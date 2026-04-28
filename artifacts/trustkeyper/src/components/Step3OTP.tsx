@@ -95,7 +95,7 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
         </p>
       </div>
 
-      <div className="mt-auto">
+      <div className="mt-10">
         <Button 
           onClick={onNext} 
           disabled={!isComplete}

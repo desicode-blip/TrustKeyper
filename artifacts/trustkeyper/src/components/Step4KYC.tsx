@@ -102,7 +102,7 @@ export default function Step4KYC({ onComplete }: Step4KYCProps) {
         accept="image/*,.pdf" 
       />
 
-      <div className="space-y-8 mb-8">
+      <div className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label htmlFor="rera" className="text-gray-700">RERA Number (optional)</Label>
@@ -127,7 +127,7 @@ export default function Step4KYC({ onComplete }: Step4KYCProps) {
         <UploadCard title="Cancelled Cheque (optional)" uploadKey="cheque" />
       </div>
 
-      <div className="mt-auto">
+      <div className="mt-10">
         <Button 
           onClick={onComplete} 
           disabled={!isComplete}

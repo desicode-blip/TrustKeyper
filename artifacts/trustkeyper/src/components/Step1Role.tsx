@@ -22,7 +22,7 @@ export default function Step1Role({ role, setRole, onNext }: Step1RoleProps) {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">I am a</h1>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         {roles.map((r) => {
           const isSelected = role === r.id;
           return (
@@ -46,9 +46,9 @@ export default function Step1Role({ role, setRole, onNext }: Step1RoleProps) {
         })}
       </div>
 
-      <p className="text-gray-500 mb-auto">This will help us personalize your journey</p>
+      <p className="text-gray-500">This will help us personalize your journey</p>
 
-      <div className="mt-8">
+      <div className="mt-10">
         <Button 
           onClick={onNext} 
           disabled={!role}

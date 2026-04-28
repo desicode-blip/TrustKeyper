@@ -18,7 +18,7 @@ export default function Step2Details({ details, setDetails, onNext }: Step2Detai
         <h1 className="text-3xl font-bold text-gray-900">Lets know you better</h1>
       </div>
 
-      <div className="space-y-6 mb-8">
+      <div className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="name" className="text-gray-700">Your Name</Label>
           <Input
@@ -43,7 +43,7 @@ export default function Step2Details({ details, setDetails, onNext }: Step2Detai
         </div>
       </div>
 
-      <div className="mt-auto">
+      <div className="mt-10">
         <Button 
           onClick={onNext} 
           disabled={!isComplete}

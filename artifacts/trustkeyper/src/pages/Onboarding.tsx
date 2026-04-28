@@ -28,7 +28,7 @@ export default function Onboarding() {
       </div>
 
       {/* Right Content Area */}
-      <div className="w-full flex-1 flex flex-col py-8 px-6 lg:px-16 xl:px-24">
+      <div className="w-full flex-1 flex flex-col pt-[120px] pb-[120px] px-6 lg:px-[140px]">
         {/* Header / Nav */}
         <div className="flex items-center gap-4 mb-10">
           <button
