@@ -19,16 +19,16 @@ export default function Onboarding() {
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F5F7FA]">
       {/* Left Sidebar */}
-      <div className="hidden lg:flex w-1/2 relative bg-primary overflow-hidden items-center justify-center">
+      <div className="hidden lg:block relative bg-primary overflow-hidden shrink-0 h-screen sticky top-0">
         <img 
           src={sidebarImage} 
           alt="TrustKeyper Sidebar" 
-          className="absolute inset-0 w-full h-full object-cover" 
+          className="h-full w-auto block" 
         />
       </div>
 
       {/* Right Content Area */}
-      <div className="w-full lg:w-1/2 flex flex-col py-8 px-6 lg:px-16 xl:px-24">
+      <div className="w-full flex-1 flex flex-col py-8 px-6 lg:px-16 xl:px-24">
         {/* Header / Nav */}
         <div className="flex items-center gap-4 mb-10">
           <button
