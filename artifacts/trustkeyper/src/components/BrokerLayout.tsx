@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
+import brandLogo from "@assets/logo_1777462358045.png";
 import footerLogo from "@assets/Frame_3466296_1777451511864.png";
 import footerWave from "@assets/Vector_20_1777451511865.png";
 import { Phone, Mail } from "lucide-react";
@@ -32,12 +33,14 @@ const helpItems = [
   { id: "logout", label: "Logout", icon: LogOut, href: "/" },
 ];
 
-function TrustKeyperLogo({ light = false }: { light?: boolean }) {
+function TrustKeyperLogo() {
   return (
-    <div className={`font-extrabold leading-none tracking-tight text-2xl ${light ? "text-white" : "text-primary"}`}>
-      <div>TRUST</div>
-      <div>KEYPER</div>
-    </div>
+    <img
+      src={brandLogo}
+      alt="TrustKeyper"
+      className="h-10 w-auto select-none"
+      draggable={false}
+    />
   );
 }
 
