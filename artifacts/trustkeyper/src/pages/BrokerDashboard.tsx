@@ -1,4 +1,5 @@
 import React from "react";
+import { useLocation } from "wouter";
 import {
   Plus,
   UserPlus,
@@ -10,6 +11,8 @@ import BrokerLayout, { getBrokerName } from "@/components/BrokerLayout";
 
 export default function BrokerDashboard() {
   const brokerName = getBrokerName();
+  const [, setLocation] = useLocation();
+  const goAddTenant = () => setLocation("/broker/tenants/add");
 
   return (
     <BrokerLayout>
@@ -26,7 +29,10 @@ export default function BrokerDashboard() {
           <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5">
             <Plus size={16} /> Add Property
           </button>
-          <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5">
+          <button
+            onClick={goAddTenant}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5"
+          >
             <UserPlus size={16} /> Add Tenant
           </button>
         </div>
@@ -77,7 +83,10 @@ export default function BrokerDashboard() {
             Add tenant details, send invitations, and manage the rental
             process digitally through TrustKeyper.
           </p>
-          <button className="inline-flex items-center gap-1 text-accent text-sm font-medium hover:underline">
+          <button
+            onClick={goAddTenant}
+            className="inline-flex items-center gap-1 text-accent text-sm font-medium hover:underline"
+          >
             <UserPlus size={14} /> Add Tenant
           </button>
         </div>
