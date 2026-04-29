@@ -1,10 +1,12 @@
 import React, { useState } from "react";
+import { useLocation } from "wouter";
 import { ChevronLeft, Check } from "lucide-react";
 import sidebarImage from "@assets/Frame_3466237_1777382669479.png";
 import Step1Role from "@/components/Step1Role";
 import Step2Details from "@/components/Step2Details";
 import Step3OTP from "@/components/Step3OTP";
 import Step4KYC from "@/components/Step4KYC";
+import BrokerForm from "@/components/BrokerForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export default function Onboarding() {
@@ -12,6 +14,10 @@ export default function Onboarding() {
   const [role, setRole] = useState("");
   const [details, setDetails] = useState({ name: "", phone: "" });
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [, setLocation] = useLocation();
+
+  const isBrokerFlow = role === "broker" && step >= 2;
+  const totalDots = isBrokerFlow ? 2 : 4;
 
   const goNext = () => setStep((s) => Math.min(4, s + 1));
   const goBack = () => setStep((s) => Math.max(1, s - 1));
@@ -40,14 +46,18 @@ export default function Onboarding() {
           </button>
           
           <div className="flex items-center gap-2">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className={`w-2 h-2 rounded-full ${
-                  i <= step ? "bg-primary" : "bg-gray-300"
-                }`}
-              />
-            ))}
+            {Array.from({ length: totalDots }).map((_, idx) => {
+              const i = idx + 1;
+              const activeIndex = isBrokerFlow ? step - 1 : step;
+              return (
+                <div
+                  key={i}
+                  className={`w-2 h-2 rounded-full ${
+                    i <= activeIndex ? "bg-primary" : "bg-gray-300"
+                  }`}
+                />
+              );
+            })}
           </div>
         </div>
 
@@ -56,13 +66,18 @@ export default function Onboarding() {
           {step === 1 && (
             <Step1Role role={role} setRole={setRole} onNext={goNext} />
           )}
-          {step === 2 && (
+          {step >= 2 && role === "broker" && (
+            <BrokerForm
+              onComplete={() => setLocation("/broker/dashboard")}
+            />
+          )}
+          {step === 2 && role !== "broker" && (
             <Step2Details details={details} setDetails={setDetails} onNext={goNext} />
           )}
-          {step === 3 && (
+          {step === 3 && role !== "broker" && (
             <Step3OTP details={details} onNext={goNext} />
           )}
-          {step === 4 && (
+          {step === 4 && role !== "broker" && (
             <Step4KYC onComplete={() => setIsSuccessOpen(true)} />
           )}
         </div>
