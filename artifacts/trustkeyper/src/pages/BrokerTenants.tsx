@@ -4,13 +4,6 @@ import { Plus, User, Phone, MessageCircle, Send } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
 import { getTenants, timeAgo, type Tenant } from "@/lib/tenants";
 
-const baseTabs = [
-  { id: "all", label: "All", count: 15 },
-  { id: "new", label: "New", count: 6 },
-  { id: "interested", label: "Interested", count: 2 },
-  { id: "invitation", label: "Invitation Sent", count: 0 },
-];
-
 function getInitial(name: string): string {
   return name.trim()[0]?.toUpperCase() ?? "?";
 }
@@ -24,13 +17,32 @@ export default function BrokerTenants() {
     setTenants(getTenants());
   }, []);
 
-  const total = baseTabs.find((t) => t.id === "all")!.count + tenants.length;
+  const counts = {
+    all: tenants.length,
+    new: tenants.filter((t) => !t.invitationSent).length,
+    interested: 0,
+    invitation: tenants.filter((t) => t.invitationSent).length,
+  };
+
+  const tabs = [
+    { id: "all", label: "All", count: counts.all },
+    { id: "new", label: "New", count: counts.new },
+    { id: "interested", label: "Interested", count: counts.interested },
+    { id: "invitation", label: "Invitation Sent", count: counts.invitation },
+  ];
+
+  const visibleTenants = tenants.filter((t) => {
+    if (active === "all") return true;
+    if (active === "new") return !t.invitationSent;
+    if (active === "invitation") return t.invitationSent;
+    return false;
+  });
 
   return (
     <BrokerLayout>
       <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-900">
-          Tenant Leads <span className="text-gray-900">({total})</span>
+          Tenant Leads <span className="text-gray-900">({counts.all})</span>
         </h1>
         <button
           onClick={() => setLocation("/broker/tenants/add")}
@@ -41,14 +53,8 @@ export default function BrokerTenants() {
       </div>
 
       <div className="flex items-center gap-2 mb-8 flex-wrap">
-        {baseTabs.map((t) => {
+        {tabs.map((t) => {
           const isActive = active === t.id;
-          const count =
-            t.id === "all"
-              ? total
-              : t.id === "invitation"
-              ? t.count + tenants.length
-              : t.count;
           return (
             <button
               key={t.id}
@@ -59,13 +65,13 @@ export default function BrokerTenants() {
                   : "text-gray-600 hover:bg-gray-100"
               }`}
             >
-              {t.label} ({count})
+              {t.label} ({t.count})
             </button>
           );
         })}
       </div>
 
-      {tenants.length === 0 ? (
+      {visibleTenants.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-32 text-center">
           <div className="w-12 h-12 rounded-lg flex items-center justify-center text-gray-400 mb-4">
             <User size={28} />
@@ -77,7 +83,7 @@ export default function BrokerTenants() {
         </div>
       ) : (
         <div className="space-y-3">
-          {tenants.map((t) => (
+          {visibleTenants.map((t) => (
             <div
               key={t.id}
               className="rounded-xl border border-gray-200 bg-white p-5"
@@ -97,11 +103,6 @@ export default function BrokerTenants() {
                     <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
                     {t.status}
                   </span>
-                  {t.invitationSent && (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-primary text-xs font-medium">
-                      Invitation Sent
-                    </span>
-                  )}
                 </div>
               </div>
 

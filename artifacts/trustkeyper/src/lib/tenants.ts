@@ -21,13 +21,18 @@ export function getTenants(): Tenant[] {
   }
 }
 
-export function addTenant(t: Omit<Tenant, "id" | "createdAt" | "status" | "invitationSent">): Tenant {
+export function addTenant(
+  t: Omit<Tenant, "id" | "createdAt" | "status" | "invitationSent"> & {
+    invitationSent?: boolean;
+  },
+): Tenant {
+  const { invitationSent = false, ...rest } = t;
   const tenant: Tenant = {
-    ...t,
+    ...rest,
     id: `t_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     createdAt: Date.now(),
     status: "Onboarding Pending",
-    invitationSent: true,
+    invitationSent,
   };
   const list = getTenants();
   list.unshift(tenant);

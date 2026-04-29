@@ -58,7 +58,7 @@ export default function AddTenant() {
     const code = Math.random().toString(36).slice(2, 12).toUpperCase();
     const link = `https://app.trustkeyper.in/tenant/onboard/${code}`;
     setGeneratedLink(link);
-    addTenant({ name: linkName, phone: `+91${linkPhone}` });
+    addTenant({ name: linkName, phone: `+91${linkPhone}`, invitationSent: true });
     setModalStep("share");
     toast({ description: "Onboarding link generated!" });
   };
