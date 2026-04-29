@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
+import footerImage from "@assets/Frame_3466293_1777451116949.png";
 import {
   LayoutDashboard,
   Building2,
@@ -145,66 +146,12 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
       </div>
 
       {/* Footer */}
-      <footer className="bg-[#0F1B3D] text-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <svg viewBox="0 0 1440 320" preserveAspectRatio="none" className="w-full h-full">
-            <path
-              d="M0,160 C240,80 480,240 720,160 C960,80 1200,240 1440,160 L1440,320 L0,320 Z"
-              fill="#fff"
-            />
-            <path
-              d="M0,220 C240,140 480,300 720,220 C960,140 1200,300 1440,220 L1440,320 L0,320 Z"
-              fill="#fff"
-              opacity="0.5"
-            />
-          </svg>
-        </div>
-        <div className="relative px-12 py-12 grid grid-cols-1 md:grid-cols-4 gap-10">
-          <div>
-            <TrustKeyperLogo light />
-          </div>
-          <div className="space-y-3 text-sm text-white/80">
-            <a href="#" className="block hover:text-white">Terms & Conditions</a>
-            <a href="#" className="block hover:text-white">About Us</a>
-            <a href="#" className="block hover:text-white">FAQs</a>
-            <a href="#" className="block hover:text-white">Privacy Policy</a>
-          </div>
-          <div className="text-sm text-white/80 space-y-4">
-            <div>
-              <p className="font-semibold text-white mb-2">Noida</p>
-              <p className="leading-relaxed">
-                Office 8, 1st Floor, Block-Mart, Mahagun Moderne, Plot GH-02,
-                Sector 78, Noida, UP, India, 201301
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold text-white mb-2">Bengaluru</p>
-              <p className="leading-relaxed">
-                HD-198, Embassy TechVillage, Outer Ring Road, Bellandur,
-                Bengaluru, Karnataka, India, 560103
-              </p>
-            </div>
-          </div>
-          <div className="text-sm text-white/80 space-y-4">
-            <div>
-              <p className="font-semibold text-white mb-2">Contact :</p>
-              <p>📞 +91 8088516875</p>
-              <p>
-                ✉️{" "}
-                <a href="mailto:info@trustkeyper.com" className="underline">
-                  info@trustkeyper.com
-                </a>
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold text-white mb-2">Head office :</p>
-              <p className="leading-relaxed">
-                HD-198, Embassy TechVillage, Outer Ring Road, Bellandur,
-                Bengaluru, Karnataka, India, 560103
-              </p>
-            </div>
-          </div>
-        </div>
+      <footer className="w-full bg-[#0F1B3D]">
+        <img
+          src={footerImage}
+          alt="TrustKeyper footer"
+          className="w-full h-auto block"
+        />
       </footer>
     </div>
   );
