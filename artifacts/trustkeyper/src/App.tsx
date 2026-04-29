@@ -5,6 +5,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Onboarding from "@/pages/Onboarding";
 import BrokerDashboard from "@/pages/BrokerDashboard";
+import BrokerProperties from "@/pages/BrokerProperties";
+import BrokerTenants from "@/pages/BrokerTenants";
+import BrokerDeals from "@/pages/BrokerDeals";
+import BrokerCommission from "@/pages/BrokerCommission";
+import BrokerDocuments from "@/pages/BrokerDocuments";
 
 const queryClient = new QueryClient();
 
@@ -13,6 +18,11 @@ function Router() {
     <Switch>
       <Route path="/" component={Onboarding} />
       <Route path="/broker/dashboard" component={BrokerDashboard} />
+      <Route path="/broker/properties" component={BrokerProperties} />
+      <Route path="/broker/tenants" component={BrokerTenants} />
+      <Route path="/broker/deals" component={BrokerDeals} />
+      <Route path="/broker/commission" component={BrokerCommission} />
+      <Route path="/broker/documents" component={BrokerDocuments} />
       <Route component={NotFound} />
     </Switch>
   );

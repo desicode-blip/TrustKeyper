@@ -44,6 +44,11 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
     }
 
     if (next.every((d) => d !== "")) {
+      try {
+        sessionStorage.setItem("broker_name", fullName);
+        sessionStorage.setItem("broker_firm", firm);
+        sessionStorage.setItem("broker_phone", phone);
+      } catch {}
       setTimeout(
         () => onComplete({ fullName, firm, phone }),
         300
