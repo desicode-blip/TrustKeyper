@@ -23,15 +23,15 @@ export default function BrokerDashboard() {
           <span className="inline-block">👋</span>
         </h1>
         <div className="flex items-center gap-3 flex-wrap">
-          <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90">
+          <button className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90">
             <Plus size={16} /> Generate Rent Agreement
           </button>
-          <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5">
+          <button className="inline-flex items-center gap-2 h-9 px-4 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5">
             <Plus size={16} /> Add Property
           </button>
           <button
             onClick={goAddTenant}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5"
+            className="inline-flex items-center gap-2 h-9 px-4 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5"
           >
             <UserPlus size={16} /> Add Tenant
           </button>

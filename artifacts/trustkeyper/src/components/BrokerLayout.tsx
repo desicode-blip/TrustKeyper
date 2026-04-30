@@ -73,7 +73,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
           <TrustKeyperLogo />
         </Link>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 text-sm text-gray-600">
+          <div className="flex items-center gap-2 h-8 px-3 rounded-full border border-gray-200 text-sm text-gray-600">
             <Clock size={14} />
             <span>IST</span>
           </div>
@@ -111,7 +111,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
                 <Link
                   key={item.id}
                   href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3 h-9 px-3 rounded-lg text-sm font-medium transition-colors ${
                     active
                       ? "bg-blue-50 text-primary"
                       : "text-gray-600 hover:bg-gray-50"
@@ -136,7 +136,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
                 <Link
                   key={item.id}
                   href={item.href}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"
+                  className="flex items-center gap-3 h-9 px-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"
                 >
                   <Icon size={18} />
                   {item.label}

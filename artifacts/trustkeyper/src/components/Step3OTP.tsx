@@ -46,7 +46,7 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
           <Input
             value={details.name}
             readOnly
-            className="bg-gray-50 py-6"
+            className="bg-gray-50"
           />
         </div>
 
@@ -55,7 +55,7 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
           <Input
             value={details.phone}
             readOnly
-            className="bg-gray-50 py-6"
+            className="bg-gray-50"
           />
         </div>
       </div>
@@ -96,10 +96,10 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
       </div>
 
       <div className="mt-10">
-        <Button 
+        <Button size="lg"
           onClick={onNext} 
           disabled={!isComplete}
-          className="w-48 py-6 text-base bg-primary hover:bg-primary/90 mb-6"
+          className="w-48 bg-primary hover:bg-primary/90 mb-6"
         >
           Continue
         </Button>

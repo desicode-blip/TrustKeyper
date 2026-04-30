@@ -76,7 +76,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             disabled={otpStage}
-            className={`py-6 ${otpStage ? "bg-blue-50/60" : "bg-white"}`}
+            className={`${otpStage ? "bg-blue-50/60" : "bg-white"}`}
           />
           <p className="text-xs text-gray-500">As per government ID</p>
         </div>
@@ -91,7 +91,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
             value={firm}
             onChange={(e) => setFirm(e.target.value)}
             disabled={otpStage}
-            className={`py-6 ${otpStage ? "bg-blue-50/60" : "bg-white"}`}
+            className={`${otpStage ? "bg-blue-50/60" : "bg-white"}`}
           />
           <p className="text-xs text-gray-500">
             Leave blank if you're an independent broker
@@ -121,7 +121,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
                 setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
               }
               disabled={otpStage}
-              className={`py-6 flex-1 ${otpStage ? "bg-blue-50/60" : "bg-white"}`}
+              className={`flex-1 ${otpStage ? "bg-blue-50/60" : "bg-white"}`}
             />
           </div>
           <p className="text-xs text-gray-500">We'll send an OTP to verify</p>
@@ -143,10 +143,10 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
       </div>
 
       {!otpStage && (
-        <Button
+        <Button size="lg"
           onClick={handleSendOtp}
           disabled={!formValid}
-          className="w-full py-6 text-base bg-primary hover:bg-primary/90"
+          className="w-full bg-primary hover:bg-primary/90"
         >
           Send OTP & Register
         </Button>

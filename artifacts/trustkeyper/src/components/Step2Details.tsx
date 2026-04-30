@@ -26,7 +26,7 @@ export default function Step2Details({ details, setDetails, onNext }: Step2Detai
             placeholder="Placeholder"
             value={details.name}
             onChange={(e) => setDetails({ ...details, name: e.target.value })}
-            className="bg-white py-6"
+            className="bg-white"
           />
         </div>
 
@@ -38,16 +38,16 @@ export default function Step2Details({ details, setDetails, onNext }: Step2Detai
             placeholder="Placeholder"
             value={details.phone}
             onChange={(e) => setDetails({ ...details, phone: e.target.value })}
-            className="bg-white py-6"
+            className="bg-white"
           />
         </div>
       </div>
 
       <div className="mt-10">
-        <Button 
+        <Button size="lg"
           onClick={onNext} 
           disabled={!isComplete}
-          className="w-48 py-6 text-base bg-primary hover:bg-primary/90 mb-6"
+          className="w-48 bg-primary hover:bg-primary/90 mb-6"
         >
           Request OTP &rarr;
         </Button>

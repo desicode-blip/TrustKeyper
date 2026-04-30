@@ -49,10 +49,10 @@ export default function Step1Role({ role, setRole, onNext }: Step1RoleProps) {
       <p className="text-gray-500">This will help us personalize your journey</p>
 
       <div className="mt-10">
-        <Button 
+        <Button size="lg"
           onClick={onNext} 
           disabled={!role}
-          className="w-40 py-6 text-lg bg-primary hover:bg-primary/90"
+          className="w-40 bg-primary hover:bg-primary/90"
         >
           Continue
         </Button>

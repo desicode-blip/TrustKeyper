@@ -395,9 +395,10 @@ export default function AddTenant() {
             </div>
 
             <Button
+              size="lg"
               onClick={handleStep1Continue}
               disabled={!step1Valid}
-              className="w-full mt-6 py-6 text-base bg-primary hover:bg-primary/90"
+              className="w-full mt-8 bg-primary hover:bg-primary/90"
             >
               Continue <ArrowRight size={16} className="ml-1" />
             </Button>
@@ -438,11 +439,11 @@ export default function AddTenant() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <div className="flex-1 min-h-[42px] rounded-md border border-input bg-white px-2 py-1.5 flex flex-wrap gap-1.5 items-center">
+                  <div className="flex-1 min-h-9 rounded-md border border-input bg-white px-2 py-1 flex flex-wrap gap-2 items-center">
                     {localities.map((l) => (
                       <span
                         key={l}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 text-primary text-xs"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 text-primary text-xs"
                       >
                         {l}
                         <button
@@ -662,9 +663,10 @@ export default function AddTenant() {
               </div>
 
               <Button
+                size="lg"
                 onClick={handleGenerateLink}
                 disabled={!linkValid}
-                className="w-full mt-6 bg-primary hover:bg-primary/90"
+                className="w-full mt-8 bg-primary hover:bg-primary/90"
               >
                 <Link2 size={16} className="mr-2" /> Generate Link
               </Button>
@@ -725,6 +727,7 @@ export default function AddTenant() {
               </div>
 
               <Button
+                size="lg"
                 onClick={() => {
                   setModalStep("closed");
                   setLocation("/broker/tenants");

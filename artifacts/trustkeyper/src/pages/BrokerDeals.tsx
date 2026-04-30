@@ -42,7 +42,7 @@ export default function BrokerDeals() {
                 <button
                   key={v.id}
                   onClick={() => setView(v.id)}
-                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  className={`inline-flex items-center gap-2 h-8 px-3 rounded-md text-sm font-medium transition-colors ${
                     isActive ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
@@ -51,7 +51,7 @@ export default function BrokerDeals() {
               );
             })}
           </div>
-          <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90">
+          <button className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90">
             <Plus size={16} /> Create Deal
           </button>
         </div>

@@ -19,7 +19,7 @@ export default function BrokerProperties() {
         <h1 className="text-2xl font-bold text-gray-900">
           My Properties <span className="text-gray-900">({total})</span>
         </h1>
-        <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90">
+        <button className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90">
           <Plus size={16} /> Add Property
         </button>
       </div>

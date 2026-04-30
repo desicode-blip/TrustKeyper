@@ -5,7 +5,6 @@ import {
   User,
   Phone,
   MessageCircle,
-  Send,
   ChevronDown,
   ChevronUp,
   Calendar,
@@ -69,12 +68,12 @@ function TenantCard({ t }: { t: Tenant }) {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {t.detailsComplete ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-medium">
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Profile Complete
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 text-xs font-medium">
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-orange-50 text-orange-600 text-xs font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
               Onboarding Pending
             </span>
@@ -125,7 +124,7 @@ function TenantCard({ t }: { t: Tenant }) {
           {t.detailsComplete && (
             <button
               onClick={() => setOpen((o) => !o)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-200 text-sm text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center gap-2 h-8 px-3 rounded-md border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50"
             >
               {open ? (
                 <>
@@ -138,17 +137,12 @@ function TenantCard({ t }: { t: Tenant }) {
               )}
             </button>
           )}
-          <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+          <button className="inline-flex items-center gap-2 h-8 px-3 rounded-md border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50">
             <Phone size={14} /> Call
           </button>
-          <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+          <button className="inline-flex items-center gap-2 h-8 px-3 rounded-md border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50">
             <MessageCircle size={14} /> WhatsApp
           </button>
-          {!t.detailsComplete && (
-            <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary text-white text-sm hover:bg-primary/90">
-              <Send size={14} /> Send Invite
-            </button>
-          )}
         </div>
       </div>
     </div>
@@ -177,22 +171,19 @@ export default function BrokerTenants() {
 
   const counts = {
     all: tenants.length,
-    new: tenants.filter((t) => !t.invitationSent && !t.detailsComplete).length,
-    interested: tenants.filter((t) => t.detailsComplete).length,
+    new: tenants.filter((t) => !t.invitationSent).length,
     invitation: tenants.filter((t) => t.invitationSent).length,
   };
 
   const tabs = [
     { id: "all", label: "All", count: counts.all },
     { id: "new", label: "New", count: counts.new },
-    { id: "interested", label: "Interested", count: counts.interested },
     { id: "invitation", label: "Invitation Sent", count: counts.invitation },
   ];
 
   const visibleTenants = tenants.filter((t) => {
     if (active === "all") return true;
-    if (active === "new") return !t.invitationSent && !t.detailsComplete;
-    if (active === "interested") return t.detailsComplete;
+    if (active === "new") return !t.invitationSent;
     if (active === "invitation") return t.invitationSent;
     return false;
   });
@@ -205,7 +196,7 @@ export default function BrokerTenants() {
         </h1>
         <button
           onClick={() => setLocation("/broker/tenants/add")}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90"
+          className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90"
         >
           <Plus size={16} /> Register Tenant Lead
         </button>
@@ -218,7 +209,7 @@ export default function BrokerTenants() {
             <button
               key={t.id}
               onClick={() => setActive(t.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`h-8 px-4 rounded-lg text-xs font-medium transition-colors ${
                 isActive
                   ? "bg-primary text-white"
                   : "text-gray-600 hover:bg-gray-100"

@@ -106,11 +106,11 @@ export default function Step4KYC({ onComplete }: Step4KYCProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label htmlFor="rera" className="text-gray-700">RERA Number (optional)</Label>
-            <Input id="rera" placeholder="Placeholder" className="bg-white py-6" />
+            <Input id="rera" placeholder="Placeholder" className="bg-white" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="gst" className="text-gray-700">GST Number (optional)</Label>
-            <Input id="gst" placeholder="Placeholder" className="bg-white py-6" />
+            <Input id="gst" placeholder="Placeholder" className="bg-white" />
           </div>
         </div>
 
@@ -128,10 +128,10 @@ export default function Step4KYC({ onComplete }: Step4KYCProps) {
       </div>
 
       <div className="mt-10">
-        <Button 
+        <Button size="lg"
           onClick={onComplete} 
           disabled={!isComplete}
-          className="w-48 py-6 text-base bg-primary hover:bg-primary/90"
+          className="w-48 bg-primary hover:bg-primary/90"
         >
           Continue
         </Button>
