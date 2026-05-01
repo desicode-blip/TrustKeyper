@@ -68,7 +68,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
   return (
     <div className="min-h-screen w-full bg-[#F5F7FA] flex flex-col">
       {/* Top Header */}
-      <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-8 shrink-0 z-10">
+      <header className="h-[90px] bg-white border-b border-gray-200 flex items-center justify-between px-8 shrink-0 z-10">
         <Link href="/broker/dashboard" className="block">
           <TrustKeyperLogo />
         </Link>
@@ -89,7 +89,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
 
       <div className="flex flex-1">
         {/* Sidebar */}
-        <aside className="w-64 bg-white border-r border-gray-200 px-4 py-6 flex flex-col shrink-0">
+        <aside className="w-64 bg-white border-r border-gray-200 px-4 py-6 flex flex-col shrink-0 overflow-y-auto">
           <div className="px-3 mb-3">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
               Broker's Portal
@@ -103,7 +103,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
             <span className="text-sm font-medium text-gray-900 truncate">{brokerName}</span>
           </div>
 
-          <nav className="flex flex-col gap-1">
+          <nav className="flex flex-col gap-7">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = location === item.href;
@@ -129,7 +129,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
               Help
             </p>
           </div>
-          <nav className="flex flex-col gap-1">
+          <nav className="flex flex-col gap-7">
             {helpItems.map((item) => {
               const Icon = item.icon;
               return (

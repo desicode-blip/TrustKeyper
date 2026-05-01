@@ -13,6 +13,7 @@ export default function BrokerDashboard() {
   const brokerName = getBrokerName();
   const [, setLocation] = useLocation();
   const goAddTenant = () => setLocation("/broker/tenants/add");
+  const goAddProperty = () => setLocation("/broker/properties/add");
 
   return (
     <BrokerLayout>
@@ -26,7 +27,10 @@ export default function BrokerDashboard() {
           <button className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90">
             <Plus size={16} /> Generate Rent Agreement
           </button>
-          <button className="inline-flex items-center gap-2 h-9 px-4 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5">
+          <button
+            onClick={goAddProperty}
+            className="inline-flex items-center gap-2 h-9 px-4 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5"
+          >
             <Plus size={16} /> Add Property
           </button>
           <button
@@ -67,7 +71,10 @@ export default function BrokerDashboard() {
             List and manage your property details to start renting
             seamlessly through TrustKeyper.
           </p>
-          <button className="inline-flex items-center gap-1 text-accent text-sm font-medium hover:underline">
+          <button
+            onClick={goAddProperty}
+            className="inline-flex items-center gap-1 text-accent text-sm font-medium hover:underline"
+          >
             <Plus size={14} /> Add Property
           </button>
         </div>
