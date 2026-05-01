@@ -103,7 +103,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
             <span className="text-sm font-medium text-gray-900 truncate">{brokerName}</span>
           </div>
 
-          <nav className="flex flex-col gap-7">
+          <nav className="flex flex-col gap-5">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = location === item.href;
@@ -129,7 +129,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
               Help
             </p>
           </div>
-          <nav className="flex flex-col gap-7">
+          <nav className="flex flex-col gap-5">
             {helpItems.map((item) => {
               const Icon = item.icon;
               return (

@@ -35,9 +35,11 @@ function StatusBadge({ status }: { status: PropertyStatus }) {
 function PropertyCard({
   property,
   onMarkRented,
+  onViewDetails,
 }: {
   property: Property;
   onMarkRented: (id: string) => void;
+  onViewDetails: (id: string) => void;
 }) {
   const type = property.propertyType === "Other"
     ? (property.propertyTypeOther || "Property")
@@ -96,7 +98,10 @@ function PropertyCard({
         </div>
 
         <div className="flex items-center gap-2 mt-1">
-          <button className="h-7 px-3 rounded border border-gray-300 text-xs font-medium text-gray-700 hover:bg-gray-50">
+          <button
+            onClick={() => onViewDetails(property.id)}
+            className="h-7 px-3 rounded border border-primary text-xs font-medium text-primary hover:bg-primary/5"
+          >
             View Details
           </button>
           <button className="h-7 px-3 rounded border border-gray-300 text-xs font-medium text-gray-700 hover:bg-gray-50">
@@ -122,6 +127,8 @@ export default function BrokerProperties() {
   const [active, setActive] = useState<"all" | PropertyStatus>("all");
 
   const refresh = () => setProperties(getProperties());
+
+  const handleViewDetails = (id: string) => setLocation(`/broker/properties/${id}`);
 
   useEffect(() => {
     refresh();
@@ -189,7 +196,7 @@ export default function BrokerProperties() {
       ) : (
         <div className="flex flex-col gap-4">
           {visible.map((p) => (
-            <PropertyCard key={p.id} property={p} onMarkRented={handleMarkRented} />
+            <PropertyCard key={p.id} property={p} onMarkRented={handleMarkRented} onViewDetails={handleViewDetails} />
           ))}
         </div>
       )}

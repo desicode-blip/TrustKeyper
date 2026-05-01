@@ -1,0 +1,577 @@
+import React, { useState, useEffect } from "react";
+import { useParams, useLocation } from "wouter";
+import {
+  ArrowLeft,
+  MapPin,
+  Home,
+  Users,
+  Building2,
+  Calendar,
+  Share2,
+  Eye,
+  Heart,
+  MessageSquare,
+  Flag,
+  Layers,
+  Wind,
+  Zap,
+  Car,
+  Leaf,
+  Dumbbell,
+  Package,
+  BookOpen,
+  Flame,
+  PawPrint,
+  Waves,
+  Bell,
+  ShieldCheck,
+  CookingPot,
+  ScanLine,
+  Trophy,
+  Sparkles,
+  BedDouble,
+  Bath,
+  Compass,
+  CheckCircle2,
+  Train,
+  ChevronRight,
+  IndianRupee,
+  SquareDashedBottom,
+} from "lucide-react";
+import { getProperties, type Property } from "@/lib/properties";
+
+// ─── Neighbourhood data keyed by city ─────────────────────────────────────────
+
+const CITY_NEIGHBOURHOOD: Record<string, {
+  transit: { name: string; distance: string }[];
+  nearby: string[];
+}> = {
+  Hyderabad: {
+    transit: [
+      { name: "Hitech Shilparamam", distance: "~1.5 km" },
+      { name: "Madhapur Metro Station", distance: "~2.8 km" },
+      { name: "Madhapur Bus Stop", distance: "~0.5 km" },
+    ],
+    nearby: ["Apollo Pharmacy", "JNTU College", "Inorbit Mall", "AIG Hospitals", "Hitech City Metro"],
+  },
+  Bengaluru: {
+    transit: [
+      { name: "Koramangala Bus Stop", distance: "~0.8 km" },
+      { name: "Jayanagar Metro Station", distance: "~3.2 km" },
+      { name: "BTM BMTC Depot", distance: "~1.4 km" },
+    ],
+    nearby: ["Forum Mall", "St. John's Hospital", "Christ University", "Sony World Junction", "Garuda Mall"],
+  },
+  Mumbai: {
+    transit: [
+      { name: "Andheri Station (W)", distance: "~1.2 km" },
+      { name: "Andheri Metro Station", distance: "~0.9 km" },
+      { name: "Powai Bus Stop", distance: "~0.4 km" },
+    ],
+    nearby: ["Hiranandani Hospital", "Galleria Mall", "IIT Bombay", "Powai Lake", "R-City Mall"],
+  },
+  Delhi: {
+    transit: [
+      { name: "Saket Metro Station", distance: "~1.0 km" },
+      { name: "Malviya Nagar Metro", distance: "~2.5 km" },
+      { name: "Saket Bus Terminal", distance: "~0.8 km" },
+    ],
+    nearby: ["Select Citywalk", "Fortis Hospital", "DLF Mall", "Max Hospital", "JNU Campus"],
+  },
+  Pune: {
+    transit: [
+      { name: "Hinjewadi Bus Stop", distance: "~0.6 km" },
+      { name: "Baner Bus Stop", distance: "~1.3 km" },
+      { name: "Shivaji Nagar Station", distance: "~8.0 km" },
+    ],
+    nearby: ["Seasons Mall", "Jehangir Hospital", "Symbiosis College", "Aga Khan Palace", "Phoenix Market City"],
+  },
+  Noida: {
+    transit: [
+      { name: "Sector 62 Metro", distance: "~0.7 km" },
+      { name: "Electronic City Metro", distance: "~1.2 km" },
+      { name: "Sector 18 Metro", distance: "~3.5 km" },
+    ],
+    nearby: ["DLF Mall of India", "Fortis Hospital", "Amity University", "Great India Place", "Wave City Center"],
+  },
+};
+
+// ─── Amenity icon map ─────────────────────────────────────────────────────────
+
+const AMENITY_ICONS: Record<string, React.ElementType> = {
+  "Sport Club": Trophy,
+  "Gym": Dumbbell,
+  "Store Room": Package,
+  "Parking Space": Car,
+  "Pool": Waves,
+  "Power Backup": Zap,
+  "Alarm System": Bell,
+  "Refrigerator": CookingPot,
+  "Covered Car Parking Space": Car,
+  "Pooja Room": Flame,
+  "Study Room": BookOpen,
+  "Servant Room": Users,
+  "Garden": Leaf,
+  "Pets Allowed": PawPrint,
+  "Air Conditioning": Wind,
+  "Basketball Court": Trophy,
+  "Spa": Sparkles,
+  "Uncovered Car Parking Space": Car,
+};
+
+// ─── Tab types ────────────────────────────────────────────────────────────────
+
+type Tab = "overview" | "amenities" | "neighbourhood" | "owner";
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatRent(v: string) {
+  const n = Number(v);
+  if (!n) return "—";
+  if (n >= 1000) return `₹${(n / 1000).toFixed(0)}K`;
+  return `₹${n}`;
+}
+
+function formatDeposit(v: string) {
+  const n = Number(v);
+  if (!n) return "—";
+  if (n >= 1000) return `₹${(n / 1000).toFixed(0)}K`;
+  return `₹${n}`;
+}
+
+function formatDate(v: string) {
+  if (!v) return "Immediately";
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return v;
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+// ─── Tab Content Components ───────────────────────────────────────────────────
+
+function OverviewTab({ property }: { property: Property }) {
+  const type = property.propertyType === "Other"
+    ? (property.propertyTypeOther || "Property")
+    : property.propertyType;
+  const size = property.unitSize === "Other"
+    ? (property.unitSizeOther || "")
+    : property.unitSize;
+
+  const rows: { icon: React.ElementType; label: string; value: string }[] = [
+    { icon: Wind, label: "Furnishing Status", value: property.furnishing || "—" },
+    { icon: Layers, label: "Floor Level", value: property.floorLevel ? `${property.floorLevel} / ${property.totalFloors} Floors` : "—" },
+    { icon: SquareDashedBottom, label: "Built-up Area", value: property.builtUpArea ? `${property.builtUpArea} ${property.builtUpUnits}` : "—" },
+    { icon: Compass, label: "Main Door Faces", value: property.mainDoorDirection || "—" },
+    { icon: Users, label: "Tenant Preference", value: property.tenantsPreferred?.join(", ") || "No Preference" },
+    { icon: Calendar, label: "Available From", value: formatDate(property.availableFrom) },
+    { icon: BedDouble, label: "Bedrooms", value: property.bedrooms || "—" },
+    { icon: Bath, label: "Bathrooms", value: property.bathrooms || "—" },
+  ];
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <h3 className="text-base font-semibold text-gray-900 mb-4">Property Details</h3>
+      <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+        {rows.map(({ icon: Icon, label, value }) => (
+          <div key={label} className="flex items-center gap-2 text-sm">
+            <Icon size={14} className="text-gray-400 shrink-0" />
+            <span className="text-gray-500">{label}:</span>
+            <span className="font-medium text-gray-800">{value}</span>
+          </div>
+        ))}
+      </div>
+      {property.address && (
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <p className="text-xs text-gray-500">Full Address</p>
+          <p className="text-sm text-gray-700 mt-0.5">{property.address}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AmenitiesTab({ property }: { property: Property }) {
+  const amenities = property.amenities || [];
+  if (amenities.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-base font-semibold text-gray-900 mb-4">Amenities</h3>
+        <p className="text-sm text-gray-500">No amenities listed for this property.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <h3 className="text-base font-semibold text-gray-900 mb-5">Amenities</h3>
+      <div className="grid grid-cols-4 gap-3">
+        {amenities.map((a) => {
+          const Icon = AMENITY_ICONS[a] || ShieldCheck;
+          return (
+            <div
+              key={a}
+              className="flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 bg-gray-50 text-center"
+            >
+              <Icon size={20} className="text-primary" />
+              <span className="text-xs text-gray-600 leading-tight">{a}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function NeighbourhoodTab({ property }: { property: Property }) {
+  const data = CITY_NEIGHBOURHOOD[property.city] ?? {
+    transit: [
+      { name: `${property.area || property.city} Bus Stop`, distance: "~0.5 km" },
+      { name: `${property.city} Metro Station`, distance: "~2.0 km" },
+    ],
+    nearby: ["Local Market", "Hospital", "School", "Mall", "Park"],
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+      <h3 className="text-base font-semibold text-gray-900">Neighbourhood</h3>
+
+      {/* Map placeholder */}
+      <div className="rounded-xl border border-gray-200 overflow-hidden bg-gradient-to-br from-blue-50 to-gray-100 h-44 flex flex-col items-center justify-center gap-2">
+        <MapPin size={28} className="text-gray-400" />
+        <p className="text-sm font-medium text-gray-600">
+          Map showing {property.area}, {property.city}
+        </p>
+        {property.address && (
+          <p className="text-xs text-gray-500 text-center max-w-xs px-4">{property.address}</p>
+        )}
+      </div>
+
+      {/* Transit */}
+      <div>
+        <h4 className="text-sm font-semibold text-gray-800 mb-3">Transit</h4>
+        <div className="space-y-2">
+          {data.transit.map((t) => (
+            <div key={t.name} className="flex items-center gap-3 text-sm">
+              <Train size={14} className="text-primary shrink-0" />
+              <span className="text-gray-700 flex-1">{t.name}</span>
+              <span className="text-gray-500">{t.distance}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Nearby */}
+      <div>
+        <h4 className="text-sm font-semibold text-gray-800 mb-3">Nearby</h4>
+        <div className="flex flex-wrap gap-2">
+          {data.nearby.map((n) => (
+            <span
+              key={n}
+              className="px-3 py-1 rounded-full border border-gray-200 text-xs text-gray-600 bg-white"
+            >
+              {n}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AboutOwnerTab({ property }: { property: Property }) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <h3 className="text-base font-semibold text-gray-900 mb-5">About Owner</h3>
+      <div className="flex items-start gap-4">
+        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold shrink-0">
+          {(property.ownerName || "O").charAt(0).toUpperCase()}
+        </div>
+        <div className="flex-1">
+          <p className="font-semibold text-gray-900 text-base">{property.ownerName || "Owner"}</p>
+          <p className="text-sm text-gray-500 mt-0.5">Property Owner</p>
+          {property.ownerContact && (
+            <div className="mt-3 flex items-center gap-2 text-sm text-gray-700">
+              <span className="text-gray-400">Contact:</span>
+              <span className="font-medium">{property.ownerContact}</span>
+            </div>
+          )}
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-green-600 font-medium">
+            <CheckCircle2 size={13} />
+            <span>Verified Owner</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Image Gallery ────────────────────────────────────────────────────────────
+
+const PLACEHOLDER_GRADIENTS = [
+  "from-blue-200 to-indigo-300",
+  "from-gray-200 to-gray-300",
+  "from-slate-200 to-blue-200",
+  "from-indigo-100 to-blue-200",
+  "from-blue-100 to-slate-200",
+];
+
+function ImageGallery({ imageCount, selectedImage, onSelect }: {
+  imageCount: number;
+  selectedImage: number;
+  onSelect: (i: number) => void;
+}) {
+  const count = Math.max(imageCount, 1);
+  const gradients = PLACEHOLDER_GRADIENTS;
+
+  return (
+    <div>
+      {/* Main image */}
+      <div className={`rounded-xl overflow-hidden bg-gradient-to-br ${gradients[selectedImage % gradients.length]} relative`} style={{ height: 340 }}>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Building2 size={56} className="text-white/40" />
+        </div>
+        <span className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1 rounded-full">
+          {selectedImage + 1} / {count}
+        </span>
+      </div>
+      {/* Thumbnails */}
+      <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
+        {Array.from({ length: count }).map((_, i) => (
+          <button
+            key={i}
+            onClick={() => onSelect(i)}
+            className={`w-24 h-16 shrink-0 rounded-lg overflow-hidden bg-gradient-to-br ${gradients[i % gradients.length]} flex items-center justify-center transition-all ${
+              selectedImage === i ? "ring-2 ring-primary ring-offset-1" : "opacity-70 hover:opacity-100"
+            }`}
+          >
+            <Building2 size={18} className="text-white/40" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function PropertyDetails() {
+  const { id } = useParams<{ id: string }>();
+  const [, setLocation] = useLocation();
+  const [property, setProperty] = useState<Property | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [selectedImage, setSelectedImage] = useState(0);
+
+  useEffect(() => {
+    const list = getProperties();
+    const found = list.find((p) => p.id === id);
+    setProperty(found ?? null);
+  }, [id]);
+
+  if (!property) {
+    return (
+      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center">
+        <div className="text-center">
+          <Building2 size={48} className="text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">Property not found</p>
+          <button
+            onClick={() => setLocation("/broker/properties")}
+            className="mt-4 text-sm text-primary hover:underline"
+          >
+            ← Back to Properties
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const type = property.propertyType === "Other"
+    ? (property.propertyTypeOther || "Property")
+    : property.propertyType;
+  const size = property.unitSize === "Other"
+    ? (property.unitSizeOther || "")
+    : property.unitSize;
+  const title = size
+    ? `${size} ${type} in ${property.nickname || property.area}`
+    : `${type} in ${property.nickname || property.area}`;
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "overview", label: "Overview" },
+    { id: "amenities", label: "Amenities" },
+    { id: "neighbourhood", label: "Neighbourhood" },
+    { id: "owner", label: "About Owner" },
+  ];
+
+  const whatsappMsg = encodeURIComponent(
+    `Hi, I'm interested in the property: ${title} in ${property.area}, ${property.city}. Rent: ₹${property.monthlyRent}/month.`
+  );
+
+  return (
+    <div className="min-h-screen bg-[#F5F7FA]">
+      <div className="max-w-6xl mx-auto px-6 py-6">
+        {/* Back */}
+        <button
+          onClick={() => setLocation("/broker/properties")}
+          className="flex items-center gap-1.5 text-sm text-gray-600 font-medium mb-5 hover:text-primary transition-colors"
+        >
+          <ArrowLeft size={15} /> Back
+        </button>
+
+        {/* Main grid */}
+        <div className="grid grid-cols-[1fr_296px] gap-6 items-start">
+          {/* ── Left column ─────────────────────────────────────────────── */}
+          <div className="min-w-0">
+            {/* Gallery */}
+            <ImageGallery
+              imageCount={property.imageCount}
+              selectedImage={selectedImage}
+              onSelect={setSelectedImage}
+            />
+
+            {/* Tabs */}
+            <div className="flex items-center gap-1 mt-6 border-b border-gray-200">
+              {tabs.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setActiveTab(t.id)}
+                  className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors ${
+                    activeTab === t.id
+                      ? "bg-gray-900 text-white"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab content */}
+            <div className="mt-4">
+              {activeTab === "overview" && <OverviewTab property={property} />}
+              {activeTab === "amenities" && <AmenitiesTab property={property} />}
+              {activeTab === "neighbourhood" && <NeighbourhoodTab property={property} />}
+              {activeTab === "owner" && <AboutOwnerTab property={property} />}
+            </div>
+          </div>
+
+          {/* ── Right column ─────────────────────────────────────────────── */}
+          <div className="space-y-4 sticky top-6">
+            {/* Summary card */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+              {/* Title */}
+              <div>
+                <h1 className="text-lg font-bold text-gray-900 leading-tight">{title}</h1>
+                <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
+                  <MapPin size={13} className="text-gray-400" />
+                  <span>{property.area}, {property.city}</span>
+                </div>
+              </div>
+
+              {/* Stats row */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p className="text-lg font-bold text-accent">{formatRent(property.monthlyRent)}</p>
+                  <p className="text-[10px] text-gray-500">Rent/month</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-gray-900">
+                    {property.builtUpArea || "—"}
+                  </p>
+                  <p className="text-[10px] text-gray-500">{property.builtUpArea ? property.builtUpUnits : ""}</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-gray-900">{formatDeposit(property.securityDeposit)}</p>
+                  <p className="text-[10px] text-gray-500">Deposit</p>
+                </div>
+              </div>
+
+              {/* Info grid */}
+              <div className="grid grid-cols-2 gap-y-2 text-sm">
+                {property.unitSize && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <BedDouble size={14} className="text-gray-400" />
+                    <span>{property.unitSize !== "Other" ? property.unitSize : property.unitSizeOther}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-gray-700">
+                  <Building2 size={14} className="text-gray-400" />
+                  <span>{type}</span>
+                </div>
+                {property.tenantsPreferred?.length > 0 && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Users size={14} className="text-gray-400" />
+                    <span className="truncate">{property.tenantsPreferred[0]}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-gray-700">
+                  <Calendar size={14} className="text-gray-400" />
+                  <span>{property.availableFrom ? formatDate(property.availableFrom) : "Immediately"}</span>
+                </div>
+              </div>
+
+              {/* Verified badge */}
+              <div className="flex items-center gap-1.5 text-sm font-medium text-green-600">
+                <CheckCircle2 size={15} />
+                <span>Verified Available</span>
+              </div>
+
+              {/* Share button */}
+              <a
+                href={`https://wa.me/?text=${whatsappMsg}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center gap-2 h-10 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
+              >
+                <Share2 size={15} /> Share via WhatsApp
+              </a>
+
+              {/* Report */}
+              <div className="pt-2 border-t border-gray-100">
+                <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
+                  <Flag size={11} />
+                  <span>Report what was not correct</span>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {["Listed by Broker", "Rented Out", "Wrong Info"].map((r) => (
+                    <button
+                      key={r}
+                      className="h-7 px-2.5 rounded border border-gray-200 text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Activity card */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <p className="text-sm font-semibold text-gray-800 mb-4">Activity on This Property</p>
+              <div className="grid grid-cols-3 text-center">
+                <div>
+                  <div className="flex items-center justify-center gap-1 text-gray-500 mb-1">
+                    <Eye size={14} />
+                    <span className="font-semibold text-gray-900 text-base">0</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500">Views</p>
+                </div>
+                <div>
+                  <div className="flex items-center justify-center gap-1 text-red-400 mb-1">
+                    <Heart size={14} />
+                    <span className="font-semibold text-gray-900 text-base">0</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500">Shortlists</p>
+                </div>
+                <div>
+                  <div className="flex items-center justify-center gap-1 text-blue-400 mb-1">
+                    <MessageSquare size={14} />
+                    <span className="font-semibold text-gray-900 text-base">0</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500">Contacted</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

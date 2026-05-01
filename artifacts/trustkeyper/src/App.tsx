@@ -12,6 +12,7 @@ import BrokerCommission from "@/pages/BrokerCommission";
 import BrokerDocuments from "@/pages/BrokerDocuments";
 import AddTenant from "@/pages/AddTenant";
 import AddProperty from "@/pages/AddProperty";
+import PropertyDetails from "@/pages/PropertyDetails";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/broker/dashboard" component={BrokerDashboard} />
       <Route path="/broker/properties" component={BrokerProperties} />
       <Route path="/broker/properties/add" component={AddProperty} />
+      <Route path="/broker/properties/:id" component={PropertyDetails} />
       <Route path="/broker/tenants" component={BrokerTenants} />
       <Route path="/broker/tenants/add" component={AddTenant} />
       <Route path="/broker/deals" component={BrokerDeals} />

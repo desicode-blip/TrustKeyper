@@ -50,12 +50,30 @@ const AMENITIES_RIGHT = [
 
 // ─── Progress Bar ─────────────────────────────────────────────────────────────
 
-function ProgressBar({ majorStep }: { majorStep: number }) {
+function ProgressBar({ subStep }: { subStep: number }) {
   const steps = [
     { label: "Property Details", Icon: Home },
     { label: "Rental Details", Icon: Wallet },
     { label: "Upload Image", Icon: ImageIcon },
   ];
+
+  // majorStep: 0 = sub-steps 0–3, 1 = sub-step 4, 2 = sub-step 5
+  const majorStep = subStep <= 3 ? 0 : subStep === 4 ? 1 : 2;
+
+  // Percentage fill for the connecting line between step i and i+1
+  const lineFill = (i: number): number => {
+    if (i === 0) {
+      // Line between Property Details and Rental Details
+      // Sub-steps 0–3 fill 0→25→50→75%, sub-step 4+ = 100%
+      if (subStep >= 4) return 100;
+      return (subStep / 4) * 100;
+    }
+    if (i === 1) {
+      // Line between Rental Details and Upload Image
+      return subStep >= 5 ? 100 : 0;
+    }
+    return 0;
+  };
 
   return (
     <div className="flex items-start justify-center gap-0 mb-6">
@@ -78,10 +96,8 @@ function ProgressBar({ majorStep }: { majorStep: number }) {
                 {s.label}
               </span>
               <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold ${
-                  done
-                    ? "bg-primary text-white"
-                    : active
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
+                  done || active
                     ? "bg-primary text-white"
                     : "bg-white border-2 border-gray-300 text-gray-400"
                 }`}
@@ -90,9 +106,10 @@ function ProgressBar({ majorStep }: { majorStep: number }) {
               </div>
             </div>
             {i < steps.length - 1 && (
-              <div className="flex-1 mt-12 mx-1">
+              <div className="flex-1 mt-12 mx-1 bg-gray-200 h-0.5 relative overflow-hidden rounded-full">
                 <div
-                  className={`h-0.5 ${majorStep > i ? "bg-primary" : "bg-gray-200"}`}
+                  className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-in-out"
+                  style={{ width: `${lineFill(i)}%` }}
                 />
               </div>
             )}
@@ -233,8 +250,6 @@ export default function AddProperty() {
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
-  const majorStep = subStep <= 3 ? 0 : subStep === 4 ? 1 : 2;
-
   const toggleAmenity = (a: string) =>
     setAmenities((prev) =>
       prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]
@@ -262,9 +277,19 @@ export default function AddProperty() {
 
   // ── Validation ────────────────────────────────────────────────────────────────
 
+  const isValidContact = (v: string): boolean => {
+    if (!v.trim()) return false;
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+    const phoneOk = /^\+?[\d\s\-().]{7,15}$/.test(v.trim());
+    return emailOk || phoneOk;
+  };
+
+  const contactTouched = ownerContact.length > 0;
+  const contactError = contactTouched && !isValidContact(ownerContact);
+
   const canContinue = (): boolean => {
     if (subStep === 0) {
-      return !!(address && area && city && pincode && country && ownerName && ownerContact);
+      return !!(address && area && city && pincode && country && ownerName && isValidContact(ownerContact));
     }
     if (subStep === 1) {
       const typeOk = propertyType !== "" && (propertyType !== "Other" || propertyTypeOther.trim() !== "");
@@ -405,8 +430,12 @@ export default function AddProperty() {
           <Input
             value={ownerContact}
             onChange={(e) => setOwnerContact(e.target.value)}
-            placeholder=""
+            placeholder="email@example.com or +91 9876543210"
+            className={contactError ? "border-red-400 focus:border-red-400 focus:ring-red-200" : ""}
           />
+          {contactError && (
+            <p className="text-xs text-red-500 mt-1">Enter a valid email address or phone number</p>
+          )}
         </div>
       </div>
     </div>
@@ -785,7 +814,7 @@ export default function AddProperty() {
       </button>
 
       {/* Progress bar */}
-      <ProgressBar majorStep={majorStep} />
+      <ProgressBar subStep={subStep} />
 
       {/* Card */}
       <div className="max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-8">
