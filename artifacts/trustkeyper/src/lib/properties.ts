@@ -31,6 +31,7 @@ export interface Property {
   monthlyMaintenance: string;
   securityDeposit: string;
   availableFrom: string;
+  images: string[];
   imageCount: number;
   status: PropertyStatus;
   createdAt: number;

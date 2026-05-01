@@ -264,15 +264,18 @@ export default function AddProperty() {
     if (!files) return;
     const remaining = 5 - imageUrls.length;
     const toAdd = Array.from(files).slice(0, remaining);
-    const urls = toAdd.map((f) => URL.createObjectURL(f));
-    setImageUrls((prev) => [...prev, ...urls]);
+    toAdd.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        if (dataUrl) setImageUrls((prev) => [...prev, dataUrl]);
+      };
+      reader.readAsDataURL(file);
+    });
   }, [imageUrls]);
 
   const removeImage = (idx: number) => {
-    setImageUrls((prev) => {
-      URL.revokeObjectURL(prev[idx]);
-      return prev.filter((_, i) => i !== idx);
-    });
+    setImageUrls((prev) => prev.filter((_, i) => i !== idx));
   };
 
   // ── Validation ────────────────────────────────────────────────────────────────
@@ -339,6 +342,7 @@ export default function AddProperty() {
       monthlyMaintenance,
       securityDeposit,
       availableFrom,
+      images: imageUrls,
       imageCount: imageUrls.length,
       status: "Active",
     });

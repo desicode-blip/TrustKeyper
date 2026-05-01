@@ -62,8 +62,16 @@ function PropertyCard({
   return (
     <div className="bg-white rounded-xl border border-gray-200 flex overflow-hidden">
       {/* Thumbnail */}
-      <div className="w-36 shrink-0 bg-gray-100 relative flex items-center justify-center">
-        <Building2 size={32} className="text-gray-400" />
+      <div className="w-36 shrink-0 bg-gray-100 relative flex items-center justify-center overflow-hidden">
+        {property.images && property.images.length > 0 ? (
+          <img
+            src={property.images[0]}
+            alt="property"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <Building2 size={32} className="text-gray-400" />
+        )}
         {property.imageCount > 0 && (
           <span className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded">
             {property.imageCount} pics

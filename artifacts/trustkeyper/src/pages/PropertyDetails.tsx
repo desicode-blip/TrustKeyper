@@ -39,6 +39,7 @@ import {
   SquareDashedBottom,
 } from "lucide-react";
 import { getProperties, type Property } from "@/lib/properties";
+import BrokerLayout from "@/components/BrokerLayout";
 
 // ─── Neighbourhood data keyed by city ─────────────────────────────────────────
 
@@ -314,21 +315,33 @@ const PLACEHOLDER_GRADIENTS = [
   "from-blue-100 to-slate-200",
 ];
 
-function ImageGallery({ imageCount, selectedImage, onSelect }: {
-  imageCount: number;
+function ImageGallery({ images, selectedImage, onSelect }: {
+  images: string[];
   selectedImage: number;
   onSelect: (i: number) => void;
 }) {
-  const count = Math.max(imageCount, 1);
+  const hasImages = images && images.length > 0;
+  const count = hasImages ? images.length : 1;
   const gradients = PLACEHOLDER_GRADIENTS;
 
   return (
     <div>
       {/* Main image */}
-      <div className={`rounded-xl overflow-hidden bg-gradient-to-br ${gradients[selectedImage % gradients.length]} relative`} style={{ height: 340 }}>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Building2 size={56} className="text-white/40" />
-        </div>
+      <div
+        className={`rounded-xl overflow-hidden relative ${hasImages ? "bg-gray-100" : `bg-gradient-to-br ${gradients[selectedImage % gradients.length]}`}`}
+        style={{ height: 340 }}
+      >
+        {hasImages ? (
+          <img
+            src={images[selectedImage]}
+            alt={`Property image ${selectedImage + 1}`}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Building2 size={56} className="text-white/40" />
+          </div>
+        )}
         <span className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1 rounded-full">
           {selectedImage + 1} / {count}
         </span>
@@ -339,11 +352,19 @@ function ImageGallery({ imageCount, selectedImage, onSelect }: {
           <button
             key={i}
             onClick={() => onSelect(i)}
-            className={`w-24 h-16 shrink-0 rounded-lg overflow-hidden bg-gradient-to-br ${gradients[i % gradients.length]} flex items-center justify-center transition-all ${
+            className={`w-24 h-16 shrink-0 rounded-lg overflow-hidden relative transition-all ${
               selectedImage === i ? "ring-2 ring-primary ring-offset-1" : "opacity-70 hover:opacity-100"
-            }`}
+            } ${hasImages ? "bg-gray-100" : `bg-gradient-to-br ${gradients[i % gradients.length]}`}`}
           >
-            <Building2 size={18} className="text-white/40" />
+            {hasImages ? (
+              <img
+                src={images[i]}
+                alt={`thumb ${i + 1}`}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <Building2 size={18} className="text-white/40 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+            )}
           </button>
         ))}
       </div>
@@ -368,9 +389,9 @@ export default function PropertyDetails() {
 
   if (!property) {
     return (
-      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center">
-        <div className="text-center">
-          <Building2 size={48} className="text-gray-300 mx-auto mb-3" />
+      <BrokerLayout>
+        <div className="flex flex-col items-center justify-center py-32 text-center">
+          <Building2 size={48} className="text-gray-300 mb-3" />
           <p className="text-gray-500">Property not found</p>
           <button
             onClick={() => setLocation("/broker/properties")}
@@ -379,7 +400,7 @@ export default function PropertyDetails() {
             ← Back to Properties
           </button>
         </div>
-      </div>
+      </BrokerLayout>
     );
   }
 
@@ -405,14 +426,14 @@ export default function PropertyDetails() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA]">
-      <div className="max-w-6xl mx-auto px-6 py-6">
+    <BrokerLayout>
+      <div>
         {/* Back */}
         <button
           onClick={() => setLocation("/broker/properties")}
           className="flex items-center gap-1.5 text-sm text-gray-600 font-medium mb-5 hover:text-primary transition-colors"
         >
-          <ArrowLeft size={15} /> Back
+          <ArrowLeft size={15} /> Back to Properties
         </button>
 
         {/* Main grid */}
@@ -421,7 +442,7 @@ export default function PropertyDetails() {
           <div className="min-w-0">
             {/* Gallery */}
             <ImageGallery
-              imageCount={property.imageCount}
+              images={property.images ?? []}
               selectedImage={selectedImage}
               onSelect={setSelectedImage}
             />
@@ -572,6 +593,6 @@ export default function PropertyDetails() {
           </div>
         </div>
       </div>
-    </div>
+    </BrokerLayout>
   );
 }
