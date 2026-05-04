@@ -308,7 +308,7 @@ function DocumentRow({
         {/* View */}
         <button
           onClick={onView}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors ml-2"
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-primary bg-blue-50 hover:bg-primary hover:text-white transition-colors ml-2 cursor-pointer"
           title="View"
         >
           <Eye size={15} />
@@ -318,7 +318,7 @@ function DocumentRow({
         <div ref={dropRef} className="relative">
           <button
             onClick={() => setDropOpen((v) => !v)}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${dropOpen ? "bg-primary text-white" : "text-primary bg-blue-50 hover:bg-primary hover:text-white"}`}
             title="Edit"
           >
             <Pencil size={15} />
@@ -328,15 +328,15 @@ function DocumentRow({
             <div className="absolute right-0 top-full mt-1 bg-white rounded-xl border border-gray-200 shadow-lg z-20 py-1 min-w-[160px]">
               <button
                 onClick={() => { setDropOpen(false); onEditDetails(); }}
-                className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary transition-colors"
               >
-                <Edit size={13} className="text-gray-500" /> Edit Details
+                <Edit size={13} /> Edit Details
               </button>
               <button
                 onClick={() => { setDropOpen(false); onEditManually(); }}
-                className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary transition-colors"
               >
-                <PenLine size={13} className="text-gray-500" /> Edit Manually
+                <PenLine size={13} /> Edit Manually
               </button>
             </div>
           )}
@@ -345,7 +345,7 @@ function DocumentRow({
         {/* Download */}
         <button
           onClick={handleDownload}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-primary bg-blue-50 hover:bg-primary hover:text-white transition-colors cursor-pointer"
           title="Download"
         >
           <Download size={15} />
