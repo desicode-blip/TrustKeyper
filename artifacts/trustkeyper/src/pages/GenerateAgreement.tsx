@@ -1030,6 +1030,7 @@ function Step4Details({
       if (!monthlyRent) setMonthlyRent(property.monthlyRent || "");
       if (!securityDeposit) setSecurityDeposit(property.securityDeposit || "");
       if (property.maintenanceIncluded) setMaintenanceIncluded(true);
+      if (!maintenanceCharges && property.monthlyMaintenance) setMaintenanceCharges(property.monthlyMaintenance);
     }
   }, [property]);
 
@@ -1127,35 +1128,56 @@ function Step4Details({
 
 function Step5Brokerage({
   brokerageAmount, setBrokerageAmount,
+  brokerageAmountOwner, setBrokerageAmountOwner,
+  brokerageAmountTenant, setBrokerageAmountTenant,
   brokeragePaidBy, setBrokeragePaidBy,
   brokerageMode, setBrokerageMode,
   onContinue,
 }: {
   brokerageAmount: string; setBrokerageAmount: (v: string) => void;
+  brokerageAmountOwner: string; setBrokerageAmountOwner: (v: string) => void;
+  brokerageAmountTenant: string; setBrokerageAmountTenant: (v: string) => void;
   brokeragePaidBy: "Owner" | "Tenant" | "Both"; setBrokeragePaidBy: (v: "Owner" | "Tenant" | "Both") => void;
-  brokerageMode: "Cash" | "Bank Transfer" | "UPI"; setBrokerageMode: (v: "Cash" | "Bank Transfer" | "UPI") => void;
+  brokerageMode: "Bank Transfer" | "UPI"; setBrokerageMode: (v: "Bank Transfer" | "UPI") => void;
   onContinue: () => void;
 }) {
+  // Broker bank details (local — not persisted to agreement store)
+  const [holderName, setHolderName] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [ifscCode, setIfscCode] = useState("");
+  const [upiId, setUpiId] = useState("");
+  const qrRef = useRef<HTMLInputElement>(null);
+  const [qrFile, setQrFile] = useState("");
+
+  const amountFilled = brokeragePaidBy === "Both"
+    ? (brokerageAmountOwner.trim() !== "" && brokerageAmountTenant.trim() !== "")
+    : brokerageAmount.trim() !== "";
+
+  const bankDetailsFilled = brokerageMode === "Bank Transfer"
+    ? (holderName && bankName && accountNumber && ifscCode)
+    : (upiId || qrFile);
+
+  const valid = amountFilled && bankDetailsFilled;
+
   return (
     <div className="max-w-2xl">
-      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-5">
-        <div>
-          <FieldLabel required>Brokerage Amount (₹)</FieldLabel>
-          <TextInput type="number" value={brokerageAmount} onChange={setBrokerageAmount} placeholder="e.g. 15000" />
-          <p className="text-xs text-gray-400 mt-1">Leave as 0 if no brokerage is charged</p>
-        </div>
+      <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
 
-        <div className="pt-4 border-t border-gray-100">
-          <FieldLabel required>Brokerage Paid By</FieldLabel>
-          <div className="flex gap-3 mt-1">
+        {/* Who pays? */}
+        <div className="p-5">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            Who pays the brokerage?
+          </p>
+          <div className="flex gap-3">
             {(["Owner", "Tenant", "Both"] as const).map((opt) => (
               <button
                 key={opt}
-                onClick={() => setBrokeragePaidBy(opt)}
-                className={`flex-1 h-10 rounded-lg border text-sm font-medium transition-colors ${
+                onClick={() => { setBrokeragePaidBy(opt); setBrokerageAmount(""); setBrokerageAmountOwner(""); setBrokerageAmountTenant(""); }}
+                className={`flex-1 h-10 rounded-xl border text-sm font-medium transition-colors ${
                   brokeragePaidBy === opt
                     ? "border-primary bg-primary/5 text-primary"
-                    : "border-gray-300 text-gray-600 hover:border-primary/50"
+                    : "border-gray-200 text-gray-600 hover:border-primary/40"
                 }`}
               >
                 {opt}
@@ -1164,27 +1186,116 @@ function Step5Brokerage({
           </div>
         </div>
 
-        <div className="pt-4 border-t border-gray-100">
-          <FieldLabel required>Payment Mode</FieldLabel>
-          <div className="flex gap-3 mt-1">
-            {(["Cash", "Bank Transfer", "UPI"] as const).map((opt) => (
+        {/* Amount */}
+        <div className="p-5">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            Brokerage Amount
+          </p>
+          {brokeragePaidBy === "Both" ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <FieldLabel required>Owner pays (₹)</FieldLabel>
+                <TextInput type="number" value={brokerageAmountOwner} onChange={setBrokerageAmountOwner} placeholder="e.g. 7500" />
+              </div>
+              <div>
+                <FieldLabel required>Tenant pays (₹)</FieldLabel>
+                <TextInput type="number" value={brokerageAmountTenant} onChange={setBrokerageAmountTenant} placeholder="e.g. 7500" />
+              </div>
+            </div>
+          ) : (
+            <div>
+              <FieldLabel required>Amount (₹)</FieldLabel>
+              <TextInput type="number" value={brokerageAmount} onChange={setBrokerageAmount} placeholder="e.g. 15000" />
+              <p className="text-xs text-gray-400 mt-1">Enter 0 if no brokerage is charged</p>
+            </div>
+          )}
+        </div>
+
+        {/* Payment Mode */}
+        <div className="p-5">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            How will the broker receive payment?
+          </p>
+          <div className="flex gap-3 mb-5">
+            {(["Bank Transfer", "UPI"] as const).map((opt) => (
               <button
                 key={opt}
                 onClick={() => setBrokerageMode(opt)}
-                className={`flex-1 h-10 rounded-lg border text-sm font-medium transition-colors ${
+                className={`flex-1 h-10 rounded-xl border text-sm font-medium transition-colors ${
                   brokerageMode === opt
                     ? "border-primary bg-primary/5 text-primary"
-                    : "border-gray-300 text-gray-600 hover:border-primary/50"
+                    : "border-gray-200 text-gray-600 hover:border-primary/40"
                 }`}
               >
-                {opt}
+                {opt === "Bank Transfer" ? "🏦 Bank Transfer" : "📱 UPI"}
               </button>
             ))}
           </div>
+
+          {/* Broker Bank Details */}
+          {brokerageMode === "Bank Transfer" && (
+            <div className="space-y-4">
+              <p className="text-xs text-gray-500 font-medium">Enter your bank account details</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <FieldLabel required>Account Holder Name</FieldLabel>
+                  <TextInput value={holderName} onChange={setHolderName} placeholder="Full name" />
+                </div>
+                <div>
+                  <FieldLabel required>Bank Name</FieldLabel>
+                  <div className="relative">
+                    <select
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      className="w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white"
+                    >
+                      <option value=""></option>
+                      {BANK_NAMES.map((b) => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                    <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+                <div>
+                  <FieldLabel required>Account Number</FieldLabel>
+                  <TextInput value={accountNumber} onChange={setAccountNumber} placeholder="Enter account number" />
+                </div>
+                <div>
+                  <FieldLabel required>IFSC Code</FieldLabel>
+                  <TextInput value={ifscCode} onChange={(v) => setIfscCode(v.toUpperCase())} placeholder="e.g. SBIN0001234" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Broker UPI Details */}
+          {brokerageMode === "UPI" && (
+            <div className="space-y-4">
+              <p className="text-xs text-gray-500 font-medium">Enter your UPI details</p>
+              <div>
+                <FieldLabel>UPI ID</FieldLabel>
+                <TextInput value={upiId} onChange={setUpiId} placeholder="name@bank" />
+              </div>
+              <p className="text-xs text-gray-400 text-center font-medium">OR</p>
+              <div>
+                <FieldLabel>QR Code</FieldLabel>
+                <button
+                  onClick={() => qrRef.current?.click()}
+                  className="w-full h-20 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5 hover:border-primary/50 hover:bg-gray-50 transition-colors"
+                >
+                  {qrFile ? (
+                    <><Check size={18} className="text-green-500" /><span className="text-xs text-green-600 font-medium">QR uploaded: {qrFile}</span></>
+                  ) : (
+                    <><div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center"><Plus size={12} className="text-gray-600" /></div><span className="text-xs text-gray-600">Upload QR Code</span><span className="text-[10px] text-gray-400">(pdf, png, jpeg)</span></>
+                  )}
+                </button>
+                <input ref={qrRef} type="file" accept=".pdf,.png,.jpeg,.jpg" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setQrFile(e.target.files[0].name); }} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      <ContinueButton onClick={onContinue} disabled={!brokerageAmount} />
+      <ContinueButton onClick={onContinue} disabled={!valid} />
     </div>
   );
 }
@@ -1205,7 +1316,7 @@ function Step6Review({
   property, ownerName, ownerContact, additionalOwners, selectedTenants,
   startDate, monthlyRent, securityDeposit,
   lockInPeriod, noticePeriod, rentDueDay, maintenanceCharges,
-  brokerageAmount, brokeragePaidBy, brokerageMode,
+  brokerageAmount, brokerageAmountOwner, brokerageAmountTenant, brokeragePaidBy, brokerageMode,
   onGoToStep, onSubmit, submitting,
 }: {
   property: Property | null;
@@ -1214,7 +1325,8 @@ function Step6Review({
   startDate: string;
   monthlyRent: string; securityDeposit: string;
   lockInPeriod: string; noticePeriod: string; rentDueDay: string; maintenanceCharges: string;
-  brokerageAmount: string; brokeragePaidBy: string; brokerageMode: string;
+  brokerageAmount: string; brokerageAmountOwner: string; brokerageAmountTenant: string;
+  brokeragePaidBy: string; brokerageMode: string;
   onGoToStep: (s: Step) => void;
   onSubmit: () => void;
   submitting: boolean;
@@ -1268,7 +1380,12 @@ function Step6Review({
       title: "Brokerage",
       step: 5,
       rows: [
-        { icon: IndianRupee, label: "Brokerage Amount", value: brokerageAmount ? `₹${Number(brokerageAmount).toLocaleString("en-IN")}` : "₹0" },
+        {
+          icon: IndianRupee, label: "Brokerage Amount",
+          value: brokeragePaidBy === "Both"
+            ? `Owner: ₹${Number(brokerageAmountOwner || 0).toLocaleString("en-IN")} + Tenant: ₹${Number(brokerageAmountTenant || 0).toLocaleString("en-IN")}`
+            : brokerageAmount ? `₹${Number(brokerageAmount).toLocaleString("en-IN")}` : "₹0"
+        },
         { icon: Users, label: "Paid By", value: brokeragePaidBy },
         { icon: Wallet, label: "Payment Mode", value: brokerageMode },
       ],
@@ -1395,9 +1512,11 @@ export default function GenerateAgreement() {
   const [maintenanceCharges, setMaintenanceCharges] = useState("");
 
   // Step 5
-  const [brokerageAmount, setBrokerageAmount] = useState("0");
+  const [brokerageAmount, setBrokerageAmount] = useState("");
+  const [brokerageAmountOwner, setBrokerageAmountOwner] = useState("");
+  const [brokerageAmountTenant, setBrokerageAmountTenant] = useState("");
   const [brokeragePaidBy, setBrokeragePaidBy] = useState<"Owner" | "Tenant" | "Both">("Tenant");
-  const [brokerageMode, setBrokerageMode] = useState<"Cash" | "Bank Transfer" | "UPI">("Bank Transfer");
+  const [brokerageMode, setBrokerageMode] = useState<"Bank Transfer" | "UPI">("Bank Transfer");
 
   const stepTitles: Record<Step, string> = {
     1: "Select a property for the agreement",
@@ -1515,6 +1634,8 @@ export default function GenerateAgreement() {
       {step === 5 && (
         <Step5Brokerage
           brokerageAmount={brokerageAmount} setBrokerageAmount={setBrokerageAmount}
+          brokerageAmountOwner={brokerageAmountOwner} setBrokerageAmountOwner={setBrokerageAmountOwner}
+          brokerageAmountTenant={brokerageAmountTenant} setBrokerageAmountTenant={setBrokerageAmountTenant}
           brokeragePaidBy={brokeragePaidBy} setBrokeragePaidBy={setBrokeragePaidBy}
           brokerageMode={brokerageMode} setBrokerageMode={setBrokerageMode}
           onContinue={() => setStep(6)}
@@ -1529,7 +1650,8 @@ export default function GenerateAgreement() {
           monthlyRent={monthlyRent} securityDeposit={securityDeposit}
           lockInPeriod={lockInPeriod} noticePeriod={noticePeriod}
           rentDueDay={rentDueDay} maintenanceCharges={maintenanceCharges}
-          brokerageAmount={brokerageAmount} brokeragePaidBy={brokeragePaidBy} brokerageMode={brokerageMode}
+          brokerageAmount={brokerageAmount} brokerageAmountOwner={brokerageAmountOwner} brokerageAmountTenant={brokerageAmountTenant}
+          brokeragePaidBy={brokeragePaidBy} brokerageMode={brokerageMode}
           onGoToStep={setStep}
           onSubmit={handleSubmit}
           submitting={submitting}
