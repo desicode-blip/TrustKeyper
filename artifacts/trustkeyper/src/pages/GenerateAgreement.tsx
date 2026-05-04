@@ -38,7 +38,7 @@ import BrokerLayout from "@/components/BrokerLayout";
 import { getProperties, getPropertyTitle, type Property } from "@/lib/properties";
 import { getTenants, type Tenant } from "@/lib/tenants";
 import { addAgreement } from "@/lib/agreements";
-import { getBrokerProfile, hasBankDetails } from "@/lib/brokerProfile";
+import { getBrokerProfile, saveBrokerProfile, hasBankDetails } from "@/lib/brokerProfile";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1316,7 +1316,19 @@ function Step5Brokerage({
         </div>
       </div>
 
-      <ContinueButton onClick={onContinue} disabled={!valid} />
+      <ContinueButton
+        onClick={() => {
+          // Persist whatever the broker filled in back to their profile (one-time save)
+          const current = getBrokerProfile();
+          if (brokerageMode === "Bank Transfer" && holderName && bankName && accountNumber && ifscCode) {
+            saveBrokerProfile({ ...current, bankHolderName: holderName, bankName, bankAccountNumber: accountNumber, bankIFSC: ifscCode });
+          } else if (brokerageMode === "UPI" && (upiId || qrFile)) {
+            saveBrokerProfile({ ...current, upiId, upiQrFileName: qrFile });
+          }
+          onContinue();
+        }}
+        disabled={!valid}
+      />
     </div>
   );
 }
@@ -1478,6 +1490,11 @@ function Step6Review({
 // ─── Success Overlay ──────────────────────────────────────────────────────────
 
 function SuccessOverlay({ onDone }: { onDone: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 2000);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl p-10 max-w-sm w-full mx-4 text-center">
@@ -1485,18 +1502,19 @@ function SuccessOverlay({ onDone }: { onDone: () => void }) {
           <CheckCircle2 size={44} className="text-accent" />
         </div>
         <h2 className="text-xl font-bold text-gray-900 mb-2">Agreement Sent!</h2>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-gray-500 mb-4">
           The rental agreement has been created and sent to both parties for e-signing.
         </p>
         <div className="flex items-center gap-1.5 justify-center text-xs text-gray-500 mb-6">
           <BadgeCheck size={14} className="text-accent" />
           Powered by TrustKeyper E-Sign
         </div>
+        <p className="text-xs text-gray-400 mb-4">Redirecting to Documents…</p>
         <button
           onClick={onDone}
           className="w-full h-10 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90"
         >
-          Go to Deals
+          Go to Documents
         </button>
       </div>
     </div>
@@ -1594,7 +1612,7 @@ export default function GenerateAgreement() {
   return (
     <BrokerLayout>
       {showSuccess && (
-        <SuccessOverlay onDone={() => { setShowSuccess(false); setLocation("/broker/deals"); }} />
+        <SuccessOverlay onDone={() => { setShowSuccess(false); setLocation("/broker/documents"); }} />
       )}
 
       {/* Back */}
