@@ -15,6 +15,7 @@ import AddProperty from "@/pages/AddProperty";
 import PropertyDetails from "@/pages/PropertyDetails";
 import GenerateAgreement from "@/pages/GenerateAgreement";
 import AddProperty2 from "@/pages/AddProperty2";
+import BrokerProfile from "@/pages/BrokerProfile";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/broker/deals" component={BrokerDeals} />
       <Route path="/broker/commission" component={BrokerCommission} />
       <Route path="/broker/documents" component={BrokerDocuments} />
+      <Route path="/broker/profile" component={BrokerProfile} />
       <Route component={NotFound} />
     </Switch>
   );

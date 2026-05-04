@@ -38,6 +38,7 @@ import BrokerLayout from "@/components/BrokerLayout";
 import { getProperties, getPropertyTitle, type Property } from "@/lib/properties";
 import { getTenants, type Tenant } from "@/lib/tenants";
 import { addAgreement } from "@/lib/agreements";
+import { getBrokerProfile, hasBankDetails } from "@/lib/brokerProfile";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1141,14 +1142,17 @@ function Step5Brokerage({
   brokerageMode: "Bank Transfer" | "UPI"; setBrokerageMode: (v: "Bank Transfer" | "UPI") => void;
   onContinue: () => void;
 }) {
-  // Broker bank details (local — not persisted to agreement store)
-  const [holderName, setHolderName] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [ifscCode, setIfscCode] = useState("");
-  const [upiId, setUpiId] = useState("");
+  // Auto-fill broker payment details from saved profile
+  const savedProfile = getBrokerProfile();
+  const bankMissing = !hasBankDetails();
+
+  const [holderName, setHolderName] = useState(savedProfile.bankHolderName || "");
+  const [bankName, setBankName] = useState(savedProfile.bankName || "");
+  const [accountNumber, setAccountNumber] = useState(savedProfile.bankAccountNumber || "");
+  const [ifscCode, setIfscCode] = useState(savedProfile.bankIFSC || "");
+  const [upiId, setUpiId] = useState(savedProfile.upiId || "");
   const qrRef = useRef<HTMLInputElement>(null);
-  const [qrFile, setQrFile] = useState("");
+  const [qrFile, setQrFile] = useState(savedProfile.upiQrFileName || "");
 
   const amountFilled = brokeragePaidBy === "Both"
     ? (brokerageAmountOwner.trim() !== "" && brokerageAmountTenant.trim() !== "")
@@ -1162,6 +1166,23 @@ function Step5Brokerage({
 
   return (
     <div className="max-w-2xl">
+      {/* Banner if broker profile bank details are missing */}
+      {bankMissing && (
+        <div className="mb-4 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <div className="mt-0.5 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shrink-0">
+            <span className="text-white text-xs font-bold">!</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800">Save your bank details to your profile</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Enter them once in{" "}
+              <a href="/broker/profile" className="underline font-medium hover:text-amber-900">My Profile</a>
+              {" "}and they'll be auto-filled here every time — no re-entry needed.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
 
         {/* Who pays? */}
@@ -1425,21 +1446,30 @@ function Step6Review({
         </div>
       </div>
 
-      <button
-        onClick={onSubmit}
-        disabled={submitting}
-        className={`flex items-center justify-center gap-2 w-full h-12 rounded-xl text-sm font-semibold transition-colors ${
-          submitting ? "bg-primary/60 text-white cursor-not-allowed" : "bg-primary text-white hover:bg-primary/90"
-        }`}
-      >
-        {submitting ? (
-          <><RefreshCw size={16} className="animate-spin" /> Sending…</>
-        ) : (
-          <><Send size={16} /> Send for E-Signing</>
-        )}
-      </button>
+      <div className="flex gap-3 mt-2">
+        <button
+          onClick={() => onGoToStep(1)}
+          disabled={submitting}
+          className="flex items-center justify-center gap-2 flex-1 h-12 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          <Edit2 size={15} /> Edit Details
+        </button>
+        <button
+          onClick={onSubmit}
+          disabled={submitting}
+          className={`flex items-center justify-center gap-2 flex-[2] h-12 rounded-xl text-sm font-semibold transition-colors ${
+            submitting ? "bg-accent/70 text-white cursor-not-allowed" : "bg-accent text-white hover:bg-accent/90"
+          }`}
+        >
+          {submitting ? (
+            <><RefreshCw size={16} className="animate-spin" /> Sending…</>
+          ) : (
+            <><Send size={16} /> Send for E-Signing</>
+          )}
+        </button>
+      </div>
       <p className="text-xs text-gray-400 text-center mt-2">
-        Agreement will be sent to owner and tenant for digital signatures
+        "Edit Details" restarts the flow from Step 1 · Agreement will be sent to all parties for digital signatures
       </p>
     </div>
   );
