@@ -10,6 +10,7 @@ import {
   Send,
   Search,
   ChevronRight,
+  ChevronDown,
   Plus,
   Check,
   X,
@@ -62,11 +63,11 @@ function ProgressBar({ current }: { current: Step }) {
                 active
                   ? "bg-primary/10 text-primary border border-primary/30"
                   : done
-                  ? "text-gray-400"
+                  ? "text-green-600"
                   : "text-gray-400"
               }`}
             >
-              <Icon size={13} />
+              {done ? <Check size={13} /> : <Icon size={13} />}
               <span>{s.label === "Review & Send" ? "Review & Send" : s.label}</span>
             </div>
             {i < STEPS.length - 1 && (
@@ -299,161 +300,265 @@ function Step1Property({
 
 // ─── Step 2 — Parties ─────────────────────────────────────────────────────────
 
-function Step2Parties({
-  property,
-  ownerName, setOwnerName,
-  ownerContact, setOwnerContact,
-  tenantName, setTenantName,
-  tenantContact, setTenantContact,
-  tenantAadhaar, setTenantAadhaar,
-  tenantPan, setTenantPan,
-  coTenantName, setCoTenantName,
-  coTenantContact, setCoTenantContact,
-  onContinue,
-}: {
-  property: Property | null;
-  ownerName: string; setOwnerName: (v: string) => void;
-  ownerContact: string; setOwnerContact: (v: string) => void;
-  tenantName: string; setTenantName: (v: string) => void;
-  tenantContact: string; setTenantContact: (v: string) => void;
-  tenantAadhaar: string; setTenantAadhaar: (v: string) => void;
-  tenantPan: string; setTenantPan: (v: string) => void;
-  coTenantName: string; setCoTenantName: (v: string) => void;
-  coTenantContact: string; setCoTenantContact: (v: string) => void;
-  onContinue: () => void;
-}) {
-  const [tenants] = useState<Tenant[]>(() => getTenants());
-  const [tenantSearch, setTenantSearch] = useState("");
-  const [tenantDropOpen, setTenantDropOpen] = useState(false);
-  const [showCoTenant, setShowCoTenant] = useState(false);
-  const tenantRef = useRef<HTMLDivElement>(null);
+interface Party { name: string; contact: string; }
 
-  useEffect(() => {
-    if (property) {
-      setOwnerName(property.ownerName || "");
-      setOwnerContact(property.ownerContact || "");
-    }
-  }, [property]);
+function PartyCard({ name, contact, badge, onRemove }: {
+  name: string; contact: string; badge?: string; onRemove?: () => void;
+}) {
+  return (
+    <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 bg-white mb-2 ${badge ? "border-primary/30 bg-primary/5" : "border-gray-200"}`}>
+      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+        <User size={15} className="text-gray-500" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-semibold text-gray-900 truncate">{name}</p>
+          {badge && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/15 text-primary uppercase tracking-wide">
+              {badge}
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 mt-0.5">{contact}</p>
+      </div>
+      {badge ? (
+        <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+          <Check size={13} className="text-green-600" />
+        </div>
+      ) : (
+        onRemove && (
+          <button onClick={onRemove} className="text-xs text-red-500 font-medium hover:text-red-700 shrink-0 ml-1">
+            Remove
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
+function InlinePartyForm({ label, onAdd, onCancel }: {
+  label: string; onAdd: (name: string, contact: string) => void; onCancel: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [contact, setContact] = useState("");
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3 mb-3">
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder={`${label} name`}
+        className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+      />
+      <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+        <span className="px-3 h-9 flex items-center text-sm text-gray-500 border-r border-gray-200 bg-gray-50 shrink-0">+91</span>
+        <input
+          value={contact}
+          onChange={(e) => setContact(e.target.value)}
+          placeholder="Phone"
+          className="flex-1 h-9 px-3 text-sm focus:outline-none"
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => { if (name.trim()) onAdd(name.trim(), contact.trim()); }}
+          disabled={!name.trim()}
+          className="px-5 h-9 rounded-lg bg-primary text-white text-sm font-semibold disabled:opacity-50 hover:bg-primary/90 transition-colors"
+        >
+          Add
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-5 h-9 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TenantSearchDrop({ allTenants, onSelect, onClose }: {
+  allTenants: Tenant[]; onSelect: (t: Tenant) => void; onClose: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (tenantRef.current && !tenantRef.current.contains(e.target as Node)) {
-        setTenantDropOpen(false);
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  }, [onClose]);
 
-  const filteredTenants = tenants.filter((t) =>
-    t.name.toLowerCase().includes(tenantSearch.toLowerCase()) ||
-    t.phone.includes(tenantSearch)
+  const filtered = allTenants.filter((t) =>
+    t.name.toLowerCase().includes(query.toLowerCase()) || t.phone.includes(query)
   );
 
-  const selectTenant = (t: Tenant) => {
-    setTenantName(t.name);
-    setTenantContact(t.phone.replace(/^\+91/, ""));
-    setTenantSearch(t.name);
+  return (
+    <div ref={ref} className="absolute z-20 top-full mt-1 left-0 right-0 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+      <div className="p-2 border-b border-gray-100">
+        <input
+          autoFocus
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search tenants…"
+          className="w-full h-8 px-3 rounded-md text-sm border border-gray-200 focus:outline-none focus:border-primary"
+        />
+      </div>
+      <div className="max-h-44 overflow-y-auto">
+        {filtered.length === 0 ? (
+          <div className="px-3 py-4 text-center text-xs text-gray-400">No tenants found</div>
+        ) : (
+          filtered.map((t, i) => (
+            <button
+              key={t.id}
+              onClick={() => onSelect(t)}
+              className={`w-full text-left px-3 py-2.5 hover:bg-gray-50 transition-colors ${i > 0 ? "border-t border-gray-100" : ""}`}
+            >
+              <p className="text-sm font-medium text-gray-900">{t.name}</p>
+              <p className="text-xs text-gray-400">{t.phone}</p>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Step2Parties({
+  property,
+  ownerName, ownerContact,
+  additionalOwners, setAdditionalOwners,
+  selectedTenants, setSelectedTenants,
+  onContinue,
+}: {
+  property: Property | null;
+  ownerName: string; ownerContact: string;
+  additionalOwners: Party[]; setAdditionalOwners: (v: Party[]) => void;
+  selectedTenants: Party[]; setSelectedTenants: (v: Party[]) => void;
+  onContinue: () => void;
+}) {
+  const allTenants = getTenants();
+  const [showOwnerForm, setShowOwnerForm] = useState(false);
+  const [tenantDropOpen, setTenantDropOpen] = useState(false);
+  const [showTenantForm, setShowTenantForm] = useState(false);
+  const tenantDropRef = useRef<HTMLDivElement>(null);
+
+  const addOwner = (name: string, contact: string) => {
+    setAdditionalOwners([...additionalOwners, { name, contact: contact ? `+91 ${contact}` : "" }]);
+    setShowOwnerForm(false);
+  };
+
+  const removeOwner = (i: number) => setAdditionalOwners(additionalOwners.filter((_, idx) => idx !== i));
+
+  const addTenantFromSearch = (t: Tenant) => {
+    if (!selectedTenants.find((s) => s.name === t.name)) {
+      setSelectedTenants([...selectedTenants, { name: t.name, contact: t.phone }]);
+    }
     setTenantDropOpen(false);
   };
 
-  const valid = ownerName.trim() && ownerContact.trim() && tenantName.trim() && tenantContact.trim();
+  const addTenantManual = (name: string, contact: string) => {
+    setSelectedTenants([...selectedTenants, { name, contact: contact ? `+91 ${contact}` : "" }]);
+    setShowTenantForm(false);
+  };
+
+  const removeTenant = (i: number) => setSelectedTenants(selectedTenants.filter((_, idx) => idx !== i));
+
+  const canContinue = selectedTenants.length > 0;
 
   return (
-    <div className="max-w-2xl space-y-6">
-      {/* Owner */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-            <User size={14} className="text-primary" />
-          </div>
-          <h3 className="text-sm font-semibold text-gray-900">Owner / Landlord</h3>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <FieldLabel required>Full Name</FieldLabel>
-            <TextInput value={ownerName} onChange={setOwnerName} placeholder="Owner's full name" />
-          </div>
-          <div>
-            <FieldLabel required>Phone / Email</FieldLabel>
-            <TextInput value={ownerContact} onChange={setOwnerContact} placeholder="Phone or email" />
-          </div>
-        </div>
+    <div className="max-w-2xl">
+      <div className="text-center mb-8">
+        <h2 className="text-xl font-bold text-gray-900">Rental Agreement Between</h2>
+        <p className="text-sm text-gray-500 mt-1">Who will be part of this agreement?</p>
       </div>
 
-      {/* Tenant */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center">
-            <Users size={14} className="text-accent" />
-          </div>
-          <h3 className="text-sm font-semibold text-gray-900">Primary Tenant</h3>
+      <div className="grid grid-cols-2 gap-6">
+        {/* ── Owner(s) ── */}
+        <div>
+          <p className="text-sm font-semibold text-gray-800 mb-3">Owner(s)</p>
+
+          {/* Primary owner card */}
+          <PartyCard
+            name={ownerName || "Owner"}
+            contact={ownerContact}
+            badge="Primary"
+          />
+
+          {/* Additional owners */}
+          {additionalOwners.map((o, i) => (
+            <PartyCard key={i} name={o.name} contact={o.contact} onRemove={() => removeOwner(i)} />
+          ))}
+
+          {/* "Add additional owner…" dropdown trigger */}
+          {!showOwnerForm && (
+            <button
+              onClick={() => setShowOwnerForm(true)}
+              className="flex items-center justify-between w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-sm text-gray-500 hover:border-primary/50 mb-3 transition-colors"
+            >
+              <span>Add additional owner…</span>
+              <ChevronDown size={14} className="text-gray-400" />
+            </button>
+          )}
+
+          {/* Inline form for additional owner */}
+          {showOwnerForm && (
+            <InlinePartyForm label="Owner" onAdd={addOwner} onCancel={() => setShowOwnerForm(false)} />
+          )}
+
+          {/* Add New Owner button */}
+          <button
+            onClick={() => { setShowOwnerForm(true); }}
+            className="flex items-center justify-center gap-1.5 w-full h-9 rounded-xl border border-primary/40 text-sm text-primary font-medium hover:bg-primary/5 transition-colors"
+          >
+            <Plus size={14} /> Add New Owner +
+          </button>
         </div>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div ref={tenantRef} className="relative">
-            <FieldLabel required>Full Name</FieldLabel>
-            <div className={`flex items-center gap-2 h-10 px-3 rounded-lg border bg-white ${tenantDropOpen ? "border-primary ring-2 ring-primary/20" : "border-gray-300"}`}>
-              <Search size={14} className="text-gray-400 shrink-0" />
-              <input
-                value={tenantSearch || tenantName}
-                onChange={(e) => { setTenantSearch(e.target.value); setTenantName(e.target.value); setTenantDropOpen(true); }}
-                onFocus={() => setTenantDropOpen(true)}
-                placeholder="Search or enter name"
-                className="flex-1 text-sm bg-transparent outline-none"
+
+        {/* ── Tenant(s) ── */}
+        <div>
+          <p className="text-sm font-semibold text-gray-800 mb-3">Tenant(s)</p>
+
+          {/* Added tenants */}
+          {selectedTenants.map((t, i) => (
+            <PartyCard key={i} name={t.name} contact={t.contact} onRemove={() => removeTenant(i)} />
+          ))}
+
+          {/* Choose a tenant dropdown */}
+          <div ref={tenantDropRef} className="relative mb-3">
+            <button
+              onClick={() => { setTenantDropOpen((v) => !v); setShowTenantForm(false); }}
+              className="flex items-center justify-between w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-sm text-gray-500 hover:border-primary/50 transition-colors"
+            >
+              <span>Choose a tenant…</span>
+              <ChevronDown size={14} className="text-gray-400" />
+            </button>
+            {tenantDropOpen && (
+              <TenantSearchDrop
+                allTenants={allTenants}
+                onSelect={addTenantFromSearch}
+                onClose={() => setTenantDropOpen(false)}
               />
-            </div>
-            {tenantDropOpen && filteredTenants.length > 0 && (
-              <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden max-h-44 overflow-y-auto">
-                {filteredTenants.map((t, i) => (
-                  <button
-                    key={t.id}
-                    onClick={() => selectTenant(t)}
-                    className={`w-full text-left px-3 py-2.5 hover:bg-gray-50 ${i > 0 ? "border-t border-gray-100" : ""}`}
-                  >
-                    <p className="text-sm font-medium text-gray-900">{t.name}</p>
-                    <p className="text-xs text-gray-400">{t.phone}</p>
-                  </button>
-                ))}
-              </div>
             )}
           </div>
-          <div>
-            <FieldLabel required>Phone Number</FieldLabel>
-            <TextInput value={tenantContact} onChange={setTenantContact} placeholder="10-digit mobile" />
-          </div>
-          <div>
-            <FieldLabel>Aadhaar Number</FieldLabel>
-            <TextInput value={tenantAadhaar} onChange={setTenantAadhaar} placeholder="XXXX XXXX XXXX" />
-          </div>
-          <div>
-            <FieldLabel>PAN Number</FieldLabel>
-            <TextInput value={tenantPan} onChange={setTenantPan} placeholder="ABCDE1234F" />
-          </div>
+
+          {/* Add New Tenant form / button */}
+          {showTenantForm ? (
+            <InlinePartyForm label="Tenant" onAdd={addTenantManual} onCancel={() => setShowTenantForm(false)} />
+          ) : (
+            <button
+              onClick={() => { setShowTenantForm(true); setTenantDropOpen(false); }}
+              className="flex items-center justify-center gap-1.5 w-full h-9 rounded-xl border border-primary/40 text-sm text-primary font-medium hover:bg-primary/5 transition-colors"
+            >
+              <Plus size={14} /> Add New Tenant +
+            </button>
+          )}
         </div>
-
-        <button
-          onClick={() => setShowCoTenant((v) => !v)}
-          className="flex items-center gap-1.5 text-xs text-primary font-medium hover:underline"
-        >
-          {showCoTenant ? <X size={13} /> : <Plus size={13} />}
-          {showCoTenant ? "Remove Co-Tenant" : "+ Add Co-Tenant"}
-        </button>
-
-        {showCoTenant && (
-          <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
-            <div>
-              <FieldLabel>Co-Tenant Name</FieldLabel>
-              <TextInput value={coTenantName} onChange={setCoTenantName} placeholder="Co-tenant's name" />
-            </div>
-            <div>
-              <FieldLabel>Co-Tenant Phone</FieldLabel>
-              <TextInput value={coTenantContact} onChange={setCoTenantContact} placeholder="10-digit mobile" />
-            </div>
-          </div>
-        )}
       </div>
 
-      <ContinueButton onClick={onContinue} disabled={!valid} />
+      <ContinueButton onClick={onContinue} disabled={!canContinue} />
     </div>
   );
 }
@@ -754,8 +859,7 @@ function ReviewRow({ icon: Icon, label, value }: { icon: React.ElementType; labe
 }
 
 function Step6Review({
-  property, ownerName, ownerContact, tenantName, tenantContact,
-  tenantAadhaar, tenantPan, coTenantName,
+  property, ownerName, ownerContact, additionalOwners, selectedTenants,
   startDate, endDate, monthlyRent, securityDeposit,
   lockInPeriod, noticePeriod, rentDueDay, maintenanceCharges,
   brokerageAmount, brokeragePaidBy, brokerageMode,
@@ -764,8 +868,7 @@ function Step6Review({
 }: {
   property: Property | null;
   ownerName: string; ownerContact: string;
-  tenantName: string; tenantContact: string;
-  tenantAadhaar: string; tenantPan: string; coTenantName: string;
+  additionalOwners: Party[]; selectedTenants: Party[];
   startDate: string; endDate: string;
   monthlyRent: string; securityDeposit: string;
   lockInPeriod: string; noticePeriod: string; rentDueDay: string; maintenanceCharges: string;
@@ -781,6 +884,12 @@ function Step6Review({
     return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   };
 
+  const allOwners = [{ name: ownerName, contact: ownerContact }, ...additionalOwners];
+  const ownerNames = allOwners.map((o) => o.name).filter(Boolean).join(", ");
+  const ownerContacts = allOwners.map((o) => o.contact).filter(Boolean).join(", ");
+  const tenantNames = selectedTenants.map((t) => t.name).join(", ") || "—";
+  const tenantContacts = selectedTenants.map((t) => t.contact).filter(Boolean).join(", ");
+
   const sections: { title: string; step: Step; rows: { icon: React.ElementType; label: string; value: string }[] }[] = [
     {
       title: "Property",
@@ -795,11 +904,10 @@ function Step6Review({
       title: "Parties",
       step: 2,
       rows: [
-        { icon: User, label: "Owner Name", value: ownerName },
-        { icon: Phone, label: "Owner Contact", value: ownerContact },
-        { icon: Users, label: "Tenant Name", value: tenantName + (coTenantName ? ` + ${coTenantName}` : "") },
-        { icon: Phone, label: "Tenant Contact", value: tenantContact },
-        { icon: CreditCard, label: "Aadhaar / PAN", value: [tenantAadhaar, tenantPan].filter(Boolean).join(" / ") },
+        { icon: User, label: "Owner(s)", value: ownerNames },
+        { icon: Phone, label: "Owner Contact", value: ownerContacts },
+        { icon: Users, label: "Tenant(s)", value: tenantNames },
+        { icon: Phone, label: "Tenant Contact", value: tenantContacts },
       ],
     },
     {
@@ -930,12 +1038,18 @@ export default function GenerateAgreement() {
   // Step 2
   const [ownerName, setOwnerName] = useState("");
   const [ownerContact, setOwnerContact] = useState("");
-  const [tenantName, setTenantName] = useState("");
-  const [tenantContact, setTenantContact] = useState("");
-  const [tenantAadhaar, setTenantAadhaar] = useState("");
-  const [tenantPan, setTenantPan] = useState("");
-  const [coTenantName, setCoTenantName] = useState("");
-  const [coTenantContact, setCoTenantContact] = useState("");
+  const [additionalOwners, setAdditionalOwners] = useState<Party[]>([]);
+  const [selectedTenants, setSelectedTenants] = useState<Party[]>([]);
+  const tenantAadhaar = "";
+  const tenantPan = "";
+
+  // Auto-fill owner from selected property
+  useEffect(() => {
+    if (selectedProperty) {
+      setOwnerName(selectedProperty.ownerName || "");
+      setOwnerContact(selectedProperty.ownerContact || "");
+    }
+  }, [selectedProperty]);
 
   // Step 3
   const [documents, setDocuments] = useState<UploadedDoc[]>([]);
@@ -967,18 +1081,19 @@ export default function GenerateAgreement() {
   const handleSubmit = () => {
     if (!selectedProperty) return;
     setSubmitting(true);
+    const primaryTenant = selectedTenants[0];
     setTimeout(() => {
       addAgreement({
         propertyId: selectedProperty.id,
         propertyTitle: getPropertyTitle(selectedProperty),
         ownerName,
         ownerContact,
-        tenantName,
-        tenantContact,
+        tenantName: primaryTenant?.name ?? "",
+        tenantContact: primaryTenant?.contact ?? "",
         tenantAadhaar,
         tenantPan,
-        coTenantName,
-        coTenantContact,
+        coTenantName: selectedTenants.slice(1).map((t) => t.name).join(", "),
+        coTenantContact: selectedTenants.slice(1).map((t) => t.contact).join(", "),
         startDate,
         endDate,
         monthlyRent,
@@ -1022,8 +1137,10 @@ export default function GenerateAgreement() {
       {/* Progress */}
       <ProgressBar current={step} />
 
-      {/* Step label */}
-      <p className="text-base font-semibold text-gray-800 mb-5">{stepTitles[step]}</p>
+      {/* Step label — hidden on step 2 which has its own heading */}
+      {step !== 2 && (
+        <p className="text-base font-semibold text-gray-800 mb-5">{stepTitles[step]}</p>
+      )}
 
       {/* Step Content */}
       {step === 1 && (
@@ -1036,14 +1153,9 @@ export default function GenerateAgreement() {
       {step === 2 && (
         <Step2Parties
           property={selectedProperty}
-          ownerName={ownerName} setOwnerName={setOwnerName}
-          ownerContact={ownerContact} setOwnerContact={setOwnerContact}
-          tenantName={tenantName} setTenantName={setTenantName}
-          tenantContact={tenantContact} setTenantContact={setTenantContact}
-          tenantAadhaar={tenantAadhaar} setTenantAadhaar={setTenantAadhaar}
-          tenantPan={tenantPan} setTenantPan={setTenantPan}
-          coTenantName={coTenantName} setCoTenantName={setCoTenantName}
-          coTenantContact={coTenantContact} setCoTenantContact={setCoTenantContact}
+          ownerName={ownerName} ownerContact={ownerContact}
+          additionalOwners={additionalOwners} setAdditionalOwners={setAdditionalOwners}
+          selectedTenants={selectedTenants} setSelectedTenants={setSelectedTenants}
           onContinue={() => setStep(3)}
         />
       )}
@@ -1080,8 +1192,7 @@ export default function GenerateAgreement() {
         <Step6Review
           property={selectedProperty}
           ownerName={ownerName} ownerContact={ownerContact}
-          tenantName={tenantName} tenantContact={tenantContact}
-          tenantAadhaar={tenantAadhaar} tenantPan={tenantPan} coTenantName={coTenantName}
+          additionalOwners={additionalOwners} selectedTenants={selectedTenants}
           startDate={startDate} endDate={endDate}
           monthlyRent={monthlyRent} securityDeposit={securityDeposit}
           lockInPeriod={lockInPeriod} noticePeriod={noticePeriod}
