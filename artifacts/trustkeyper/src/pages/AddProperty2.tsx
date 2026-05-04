@@ -275,7 +275,7 @@ export default function AddProperty2() {
   // ── Submit ────────────────────────────────────────────────────────────────────
 
   const handleSubmit = () => {
-    addProperty({
+    const newProp = addProperty({
       nickname,
       address,
       area,
@@ -309,6 +309,7 @@ export default function AddProperty2() {
       imageCount: imageUrls.length,
       status: "Active",
     });
+    try { sessionStorage.setItem("agreement_pending_property", newProp.id); } catch {}
     setShowSuccess(true);
     setTimeout(() => {
       setShowSuccess(false);

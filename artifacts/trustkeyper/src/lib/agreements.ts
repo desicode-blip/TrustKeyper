@@ -24,7 +24,7 @@ export interface Agreement {
   brokerageAmount: string;
   brokeragePaidBy: "Owner" | "Tenant" | "Both";
   brokerageMode: "Cash" | "Bank Transfer" | "UPI";
-  documents: { name: string; dataUrl: string }[];
+  documents?: { name: string; dataUrl: string }[];
   status: AgreementStatus;
   createdAt: number;
 }

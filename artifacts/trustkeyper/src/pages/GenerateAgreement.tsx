@@ -28,6 +28,11 @@ import {
   Edit2,
   Trash2,
   RefreshCw,
+  Eye,
+  Clock,
+  AlertTriangle,
+  Link2,
+  QrCode,
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
 import { getProperties, getPropertyTitle, type Property } from "@/lib/properties";
@@ -162,7 +167,16 @@ function Step1Property({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setProperties(getProperties());
+    const props = getProperties();
+    setProperties(props);
+    try {
+      const pendingId = sessionStorage.getItem("agreement_pending_property");
+      if (pendingId) {
+        const pending = props.find((p) => p.id === pendingId);
+        if (pending) { onSelect(pending); }
+        sessionStorage.removeItem("agreement_pending_property");
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -565,100 +579,423 @@ function Step2Parties({
 
 // ─── Step 3 — Documents ───────────────────────────────────────────────────────
 
-interface UploadedDoc { name: string; dataUrl: string; size: number }
+type DocStatus = "pending" | "uploaded" | "link_sent";
 
-const DOC_TYPES = [
-  "Tenant Aadhaar Card",
-  "Tenant PAN Card",
-  "Owner Aadhaar Card",
-  "Previous Rent Agreement",
-  "Police Verification",
-  "Other",
+interface DocState {
+  id: "aadhaar" | "pan" | "bank";
+  label: string;
+  status: DocStatus;
+  fileName?: string;
+  fileSize?: number;
+  uploadedAt?: number;
+}
+
+interface PersonState {
+  name: string;
+  contact: string;
+  personLabel: string;
+  docs: DocState[];
+}
+
+interface BankData {
+  mode: "bank" | "upi";
+  holderName: string;
+  bankName: string;
+  accountNumber: string;
+  ifscCode: string;
+  upiId: string;
+}
+
+const BANK_NAMES = [
+  "State Bank of India", "HDFC Bank", "ICICI Bank", "Axis Bank",
+  "Kotak Mahindra Bank", "Punjab National Bank", "Bank of Baroda",
+  "Canara Bank", "Union Bank of India", "IndusInd Bank", "Yes Bank",
 ];
 
-function Step3Documents({
-  documents, setDocuments, onContinue,
-}: {
-  documents: UploadedDoc[];
-  setDocuments: React.Dispatch<React.SetStateAction<UploadedDoc[]>>;
-  onContinue: () => void;
-}) {
-  const [dragOver, setDragOver] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+function initPersonDocs(name: string, contact: string, label: string): PersonState {
+  return {
+    name, contact, personLabel: label,
+    docs: [
+      { id: "aadhaar", label: "Aadhaar Card", status: "pending" },
+      { id: "pan", label: "PAN Card", status: "pending" },
+      { id: "bank", label: "Bank Account Details", status: "pending" },
+    ],
+  };
+}
 
-  const readFiles = useCallback((files: FileList | null) => {
-    if (!files) return;
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        if (dataUrl) {
-          setDocuments((prev) => [...prev, { name: file.name, dataUrl, size: file.size }]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-  }, [setDocuments]);
+function fmtFileSize(b: number) {
+  return b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${(b / 1024).toFixed(1)} KB` : `${(b / (1024 * 1024)).toFixed(1)} MB`;
+}
 
-  const removeDoc = (idx: number) => setDocuments((prev) => prev.filter((_, i) => i !== idx));
+// ── Bank Details Modal ────────────────────────────────────────────────────────
 
-  const fmtSize = (b: number) => b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${(b / 1024).toFixed(1)} KB` : `${(b / (1024 * 1024)).toFixed(1)} MB`;
+function BankModal({ onSave, onClose }: { onSave: (d: BankData) => void; onClose: () => void }) {
+  const [tab, setTab] = useState<"bank" | "upi">("bank");
+  const [holderName, setHolderName] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [ifscCode, setIfscCode] = useState("");
+  const [upiId, setUpiId] = useState("");
+  const qrRef = useRef<HTMLInputElement>(null);
+  const [qrFile, setQrFile] = useState("");
+
+  const bankValid = holderName && bankName && accountNumber && ifscCode;
+  const upiValid = upiId || qrFile;
 
   return (
-    <div className="max-w-2xl">
-      <p className="text-sm text-gray-500 mb-5">Upload supporting documents for the agreement. All documents are securely stored.</p>
-
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => { e.preventDefault(); setDragOver(false); readFiles(e.dataTransfer.files); }}
-        onClick={() => fileRef.current?.click()}
-        className={`flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-10 cursor-pointer transition-colors mb-5 ${
-          dragOver ? "border-primary bg-primary/5" : "border-gray-300 bg-gray-50 hover:border-primary/50 hover:bg-primary/5"
-        }`}
-      >
-        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-          <Upload size={22} className="text-primary" />
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md relative">
+        <button onClick={onClose} className="absolute top-4 right-4 w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
+          <X size={14} className="text-gray-600" />
+        </button>
+        <div className="px-6 pt-6 pb-2 border-b border-gray-100">
+          <h3 className="text-base font-bold text-gray-900 text-center mb-5">Add Bank Details</h3>
+          <div className="flex gap-2 mb-1">
+            <button
+              onClick={() => setTab("bank")}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${tab === "bank" ? "bg-accent/15 border-accent/30 text-green-800" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+            >
+              Bank account
+            </button>
+            <button
+              onClick={() => setTab("upi")}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${tab === "upi" ? "bg-accent/15 border-accent/30 text-green-800" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+            >
+              UPI
+            </button>
+          </div>
         </div>
-        <div className="text-center">
-          <p className="text-sm font-medium text-gray-700">
-            Drop files here or <span className="text-primary">browse</span>
-          </p>
-          <p className="text-xs text-gray-400 mt-0.5">PDF, JPG, PNG up to 10 MB each</p>
-        </div>
-        <input ref={fileRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={(e) => readFiles(e.target.files)} />
-      </div>
 
-      {/* Suggested doc types */}
-      <div className="mb-5">
-        <p className="text-xs text-gray-500 font-medium mb-2">Commonly required documents</p>
-        <div className="flex flex-wrap gap-2">
-          {DOC_TYPES.map((d) => (
-            <span key={d} className="px-2.5 py-1 rounded-full bg-gray-100 text-xs text-gray-600 border border-gray-200">
-              {d}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {documents.length > 0 && (
-        <div className="space-y-2 mb-2">
-          {documents.map((doc, i) => (
-            <div key={i} className="flex items-center gap-3 bg-white rounded-lg border border-gray-200 px-4 py-3">
-              <FileText size={16} className="text-primary shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">{doc.name}</p>
-                <p className="text-xs text-gray-400">{fmtSize(doc.size)}</p>
+        <div className="px-6 py-5 space-y-4">
+          {tab === "bank" ? (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Account Holder Name*</label>
+                  <input value={holderName} onChange={(e) => setHolderName(e.target.value)} className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Bank Name*</label>
+                  <div className="relative">
+                    <select value={bankName} onChange={(e) => setBankName(e.target.value)} className="w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm appearance-none focus:outline-none focus:border-primary bg-white">
+                      <option value=""></option>
+                      {BANK_NAMES.map((b) => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                    <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Account Number*</label>
+                  <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">IFSC Code*</label>
+                  <input value={ifscCode} onChange={(e) => setIfscCode(e.target.value.toUpperCase())} placeholder="e.g. SBIN0001234" className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                </div>
               </div>
-              <button onClick={() => removeDoc(i)} className="text-gray-400 hover:text-red-500 transition-colors">
-                <Trash2 size={15} />
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1 text-center">UPI ID</label>
+                <input value={upiId} onChange={(e) => setUpiId(e.target.value)} placeholder="name@bank" className="w-full h-9 px-3 rounded-lg border border-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-center" />
+              </div>
+              <p className="text-center text-xs text-gray-400 font-medium">OR</p>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">QR Code</label>
+                <button
+                  onClick={() => qrRef.current?.click()}
+                  className="w-full h-24 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5 hover:border-primary/50 hover:bg-gray-50 transition-colors"
+                >
+                  {qrFile ? (
+                    <><Check size={20} className="text-green-500" /><span className="text-xs text-green-600 font-medium">QR uploaded</span></>
+                  ) : (
+                    <><div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center"><Plus size={14} className="text-gray-600" /></div><span className="text-xs text-gray-600 font-medium">Upload QR Code</span><span className="text-[10px] text-gray-400">(pdf, png, jpeg)</span></>
+                  )}
+                </button>
+                <input ref={qrRef} type="file" accept=".pdf,.png,.jpeg,.jpg" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setQrFile(e.target.files[0].name); }} />
+              </div>
+            </>
+          )}
+
+          <button
+            onClick={() => { if (tab === "bank" ? bankValid : upiValid) { onSave({ mode: tab, holderName, bankName, accountNumber, ifscCode, upiId }); } }}
+            disabled={tab === "bank" ? !bankValid : !upiValid}
+            className={`flex items-center justify-center gap-2 w-full h-10 rounded-xl text-sm font-semibold transition-colors ${(tab === "bank" ? bankValid : upiValid) ? "bg-primary text-white hover:bg-primary/90" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+          >
+            Continue <ChevronRight size={15} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Document Row ──────────────────────────────────────────────────────────────
+
+function DocRow({ doc, personName, onUpload, onSendLink, onRemove, onAddDetails }: {
+  doc: DocState;
+  personName: string;
+  onUpload: (file: File) => void;
+  onSendLink: () => void;
+  onRemove: () => void;
+  onAddDetails: () => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${doc.status === "uploaded" ? "bg-white border-gray-200" : doc.status === "link_sent" ? "bg-white border-gray-200" : "bg-amber-50/40 border-amber-100"}`}>
+      {/* Status icon */}
+      <div className="shrink-0">
+        {doc.status === "uploaded" && <CheckCircle2 size={20} className="text-green-500" />}
+        {doc.status === "link_sent" && <Clock size={20} className="text-blue-400" />}
+        {doc.status === "pending" && <AlertTriangle size={20} className="text-amber-400" />}
+      </div>
+
+      {/* Label + info */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-900">{doc.label}</p>
+        {doc.status === "uploaded" && (
+          <p className="text-xs text-gray-500 mt-0.5">
+            {doc.fileName ? `${doc.fileName} · ${doc.fileSize ? fmtFileSize(doc.fileSize) : ""} · ` : ""}
+            Uploaded just now · <span className="text-green-600 font-medium">Verified ✓</span>
+          </p>
+        )}
+        {doc.status === "link_sent" && (
+          <p className="text-xs text-gray-500 mt-0.5">
+            Waiting for {personName} to upload · <span className="text-blue-500">Link sent Just now</span>
+          </p>
+        )}
+        {doc.status === "pending" && (
+          <p className="text-xs text-gray-400 mt-0.5">Pending upload</p>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 shrink-0">
+        {doc.status === "uploaded" && (
+          <>
+            <button className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors">
+              <Eye size={12} /> View
+            </button>
+            <button onClick={onRemove} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400"><RefreshCw size={13} /></button>
+            <button onClick={onRemove} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>
+          </>
+        )}
+        {doc.status === "link_sent" && (
+          <>
+            <button onClick={onSendLink} className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors">
+              <RefreshCw size={11} /> Resend
+            </button>
+            <button onClick={onRemove} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>
+          </>
+        )}
+        {doc.status === "pending" && (
+          <>
+            {doc.id === "bank" ? (
+              <button onClick={onAddDetails} className="flex items-center gap-1 text-xs bg-primary text-white rounded-lg px-3 py-1.5 font-medium hover:bg-primary/90 transition-colors">
+                <Plus size={11} /> Add Details
               </button>
-            </div>
-          ))}
+            ) : (
+              <>
+                <button onClick={() => fileRef.current?.click()} className="flex items-center gap-1 text-xs bg-primary text-white rounded-lg px-3 py-1.5 font-medium hover:bg-primary/90 transition-colors">
+                  <Upload size={11} /> Upload
+                </button>
+                <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={(e) => { if (e.target.files?.[0]) onUpload(e.target.files[0]); }} />
+              </>
+            )}
+            <button onClick={onSendLink} className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors">
+              <Send size={11} /> Send Link
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Step 3 Main ───────────────────────────────────────────────────────────────
+
+function Step3Documents({
+  allParties, ownerCount, onContinue,
+}: {
+  allParties: Party[];
+  ownerCount: number;
+  onContinue: () => void;
+}) {
+  const [persons, setPersons] = useState<PersonState[]>(() => {
+    if (!allParties || allParties.length === 0) return [initPersonDocs("Owner", "", "OWNER 1")];
+    let ownerIdx = 0;
+    let tenantIdx = 0;
+    return allParties.map((p, i) => {
+      let label: string;
+      if (i < ownerCount) {
+        ownerIdx++;
+        label = ownerCount === 1 ? "OWNER" : `OWNER ${ownerIdx}`;
+      } else {
+        tenantIdx++;
+        label = `TENANT ${tenantIdx}`;
+      }
+      return initPersonDocs(p.name, p.contact, label);
+    });
+  });
+
+  const [personIdx, setPersonIdx] = useState(0);
+  const [bankModal, setBankModal] = useState<{ pIdx: number; dIdx: number } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const updateDoc = (pIdx: number, dIdx: number, update: Partial<DocState>) => {
+    setPersons((prev) => prev.map((p, pi) =>
+      pi !== pIdx ? p : { ...p, docs: p.docs.map((d, di) => di !== dIdx ? d : { ...d, ...update }) }
+    ));
+  };
+
+  const handleUpload = (pIdx: number, dIdx: number, file: File) => {
+    updateDoc(pIdx, dIdx, { status: "uploaded", fileName: file.name, fileSize: file.size, uploadedAt: Date.now() });
+  };
+
+  const handleSendLink = (pIdx: number, dIdx: number) => {
+    updateDoc(pIdx, dIdx, { status: "link_sent" });
+  };
+
+  const handleResetDoc = (pIdx: number, dIdx: number) => {
+    updateDoc(pIdx, dIdx, { status: "pending", fileName: undefined, fileSize: undefined });
+  };
+
+  const handleSendAllPending = (pIdx: number) => {
+    const person = persons[pIdx];
+    const pendingCount = person.docs.filter((d) => d.status === "pending").length;
+    if (pendingCount === 0) return;
+    setPersons((prev) => prev.map((p, pi) =>
+      pi !== pIdx ? p : { ...p, docs: p.docs.map((d) => d.status === "pending" ? { ...d, status: "link_sent" as DocStatus } : d) }
+    ));
+    showToast(`Upload links sent to ${person.name || "person"} for ${pendingCount} document${pendingCount > 1 ? "s" : ""} ✓`);
+  };
+
+  const handleBankSave = (data: BankData) => {
+    if (!bankModal) return;
+    updateDoc(bankModal.pIdx, bankModal.dIdx, { status: "uploaded", fileName: data.mode === "upi" ? "UPI Details" : "Bank Account", uploadedAt: Date.now() });
+    setBankModal(null);
+  };
+
+  const person = persons[personIdx];
+  const isLast = personIdx === persons.length - 1;
+  const allDoneForPerson = person?.docs.every((d) => d.status !== "pending");
+  const allDone = persons.every((p) => p.docs.every((d) => d.status !== "pending"));
+
+  if (persons.length === 0) {
+    return (
+      <div className="max-w-lg text-center py-12">
+        <p className="text-sm text-gray-500 mb-4">No parties selected. Go back and add owners and tenants first.</p>
+        <ContinueButton onClick={onContinue} label="Skip" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-xl">
+      {/* Bank modal */}
+      {bankModal && <BankModal onSave={handleBankSave} onClose={() => setBankModal(null)} />}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2 bg-gray-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg">
+          <CheckCircle2 size={16} className="text-green-400 shrink-0" />
+          {toast}
         </div>
       )}
 
-      <ContinueButton onClick={onContinue} label={documents.length === 0 ? "Skip for now" : "Continue"} />
+      {/* Person card */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        {/* Card header nav */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+          <button
+            onClick={() => setPersonIdx((i) => Math.max(0, i - 1))}
+            disabled={personIdx === 0}
+            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 disabled:opacity-30 transition-colors"
+          >
+            <ArrowLeft size={13} /> Back
+          </button>
+          {/* progress dots */}
+          <div className="flex items-center gap-1.5">
+            {persons.map((_, i) => (
+              <div
+                key={i}
+                className={`rounded-full transition-all ${i === personIdx ? "w-5 h-2 bg-primary" : "w-2 h-2 bg-gray-200"}`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Person info */}
+        <div className="px-5 pt-4 pb-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-bold text-teal-600 tracking-widest mb-2">{person.personLabel}</p>
+              <div className="flex items-center gap-2 mb-1">
+                <User size={14} className="text-gray-400 shrink-0" />
+                <p className="text-sm font-semibold text-gray-900">{person.name || "—"}</p>
+              </div>
+              <div className="flex items-center gap-4 mb-1 ml-0.5">
+                {person.contact && (
+                  <span className="flex items-center gap-1 text-xs text-gray-500">
+                    <Phone size={11} /> {person.contact}
+                  </span>
+                )}
+              </div>
+              <button className="flex items-center gap-1 text-xs text-primary mt-1 hover:underline">
+                <Plus size={11} /> Add alt phone
+              </button>
+            </div>
+            {allDoneForPerson && (
+              <span className="flex items-center gap-1 text-xs text-green-600 font-semibold bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+                <Check size={11} /> All Done
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => handleSendAllPending(personIdx)}
+            disabled={allDoneForPerson}
+            className={`mt-3 flex items-center justify-center gap-1.5 w-full h-8 rounded-lg border text-xs font-medium transition-colors ${allDoneForPerson ? "border-gray-100 text-gray-300 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary hover:bg-primary/5"}`}
+          >
+            <Send size={12} /> Send All Pending Links
+          </button>
+        </div>
+
+        {/* Doc rows */}
+        <div className="px-5 pb-5 space-y-2">
+          {person.docs.map((doc, dIdx) => (
+            <DocRow
+              key={doc.id}
+              doc={doc}
+              personName={person.name}
+              onUpload={(file) => handleUpload(personIdx, dIdx, file)}
+              onSendLink={() => handleSendLink(personIdx, dIdx)}
+              onRemove={() => handleResetDoc(personIdx, dIdx)}
+              onAddDetails={() => setBankModal({ pIdx: personIdx, dIdx })}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Navigation button */}
+      <div className="mt-4">
+        {isLast ? (
+          <ContinueButton onClick={onContinue} label="Continue" />
+        ) : (
+          <ContinueButton onClick={() => setPersonIdx((i) => i + 1)} label="Next Person" />
+        )}
+        {!allDoneForPerson && (
+          <p className="text-xs text-center text-gray-400 mt-2">
+            Upload or send link for all required documents to continue
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -863,7 +1200,6 @@ function Step6Review({
   startDate, endDate, monthlyRent, securityDeposit,
   lockInPeriod, noticePeriod, rentDueDay, maintenanceCharges,
   brokerageAmount, brokeragePaidBy, brokerageMode,
-  documents,
   onGoToStep, onSubmit, submitting,
 }: {
   property: Property | null;
@@ -873,7 +1209,6 @@ function Step6Review({
   monthlyRent: string; securityDeposit: string;
   lockInPeriod: string; noticePeriod: string; rentDueDay: string; maintenanceCharges: string;
   brokerageAmount: string; brokeragePaidBy: string; brokerageMode: string;
-  documents: UploadedDoc[];
   onGoToStep: (s: Step) => void;
   onSubmit: () => void;
   submitting: boolean;
@@ -961,17 +1296,9 @@ function Step6Review({
             </button>
           </div>
           <div className="px-5 py-3">
-            {documents.length === 0 ? (
-              <p className="text-sm text-gray-400">No documents uploaded</p>
-            ) : (
-              <div className="space-y-1.5">
-                {documents.map((d, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm text-gray-700">
-                    <FileText size={13} className="text-primary" /> {d.name}
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <CheckCircle2 size={14} /> Documents collected via upload or send-link flow
+            </div>
           </div>
         </div>
       </div>
@@ -1051,8 +1378,7 @@ export default function GenerateAgreement() {
     }
   }, [selectedProperty]);
 
-  // Step 3
-  const [documents, setDocuments] = useState<UploadedDoc[]>([]);
+  // Step 3 — managed internally by Step3Documents
 
   // Step 4
   const [startDate, setStartDate] = useState("");
@@ -1105,7 +1431,6 @@ export default function GenerateAgreement() {
         brokerageAmount,
         brokeragePaidBy,
         brokerageMode,
-        documents: documents.map((d) => ({ name: d.name, dataUrl: d.dataUrl })),
         status: "Sent",
       });
       setSubmitting(false);
@@ -1161,8 +1486,12 @@ export default function GenerateAgreement() {
       )}
       {step === 3 && (
         <Step3Documents
-          documents={documents}
-          setDocuments={setDocuments}
+          allParties={[
+            { name: ownerName, contact: ownerContact },
+            ...additionalOwners,
+            ...selectedTenants,
+          ]}
+          ownerCount={1 + additionalOwners.length}
           onContinue={() => setStep(4)}
         />
       )}
@@ -1198,7 +1527,6 @@ export default function GenerateAgreement() {
           lockInPeriod={lockInPeriod} noticePeriod={noticePeriod}
           rentDueDay={rentDueDay} maintenanceCharges={maintenanceCharges}
           brokerageAmount={brokerageAmount} brokeragePaidBy={brokeragePaidBy} brokerageMode={brokerageMode}
-          documents={documents}
           onGoToStep={setStep}
           onSubmit={handleSubmit}
           submitting={submitting}
