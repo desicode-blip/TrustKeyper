@@ -25,6 +25,7 @@ export interface Agreement {
   brokeragePaidBy: "Owner" | "Tenant" | "Both";
   brokerageMode: "Cash" | "Bank Transfer" | "UPI";
   documents?: { name: string; dataUrl: string }[];
+  customText?: string;
   status: AgreementStatus;
   createdAt: number;
 }
@@ -39,6 +40,14 @@ export function getAgreements(): Agreement[] {
   } catch {
     return [];
   }
+}
+
+export function updateAgreement(id: string, patch: Partial<Agreement>): void {
+  const list = getAgreements();
+  const idx = list.findIndex((a) => a.id === id);
+  if (idx === -1) return;
+  list[idx] = { ...list[idx], ...patch };
+  try { sessionStorage.setItem(KEY, JSON.stringify(list)); } catch {}
 }
 
 export function addAgreement(
