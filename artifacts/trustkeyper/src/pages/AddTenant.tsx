@@ -774,7 +774,7 @@ export default function AddTenant() {
               <Button
                 onClick={() => {
                   setSuccessOpen(false);
-                  setLocation("/broker/tenants");
+                  setLocation("/broker/agreements/generate");
                 }}
                 className="bg-primary hover:bg-primary/90"
               >

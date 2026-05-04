@@ -14,6 +14,7 @@ export default function BrokerDashboard() {
   const [, setLocation] = useLocation();
   const goAddTenant = () => setLocation("/broker/tenants/add");
   const goAddProperty = () => setLocation("/broker/properties/add");
+  const goGenerateAgreement = () => setLocation("/broker/agreements/generate");
 
   return (
     <BrokerLayout>
@@ -24,7 +25,10 @@ export default function BrokerDashboard() {
           <span className="inline-block">👋</span>
         </h1>
         <div className="flex items-center gap-3 flex-wrap">
-          <button className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90">
+          <button
+            onClick={goGenerateAgreement}
+            className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90"
+          >
             <Plus size={16} /> Generate Rent Agreement
           </button>
           <button
@@ -55,7 +59,10 @@ export default function BrokerDashboard() {
             Generate rental agreements, collect documents, and complete
             digital signing, all in one place with TrustKeyper.
           </p>
-          <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90">
+          <button
+            onClick={goGenerateAgreement}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90"
+          >
             Continue <ArrowRight size={14} />
           </button>
         </div>
