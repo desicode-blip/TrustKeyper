@@ -1346,10 +1346,12 @@ function ReviewRow({ icon: Icon, label, value }: { icon: React.ElementType; labe
 }
 
 function Step6Review({
-  property, ownerName, ownerContact, additionalOwners, selectedTenants,
+  property,
+  ownerName, ownerContact, additionalOwners, selectedTenants,
   startDate, monthlyRent, securityDeposit,
   lockInPeriod, noticePeriod, rentDueDay, maintenanceCharges,
   brokerageAmount, brokerageAmountOwner, brokerageAmountTenant, brokeragePaidBy, brokerageMode,
+  onUpdateParties, onUpdateDetails, onUpdateBrokerage,
   onGoToStep, onSubmit, submitting,
 }: {
   property: Property | null;
@@ -1360,14 +1362,63 @@ function Step6Review({
   lockInPeriod: string; noticePeriod: string; rentDueDay: string; maintenanceCharges: string;
   brokerageAmount: string; brokerageAmountOwner: string; brokerageAmountTenant: string;
   brokeragePaidBy: string; brokerageMode: string;
+  onUpdateParties: (d: { ownerName: string; ownerContact: string; additionalOwners: Party[]; selectedTenants: Party[] }) => void;
+  onUpdateDetails: (d: { startDate: string; monthlyRent: string; securityDeposit: string; lockInPeriod: string; noticePeriod: string; rentDueDay: string; maintenanceCharges: string }) => void;
+  onUpdateBrokerage: (d: { brokerageAmount: string; brokerageAmountOwner: string; brokerageAmountTenant: string; brokeragePaidBy: "Owner" | "Tenant" | "Both"; brokerageMode: "Bank Transfer" | "UPI" }) => void;
   onGoToStep: (s: Step) => void;
   onSubmit: () => void;
   submitting: boolean;
 }) {
+  type EditSection = "parties" | "details" | "brokerage" | null;
+  const [editing, setEditing] = useState<EditSection>(null);
+
+  // Parties draft
+  const [dOwnerName, setDOwnerName] = useState(ownerName);
+  const [dOwnerContact, setDOwnerContact] = useState(ownerContact);
+  const [dAddlOwners, setDAddlOwners] = useState<Party[]>(additionalOwners);
+  const [dTenants, setDTenants] = useState<Party[]>(selectedTenants);
+
+  // Details draft
+  const [dStartDate, setDStartDate] = useState(startDate);
+  const [dRent, setDRent] = useState(monthlyRent);
+  const [dDeposit, setDDeposit] = useState(securityDeposit);
+  const [dLockIn, setDLockIn] = useState(lockInPeriod);
+  const [dNotice, setDNotice] = useState(noticePeriod);
+  const [dRentDay, setDRentDay] = useState(rentDueDay);
+  const [dMaint, setDMaint] = useState(maintenanceCharges);
+
+  // Brokerage draft
+  const [dBroPaidBy, setDBroPaidBy] = useState<"Owner" | "Tenant" | "Both">(brokeragePaidBy as "Owner" | "Tenant" | "Both");
+  const [dBroAmt, setDBroAmt] = useState(brokerageAmount);
+  const [dBroAmtOwner, setDBroAmtOwner] = useState(brokerageAmountOwner);
+  const [dBroAmtTenant, setDBroAmtTenant] = useState(brokerageAmountTenant);
+  const [dBroMode, setDBroMode] = useState<"Bank Transfer" | "UPI">(brokerageMode as "Bank Transfer" | "UPI");
+
+  const startEdit = (sec: EditSection) => {
+    if (sec === "parties") {
+      setDOwnerName(ownerName); setDOwnerContact(ownerContact);
+      setDAddlOwners([...additionalOwners]); setDTenants([...selectedTenants]);
+    } else if (sec === "details") {
+      setDStartDate(startDate); setDRent(monthlyRent); setDDeposit(securityDeposit);
+      setDLockIn(lockInPeriod); setDNotice(noticePeriod); setDRentDay(rentDueDay); setDMaint(maintenanceCharges);
+    } else if (sec === "brokerage") {
+      setDBroPaidBy(brokeragePaidBy as "Owner" | "Tenant" | "Both");
+      setDBroAmt(brokerageAmount); setDBroAmtOwner(brokerageAmountOwner); setDBroAmtTenant(brokerageAmountTenant);
+      setDBroMode(brokerageMode as "Bank Transfer" | "UPI");
+    }
+    setEditing(sec);
+  };
+
+  const saveEdit = () => {
+    if (editing === "parties") onUpdateParties({ ownerName: dOwnerName, ownerContact: dOwnerContact, additionalOwners: dAddlOwners, selectedTenants: dTenants });
+    else if (editing === "details") onUpdateDetails({ startDate: dStartDate, monthlyRent: dRent, securityDeposit: dDeposit, lockInPeriod: dLockIn, noticePeriod: dNotice, rentDueDay: dRentDay, maintenanceCharges: dMaint });
+    else if (editing === "brokerage") onUpdateBrokerage({ brokerageAmount: dBroAmt, brokerageAmountOwner: dBroAmtOwner, brokerageAmountTenant: dBroAmtTenant, brokeragePaidBy: dBroPaidBy, brokerageMode: dBroMode });
+    setEditing(null);
+  };
+
   const fmtDate = (v: string) => {
     if (!v) return "—";
-    const d = new Date(v);
-    return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    return new Date(v).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   };
 
   const allOwners = [{ name: ownerName, contact: ownerContact }, ...additionalOwners];
@@ -1376,80 +1427,200 @@ function Step6Review({
   const tenantNames = selectedTenants.map((t) => t.name).join(", ") || "—";
   const tenantContacts = selectedTenants.map((t) => t.contact).filter(Boolean).join(", ");
 
-  const sections: { title: string; step: Step; rows: { icon: React.ElementType; label: string; value: string }[] }[] = [
-    {
-      title: "Property",
-      step: 1,
-      rows: [
-        { icon: Home, label: "Property", value: property ? getPropertyTitle(property) : "—" },
-        { icon: Building2, label: "Location", value: property ? `${property.area}, ${property.city}` : "—" },
-        { icon: IndianRupee, label: "Listed Rent", value: property ? `₹${Number(property.monthlyRent).toLocaleString("en-IN")}/mo` : "—" },
-      ],
-    },
-    {
-      title: "Parties",
-      step: 2,
-      rows: [
-        { icon: User, label: "Owner(s)", value: ownerNames },
-        { icon: Phone, label: "Owner Contact", value: ownerContacts },
-        { icon: Users, label: "Tenant(s)", value: tenantNames },
-        { icon: Phone, label: "Tenant Contact", value: tenantContacts },
-      ],
-    },
-    {
-      title: "Agreement Details",
-      step: 4,
-      rows: [
-        { icon: Calendar, label: "Start Date", value: fmtDate(startDate) },
-        { icon: IndianRupee, label: "Monthly Rent", value: monthlyRent ? `₹${Number(monthlyRent).toLocaleString("en-IN")}` : "—" },
-        { icon: Wallet, label: "Security Deposit", value: securityDeposit ? `₹${Number(securityDeposit).toLocaleString("en-IN")}` : "—" },
-        { icon: Lock, label: "Lock-in Period", value: lockInPeriod },
-        { icon: Bell, label: "Notice Period", value: noticePeriod },
-        { icon: Calendar, label: "Rent Due Day", value: rentDueDay ? `${rentDueDay}${rentDueDay === "1" ? "st" : rentDueDay === "2" ? "nd" : rentDueDay === "3" ? "rd" : "th"} of month` : "—" },
-        { icon: IndianRupee, label: "Maintenance", value: maintenanceCharges ? `₹${Number(maintenanceCharges).toLocaleString("en-IN")}` : "Not included" },
-      ],
-    },
-    {
-      title: "Brokerage",
-      step: 5,
-      rows: [
-        {
-          icon: IndianRupee, label: "Brokerage Amount",
-          value: brokeragePaidBy === "Both"
-            ? `Owner: ₹${Number(brokerageAmountOwner || 0).toLocaleString("en-IN")} + Tenant: ₹${Number(brokerageAmountTenant || 0).toLocaleString("en-IN")}`
-            : brokerageAmount ? `₹${Number(brokerageAmount).toLocaleString("en-IN")}` : "₹0"
-        },
-        { icon: Users, label: "Paid By", value: brokeragePaidBy },
-        { icon: Wallet, label: "Payment Mode", value: brokerageMode },
-      ],
-    },
-  ];
+  const SectionHeader = ({ title, section, onNavigate }: { title: string; section: EditSection; onNavigate?: () => void }) => (
+    <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50">
+      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{title}</p>
+      {editing === section ? (
+        <div className="flex items-center gap-2">
+          <button onClick={saveEdit} className="flex items-center gap-1 text-xs font-semibold text-white bg-primary px-2.5 py-1 rounded-lg hover:bg-primary/90 transition-colors">
+            <Check size={11} /> Save
+          </button>
+          <button onClick={() => setEditing(null)} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 px-1.5 py-1 rounded-lg hover:bg-gray-100 transition-colors">
+            <X size={11} /> Cancel
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => section ? startEdit(section) : onNavigate?.()}
+          className="flex items-center gap-1 text-xs text-primary hover:underline"
+        >
+          <Edit2 size={11} /> Edit
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <div className="max-w-2xl">
       <div className="space-y-4 mb-6">
-        {sections.map((sec) => (
-          <div key={sec.title} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50">
-              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{sec.title}</p>
-              <button onClick={() => onGoToStep(sec.step)} className="flex items-center gap-1 text-xs text-primary hover:underline">
-                <Edit2 size={11} /> Edit
-              </button>
-            </div>
-            <div className="px-5 py-1">
-              {sec.rows.map((r) => <ReviewRow key={r.label} {...r} />)}
-            </div>
-          </div>
-        ))}
 
-        {/* Documents */}
+        {/* ── Property ── */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50">
-            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Documents</p>
-            <button onClick={() => onGoToStep(3)} className="flex items-center gap-1 text-xs text-primary hover:underline">
-              <Edit2 size={11} /> Edit
-            </button>
+          <SectionHeader title="Property" section={null} onNavigate={() => onGoToStep(1)} />
+          <div className="px-5 py-1">
+            <ReviewRow icon={Home} label="Property" value={property ? getPropertyTitle(property) : "—"} />
+            <ReviewRow icon={Building2} label="Location" value={property ? `${property.area}, ${property.city}` : "—"} />
+            <ReviewRow icon={IndianRupee} label="Listed Rent" value={property ? `₹${Number(property.monthlyRent).toLocaleString("en-IN")}/mo` : "—"} />
           </div>
+        </div>
+
+        {/* ── Parties ── */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <SectionHeader title="Parties" section="parties" />
+          {editing === "parties" ? (
+            <div className="px-5 py-4 space-y-4">
+              <div>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Primary Owner</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><FieldLabel>Name</FieldLabel><TextInput value={dOwnerName} onChange={setDOwnerName} placeholder="Owner name" /></div>
+                  <div><FieldLabel>Phone</FieldLabel><TextInput value={dOwnerContact} onChange={setDOwnerContact} placeholder="Phone number" /></div>
+                </div>
+              </div>
+              {dAddlOwners.map((o, i) => (
+                <div key={i}>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Additional Owner {i + 1}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><FieldLabel>Name</FieldLabel><TextInput value={o.name} onChange={(v) => setDAddlOwners((arr) => arr.map((x, j) => j === i ? { ...x, name: v } : x))} placeholder="Name" /></div>
+                    <div><FieldLabel>Phone</FieldLabel><TextInput value={o.contact} onChange={(v) => setDAddlOwners((arr) => arr.map((x, j) => j === i ? { ...x, contact: v } : x))} placeholder="Phone" /></div>
+                  </div>
+                </div>
+              ))}
+              {dTenants.map((t, i) => (
+                <div key={i}>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Tenant {i + 1}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><FieldLabel>Name</FieldLabel><TextInput value={t.name} onChange={(v) => setDTenants((arr) => arr.map((x, j) => j === i ? { ...x, name: v } : x))} placeholder="Name" /></div>
+                    <div><FieldLabel>Phone</FieldLabel><TextInput value={t.contact} onChange={(v) => setDTenants((arr) => arr.map((x, j) => j === i ? { ...x, contact: v } : x))} placeholder="Phone" /></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="px-5 py-1">
+              <ReviewRow icon={User} label="Owner(s)" value={ownerNames} />
+              <ReviewRow icon={Phone} label="Owner Contact" value={ownerContacts} />
+              <ReviewRow icon={Users} label="Tenant(s)" value={tenantNames} />
+              <ReviewRow icon={Phone} label="Tenant Contact" value={tenantContacts} />
+            </div>
+          )}
+        </div>
+
+        {/* ── Agreement Details ── */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <SectionHeader title="Agreement Details" section="details" />
+          {editing === "details" ? (
+            <div className="px-5 py-4 grid grid-cols-2 gap-4">
+              <div>
+                <FieldLabel required>Start Date</FieldLabel>
+                <input type="date" value={dStartDate} onChange={(e) => setDStartDate(e.target.value)} className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div>
+                <FieldLabel required>Monthly Rent (₹)</FieldLabel>
+                <TextInput type="number" value={dRent} onChange={setDRent} placeholder="e.g. 25000" />
+              </div>
+              <div>
+                <FieldLabel>Security Deposit (₹)</FieldLabel>
+                <TextInput type="number" value={dDeposit} onChange={setDDeposit} placeholder="e.g. 50000" />
+              </div>
+              <div>
+                <FieldLabel>Maintenance Charges (₹)</FieldLabel>
+                <TextInput type="number" value={dMaint} onChange={setDMaint} placeholder="e.g. 2000" />
+              </div>
+              <div>
+                <FieldLabel>Lock-in Period</FieldLabel>
+                <div className="relative">
+                  <select value={dLockIn} onChange={(e) => setDLockIn(e.target.value)} className="w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white">
+                    <option value=""></option>
+                    {Array.from({ length: 11 }, (_, i) => i + 1).map((m) => <option key={m} value={`${m} month${m > 1 ? "s" : ""}`}>{m} month{m > 1 ? "s" : ""}</option>)}
+                  </select>
+                  <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <FieldLabel>Notice Period</FieldLabel>
+                <div className="relative">
+                  <select value={dNotice} onChange={(e) => setDNotice(e.target.value)} className="w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white">
+                    <option value=""></option>
+                    {["1 month", "2 months", "3 months"].map((o) => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                  <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <FieldLabel>Rent Due Day</FieldLabel>
+                <div className="relative">
+                  <select value={dRentDay} onChange={(e) => setDRentDay(e.target.value)} className="w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white">
+                    <option value=""></option>
+                    {Array.from({ length: 28 }, (_, i) => String(i + 1)).map((d) => <option key={d} value={d}>{d}{d === "1" ? "st" : d === "2" ? "nd" : d === "3" ? "rd" : "th"} of month</option>)}
+                  </select>
+                  <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="px-5 py-1">
+              <ReviewRow icon={Calendar} label="Start Date" value={fmtDate(startDate)} />
+              <ReviewRow icon={IndianRupee} label="Monthly Rent" value={monthlyRent ? `₹${Number(monthlyRent).toLocaleString("en-IN")}` : "—"} />
+              <ReviewRow icon={Wallet} label="Security Deposit" value={securityDeposit ? `₹${Number(securityDeposit).toLocaleString("en-IN")}` : "—"} />
+              <ReviewRow icon={Lock} label="Lock-in Period" value={lockInPeriod} />
+              <ReviewRow icon={Bell} label="Notice Period" value={noticePeriod} />
+              <ReviewRow icon={Calendar} label="Rent Due Day" value={rentDueDay ? `${rentDueDay}${rentDueDay === "1" ? "st" : rentDueDay === "2" ? "nd" : rentDueDay === "3" ? "rd" : "th"} of month` : "—"} />
+              <ReviewRow icon={IndianRupee} label="Maintenance" value={maintenanceCharges ? `₹${Number(maintenanceCharges).toLocaleString("en-IN")}` : "Not included"} />
+            </div>
+          )}
+        </div>
+
+        {/* ── Brokerage ── */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <SectionHeader title="Brokerage" section="brokerage" />
+          {editing === "brokerage" ? (
+            <div className="px-5 py-4 space-y-4">
+              <div>
+                <FieldLabel>Paid By</FieldLabel>
+                <div className="flex gap-2 mt-1">
+                  {(["Owner", "Tenant", "Both"] as const).map((opt) => (
+                    <button key={opt} onClick={() => { setDBroPaidBy(opt); setDBroAmt(""); setDBroAmtOwner(""); setDBroAmtTenant(""); }}
+                      className={`flex-1 h-9 rounded-xl border text-sm font-medium transition-colors ${dBroPaidBy === opt ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-600 hover:border-primary/40"}`}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {dBroPaidBy === "Both" ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div><FieldLabel required>Owner pays (₹)</FieldLabel><TextInput type="number" value={dBroAmtOwner} onChange={setDBroAmtOwner} placeholder="e.g. 7500" /></div>
+                  <div><FieldLabel required>Tenant pays (₹)</FieldLabel><TextInput type="number" value={dBroAmtTenant} onChange={setDBroAmtTenant} placeholder="e.g. 7500" /></div>
+                </div>
+              ) : (
+                <div><FieldLabel required>Amount (₹)</FieldLabel><TextInput type="number" value={dBroAmt} onChange={setDBroAmt} placeholder="e.g. 15000" /></div>
+              )}
+              <div>
+                <FieldLabel>Payment Mode</FieldLabel>
+                <div className="flex gap-2 mt-1">
+                  {(["Bank Transfer", "UPI"] as const).map((opt) => (
+                    <button key={opt} onClick={() => setDBroMode(opt)}
+                      className={`flex-1 h-9 rounded-xl border text-sm font-medium transition-colors ${dBroMode === opt ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-600 hover:border-primary/40"}`}>
+                      {opt === "Bank Transfer" ? "🏦 Bank Transfer" : "📱 UPI"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="px-5 py-1">
+              <ReviewRow icon={IndianRupee} label="Brokerage Amount"
+                value={brokeragePaidBy === "Both"
+                  ? `Owner: ₹${Number(brokerageAmountOwner || 0).toLocaleString("en-IN")} + Tenant: ₹${Number(brokerageAmountTenant || 0).toLocaleString("en-IN")}`
+                  : brokerageAmount ? `₹${Number(brokerageAmount).toLocaleString("en-IN")}` : "₹0"} />
+              <ReviewRow icon={Users} label="Paid By" value={brokeragePaidBy} />
+              <ReviewRow icon={Wallet} label="Payment Mode" value={brokerageMode} />
+            </div>
+          )}
+        </div>
+
+        {/* ── Documents ── */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <SectionHeader title="Documents" section={null} onNavigate={() => onGoToStep(3)} />
           <div className="px-5 py-3">
             <div className="flex items-center gap-2 text-sm text-green-600">
               <CheckCircle2 size={14} /> Documents collected via upload or send-link flow
@@ -1700,6 +1871,20 @@ export default function GenerateAgreement() {
           rentDueDay={rentDueDay} maintenanceCharges={maintenanceCharges}
           brokerageAmount={brokerageAmount} brokerageAmountOwner={brokerageAmountOwner} brokerageAmountTenant={brokerageAmountTenant}
           brokeragePaidBy={brokeragePaidBy} brokerageMode={brokerageMode}
+          onUpdateParties={(d) => {
+            setOwnerName(d.ownerName); setOwnerContact(d.ownerContact);
+            setAdditionalOwners(d.additionalOwners); setSelectedTenants(d.selectedTenants);
+          }}
+          onUpdateDetails={(d) => {
+            setStartDate(d.startDate); setMonthlyRent(d.monthlyRent); setSecurityDeposit(d.securityDeposit);
+            setLockInPeriod(d.lockInPeriod); setNoticePeriod(d.noticePeriod); setRentDueDay(d.rentDueDay);
+            setMaintenanceCharges(d.maintenanceCharges);
+          }}
+          onUpdateBrokerage={(d) => {
+            setBrokerageAmount(d.brokerageAmount); setBrokerageAmountOwner(d.brokerageAmountOwner);
+            setBrokerageAmountTenant(d.brokerageAmountTenant); setBrokeragePaidBy(d.brokeragePaidBy);
+            setBrokerageMode(d.brokerageMode);
+          }}
           onGoToStep={setStep}
           onSubmit={handleSubmit}
           submitting={submitting}
