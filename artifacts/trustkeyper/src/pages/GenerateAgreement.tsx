@@ -1458,7 +1458,7 @@ function Step6Review({
           onClick={onSubmit}
           disabled={submitting}
           className={`flex items-center justify-center gap-2 flex-[2] h-12 rounded-xl text-sm font-semibold transition-colors ${
-            submitting ? "bg-accent/70 text-white cursor-not-allowed" : "bg-accent text-white hover:bg-accent/90"
+            submitting ? "bg-primary/60 text-white cursor-not-allowed" : "bg-primary text-white hover:bg-primary/90"
           }`}
         >
           {submitting ? (
