@@ -14,6 +14,7 @@ import AddTenant from "@/pages/AddTenant";
 import AddProperty from "@/pages/AddProperty";
 import PropertyDetails from "@/pages/PropertyDetails";
 import GenerateAgreement from "@/pages/GenerateAgreement";
+import AddProperty2 from "@/pages/AddProperty2";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/broker/dashboard" component={BrokerDashboard} />
       <Route path="/broker/properties" component={BrokerProperties} />
       <Route path="/broker/properties/add" component={AddProperty} />
+      <Route path="/broker/properties/add2" component={AddProperty2} />
       <Route path="/broker/properties/:id" component={PropertyDetails} />
       <Route path="/broker/agreements/generate" component={GenerateAgreement} />
       <Route path="/broker/tenants" component={BrokerTenants} />

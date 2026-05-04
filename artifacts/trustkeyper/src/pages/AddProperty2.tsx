@@ -1,0 +1,696 @@
+import React, { useState, useRef, useCallback } from "react";
+import { useLocation } from "wouter";
+import {
+  ArrowLeft,
+  Home,
+  Wallet,
+  ImageIcon,
+  X,
+  Check,
+  Plus,
+  ChevronDown,
+  Upload,
+  SkipForward,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import BrokerLayout from "@/components/BrokerLayout";
+import { addProperty } from "@/lib/properties";
+import { CITY_LOCALITIES } from "@/lib/tenants";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const PROPERTY_TYPES = ["Apartment", "House", "Studio", "Villa", "Other"];
+const UNIT_SIZES = ["1 RK", "1 BHK", "2 BHK", "3 BHK", "4 BHK", "Other"];
+const FURNISHING_OPTIONS = ["Unfurnished", "Semi Furnished", "Fully Furnished"];
+const UNIT_OPTIONS = ["sq ft", "sq m", "sq yards"];
+const FLOORS_OPTIONS = Array.from({ length: 30 }, (_, i) => String(i + 1));
+const BEDROOM_OPTIONS = Array.from({ length: 10 }, (_, i) => String(i + 1));
+const BATHROOM_OPTIONS = Array.from({ length: 8 }, (_, i) => String(i + 1));
+const BALCONY_OPTIONS = ["0", "1", "2", "3", "4", "5+"];
+const FLOOR_LEVEL_OPTIONS = [
+  "Ground",
+  ...Array.from({ length: 20 }, (_, i) => `${i + 1}${["st","nd","rd"][i] ?? "th"}`),
+  "Penthouse",
+];
+const DIRECTION_OPTIONS = [
+  "North", "South", "East", "West",
+  "North-East", "North-West", "South-East", "South-West",
+];
+const COUNTRIES = ["India"];
+const CITIES = Object.keys(CITY_LOCALITIES);
+
+const AMENITIES_LEFT = [
+  "Sport Club", "Gym", "Store Room", "Parking Space", "Pool",
+  "Power Backup", "Alarm System", "Refrigerator", "Covered Car Parking Space",
+];
+const AMENITIES_RIGHT = [
+  "Pooja Room", "Study Room", "Servant Room", "Garden", "Pets Allowed",
+  "Air Conditioning", "Basketball Court", "Spa", "Uncovered Car Parking Space",
+];
+
+// ─── Progress Bar ─────────────────────────────────────────────────────────────
+
+function ProgressBar({ subStep }: { subStep: number }) {
+  const steps = [
+    { label: "Property Details", Icon: Home },
+    { label: "Rental Details", Icon: Wallet },
+    { label: "Upload Image", Icon: ImageIcon },
+  ];
+
+  const majorStep = subStep <= 3 ? 0 : subStep === 4 ? 1 : 2;
+
+  const lineFill = (i: number): number => {
+    if (i === 0) {
+      if (subStep >= 4) return 100;
+      return (subStep / 4) * 100;
+    }
+    if (i === 1) return subStep >= 5 ? 100 : 0;
+    return 0;
+  };
+
+  return (
+    <div className="flex items-start justify-center gap-0 mb-6">
+      {steps.map((s, i) => {
+        const done = majorStep > i;
+        const active = majorStep === i;
+        const Icon = s.Icon;
+        return (
+          <React.Fragment key={i}>
+            <div className="flex flex-col items-center w-32">
+              <Icon size={22} className={active || done ? "text-primary mb-1" : "text-gray-400 mb-1"} />
+              <span className={`text-[11px] font-medium mb-2 text-center leading-tight ${active || done ? "text-primary" : "text-gray-400"}`}>
+                {s.label}
+              </span>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${done || active ? "bg-primary text-white" : "bg-white border-2 border-gray-300 text-gray-400"}`}>
+                {done ? <Check size={14} /> : i + 1}
+              </div>
+            </div>
+            {i < steps.length - 1 && (
+              <div className="flex-1 mt-12 mx-1 bg-gray-200 h-0.5 relative overflow-hidden rounded-full">
+                <div className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-in-out" style={{ width: `${lineFill(i)}%` }} />
+              </div>
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Reusable UI ─────────────────────────────────────────────────────────────
+
+function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
+  return (
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      {children}
+      {required && <span className="text-red-500 ml-0.5">*</span>}
+    </label>
+  );
+}
+
+function SelectField({ value, onChange, options, placeholder }: {
+  value: string; onChange: (v: string) => void; options: string[]; placeholder?: string;
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full h-9 rounded-md border border-input bg-white px-3 pr-8 text-sm text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+      >
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+      <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+    </div>
+  );
+}
+
+function ChipButton({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-4 py-2 rounded-md border text-sm font-medium transition-colors ${selected ? "bg-primary/10 border-primary text-primary" : "bg-white border-gray-300 text-gray-700 hover:border-primary/50"}`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function AmenityCheck({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex items-center gap-2.5 cursor-pointer select-none">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-primary accent-primary" />
+      <span className="text-sm text-gray-700">{label}</span>
+    </label>
+  );
+}
+
+// ─── Skip Banner ──────────────────────────────────────────────────────────────
+
+function SkipBanner({ onSkip }: { onSkip: () => void }) {
+  return (
+    <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-lg px-4 py-2.5 mb-5">
+      <p className="text-xs text-blue-700">
+        These details help generate a more accurate agreement — but you can fill them in later.
+      </p>
+      <button
+        onClick={onSkip}
+        className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 shrink-0 ml-3"
+      >
+        <SkipForward size={13} /> Skip step
+      </button>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function AddProperty2() {
+  const [, setLocation] = useLocation();
+  const [subStep, setSubStep] = useState(0);
+
+  // Sub-step 0 – Property Details
+  const [nickname, setNickname] = useState("");
+  const [address, setAddress] = useState("");
+  const [area, setArea] = useState("");
+  const [city, setCity] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [country, setCountry] = useState("India");
+  const [ownerName, setOwnerName] = useState("");
+  const [ownerContact, setOwnerContact] = useState("");
+
+  // Sub-step 1 – Type/Size/Furnishing
+  const [propertyType, setPropertyType] = useState("");
+  const [propertyTypeOther, setPropertyTypeOther] = useState("");
+  const [unitSize, setUnitSize] = useState("");
+  const [unitSizeOther, setUnitSizeOther] = useState("");
+  const [furnishing, setFurnishing] = useState("");
+
+  // Sub-step 2 – Dimensions
+  const [builtUpArea, setBuiltUpArea] = useState("");
+  const [builtUpUnits, setBuiltUpUnits] = useState("sq ft");
+  const [totalFloors, setTotalFloors] = useState("");
+  const [bedrooms, setBedrooms] = useState("");
+  const [bathrooms, setBathrooms] = useState("");
+  const [balconies, setBalconies] = useState("");
+  const [floorLevel, setFloorLevel] = useState("");
+  const [mainDoorDirection, setMainDoorDirection] = useState("");
+
+  // Sub-step 3 – Amenities
+  const [amenities, setAmenities] = useState<string[]>([]);
+
+  // Sub-step 4 – Rental Details
+  const [tenantsPreferred, setTenantsPreferred] = useState<string[]>([]);
+  const [monthlyRent, setMonthlyRent] = useState("");
+  const [rentNegotiable, setRentNegotiable] = useState(false);
+  const [maintenanceIncluded, setMaintenanceIncluded] = useState(false);
+  const [monthlyMaintenance, setMonthlyMaintenance] = useState("");
+  const [securityDeposit, setSecurityDeposit] = useState("");
+  const [availableFrom, setAvailableFrom] = useState("");
+
+  // Sub-step 5 – Images (optional)
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  const toggleAmenity = (a: string) =>
+    setAmenities((prev) => prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]);
+
+  const toggleTenant = (t: string) =>
+    setTenantsPreferred((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]);
+
+  const handleFiles = useCallback((files: FileList | null) => {
+    if (!files) return;
+    const remaining = 5 - imageUrls.length;
+    Array.from(files).slice(0, remaining).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        if (dataUrl) setImageUrls((prev) => [...prev, dataUrl]);
+      };
+      reader.readAsDataURL(file);
+    });
+  }, [imageUrls]);
+
+  const removeImage = (idx: number) => setImageUrls((prev) => prev.filter((_, i) => i !== idx));
+
+  // ── Validation ────────────────────────────────────────────────────────────────
+
+  const isValidContact = (v: string): boolean => {
+    if (!v.trim()) return false;
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+    const phoneOk = /^\+?[\d\s\-().]{7,15}$/.test(v.trim());
+    return emailOk || phoneOk;
+  };
+
+  const contactTouched = ownerContact.length > 0;
+  const contactError = contactTouched && !isValidContact(ownerContact);
+
+  const canContinue = (): boolean => {
+    if (subStep === 0) {
+      return !!(address && area && city && pincode && country && ownerName && isValidContact(ownerContact));
+    }
+    // Steps 1–3 always continuable (skip is available)
+    if (subStep === 1) {
+      const typeOk = propertyType !== "" && (propertyType !== "Other" || propertyTypeOther.trim() !== "");
+      const sizeOk = unitSize !== "" && (unitSize !== "Other" || unitSizeOther.trim() !== "");
+      return typeOk && sizeOk && furnishing !== "";
+    }
+    if (subStep === 2) {
+      return !!(builtUpArea && builtUpUnits && totalFloors && bedrooms && bathrooms && balconies && floorLevel && mainDoorDirection);
+    }
+    if (subStep === 3) return true;
+    if (subStep === 4) {
+      return tenantsPreferred.length > 0 && !!monthlyRent && !!securityDeposit && !!availableFrom;
+    }
+    // Step 5 images are optional — always continuable
+    return true;
+  };
+
+  // ── Submit ────────────────────────────────────────────────────────────────────
+
+  const handleSubmit = () => {
+    addProperty({
+      nickname,
+      address,
+      area,
+      city,
+      pincode,
+      country,
+      ownerName,
+      ownerContact,
+      propertyType,
+      propertyTypeOther,
+      unitSize,
+      unitSizeOther,
+      furnishing,
+      builtUpArea,
+      builtUpUnits,
+      totalFloors,
+      bedrooms,
+      bathrooms,
+      balconies,
+      floorLevel,
+      mainDoorDirection,
+      amenities,
+      tenantsPreferred,
+      monthlyRent,
+      rentNegotiable,
+      maintenanceIncluded,
+      monthlyMaintenance,
+      securityDeposit,
+      availableFrom,
+      images: imageUrls,
+      imageCount: imageUrls.length,
+      status: "Active",
+    });
+    setShowSuccess(true);
+    setTimeout(() => {
+      setShowSuccess(false);
+      setLocation("/broker/agreements/generate");
+    }, 1800);
+  };
+
+  const handleContinue = () => {
+    if (subStep < 5) setSubStep((s) => s + 1);
+    else handleSubmit();
+  };
+
+  const handleSkip = () => {
+    if (subStep < 5) setSubStep((s) => s + 1);
+    else handleSubmit();
+  };
+
+  // ── Sub-step Renders ─────────────────────────────────────────────────────────
+
+  const renderStep0 = () => (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900 text-center mb-6 pb-4 border-b border-gray-100">
+        Property details
+      </h2>
+      <div className="space-y-4">
+        <div>
+          <FieldLabel>Property Nickname</FieldLabel>
+          <Input placeholder="My property 01" value={nickname} onChange={(e) => setNickname(e.target.value)} />
+        </div>
+        <div>
+          <FieldLabel required>Address</FieldLabel>
+          <textarea
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Full address"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none h-20"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel required>Area/Landmark</FieldLabel>
+            <Input value={area} onChange={(e) => setArea(e.target.value)} placeholder="" />
+          </div>
+          <div>
+            <FieldLabel required>City</FieldLabel>
+            <SelectField value={city} onChange={setCity} options={CITIES} placeholder="Select" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel required>Pincode</FieldLabel>
+            <Input value={pincode} onChange={(e) => setPincode(e.target.value)} placeholder="" maxLength={6} />
+          </div>
+          <div>
+            <FieldLabel required>Country</FieldLabel>
+            <SelectField value={country} onChange={setCountry} options={COUNTRIES} />
+          </div>
+        </div>
+        <div className="pt-4 pb-1">
+          <h3 className="text-base font-semibold text-gray-900 pb-3 border-b border-gray-100">Property Owner Details</h3>
+        </div>
+        <div>
+          <FieldLabel required>Your Name</FieldLabel>
+          <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="" />
+        </div>
+        <div>
+          <FieldLabel required>Email/Phone Number</FieldLabel>
+          <Input
+            value={ownerContact}
+            onChange={(e) => setOwnerContact(e.target.value)}
+            placeholder="email@example.com or +91 9876543210"
+            className={contactError ? "border-red-400 focus:border-red-400 focus:ring-red-200" : ""}
+          />
+          {contactError && <p className="text-xs text-red-500 mt-1">Enter a valid email address or phone number</p>}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep1 = () => (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900 text-center mb-4 pb-4 border-b border-gray-100">
+        Tell us more about your property
+      </h2>
+      <SkipBanner onSkip={handleSkip} />
+      <div className="space-y-6">
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-3">Property Type</p>
+          <div className="flex flex-wrap gap-2">
+            {PROPERTY_TYPES.map((t) => (
+              <ChipButton key={t} label={t} selected={propertyType === t} onClick={() => { setPropertyType(t); if (t !== "Other") setPropertyTypeOther(""); }} />
+            ))}
+          </div>
+          {propertyType === "Other" && (
+            <div className="mt-3">
+              <Input placeholder="Specify property type" value={propertyTypeOther} onChange={(e) => setPropertyTypeOther(e.target.value)} />
+            </div>
+          )}
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-3">Unit Size</p>
+          <div className="flex flex-wrap gap-2">
+            {UNIT_SIZES.map((s) => (
+              <ChipButton key={s} label={s} selected={unitSize === s} onClick={() => { setUnitSize(s); if (s !== "Other") setUnitSizeOther(""); }} />
+            ))}
+          </div>
+          {unitSize === "Other" && (
+            <div className="mt-3">
+              <Input placeholder="Specify unit size" value={unitSizeOther} onChange={(e) => setUnitSizeOther(e.target.value)} />
+            </div>
+          )}
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-3">Furnishing Status</p>
+          <div className="flex flex-wrap gap-2">
+            {FURNISHING_OPTIONS.map((f) => (
+              <ChipButton key={f} label={f} selected={furnishing === f} onClick={() => setFurnishing(f)} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900 text-center mb-4 pb-4 border-b border-gray-100">
+        Tell us more about your property
+      </h2>
+      <SkipBanner onSkip={handleSkip} />
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel>Built Up Area</FieldLabel>
+            <Input value={builtUpArea} onChange={(e) => setBuiltUpArea(e.target.value)} placeholder="" type="number" />
+          </div>
+          <div>
+            <FieldLabel>Units</FieldLabel>
+            <SelectField value={builtUpUnits} onChange={setBuiltUpUnits} options={UNIT_OPTIONS} placeholder="Select" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel>Total Floors</FieldLabel>
+            <SelectField value={totalFloors} onChange={setTotalFloors} options={FLOORS_OPTIONS} placeholder="Select" />
+          </div>
+          <div>
+            <FieldLabel>Bedrooms</FieldLabel>
+            <SelectField value={bedrooms} onChange={setBedrooms} options={BEDROOM_OPTIONS} placeholder="Select" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel>Bathrooms</FieldLabel>
+            <SelectField value={bathrooms} onChange={setBathrooms} options={BATHROOM_OPTIONS} placeholder="Select" />
+          </div>
+          <div>
+            <FieldLabel>Balconies</FieldLabel>
+            <SelectField value={balconies} onChange={setBalconies} options={BALCONY_OPTIONS} placeholder="Select" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel>Floor Level</FieldLabel>
+            <SelectField value={floorLevel} onChange={setFloorLevel} options={FLOOR_LEVEL_OPTIONS} placeholder="Select" />
+          </div>
+          <div>
+            <FieldLabel>Direction of main door</FieldLabel>
+            <SelectField value={mainDoorDirection} onChange={setMainDoorDirection} options={DIRECTION_OPTIONS} placeholder="Select" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep3 = () => (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900 text-center mb-4 pb-4 border-b border-gray-100">
+        Tell us more about your property
+      </h2>
+      <SkipBanner onSkip={handleSkip} />
+      <div className="grid grid-cols-2 gap-y-4 gap-x-12">
+        <div className="space-y-4">
+          {AMENITIES_LEFT.map((a) => (
+            <AmenityCheck key={a} label={a} checked={amenities.includes(a)} onChange={() => toggleAmenity(a)} />
+          ))}
+        </div>
+        <div className="space-y-4">
+          {AMENITIES_RIGHT.map((a) => (
+            <AmenityCheck key={a} label={a} checked={amenities.includes(a)} onChange={() => toggleAmenity(a)} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep4 = () => (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900 text-center mb-6 pb-4 border-b border-gray-100">
+        Rental details for the property
+      </h2>
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-2">
+            Tenants Preferred<span className="text-red-500 ml-0.5">*</span>
+          </p>
+          <div className="flex items-center gap-6 flex-wrap pb-3 border-b border-gray-100">
+            {["Family", "Bachelors - Male", "Bachelors - Female"].map((t) => (
+              <label key={t} className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={tenantsPreferred.includes(t)} onChange={() => toggleTenant(t)} className="w-4 h-4 accent-primary" />
+                <span className="text-sm text-gray-700">{t}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div>
+          <FieldLabel required>Expected Monthly Rent</FieldLabel>
+          <div className="flex items-center border border-input rounded-md overflow-hidden">
+            <span className="px-3 text-sm text-gray-500 border-r border-input bg-gray-50 h-9 flex items-center">₹</span>
+            <input type="number" value={monthlyRent} onChange={(e) => setMonthlyRent(e.target.value)} className="flex-1 h-9 px-3 text-sm focus:outline-none bg-white" placeholder="" />
+            <span className="px-3 text-sm text-gray-500 border-l border-input bg-gray-50 h-9 flex items-center">/month</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-6">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={rentNegotiable} onChange={(e) => setRentNegotiable(e.target.checked)} className="w-4 h-4 accent-primary" />
+            <span className="text-sm text-gray-700">Rent Negotiable</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={maintenanceIncluded} onChange={(e) => { setMaintenanceIncluded(e.target.checked); if (e.target.checked) setMonthlyMaintenance(""); }} className="w-4 h-4 accent-primary" />
+            <span className="text-sm text-gray-700">Maintenance included</span>
+          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel>Monthly Maintenance Amount</FieldLabel>
+            <div className={`flex items-center border rounded-md overflow-hidden transition-opacity ${maintenanceIncluded ? "opacity-40 pointer-events-none" : "border-input"}`}>
+              <span className="px-3 text-sm text-gray-500 border-r border-input bg-gray-50 h-9 flex items-center">₹</span>
+              <input type="number" value={monthlyMaintenance} onChange={(e) => setMonthlyMaintenance(e.target.value)} disabled={maintenanceIncluded} className="flex-1 h-9 px-3 text-sm focus:outline-none bg-white disabled:bg-gray-50" />
+            </div>
+          </div>
+          <div>
+            <FieldLabel required>Expected Security Deposit</FieldLabel>
+            <div className="flex items-center border border-input rounded-md overflow-hidden">
+              <span className="px-3 text-sm text-gray-500 border-r border-input bg-gray-50 h-9 flex items-center">₹</span>
+              <input type="number" value={securityDeposit} onChange={(e) => setSecurityDeposit(e.target.value)} className="flex-1 h-9 px-3 text-sm focus:outline-none bg-white" />
+            </div>
+          </div>
+        </div>
+        <div>
+          <FieldLabel required>Available From</FieldLabel>
+          <div className="flex items-center border border-input rounded-md overflow-hidden">
+            <span className="px-3 text-gray-400 h-9 flex items-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </span>
+            <input type="date" value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} className="flex-1 h-9 px-2 text-sm focus:outline-none bg-white" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep5 = () => (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900 text-center mb-4 pb-4 border-b border-gray-100">
+        Upload property images
+      </h2>
+
+      {/* Optional badge */}
+      <div className="flex items-center justify-between bg-amber-50 border border-amber-100 rounded-lg px-4 py-2.5 mb-5">
+        <p className="text-xs text-amber-700">
+          Images are optional — you can add them later from the property details page.
+        </p>
+        <button
+          onClick={handleSkip}
+          className="flex items-center gap-1 text-xs font-semibold text-amber-600 hover:text-amber-800 shrink-0 ml-3"
+        >
+          <SkipForward size={13} /> Skip
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        <div className="rounded-lg bg-green-50 border border-green-200 p-4">
+          <p className="text-sm font-semibold text-gray-800 mb-1">Guidelines</p>
+          <p className="text-xs text-gray-600 mb-3">
+            Our AI system automatically checks every photo for clarity, lighting, and relevance.
+            Following these guidelines ensures your listing is approved and published instantly.
+          </p>
+          <ul className="space-y-1">
+            {[
+              "Maximum 5 photos",
+              "Show all rooms clearly with good lighting (daylight preferred)",
+              "Clear and in focus",
+            ].map((g) => (
+              <li key={g} className="flex items-start gap-2 text-xs text-gray-600">
+                <Check size={12} className="text-green-600 mt-0.5 shrink-0" /> {g}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {imageUrls.length === 0 ? (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full border-2 border-dashed border-primary/40 rounded-xl bg-blue-50/40 flex flex-col items-center justify-center py-10 gap-3 hover:bg-blue-50 transition-colors"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
+          >
+            <ImageIcon size={32} className="text-primary" />
+            <p className="text-sm text-gray-700">Drag an <span className="text-primary font-medium">Image</span> to Upload</p>
+            <Button size="sm" variant="outline" className="border-primary text-primary" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>
+              Select photos
+            </Button>
+          </button>
+        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            {imageUrls.length < 5 && (
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square border-2 border-dashed border-primary/40 rounded-lg bg-blue-50/40 flex items-center justify-center hover:bg-blue-50 transition-colors">
+                <Plus size={24} className="text-primary" />
+              </button>
+            )}
+            {imageUrls.map((url, i) => (
+              <div key={i} className="relative aspect-square rounded-lg overflow-hidden">
+                <img src={url} alt={`Property ${i + 1}`} className="w-full h-full object-cover" />
+                <button onClick={() => removeImage(i)} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center hover:bg-primary/80">
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
+      </div>
+    </div>
+  );
+
+  // ── Render ────────────────────────────────────────────────────────────────────
+
+  return (
+    <BrokerLayout>
+      <button
+        onClick={() => subStep === 0 ? setLocation("/broker/agreements/generate") : setSubStep((s) => s - 1)}
+        className="flex items-center gap-1.5 text-sm text-primary font-medium mb-4 hover:underline"
+      >
+        <ArrowLeft size={16} /> {subStep === 0 ? "Back to Agreement" : "Back"}
+      </button>
+
+      <ProgressBar subStep={subStep} />
+
+      <div className="max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-8">
+        {subStep === 0 && renderStep0()}
+        {subStep === 1 && renderStep1()}
+        {subStep === 2 && renderStep2()}
+        {subStep === 3 && renderStep3()}
+        {subStep === 4 && renderStep4()}
+        {subStep === 5 && renderStep5()}
+
+        <div className="mt-8 flex justify-center">
+          <Button
+            size="lg"
+            onClick={handleContinue}
+            disabled={!canContinue()}
+            className="w-48 bg-primary hover:bg-primary/90"
+          >
+            {subStep === 5 ? "Submit" : "Continue →"}
+          </Button>
+        </div>
+      </div>
+
+      {showSuccess && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-8 flex flex-col items-center gap-3 w-72 text-center">
+            <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
+              <Check size={28} className="text-green-500" />
+            </div>
+            <p className="text-lg font-bold text-gray-900">Property Added!</p>
+            <p className="text-sm text-gray-500">Taking you back to the agreement…</p>
+          </div>
+        </div>
+      )}
+    </BrokerLayout>
+  );
+}

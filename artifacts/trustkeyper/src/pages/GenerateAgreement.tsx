@@ -286,7 +286,7 @@ function Step1Property({
       )}
 
       <button
-        onClick={() => setLocation("/broker/properties/add")}
+        onClick={() => setLocation("/broker/properties/add2")}
         className="flex items-center justify-center gap-2 w-full h-11 rounded-xl border border-dashed border-gray-300 text-sm text-gray-600 hover:border-primary hover:text-primary transition-colors mb-0"
       >
         <Plus size={15} /> Add New Property
