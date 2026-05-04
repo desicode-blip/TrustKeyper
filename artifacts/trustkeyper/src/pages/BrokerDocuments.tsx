@@ -66,13 +66,7 @@ Payment Mode: ${a.brokerageMode}
 
 This agreement is legally binding and subject to the terms and conditions agreed upon by both parties. Any dispute arising out of this agreement shall be subject to the jurisdiction of local courts.
 
-Signed by:
-
-Owner: ___________________________     Date: __________
-
-Tenant: __________________________     Date: __________
-
-Broker: __________________________     Date: __________`;
+This agreement will be executed through a legally valid e-signing process powered by TrustKeyper E-Sign.`;
 }
 
 function ordSuffix(n: number): string {
@@ -390,7 +384,38 @@ export default function BrokerDocuments() {
               agreement={agr}
               onView={() => setViewing(agr)}
               onEditManually={() => setEditingManually(agr)}
-              onEditDetails={() => setLocation("/broker/agreements/generate")}
+              onEditDetails={() => {
+                const tenants = [
+                  { name: agr.tenantName, contact: agr.tenantContact },
+                  ...(agr.coTenantName
+                    ? agr.coTenantName.split(", ").map((name, i) => ({
+                        name,
+                        contact: agr.coTenantContact?.split(", ")[i] || "",
+                      }))
+                    : []),
+                ].filter((t) => t.name);
+                const draft = {
+                  propertyId: agr.propertyId,
+                  ownerName: agr.ownerName,
+                  ownerContact: agr.ownerContact,
+                  additionalOwners: [] as { name: string; contact: string }[],
+                  selectedTenants: tenants,
+                  startDate: agr.startDate,
+                  monthlyRent: agr.monthlyRent,
+                  securityDeposit: agr.securityDeposit,
+                  lockInPeriod: agr.lockInPeriod,
+                  noticePeriod: agr.noticePeriod,
+                  rentDueDay: agr.rentDueDay,
+                  maintenanceCharges: agr.maintenanceCharges || "",
+                  brokerageAmount: agr.brokerageAmount,
+                  brokerageAmountOwner: "",
+                  brokerageAmountTenant: "",
+                  brokeragePaidBy: agr.brokeragePaidBy,
+                  brokerageMode: agr.brokerageMode === "Cash" ? "Bank Transfer" : agr.brokerageMode,
+                };
+                sessionStorage.setItem("agreement_edit_draft", JSON.stringify(draft));
+                setLocation("/broker/agreements/generate");
+              }}
             />
           ))}
         </div>

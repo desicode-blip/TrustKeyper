@@ -528,7 +528,7 @@ function Step2Parties({
             onClick={() => { setShowOwnerForm(true); }}
             className="flex items-center justify-center gap-1.5 w-full h-9 rounded-xl border border-primary/40 text-sm text-primary font-medium hover:bg-primary/5 transition-colors"
           >
-            <Plus size={14} /> Add New Owner +
+            <Plus size={14} /> Add New Owner
           </button>
         </div>
 
@@ -567,7 +567,7 @@ function Step2Parties({
               onClick={() => { setShowTenantForm(true); setTenantDropOpen(false); }}
               className="flex items-center justify-center gap-1.5 w-full h-9 rounded-xl border border-primary/40 text-sm text-primary font-medium hover:bg-primary/5 transition-colors"
             >
-              <Plus size={14} /> Add New Tenant +
+              <Plus size={14} /> Add New Tenant
             </button>
           )}
         </div>
@@ -1430,7 +1430,7 @@ function Step6Review({
   const SectionHeader = ({ title, section, onNavigate }: { title: string; section: EditSection; onNavigate?: () => void }) => (
     <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50">
       <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{title}</p>
-      {editing === section ? (
+      {editing !== null && editing === section ? (
         <div className="flex items-center gap-2">
           <button onClick={saveEdit} className="flex items-center gap-1 text-xs font-semibold text-white bg-primary px-2.5 py-1 rounded-lg hover:bg-primary/90 transition-colors">
             <Check size={11} /> Save
@@ -1711,7 +1711,45 @@ export default function GenerateAgreement() {
   const tenantAadhaar = "";
   const tenantPan = "";
 
-  // Auto-fill owner from selected property
+  // Load edit draft if coming from Documents → Edit Details
+  useEffect(() => {
+    const raw = sessionStorage.getItem("agreement_edit_draft");
+    if (!raw) return;
+    try {
+      const d = JSON.parse(raw) as {
+        propertyId: string; ownerName: string; ownerContact: string;
+        additionalOwners: Party[]; selectedTenants: Party[];
+        startDate: string; monthlyRent: string; securityDeposit: string;
+        lockInPeriod: string; noticePeriod: string; rentDueDay: string; maintenanceCharges: string;
+        brokerageAmount: string; brokerageAmountOwner: string; brokerageAmountTenant: string;
+        brokeragePaidBy: "Owner" | "Tenant" | "Both"; brokerageMode: "Bank Transfer" | "UPI";
+      };
+      sessionStorage.removeItem("agreement_edit_draft");
+      const prop = getProperties().find((p) => p.id === d.propertyId) || null;
+      if (prop) setSelectedProperty(prop);
+      setAdditionalOwners(d.additionalOwners || []);
+      setSelectedTenants(d.selectedTenants || []);
+      setStartDate(d.startDate || "");
+      setMonthlyRent(d.monthlyRent || "");
+      setSecurityDeposit(d.securityDeposit || "");
+      setLockInPeriod(d.lockInPeriod || "");
+      setNoticePeriod(d.noticePeriod || "");
+      setRentDueDay(d.rentDueDay || "");
+      setMaintenanceCharges(d.maintenanceCharges || "");
+      setBrokerageAmount(d.brokerageAmount || "");
+      setBrokerageAmountOwner(d.brokerageAmountOwner || "");
+      setBrokerageAmountTenant(d.brokerageAmountTenant || "");
+      setBrokeragePaidBy(d.brokeragePaidBy || "Tenant");
+      setBrokerageMode(d.brokerageMode || "Bank Transfer");
+      // Override owner name/contact after the property auto-fill runs
+      setTimeout(() => {
+        setOwnerName(d.ownerName || "");
+        setOwnerContact(d.ownerContact || "");
+      }, 0);
+    } catch {}
+  }, []);
+
+  // Auto-fill owner from selected property (new selections only)
   useEffect(() => {
     if (selectedProperty) {
       setOwnerName(selectedProperty.ownerName || "");
