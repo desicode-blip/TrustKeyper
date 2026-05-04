@@ -14,7 +14,7 @@ export interface Agreement {
   coTenantName?: string;
   coTenantContact?: string;
   startDate: string;
-  endDate: string;
+  endDate?: string;
   monthlyRent: string;
   securityDeposit: string;
   lockInPeriod: string;

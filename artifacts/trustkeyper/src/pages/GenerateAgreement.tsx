@@ -986,9 +986,9 @@ function Step3Documents({
       {/* Navigation button */}
       <div className="mt-4">
         {isLast ? (
-          <ContinueButton onClick={onContinue} label="Continue" />
+          <ContinueButton onClick={onContinue} disabled={!allDoneForPerson} label="Continue" />
         ) : (
-          <ContinueButton onClick={() => setPersonIdx((i) => i + 1)} label="Next Person" />
+          <ContinueButton onClick={() => setPersonIdx((i) => i + 1)} disabled={!allDoneForPerson} label="Next Person" />
         )}
         {!allDoneForPerson && (
           <p className="text-xs text-center text-gray-400 mt-2">
@@ -1005,7 +1005,6 @@ function Step3Documents({
 function Step4Details({
   property,
   startDate, setStartDate,
-  endDate, setEndDate,
   monthlyRent, setMonthlyRent,
   securityDeposit, setSecurityDeposit,
   lockInPeriod, setLockInPeriod,
@@ -1016,7 +1015,6 @@ function Step4Details({
 }: {
   property: Property | null;
   startDate: string; setStartDate: (v: string) => void;
-  endDate: string; setEndDate: (v: string) => void;
   monthlyRent: string; setMonthlyRent: (v: string) => void;
   securityDeposit: string; setSecurityDeposit: (v: string) => void;
   lockInPeriod: string; setLockInPeriod: (v: string) => void;
@@ -1025,14 +1023,22 @@ function Step4Details({
   maintenanceCharges: string; setMaintenanceCharges: (v: string) => void;
   onContinue: () => void;
 }) {
+  const [maintenanceIncluded, setMaintenanceIncluded] = useState(false);
+
   useEffect(() => {
     if (property) {
       if (!monthlyRent) setMonthlyRent(property.monthlyRent || "");
       if (!securityDeposit) setSecurityDeposit(property.securityDeposit || "");
+      if (property.maintenanceIncluded) setMaintenanceIncluded(true);
     }
   }, [property]);
 
-  const valid = startDate && endDate && monthlyRent && securityDeposit && lockInPeriod && noticePeriod && rentDueDay;
+  const handleMaintenanceToggle = (checked: boolean) => {
+    setMaintenanceIncluded(checked);
+    if (checked) setMaintenanceCharges("");
+  };
+
+  const valid = startDate && monthlyRent && securityDeposit && lockInPeriod && noticePeriod && rentDueDay;
 
   return (
     <div className="max-w-2xl">
@@ -1048,8 +1054,24 @@ function Step4Details({
               <TextInput type="date" value={startDate} onChange={setStartDate} />
             </div>
             <div>
-              <FieldLabel required>End Date</FieldLabel>
-              <TextInput type="date" value={endDate} onChange={setEndDate} />
+              <FieldLabel required>Lock-in Period</FieldLabel>
+              <SelectInput value={lockInPeriod} onChange={setLockInPeriod}>
+                <option value="">Select period</option>
+                {Array.from({ length: 11 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={`${m} ${m === 1 ? "month" : "months"}`}>
+                    {m} {m === 1 ? "month" : "months"}
+                  </option>
+                ))}
+              </SelectInput>
+            </div>
+            <div>
+              <FieldLabel required>Notice Period</FieldLabel>
+              <SelectInput value={noticePeriod} onChange={setNoticePeriod}>
+                <option value="">Select period</option>
+                {["15 days", "1 month", "2 months", "3 months"].map((v) => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </SelectInput>
             </div>
           </div>
         </div>
@@ -1063,48 +1085,32 @@ function Step4Details({
             <div>
               <FieldLabel required>Monthly Rent (₹)</FieldLabel>
               <TextInput type="number" value={monthlyRent} onChange={setMonthlyRent} placeholder="e.g. 25000" />
+              <label className="flex items-center gap-2 mt-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={maintenanceIncluded}
+                  onChange={(e) => handleMaintenanceToggle(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 accent-primary cursor-pointer"
+                />
+                <span className="text-xs text-gray-600">Maintenance included in rent</span>
+              </label>
             </div>
             <div>
               <FieldLabel required>Security Deposit (₹)</FieldLabel>
               <TextInput type="number" value={securityDeposit} onChange={setSecurityDeposit} placeholder="e.g. 50000" />
             </div>
-            <div>
-              <FieldLabel>Maintenance Charges (₹)</FieldLabel>
-              <TextInput type="number" value={maintenanceCharges} onChange={setMaintenanceCharges} placeholder="Optional" />
-            </div>
+            {!maintenanceIncluded && (
+              <div>
+                <FieldLabel>Maintenance Charges (₹)</FieldLabel>
+                <TextInput type="number" value={maintenanceCharges} onChange={setMaintenanceCharges} placeholder="Optional" />
+              </div>
+            )}
             <div>
               <FieldLabel required>Rent Due Day</FieldLabel>
               <SelectInput value={rentDueDay} onChange={setRentDueDay}>
                 <option value="">Select day</option>
                 {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
                   <option key={d} value={String(d)}>{d}{d === 1 ? "st" : d === 2 ? "nd" : d === 3 ? "rd" : "th"} of every month</option>
-                ))}
-              </SelectInput>
-            </div>
-          </div>
-        </div>
-
-        {/* Terms */}
-        <div className="pt-4 border-t border-gray-100">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-            <Lock size={12} /> Terms
-          </p>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <FieldLabel required>Lock-in Period</FieldLabel>
-              <SelectInput value={lockInPeriod} onChange={setLockInPeriod}>
-                <option value="">Select period</option>
-                {["1 month", "2 months", "3 months", "6 months", "11 months", "12 months"].map((v) => (
-                  <option key={v} value={v}>{v}</option>
-                ))}
-              </SelectInput>
-            </div>
-            <div>
-              <FieldLabel required>Notice Period</FieldLabel>
-              <SelectInput value={noticePeriod} onChange={setNoticePeriod}>
-                <option value="">Select period</option>
-                {["15 days", "1 month", "2 months", "3 months"].map((v) => (
-                  <option key={v} value={v}>{v}</option>
                 ))}
               </SelectInput>
             </div>
@@ -1197,7 +1203,7 @@ function ReviewRow({ icon: Icon, label, value }: { icon: React.ElementType; labe
 
 function Step6Review({
   property, ownerName, ownerContact, additionalOwners, selectedTenants,
-  startDate, endDate, monthlyRent, securityDeposit,
+  startDate, monthlyRent, securityDeposit,
   lockInPeriod, noticePeriod, rentDueDay, maintenanceCharges,
   brokerageAmount, brokeragePaidBy, brokerageMode,
   onGoToStep, onSubmit, submitting,
@@ -1205,7 +1211,7 @@ function Step6Review({
   property: Property | null;
   ownerName: string; ownerContact: string;
   additionalOwners: Party[]; selectedTenants: Party[];
-  startDate: string; endDate: string;
+  startDate: string;
   monthlyRent: string; securityDeposit: string;
   lockInPeriod: string; noticePeriod: string; rentDueDay: string; maintenanceCharges: string;
   brokerageAmount: string; brokeragePaidBy: string; brokerageMode: string;
@@ -1250,7 +1256,6 @@ function Step6Review({
       step: 4,
       rows: [
         { icon: Calendar, label: "Start Date", value: fmtDate(startDate) },
-        { icon: Calendar, label: "End Date", value: fmtDate(endDate) },
         { icon: IndianRupee, label: "Monthly Rent", value: monthlyRent ? `₹${Number(monthlyRent).toLocaleString("en-IN")}` : "—" },
         { icon: Wallet, label: "Security Deposit", value: securityDeposit ? `₹${Number(securityDeposit).toLocaleString("en-IN")}` : "—" },
         { icon: Lock, label: "Lock-in Period", value: lockInPeriod },
@@ -1382,7 +1387,6 @@ export default function GenerateAgreement() {
 
   // Step 4
   const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
   const [monthlyRent, setMonthlyRent] = useState("");
   const [securityDeposit, setSecurityDeposit] = useState("");
   const [lockInPeriod, setLockInPeriod] = useState("");
@@ -1421,7 +1425,7 @@ export default function GenerateAgreement() {
         coTenantName: selectedTenants.slice(1).map((t) => t.name).join(", "),
         coTenantContact: selectedTenants.slice(1).map((t) => t.contact).join(", "),
         startDate,
-        endDate,
+        endDate: "",
         monthlyRent,
         securityDeposit,
         lockInPeriod,
@@ -1499,7 +1503,6 @@ export default function GenerateAgreement() {
         <Step4Details
           property={selectedProperty}
           startDate={startDate} setStartDate={setStartDate}
-          endDate={endDate} setEndDate={setEndDate}
           monthlyRent={monthlyRent} setMonthlyRent={setMonthlyRent}
           securityDeposit={securityDeposit} setSecurityDeposit={setSecurityDeposit}
           lockInPeriod={lockInPeriod} setLockInPeriod={setLockInPeriod}
@@ -1522,7 +1525,7 @@ export default function GenerateAgreement() {
           property={selectedProperty}
           ownerName={ownerName} ownerContact={ownerContact}
           additionalOwners={additionalOwners} selectedTenants={selectedTenants}
-          startDate={startDate} endDate={endDate}
+          startDate={startDate}
           monthlyRent={monthlyRent} securityDeposit={securityDeposit}
           lockInPeriod={lockInPeriod} noticePeriod={noticePeriod}
           rentDueDay={rentDueDay} maintenanceCharges={maintenanceCharges}
