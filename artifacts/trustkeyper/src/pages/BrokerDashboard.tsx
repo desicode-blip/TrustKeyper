@@ -152,6 +152,7 @@ function ActiveDashboard({
   onAddTenant,
   onViewDeals,
   onViewDocuments,
+  onViewActivity,
 }: {
   brokerName: string;
   onGenerateAgreement: () => void;
@@ -159,6 +160,7 @@ function ActiveDashboard({
   onAddTenant: () => void;
   onViewDeals: () => void;
   onViewDocuments: () => void;
+  onViewActivity: () => void;
 }) {
   const properties = getProperties();
   const tenants = getTenants();
@@ -409,7 +411,7 @@ function ActiveDashboard({
             ))
           )}
           <div className="px-5 py-3 text-center">
-            <button onClick={() => setLocation("/broker/activity")} className="text-sm text-primary font-medium hover:underline">View All Activity</button>
+            <button onClick={onViewActivity} className="text-sm text-primary font-medium hover:underline">View All Activity</button>
           </div>
         </div>
       </div>
@@ -428,6 +430,7 @@ export default function BrokerDashboard() {
   const goAddTenant = () => setLocation("/broker/tenants/add");
   const goDeals = () => setLocation("/broker/deals");
   const goDocuments = () => setLocation("/broker/documents");
+  const goActivity = () => setLocation("/broker/activity");
 
   const properties = getProperties();
   const tenants = getTenants();
@@ -444,6 +447,7 @@ export default function BrokerDashboard() {
           onAddTenant={goAddTenant}
           onViewDeals={goDeals}
           onViewDocuments={goDocuments}
+          onViewActivity={goActivity}
         />
       ) : (
         <WelcomeDashboard
