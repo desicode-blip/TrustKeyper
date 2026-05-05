@@ -368,10 +368,9 @@ export default function BrokerDeals() {
           </button>
         </div>
       </div>
-
       {/* ── Earnings banner ── */}
       {hasData && (
-        <div className="inline-flex items-center gap-4 relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-[#1a35c4] mb-6 pl-6 pr-8 py-4">
+        <div className="inline-flex items-center gap-4 relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-[#1a35c4] mb-6 pr-8 py-4 pl-[32px] pt-[40px] pb-[40px]">
           <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/5" />
           <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
             <IndianRupee size={18} className="text-white" />
@@ -382,7 +381,6 @@ export default function BrokerDeals() {
           </div>
         </div>
       )}
-
       {/* ── Search ── */}
       <div className="relative mb-6 mt-0">
         <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -393,19 +391,18 @@ export default function BrokerDeals() {
           className="w-full max-w-sm h-10 pl-9 pr-4 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
         />
       </div>
-
       {!hasData ? (
         <EmptyState onAction={() => setLocation("/broker/agreements/generate")} />
       ) : view === "kanban" ? (
         /* ── Kanban ── */
-        <div className="grid grid-cols-3 gap-5">
+        (<div className="grid grid-cols-3 gap-5">
           {(["lead", "agreement", "completed"] as Stage[]).map((stage) => (
             <KanbanColumn key={stage} stage={stage} deals={byStage(stage)} />
           ))}
-        </div>
+        </div>)
       ) : (
         /* ── Table ── */
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        (<div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
@@ -431,7 +428,7 @@ export default function BrokerDeals() {
               )}
             </tbody>
           </table>
-        </div>
+        </div>)
       )}
     </BrokerLayout>
   );
