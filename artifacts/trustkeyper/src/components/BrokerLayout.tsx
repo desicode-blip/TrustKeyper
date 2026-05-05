@@ -12,7 +12,6 @@ import {
   Handshake,
   FileText,
   Settings,
-  UserCircle2,
   LogOut,
   Bell,
   Clock,
@@ -30,7 +29,6 @@ const navItems = [
 
 const helpItems = [
   { id: "settings", label: "Settings", icon: Settings, href: "/broker/settings" },
-  { id: "profile", label: "My Profile", icon: UserCircle2, href: "/broker/profile" },
   { id: "logout", label: "Logout", icon: LogOut, href: "/" },
 ];
 
@@ -96,10 +94,10 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
             <Bell size={17} />
             <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" />
           </Link>
-          <Link href="/broker/profile" className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50">
-            <UserCircle2 size={19} />
+          <Link href="/broker/settings" className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50">
+            <Settings size={17} />
             {!hasBankDetails() && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400 border border-white" title="Complete your bank details" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400 border border-white" title="Complete your payment details" />
             )}
           </Link>
         </div>

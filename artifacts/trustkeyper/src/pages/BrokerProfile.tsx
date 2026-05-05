@@ -3,7 +3,8 @@ import BrokerLayout from "@/components/BrokerLayout";
 import { getBrokerProfile, saveBrokerProfile } from "@/lib/brokerProfile";
 import type { BrokerProfile } from "@/lib/brokerProfile";
 import {
-  User, Building2, Phone, Mail, CreditCard, Landmark, QrCode, Check, Pencil, Save, X, ChevronDown, Upload, Trash2, AlertTriangle,
+  User, Building2, Phone, Mail, CreditCard, Landmark, QrCode, Check, Pencil,
+  Save, X, ChevronDown, Upload, Trash2, AlertTriangle, UserCircle2, CreditCard as PaymentIcon,
 } from "lucide-react";
 
 const BANK_NAMES = [
@@ -82,19 +83,17 @@ function SectionHeader({ icon: Icon, title, onEdit, onSave, onCancel, onDelete, 
   );
 }
 
-export default function BrokerProfile() {
+type Tab = "profile" | "payment";
+
+export default function BrokerSettings() {
+  const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [profile, setProfile] = useState<BrokerProfile>(getBrokerProfile);
 
-  // Section edit states
   const [editingPersonal, setEditingPersonal] = useState(false);
   const [editingBank, setEditingBank] = useState(false);
   const [editingUPI, setEditingUPI] = useState(false);
 
-  // Saved flags
-  const [savedPersonal, setSavedPersonal] = useState(() => {
-    const p = getBrokerProfile();
-    return !!(p.name);
-  });
+  const [savedPersonal, setSavedPersonal] = useState(() => !!(getBrokerProfile().name));
   const [savedBank, setSavedBank] = useState(() => {
     const p = getBrokerProfile();
     return !!(p.bankName && p.bankAccountNumber && p.bankIFSC);
@@ -104,7 +103,6 @@ export default function BrokerProfile() {
     return !!(p.upiId || p.upiQrFileName);
   });
 
-  // Drafts
   const [draftPersonal, setDraftPersonal] = useState<Pick<BrokerProfile, "name" | "firm" | "phone" | "email">>({
     name: profile.name, firm: profile.firm, phone: profile.phone, email: profile.email,
   });
@@ -126,10 +124,8 @@ export default function BrokerProfile() {
 
   const savePersonal = () => {
     const updated = { ...profile, ...draftPersonal };
-    setProfile(updated);
-    saveBrokerProfile(updated);
-    setEditingPersonal(false);
-    setSavedPersonal(true);
+    setProfile(updated); saveBrokerProfile(updated);
+    setEditingPersonal(false); setSavedPersonal(true);
   };
   const cancelPersonal = () => {
     setDraftPersonal({ name: profile.name, firm: profile.firm, phone: profile.phone, email: profile.email });
@@ -138,8 +134,7 @@ export default function BrokerProfile() {
 
   const saveBank = () => {
     const updated = { ...profile, ...draftBank };
-    setProfile(updated);
-    saveBrokerProfile(updated);
+    setProfile(updated); saveBrokerProfile(updated);
     setEditingBank(false);
     setSavedBank(!!(draftBank.bankName && draftBank.bankAccountNumber && draftBank.bankIFSC));
   };
@@ -150,8 +145,7 @@ export default function BrokerProfile() {
 
   const saveUPI = () => {
     const updated = { ...profile, ...draftUPI };
-    setProfile(updated);
-    saveBrokerProfile(updated);
+    setProfile(updated); saveBrokerProfile(updated);
     setEditingUPI(false);
     setSavedUPI(!!(draftUPI.upiId || draftUPI.upiQrFileName));
   };
@@ -160,54 +154,61 @@ export default function BrokerProfile() {
     setEditingUPI(false);
   };
 
-  // Delete confirmation
   const [confirmDelete, setConfirmDelete] = useState<"bank" | "upi" | null>(null);
-
   const confirmAndDelete = () => {
     if (confirmDelete === "bank") {
       const updated = { ...profile, bankHolderName: "", bankName: "", bankAccountNumber: "", bankIFSC: "" };
-      setProfile(updated);
-      saveBrokerProfile(updated);
+      setProfile(updated); saveBrokerProfile(updated);
       setDraftBank({ bankHolderName: "", bankName: "", bankAccountNumber: "", bankIFSC: "" });
       setSavedBank(false);
     } else if (confirmDelete === "upi") {
       const updated = { ...profile, upiId: "", upiQrFileName: "" };
-      setProfile(updated);
-      saveBrokerProfile(updated);
+      setProfile(updated); saveBrokerProfile(updated);
       setDraftUPI({ upiId: "", upiQrFileName: "" });
       setSavedUPI(false);
     }
     setConfirmDelete(null);
   };
 
+  const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
+    { id: "profile", label: "Profile", icon: UserCircle2 },
+    { id: "payment", label: "Payment Details", icon: PaymentIcon },
+  ];
+
   return (
     <BrokerLayout>
       <div className="max-w-2xl">
         {/* Page title */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage your personal info and payment details used across agreements
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage your profile and payment details</p>
         </div>
 
-        {/* Banner if bank details missing */}
-        {!savedBank && (
-          <div className="mb-5 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-            <div className="mt-0.5 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shrink-0">
-              <span className="text-white text-xs font-bold">!</span>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-amber-800">Add your bank details</p>
-              <p className="text-xs text-amber-700 mt-0.5">
-                Save your bank or UPI details here once and they'll be auto-filled every time you generate a rental agreement — no need to re-enter them.
-              </p>
-            </div>
-          </div>
-        )}
+        {/* Tab bar */}
+        <div className="flex items-center gap-1 p-1 bg-white border border-gray-200 rounded-xl mb-6 w-fit">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium transition-colors ${
+                  active ? "bg-primary text-white shadow-sm" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <Icon size={15} />
+                {tab.label}
+                {tab.id === "payment" && !savedBank && (
+                  <span className="w-2 h-2 rounded-full bg-amber-400 ml-0.5" />
+                )}
+              </button>
+            );
+          })}
+        </div>
 
-        <div className="space-y-4">
-          {/* ── Personal Info ── */}
+        {/* ── Profile tab ── */}
+        {activeTab === "profile" && (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <SectionHeader
               icon={User} title="Personal Information"
@@ -217,7 +218,7 @@ export default function BrokerProfile() {
             />
             <div className="px-5 py-4">
               {editingPersonal ? (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <FieldLabel required>Full Name</FieldLabel>
                     <TextInput value={draftPersonal.name} onChange={(v) => setDraftPersonal((d) => ({ ...d, name: v }))} placeholder="Your full name" />
@@ -236,7 +237,7 @@ export default function BrokerProfile() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-y-4 gap-x-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
                   {[
                     { icon: User, label: "Full Name", value: profile.name || "—" },
                     { icon: Building2, label: "Brokerage Firm", value: profile.firm || "Independent" },
@@ -255,151 +256,169 @@ export default function BrokerProfile() {
               )}
             </div>
           </div>
+        )}
 
-          {/* ── Bank Details ── */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <SectionHeader
-              icon={Landmark} title="Bank Account Details"
-              editing={editingBank} saved={savedBank}
-              onEdit={() => setEditingBank(true)}
-              onSave={saveBank} onCancel={cancelBank}
-              onDelete={() => setConfirmDelete("bank")}
-            />
-            <div className="px-5 py-4">
-              {editingBank ? (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <FieldLabel required>Account Holder Name</FieldLabel>
-                    <TextInput value={draftBank.bankHolderName} onChange={(v) => setDraftBank((d) => ({ ...d, bankHolderName: v }))} placeholder="Full name on account" />
+        {/* ── Payment Details tab ── */}
+        {activeTab === "payment" && (
+          <div className="space-y-4">
+            {!savedBank && (
+              <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <div className="mt-0.5 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shrink-0">
+                  <span className="text-white text-xs font-bold">!</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">Add your bank details</p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    Save your bank or UPI details once and they'll be auto-filled every time you generate a rental agreement.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Bank */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <SectionHeader
+                icon={Landmark} title="Bank Account Details"
+                editing={editingBank} saved={savedBank}
+                onEdit={() => setEditingBank(true)}
+                onSave={saveBank} onCancel={cancelBank}
+                onDelete={() => setConfirmDelete("bank")}
+              />
+              <div className="px-5 py-4">
+                {editingBank ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <FieldLabel required>Account Holder Name</FieldLabel>
+                      <TextInput value={draftBank.bankHolderName} onChange={(v) => setDraftBank((d) => ({ ...d, bankHolderName: v }))} placeholder="Full name on account" />
+                    </div>
+                    <div>
+                      <FieldLabel required>Bank Name</FieldLabel>
+                      <div className="relative">
+                        <select
+                          value={draftBank.bankName}
+                          onChange={(e) => setDraftBank((d) => ({ ...d, bankName: e.target.value }))}
+                          className="w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white"
+                        >
+                          <option value=""></option>
+                          {BANK_NAMES.map((b) => <option key={b} value={b}>{b}</option>)}
+                        </select>
+                        <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                    <div>
+                      <FieldLabel required>Account Number</FieldLabel>
+                      <TextInput value={draftBank.bankAccountNumber} onChange={(v) => setDraftBank((d) => ({ ...d, bankAccountNumber: v }))} placeholder="Enter account number" />
+                    </div>
+                    <div>
+                      <FieldLabel required>IFSC Code</FieldLabel>
+                      <TextInput value={draftBank.bankIFSC} onChange={(v) => setDraftBank((d) => ({ ...d, bankIFSC: v.toUpperCase() }))} placeholder="e.g. SBIN0001234" />
+                    </div>
                   </div>
+                ) : (
                   <div>
-                    <FieldLabel required>Bank Name</FieldLabel>
-                    <div className="relative">
-                      <select
-                        value={draftBank.bankName}
-                        onChange={(e) => setDraftBank((d) => ({ ...d, bankName: e.target.value }))}
-                        className="w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white"
+                    {profile.bankName ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
+                        {[
+                          { icon: User, label: "Account Holder", value: profile.bankHolderName || "—" },
+                          { icon: Landmark, label: "Bank", value: profile.bankName },
+                          { icon: CreditCard, label: "Account Number", value: profile.bankAccountNumber ? `••••${profile.bankAccountNumber.slice(-4)}` : "—" },
+                          { icon: CreditCard, label: "IFSC Code", value: profile.bankIFSC || "—" },
+                        ].map(({ icon: Icon, label, value }) => (
+                          <div key={label} className="flex items-start gap-2">
+                            <Icon size={14} className="text-gray-400 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-[10px] text-gray-400 uppercase tracking-wide">{label}</p>
+                              <p className="text-sm font-medium text-gray-800">{value}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setEditingBank(true)}
+                        className="w-full h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center gap-2 text-sm text-gray-400 hover:border-primary/40 hover:text-primary transition-colors"
                       >
-                        <option value=""></option>
-                        {BANK_NAMES.map((b) => <option key={b} value={b}>{b}</option>)}
-                      </select>
-                      <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
+                        <Landmark size={16} /> Add bank account details
+                      </button>
+                    )}
                   </div>
-                  <div>
-                    <FieldLabel required>Account Number</FieldLabel>
-                    <TextInput value={draftBank.bankAccountNumber} onChange={(v) => setDraftBank((d) => ({ ...d, bankAccountNumber: v }))} placeholder="Enter account number" />
-                  </div>
-                  <div>
-                    <FieldLabel required>IFSC Code</FieldLabel>
-                    <TextInput value={draftBank.bankIFSC} onChange={(v) => setDraftBank((d) => ({ ...d, bankIFSC: v.toUpperCase() }))} placeholder="e.g. SBIN0001234" />
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  {profile.bankName ? (
-                    <div className="grid grid-cols-2 gap-y-4 gap-x-8">
-                      {[
-                        { icon: User, label: "Account Holder", value: profile.bankHolderName || "—" },
-                        { icon: Landmark, label: "Bank", value: profile.bankName },
-                        { icon: CreditCard, label: "Account Number", value: profile.bankAccountNumber ? `••••${profile.bankAccountNumber.slice(-4)}` : "—" },
-                        { icon: CreditCard, label: "IFSC Code", value: profile.bankIFSC || "—" },
-                      ].map(({ icon: Icon, label, value }) => (
-                        <div key={label} className="flex items-start gap-2">
-                          <Icon size={14} className="text-gray-400 mt-0.5 shrink-0" />
-                          <div>
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wide">{label}</p>
-                            <p className="text-sm font-medium text-gray-800">{value}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setEditingBank(true)}
-                      className="w-full h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center gap-2 text-sm text-gray-400 hover:border-primary/40 hover:text-primary transition-colors"
-                    >
-                      <Landmark size={16} />
-                      Add bank account details
-                    </button>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* ── UPI Details ── */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <SectionHeader
-              icon={QrCode} title="UPI Details"
-              editing={editingUPI} saved={savedUPI}
-              onEdit={() => setEditingUPI(true)}
-              onSave={saveUPI} onCancel={cancelUPI}
-              onDelete={() => setConfirmDelete("upi")}
-            />
-            <div className="px-5 py-4">
-              {editingUPI ? (
-                <div className="space-y-4">
-                  <div>
-                    <FieldLabel>UPI ID</FieldLabel>
-                    <TextInput value={draftUPI.upiId} onChange={(v) => setDraftUPI((d) => ({ ...d, upiId: v }))} placeholder="yourname@bank" />
-                  </div>
-                  <p className="text-xs text-gray-400 text-center font-medium">OR</p>
-                  <div>
-                    <FieldLabel>QR Code</FieldLabel>
-                    <button
-                      onClick={() => qrRef.current?.click()}
-                      className="w-full h-20 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1.5 hover:border-primary/50 hover:bg-gray-50 transition-colors"
-                    >
-                      {draftUPI.upiQrFileName ? (
-                        <><Check size={16} className="text-green-500" /><span className="text-xs text-green-600 font-medium">{draftUPI.upiQrFileName}</span></>
-                      ) : (
-                        <><Upload size={16} className="text-gray-400" /><span className="text-xs text-gray-500">Upload QR Code image or PDF</span></>
-                      )}
-                    </button>
-                    <input ref={qrRef} type="file" accept=".pdf,.png,.jpeg,.jpg" className="hidden"
-                      onChange={(e) => { if (e.target.files?.[0]) setDraftUPI((d) => ({ ...d, upiQrFileName: e.target.files![0].name })); }} />
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  {(profile.upiId || profile.upiQrFileName) ? (
-                    <div className="space-y-3">
-                      {profile.upiId && (
-                        <div className="flex items-start gap-2">
-                          <QrCode size={14} className="text-gray-400 mt-0.5 shrink-0" />
-                          <div>
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wide">UPI ID</p>
-                            <p className="text-sm font-medium text-gray-800">{profile.upiId}</p>
-                          </div>
-                        </div>
-                      )}
-                      {profile.upiQrFileName && (
-                        <div className="flex items-start gap-2">
-                          <QrCode size={14} className="text-gray-400 mt-0.5 shrink-0" />
-                          <div>
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wide">QR Code</p>
-                            <p className="text-sm font-medium text-green-600 flex items-center gap-1"><Check size={12} />{profile.upiQrFileName}</p>
-                          </div>
-                        </div>
-                      )}
+            {/* UPI */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <SectionHeader
+                icon={QrCode} title="UPI Details"
+                editing={editingUPI} saved={savedUPI}
+                onEdit={() => setEditingUPI(true)}
+                onSave={saveUPI} onCancel={cancelUPI}
+                onDelete={() => setConfirmDelete("upi")}
+              />
+              <div className="px-5 py-4">
+                {editingUPI ? (
+                  <div className="space-y-4">
+                    <div>
+                      <FieldLabel>UPI ID</FieldLabel>
+                      <TextInput value={draftUPI.upiId} onChange={(v) => setDraftUPI((d) => ({ ...d, upiId: v }))} placeholder="yourname@bank" />
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => setEditingUPI(true)}
-                      className="w-full h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center gap-2 text-sm text-gray-400 hover:border-primary/40 hover:text-primary transition-colors"
-                    >
-                      <QrCode size={16} />
-                      Add UPI ID or QR Code
-                    </button>
-                  )}
-                </div>
-              )}
+                    <p className="text-xs text-gray-400 text-center font-medium">OR</p>
+                    <div>
+                      <FieldLabel>QR Code</FieldLabel>
+                      <button
+                        onClick={() => qrRef.current?.click()}
+                        className="w-full h-20 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1.5 hover:border-primary/50 hover:bg-gray-50 transition-colors"
+                      >
+                        {draftUPI.upiQrFileName ? (
+                          <><Check size={16} className="text-green-500" /><span className="text-xs text-green-600 font-medium">{draftUPI.upiQrFileName}</span></>
+                        ) : (
+                          <><Upload size={16} className="text-gray-400" /><span className="text-xs text-gray-500">Upload QR Code image or PDF</span></>
+                        )}
+                      </button>
+                      <input ref={qrRef} type="file" accept=".pdf,.png,.jpeg,.jpg" className="hidden"
+                        onChange={(e) => { if (e.target.files?.[0]) setDraftUPI((d) => ({ ...d, upiQrFileName: e.target.files![0].name })); }} />
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    {(profile.upiId || profile.upiQrFileName) ? (
+                      <div className="space-y-3">
+                        {profile.upiId && (
+                          <div className="flex items-start gap-2">
+                            <QrCode size={14} className="text-gray-400 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-[10px] text-gray-400 uppercase tracking-wide">UPI ID</p>
+                              <p className="text-sm font-medium text-gray-800">{profile.upiId}</p>
+                            </div>
+                          </div>
+                        )}
+                        {profile.upiQrFileName && (
+                          <div className="flex items-start gap-2">
+                            <QrCode size={14} className="text-gray-400 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-[10px] text-gray-400 uppercase tracking-wide">QR Code</p>
+                              <p className="text-sm font-medium text-green-600 flex items-center gap-1"><Check size={12} />{profile.upiQrFileName}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setEditingUPI(true)}
+                        className="w-full h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center gap-2 text-sm text-gray-400 hover:border-primary/40 hover:text-primary transition-colors"
+                      >
+                        <QrCode size={16} /> Add UPI ID or QR Code
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
-      {/* ── Delete confirmation dialog ── */}
+
+      {/* Delete confirmation dialog */}
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setConfirmDelete(null)} />
@@ -416,16 +435,10 @@ export default function BrokerProfile() {
                 : "Your saved UPI ID and QR code will be removed. You'll need to re-enter them for future agreements."}
             </p>
             <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmDelete(null)}
-                className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-              >
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                 Cancel
               </button>
-              <button
-                onClick={confirmAndDelete}
-                className="flex-1 h-10 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors"
-              >
+              <button onClick={confirmAndDelete} className="flex-1 h-10 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors">
                 Yes, Delete
               </button>
             </div>
