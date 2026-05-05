@@ -318,7 +318,7 @@ function ActiveDashboard({
           <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={onGenerateAgreement} className="inline-flex items-center gap-2 h-10 px-5 rounded-full bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors">
+          <button onClick={onGenerateAgreement} className="inline-flex items-center gap-2 h-10 px-5 rounded-full bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors rounded-tl-[20px] rounded-tr-[20px] rounded-br-[20px] rounded-bl-[20px]">
             <Plus size={15} /> Generate Rent Agreement
           </button>
           <button onClick={onAddProperty} className="inline-flex items-center gap-2 h-10 px-5 rounded-full border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors">
@@ -329,7 +329,6 @@ function ActiveDashboard({
           </button>
         </div>
       </div>
-
       {/* ── Stats ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -354,7 +353,6 @@ function ActiveDashboard({
           <p className="text-xs text-gray-500 mt-1">Leads in Pipeline</p>
         </div>
       </div>
-
       {/* ── Deals Pipeline ── */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -411,7 +409,6 @@ function ActiveDashboard({
           })}
         </div>
       </div>
-
       {/* ── Recent Activity ── */}
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-4">Recent Activity</h2>
