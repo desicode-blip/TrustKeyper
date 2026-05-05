@@ -339,23 +339,23 @@ function ActiveDashboard({
           </button>
         </div>
 
-        {/* Pipeline tabs */}
-        <div className="flex items-center gap-3 mb-5">
-          {(["lead", "agreement", "completed"] as Tab[]).map((tab, i) => {
+        {/* Pipeline tabs — same 3-col grid as the cards below */}
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          {(["lead", "agreement", "completed"] as Tab[]).map((tab) => {
             const count = tab === "lead" ? leadCount : tab === "agreement" ? agreementCount : completedCount;
             const label = tab === "lead" ? "Lead" : tab === "agreement" ? "Agreement" : "Completed";
             return (
-              <React.Fragment key={tab}>
-                <button
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex items-center gap-2.5 px-4 h-10 rounded-xl border text-sm font-semibold transition-colors ${tabStyles(tab)}`}
-                >
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex items-center justify-between w-full px-4 h-11 rounded-xl border text-sm font-semibold transition-colors ${tabStyles(tab)}`}
+              >
+                <div className="flex items-center gap-2.5">
                   <span className={`w-2 h-2 rounded-full ${dotColor(tab)}`} />
                   {label}
-                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${countBg(tab)}`}>{count}</span>
-                </button>
-                {i < 2 && <ChevronRight size={14} className="text-gray-300 shrink-0" />}
-              </React.Fragment>
+                </div>
+                <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${countBg(tab)}`}>{count}</span>
+              </button>
             );
           })}
         </div>
@@ -376,7 +376,7 @@ function ActiveDashboard({
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             {visibleCards.map((card) => (
               <DealCardItem
                 key={card.id}
