@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useLocation } from "wouter";
 import {
   Plus, UserPlus, FilePlus2, ArrowRight, Check,
@@ -200,20 +200,12 @@ function ActiveDashboard({
   const tenants = getTenants();
   const agreements = getAgreements();
 
-  type Tab = "lead" | "agreement" | "completed";
-  const [activeTab, setActiveTab] = useState<Tab>("lead");
-
   // Stats
   const totalEarned = agreements.reduce((s, a) => s + (Number(a.brokerageAmount) || 0), 0);
   const activePropertyCount = properties.filter((p) => p.status === "Active").length;
   const leadsInPipeline = tenants.length;
 
-  // Pipeline counts
-  const leadCount = tenants.length;
-  const agreementCount = agreements.filter((a) => a.status === "Sent").length;
-  const completedCount = agreements.filter((a) => a.status === "Signed").length;
-
-  // Deal cards per stage
+  // Pipeline cards
   const leadCards: DealCard[] = tenants.map((t) => ({
     id: t.id,
     propertyTitle: t.city ? `Looking in ${t.city}${t.localities?.length ? ` — ${t.localities[0]}` : ""}` : "Property search in progress",
@@ -251,13 +243,14 @@ function ActiveDashboard({
       stage: "completed",
     }));
 
-  const allTabCards =
-    activeTab === "lead" ? leadCards : activeTab === "agreement" ? agreementCards : completedCards;
-  const visibleCards = allTabCards.slice(0, 2);
-  const hasMore = allTabCards.length > 2;
+  const COLUMNS = [
+    { stage: "lead" as const,      label: "Lead",      dot: "bg-primary",    headerBg: "bg-blue-50",  headerText: "text-primary",   countBg: "bg-primary/15 text-primary",      cards: leadCards },
+    { stage: "agreement" as const, label: "Agreement", dot: "bg-amber-500",  headerBg: "bg-amber-50", headerText: "text-amber-700", countBg: "bg-amber-100 text-amber-700",     cards: agreementCards },
+    { stage: "completed" as const, label: "Completed", dot: "bg-green-500",  headerBg: "bg-green-50", headerText: "text-green-700", countBg: "bg-green-100 text-green-700",     cards: completedCards },
+  ];
 
   // Subtitle
-  const inProgress = agreementCount;
+  const inProgress = agreementCards.length;
   const newLeads = tenants.filter((t) => Date.now() - t.createdAt < 7 * 24 * 60 * 60 * 1000).length;
   const subtitle =
     inProgress > 0 && newLeads > 0
@@ -380,63 +373,52 @@ function ActiveDashboard({
           </button>
         </div>
 
-        {/* Pipeline tabs — same 3-col grid as the cards below */}
-        <div className="grid grid-cols-3 gap-4 mb-4">
-          {(["lead", "agreement", "completed"] as Tab[]).map((tab) => {
-            const count = tab === "lead" ? leadCount : tab === "agreement" ? agreementCount : completedCount;
-            const label = tab === "lead" ? "Lead" : tab === "agreement" ? "Agreement" : "Completed";
+        {/* 3-column Kanban board */}
+        <div className="grid grid-cols-3 gap-4">
+          {COLUMNS.map((col) => {
+            const preview = col.cards.slice(0, 2);
+            const remaining = col.cards.length - 2;
             return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex items-center justify-between w-full px-4 h-11 rounded-xl border text-sm font-semibold transition-colors ${tabStyles(tab)}`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className={`w-2 h-2 rounded-full ${dotColor(tab)}`} />
-                  {label}
+              <div key={col.stage} className="flex flex-col gap-3">
+                {/* Column header */}
+                <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl ${col.headerBg}`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${col.dot}`} />
+                    <span className={`text-sm font-bold ${col.headerText}`}>{col.label}</span>
+                  </div>
+                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded-lg ${col.countBg}`}>
+                    {col.cards.length}
+                  </span>
                 </div>
-                <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${countBg(tab)}`}>{count}</span>
-              </button>
+
+                {/* Cards */}
+                {preview.length === 0 ? (
+                  <div className="border border-dashed border-gray-200 rounded-xl py-8 text-center text-xs text-gray-400">
+                    No deals here yet
+                  </div>
+                ) : (
+                  preview.map((card) => (
+                    <DealCardItem
+                      key={card.id}
+                      card={card}
+                      onClick={col.stage !== "lead" ? onViewDocuments : undefined}
+                    />
+                  ))
+                )}
+
+                {/* View more */}
+                {remaining > 0 && (
+                  <button
+                    onClick={onViewDeals}
+                    className="py-2 rounded-xl border border-dashed border-gray-300 text-xs text-primary font-semibold hover:bg-primary/5 transition-colors"
+                  >
+                    +{remaining} more deal{remaining !== 1 ? "s" : ""}
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>
-
-        {/* Deal cards grid */}
-        {visibleCards.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 border-dashed py-12 text-center">
-            <p className="text-sm text-gray-400">No deals in this stage yet</p>
-            {activeTab === "lead" && (
-              <button onClick={onAddTenant} className="mt-3 text-sm text-primary font-medium hover:underline flex items-center gap-1 mx-auto">
-                <Plus size={13} /> Add a tenant lead
-              </button>
-            )}
-            {activeTab === "agreement" && (
-              <button onClick={onGenerateAgreement} className="mt-3 text-sm text-primary font-medium hover:underline flex items-center gap-1 mx-auto">
-                <Plus size={13} /> Generate agreement
-              </button>
-            )}
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-3 gap-4">
-              {visibleCards.map((card) => (
-                <DealCardItem
-                  key={card.id}
-                  card={card}
-                  onClick={activeTab !== "lead" ? onViewDocuments : undefined}
-                />
-              ))}
-            </div>
-            {hasMore && (
-              <button
-                onClick={onViewDeals}
-                className="mt-3 w-full py-2.5 rounded-xl border border-dashed border-gray-300 text-sm text-primary font-medium hover:bg-primary/5 transition-colors flex items-center justify-center gap-1"
-              >
-                View all {allTabCards.length} deals <ChevronRight size={14} />
-              </button>
-            )}
-          </>
-        )}
       </div>
 
       {/* ── Recent Activity ── */}
