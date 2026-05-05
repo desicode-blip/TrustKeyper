@@ -335,19 +335,11 @@ export default function BrokerDeals() {
 
   return (
     <BrokerLayout>
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between flex-wrap gap-4 mb-1">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Deals <span className="text-gray-500 font-semibold">({totalCount})</span>
-          </h1>
-          {hasData && (
-            <p className="text-sm mt-0.5">
-              Total Earnings:{" "}
-              <span className="font-bold text-primary">{fmtLakh(totalEarnings)}</span>
-            </p>
-          )}
-        </div>
+      {/* ── Header row ── */}
+      <div className="flex items-center justify-between flex-wrap gap-4 mb-5">
+        <h1 className="text-2xl font-bold text-gray-900">
+          Deals <span className="text-gray-400 font-semibold text-xl">({totalCount})</span>
+        </h1>
         <div className="flex items-center gap-3">
           {/* View toggle */}
           <div className="flex items-center p-0.5 rounded-xl border border-gray-200 bg-white">
@@ -377,8 +369,44 @@ export default function BrokerDeals() {
         </div>
       </div>
 
+      {/* ── Earnings banner ── */}
+      {hasData && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary to-[#1a35c4] mb-6 px-8 py-6 flex items-center justify-between">
+          {/* Background decoration */}
+          <div className="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-white/5" />
+          <div className="absolute -right-4 bottom-0 w-32 h-32 rounded-full bg-white/5" />
+
+          <div className="relative">
+            <p className="text-sm font-medium text-white/70 mb-1 uppercase tracking-wide">Total Commission Earned</p>
+            <p className="text-5xl font-extrabold text-white tracking-tight leading-none">
+              {fmtLakh(totalEarnings)}
+            </p>
+            <p className="text-sm text-white/60 mt-2">Across {totalCount} deal{totalCount !== 1 ? "s" : ""} in your pipeline</p>
+          </div>
+
+          <div className="relative flex flex-col items-end gap-3">
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <p className="text-xs text-white/60 mb-0.5">Lead</p>
+                <p className="text-2xl font-bold text-white">{rawDeals.filter(d => d.stage === "lead").length}</p>
+              </div>
+              <div className="w-px h-10 bg-white/20" />
+              <div className="text-right">
+                <p className="text-xs text-white/60 mb-0.5">Agreement</p>
+                <p className="text-2xl font-bold text-white">{rawDeals.filter(d => d.stage === "agreement").length}</p>
+              </div>
+              <div className="w-px h-10 bg-white/20" />
+              <div className="text-right">
+                <p className="text-xs text-white/60 mb-0.5">Completed</p>
+                <p className="text-2xl font-bold text-white">{rawDeals.filter(d => d.stage === "completed").length}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Search ── */}
-      <div className="relative mb-6 mt-5">
+      <div className="relative mb-6 mt-0">
         <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
           value={search}
