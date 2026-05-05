@@ -394,11 +394,12 @@ export default function AddTenant() {
               </div>
             </div>
 
+            {/* Step 1 CTA — desktop */}
             <Button
               size="lg"
               onClick={handleStep1Continue}
               disabled={!step1Valid}
-              className="w-full mt-8 bg-primary hover:bg-primary/90"
+              className="hidden sm:flex w-full mt-8 bg-primary hover:bg-primary/90"
             >
               Continue <ArrowRight size={16} className="ml-1" />
             </Button>
@@ -576,7 +577,8 @@ export default function AddTenant() {
               )}
             </div>
 
-            <div className="flex items-center justify-center gap-3 mt-6">
+            {/* Step 2 CTA — desktop */}
+            <div className="hidden sm:flex items-center justify-center gap-3 mt-6">
               <Button
                 variant="outline"
                 onClick={handleSkipSave}
@@ -595,6 +597,40 @@ export default function AddTenant() {
           </>
         )}
       </div>
+
+      {/* Mobile sticky CTAs */}
+      {step === 1 && (
+        <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white border-t border-gray-200 px-4 py-3">
+          <button
+            onClick={handleStep1Continue}
+            disabled={!step1Valid}
+            className={`flex items-center justify-center gap-2 w-full h-12 rounded-xl text-sm font-semibold transition-colors ${
+              step1Valid ? "bg-primary text-white" : "bg-primary/40 text-white cursor-not-allowed"
+            }`}
+          >
+            Continue <ArrowRight size={16} />
+          </button>
+        </div>
+      )}
+      {step === 2 && (
+        <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white border-t border-gray-200 px-4 py-3 flex gap-3">
+          <button
+            onClick={handleSkipSave}
+            className="flex-1 h-12 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors"
+          >
+            Skip
+          </button>
+          <button
+            onClick={handleSaveDetails}
+            disabled={!step2Valid}
+            className={`flex-1 h-12 rounded-xl text-sm font-semibold transition-colors ${
+              step2Valid ? "bg-primary text-white" : "bg-primary/40 text-white cursor-not-allowed"
+            }`}
+          >
+            Save Details
+          </button>
+        </div>
+      )}
 
       {/* Generate Link modal */}
       <Dialog

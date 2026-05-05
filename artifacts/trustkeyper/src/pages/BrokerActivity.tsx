@@ -132,29 +132,24 @@ function ActivityRow({ item }: { item: ActivityItem }) {
   const timeStr = time.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 
   return (
-    <div className={`flex items-start gap-4 px-6 py-4 hover:bg-gray-50 transition-colors relative ${!item.read ? "bg-blue-50/40" : ""}`}>
-      {/* Unread dot */}
+    <div className={`flex items-start gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors relative ${!item.read ? "bg-blue-50/40" : ""}`}>
       {!item.read && (
-        <span className={`absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ${cfg.dotColor}`} />
+        <span className={`absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ${cfg.dotColor}`} />
       )}
-
-      {/* Icon */}
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${cfg.bg} ${cfg.text}`}>
+      <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 ${cfg.bg} ${cfg.text}`}>
         {cfg.icon}
       </div>
-
-      {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className={`text-sm font-semibold ${item.read ? "text-gray-700" : "text-gray-900"}`}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className={`text-sm font-semibold truncate ${item.read ? "text-gray-700" : "text-gray-900"}`}>
               {item.title}
             </p>
             {item.description && (
               <p className="text-xs text-gray-500 mt-0.5 truncate">{item.description}</p>
             )}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-2 shrink-0">
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.text}`}>
               {cfg.label}
             </span>
@@ -201,33 +196,31 @@ export default function BrokerActivity() {
   return (
     <BrokerLayout>
       {/* ── Page header ── */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => setLocation("/broker/dashboard")}
-          className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
+          className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors shrink-0"
         >
           <ArrowLeft size={16} />
         </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-gray-900">Recent Activity</h1>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Recent Activity</h1>
             {unreadCount > 0 && (
               <span className="h-5 px-1.5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center">
                 {unreadCount} new
               </span>
             )}
           </div>
-          <p className="text-sm text-gray-500 mt-0.5">A full log of everything happening in your portal</p>
+          <p className="text-sm text-gray-500 mt-0.5 hidden sm:block">A full log of everything happening in your portal</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-            <CheckCheck size={13} /> Mark all read
-          </button>
-        </div>
+        <button className="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+          <CheckCheck size={13} /> <span className="hidden sm:inline">Mark all read</span>
+        </button>
       </div>
 
       {/* ── Filter + Search bar ── */}
-      <div className="flex items-center gap-3 mb-5 flex-wrap">
+      <div className="flex items-center gap-2 sm:gap-3 mb-5 flex-wrap">
         {/* Type filter tabs */}
         <div className="flex items-center gap-1 p-0.5 rounded-xl border border-gray-200 bg-white">
           {FILTER_OPTIONS.map((opt) => (

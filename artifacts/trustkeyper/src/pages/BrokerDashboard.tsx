@@ -40,7 +40,7 @@ function WelcomeDashboard({
   return (
     <>
       <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
-        <h1 className="text-2xl font-bold text-primary">
+        <h1 className="text-xl sm:text-2xl font-bold text-primary">
           Welcome, {brokerName} <span className="inline-block">👋</span>
         </h1>
         <div className="flex items-center gap-3 flex-wrap">
@@ -56,7 +56,7 @@ function WelcomeDashboard({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
         <div className="rounded-xl border border-gray-200 bg-white p-6 relative overflow-hidden">
           <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700 mb-6">
             <FilePlus2 size={20} />
@@ -297,50 +297,31 @@ function ActiveDashboard({
     return "bg-accent/10";
   };
 
-  const tabStyles = (tab: Tab) => {
-    const active = activeTab === tab;
-    if (tab === "lead") return active ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50";
-    if (tab === "agreement") return active ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50";
-    return active ? "bg-green-50 border-green-200 text-green-700" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50";
-  };
-
-  const dotColor = (tab: Tab) => {
-    if (tab === "lead") return "bg-primary";
-    if (tab === "agreement") return "bg-amber-500";
-    return "bg-gray-400";
-  };
-
-  const countBg = (tab: Tab) => {
-    if (tab === "lead") return "bg-primary/15 text-primary";
-    if (tab === "agreement") return "bg-amber-100 text-amber-700";
-    return "bg-gray-100 text-gray-500";
-  };
-
   return (
     <>
       {/* ── Header ── */}
       <div className="flex items-start justify-between flex-wrap gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
             {getGreeting()}, {brokerName} 👋
           </h1>
           <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={onGenerateAgreement} className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors">
-            <Plus size={15} /> Generate Rent Agreement
+          <button onClick={onGenerateAgreement} className="inline-flex items-center gap-2 h-9 px-3 sm:px-4 rounded-lg bg-primary text-white text-xs sm:text-sm font-semibold hover:bg-primary/90 transition-colors">
+            <Plus size={14} /> <span className="hidden xs:inline">Generate Rent Agreement</span><span className="xs:hidden">Agreement</span>
           </button>
-          <button onClick={onAddProperty} className="inline-flex items-center gap-2 h-9 px-4 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors">
-            <Plus size={15} /> Add Property
+          <button onClick={onAddProperty} className="inline-flex items-center gap-2 h-9 px-3 sm:px-4 rounded-lg border border-gray-300 text-gray-700 text-xs sm:text-sm font-medium hover:bg-gray-50 transition-colors">
+            <Plus size={14} /> Property
           </button>
-          <button onClick={onAddTenant} className="inline-flex items-center gap-2 h-9 px-4 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors">
-            <Plus size={15} /> Add Tenant
+          <button onClick={onAddTenant} className="inline-flex items-center gap-2 h-9 px-3 sm:px-4 rounded-lg border border-gray-300 text-gray-700 text-xs sm:text-sm font-medium hover:bg-gray-50 transition-colors">
+            <Plus size={14} /> Tenant
           </button>
         </div>
       </div>
 
       {/* ── Stats ── */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center mb-3">
             <IndianRupee size={18} className="text-amber-500" />
@@ -374,7 +355,7 @@ function ActiveDashboard({
         </div>
 
         {/* 3-column Kanban board */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {COLUMNS.map((col) => {
             const preview = col.cards.slice(0, 2);
             const remaining = col.cards.length - 2;

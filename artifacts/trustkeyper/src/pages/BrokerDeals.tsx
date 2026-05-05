@@ -336,41 +336,40 @@ export default function BrokerDeals() {
   return (
     <BrokerLayout>
       {/* ── Header row ── */}
-      <div className="flex items-center justify-between flex-wrap gap-4 mb-5">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Deals <span className="text-gray-400 font-semibold text-xl">({totalCount})</span>
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+          Deals <span className="text-gray-400 font-semibold text-lg sm:text-xl">({totalCount})</span>
         </h1>
-        <div className="flex items-center gap-3">
-          {/* View toggle */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <div className="flex items-center p-0.5 rounded-xl border border-gray-200 bg-white">
             <button
               onClick={() => setView("kanban")}
-              className={`inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`inline-flex items-center gap-1.5 h-8 px-2.5 sm:px-3.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                 view === "kanban" ? "bg-gray-900 text-white" : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              <LayoutGrid size={14} /> Kanban
+              <LayoutGrid size={13} /> Kanban
             </button>
             <button
               onClick={() => setView("table")}
-              className={`inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`inline-flex items-center gap-1.5 h-8 px-2.5 sm:px-3.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                 view === "table" ? "bg-gray-900 text-white" : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              <TableIcon size={14} /> Table
+              <TableIcon size={13} /> Table
             </button>
           </div>
           <button
             onClick={() => setLocation("/broker/agreements/generate")}
-            className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-lg bg-primary text-white text-xs sm:text-sm font-semibold hover:bg-primary/90 transition-colors"
           >
-            <Plus size={15} /> Generate Rent Agreement
+            <Plus size={14} /> <span className="hidden sm:inline">Generate Rent Agreement</span><span className="sm:hidden">Agreement</span>
           </button>
         </div>
       </div>
       {/* ── Earnings banner ── */}
       {hasData && (
-        <div className="inline-flex items-center gap-4 relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-[#1a35c4] mb-6 pr-8 py-4 pl-[32px] pt-[40px] pb-[40px]">
+        <div className="flex items-center gap-4 relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-[#1a35c4] mb-6 px-6 py-8 sm:inline-flex sm:pr-8 sm:pl-8">
           <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/5" />
           <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
             <IndianRupee size={18} className="text-white" />
@@ -394,22 +393,24 @@ export default function BrokerDeals() {
       {!hasData ? (
         <EmptyState onAction={() => setLocation("/broker/agreements/generate")} />
       ) : view === "kanban" ? (
-        /* ── Kanban ── */
-        (<div className="grid grid-cols-3 gap-5">
+        /* ── Kanban — horizontal scroll on mobile, 3-col on desktop ── */
+        <div className="flex gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:overflow-visible">
           {(["lead", "agreement", "completed"] as Stage[]).map((stage) => (
-            <KanbanColumn key={stage} stage={stage} deals={byStage(stage)} />
+            <div key={stage} className="min-w-[280px] md:min-w-0 flex-shrink-0 md:flex-shrink">
+              <KanbanColumn stage={stage} deals={byStage(stage)} />
+            </div>
           ))}
-        </div>)
+        </div>
       ) : (
-        /* ── Table ── */
-        (<div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full border-collapse">
+        /* ── Table — horizontal scroll on mobile ── */
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden overflow-x-auto">
+          <table className="w-full border-collapse min-w-[700px]">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
                 {["Property", "Tenant", "Rent", "Status", "Brokerage", "Paid By", "Updated", "Actions"].map((h) => (
                   <th
                     key={h}
-                    className="px-5 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide"
+                    className="px-5 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap"
                   >
                     {h}
                   </th>
@@ -428,7 +429,7 @@ export default function BrokerDeals() {
               )}
             </tbody>
           </table>
-        </div>)
+        </div>
       )}
     </BrokerLayout>
   );

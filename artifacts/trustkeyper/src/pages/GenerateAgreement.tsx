@@ -130,18 +130,30 @@ function SelectInput({
 }
 
 function ContinueButton({ onClick, disabled, label = "Continue" }: { onClick: () => void; disabled?: boolean; label?: string }) {
+  const cls = disabled
+    ? "bg-primary/40 text-white cursor-not-allowed"
+    : "bg-primary text-white hover:bg-primary/90";
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex items-center justify-center gap-2 w-full h-11 rounded-xl text-sm font-semibold transition-colors mt-6 ${
-        disabled
-          ? "bg-primary/40 text-white cursor-not-allowed"
-          : "bg-primary text-white hover:bg-primary/90"
-      }`}
-    >
-      {label} <ChevronRight size={16} />
-    </button>
+    <>
+      {/* Desktop: inline */}
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className={`hidden sm:flex items-center justify-center gap-2 w-full h-11 rounded-xl text-sm font-semibold transition-colors mt-6 ${cls}`}
+      >
+        {label} <ChevronRight size={16} />
+      </button>
+      {/* Mobile: sticky above bottom nav */}
+      <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white border-t border-gray-200 px-4 py-3">
+        <button
+          onClick={onClick}
+          disabled={disabled}
+          className={`flex items-center justify-center gap-2 w-full h-12 rounded-xl text-sm font-semibold transition-colors ${cls}`}
+        >
+          {label} <ChevronRight size={16} />
+        </button>
+      </div>
+    </>
   );
 }
 

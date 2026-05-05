@@ -821,7 +821,7 @@ export default function AddProperty() {
       <ProgressBar subStep={subStep} />
 
       {/* Card */}
-      <div className="max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-8">
+      <div className="max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-8 pb-6 sm:pb-8">
         {subStep === 0 && renderStep0()}
         {subStep === 1 && renderStep1()}
         {subStep === 2 && renderStep2()}
@@ -829,8 +829,8 @@ export default function AddProperty() {
         {subStep === 4 && renderStep4()}
         {subStep === 5 && renderStep5()}
 
-        {/* Continue / Submit */}
-        <div className="mt-8 flex justify-center">
+        {/* Continue / Submit — desktop */}
+        <div className="mt-8 hidden sm:flex justify-center">
           <Button
             size="lg"
             onClick={handleContinue}
@@ -840,6 +840,18 @@ export default function AddProperty() {
             {subStep === 5 ? "Submit" : "Continue →"}
           </Button>
         </div>
+      </div>
+
+      {/* Continue / Submit — mobile sticky */}
+      <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white border-t border-gray-200 px-4 py-3">
+        <Button
+          size="lg"
+          onClick={handleContinue}
+          disabled={!canContinue()}
+          className="w-full bg-primary hover:bg-primary/90"
+        >
+          {subStep === 5 ? "Submit" : "Continue →"}
+        </Button>
       </div>
 
       {/* Success overlay */}
