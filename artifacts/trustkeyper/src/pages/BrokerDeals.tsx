@@ -238,22 +238,16 @@ function TableRow({ deal }: { deal: Deal }) {
 
 // ─── Empty State ───────────────────────────────────────────────────────────────
 
-function EmptyState({ onAction }: { onAction: () => void }) {
+function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-32 text-center">
       <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mb-5">
         <Briefcase size={30} className="text-primary" />
       </div>
       <h3 className="text-base font-bold text-gray-900 mb-1">No deals yet</h3>
-      <p className="text-sm text-gray-400 mb-5 max-w-xs">
+      <p className="text-sm text-gray-400 max-w-xs">
         Add a property, register a tenant, or generate an agreement to start tracking deals.
       </p>
-      <button
-        onClick={onAction}
-        className="inline-flex items-center gap-2 h-9 px-5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
-      >
-        <Plus size={15} /> Generate Agreement
-      </button>
     </div>
   );
 }
@@ -393,7 +387,7 @@ export default function BrokerDeals() {
         />
       </div>
       {!hasData ? (
-        <EmptyState onAction={() => setLocation("/broker/agreements/generate")} />
+        <EmptyState />
       ) : view === "kanban" ? (
         /* ── Kanban — horizontal scroll on mobile, 3-col on desktop ── */
         <div className="flex gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:overflow-visible">
