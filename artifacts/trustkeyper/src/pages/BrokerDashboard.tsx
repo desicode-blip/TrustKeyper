@@ -409,7 +409,7 @@ function ActiveDashboard({
             ))
           )}
           <div className="px-5 py-3 text-center">
-            <button className="text-sm text-primary font-medium hover:underline">View All Activity</button>
+            <button onClick={() => setLocation("/broker/activity")} className="text-sm text-primary font-medium hover:underline">View All Activity</button>
           </div>
         </div>
       </div>

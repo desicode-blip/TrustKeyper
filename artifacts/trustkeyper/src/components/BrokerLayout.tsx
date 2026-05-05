@@ -77,10 +77,10 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
             <Clock size={14} />
             <span>IST</span>
           </div>
-          <button className="relative w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50">
+          <Link href="/broker/activity" className="relative w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50">
             <Bell size={18} />
             <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" />
-          </button>
+          </Link>
           <Link href="/broker/profile" className="relative w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50">
             <UserCircle2 size={20} />
             {!hasBankDetails() && (
