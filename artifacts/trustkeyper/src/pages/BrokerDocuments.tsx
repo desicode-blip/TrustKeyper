@@ -272,7 +272,7 @@ function DocumentRow({
   };
 
   return (
-    <div className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors">
+    <div className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors first:rounded-t-xl last:rounded-b-xl overflow-visible">
       {/* Icon */}
       <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
         <FileText size={17} className="text-primary" />
@@ -319,7 +319,7 @@ function DocumentRow({
           </button>
 
           {dropOpen && (
-            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl border border-gray-200 shadow-lg z-20 py-1 min-w-[160px]">
+            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl border border-gray-200 shadow-lg z-50 py-1 min-w-[160px]">
               <button
                 onClick={() => { setDropOpen(false); onEditDetails(); }}
                 className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary transition-colors"
@@ -377,7 +377,7 @@ export default function BrokerDocuments() {
           <p className="text-xs text-gray-400 mt-1">Agreements sent for e-signing will appear here</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
+        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
           {agreements.map((agr) => (
             <DocumentRow
               key={agr.id}
