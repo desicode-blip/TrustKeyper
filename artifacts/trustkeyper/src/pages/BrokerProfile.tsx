@@ -3,7 +3,7 @@ import BrokerLayout from "@/components/BrokerLayout";
 import { getBrokerProfile, saveBrokerProfile } from "@/lib/brokerProfile";
 import type { BrokerProfile } from "@/lib/brokerProfile";
 import {
-  User, Building2, Phone, Mail, CreditCard, Landmark, QrCode, Check, Pencil, Save, X, ChevronDown, Upload,
+  User, Building2, Phone, Mail, CreditCard, Landmark, QrCode, Check, Pencil, Save, X, ChevronDown, Upload, Trash2, AlertTriangle,
 } from "lucide-react";
 
 const BANK_NAMES = [
@@ -39,9 +39,9 @@ function TextInput({
   );
 }
 
-function SectionHeader({ icon: Icon, title, onEdit, onSave, onCancel, editing, saved }: {
+function SectionHeader({ icon: Icon, title, onEdit, onSave, onCancel, onDelete, editing, saved }: {
   icon: React.ElementType; title: string;
-  onEdit: () => void; onSave: () => void; onCancel: () => void;
+  onEdit: () => void; onSave: () => void; onCancel: () => void; onDelete?: () => void;
   editing: boolean; saved: boolean;
 }) {
   return (
@@ -66,9 +66,16 @@ function SectionHeader({ icon: Icon, title, onEdit, onSave, onCancel, editing, s
             </button>
           </>
         ) : (
-          <button onClick={onEdit} className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
-            <Pencil size={11} /> Edit
-          </button>
+          <>
+            {saved && onDelete && (
+              <button onClick={onDelete} className="flex items-center gap-1 text-xs text-red-500 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">
+                <Trash2 size={11} /> Delete
+              </button>
+            )}
+            <button onClick={onEdit} className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
+              <Pencil size={11} /> Edit
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -151,6 +158,26 @@ export default function BrokerProfile() {
   const cancelUPI = () => {
     setDraftUPI({ upiId: profile.upiId, upiQrFileName: profile.upiQrFileName });
     setEditingUPI(false);
+  };
+
+  // Delete confirmation
+  const [confirmDelete, setConfirmDelete] = useState<"bank" | "upi" | null>(null);
+
+  const confirmAndDelete = () => {
+    if (confirmDelete === "bank") {
+      const updated = { ...profile, bankHolderName: "", bankName: "", bankAccountNumber: "", bankIFSC: "" };
+      setProfile(updated);
+      saveBrokerProfile(updated);
+      setDraftBank({ bankHolderName: "", bankName: "", bankAccountNumber: "", bankIFSC: "" });
+      setSavedBank(false);
+    } else if (confirmDelete === "upi") {
+      const updated = { ...profile, upiId: "", upiQrFileName: "" };
+      setProfile(updated);
+      saveBrokerProfile(updated);
+      setDraftUPI({ upiId: "", upiQrFileName: "" });
+      setSavedUPI(false);
+    }
+    setConfirmDelete(null);
   };
 
   return (
@@ -236,6 +263,7 @@ export default function BrokerProfile() {
               editing={editingBank} saved={savedBank}
               onEdit={() => setEditingBank(true)}
               onSave={saveBank} onCancel={cancelBank}
+              onDelete={() => setConfirmDelete("bank")}
             />
             <div className="px-5 py-4">
               {editingBank ? (
@@ -307,6 +335,7 @@ export default function BrokerProfile() {
               editing={editingUPI} saved={savedUPI}
               onEdit={() => setEditingUPI(true)}
               onSave={saveUPI} onCancel={cancelUPI}
+              onDelete={() => setConfirmDelete("upi")}
             />
             <div className="px-5 py-4">
               {editingUPI ? (
@@ -370,6 +399,39 @@ export default function BrokerProfile() {
           </div>
         </div>
       </div>
+      {/* ── Delete confirmation dialog ── */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setConfirmDelete(null)} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-50 mx-auto mb-4">
+              <AlertTriangle size={22} className="text-red-500" />
+            </div>
+            <h3 className="text-base font-bold text-gray-900 text-center mb-1">
+              Delete {confirmDelete === "bank" ? "Bank Account" : "UPI"} Details?
+            </h3>
+            <p className="text-sm text-gray-500 text-center mb-6">
+              {confirmDelete === "bank"
+                ? "Your saved bank account information will be removed. You'll need to re-enter it for future agreements."
+                : "Your saved UPI ID and QR code will be removed. You'll need to re-enter them for future agreements."}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAndDelete}
+                className="flex-1 h-10 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </BrokerLayout>
   );
 }
