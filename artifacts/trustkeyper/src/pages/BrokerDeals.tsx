@@ -371,36 +371,14 @@ export default function BrokerDeals() {
 
       {/* ── Earnings banner ── */}
       {hasData && (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary to-[#1a35c4] mb-6 px-8 py-6 flex items-center justify-between">
-          {/* Background decoration */}
-          <div className="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-white/5" />
-          <div className="absolute -right-4 bottom-0 w-32 h-32 rounded-full bg-white/5" />
-
-          <div className="relative">
-            <p className="text-sm font-medium text-white/70 mb-1 uppercase tracking-wide">Total Commission Earned</p>
-            <p className="text-5xl font-extrabold text-white tracking-tight leading-none">
-              {fmtLakh(totalEarnings)}
-            </p>
-            <p className="text-sm text-white/60 mt-2">Across {totalCount} deal{totalCount !== 1 ? "s" : ""} in your pipeline</p>
+        <div className="inline-flex items-center gap-4 relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-[#1a35c4] mb-6 pl-6 pr-8 py-4">
+          <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/5" />
+          <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+            <IndianRupee size={18} className="text-white" />
           </div>
-
-          <div className="relative flex flex-col items-end gap-3">
-            <div className="flex items-center gap-6">
-              <div className="text-right">
-                <p className="text-xs text-white/60 mb-0.5">Lead</p>
-                <p className="text-2xl font-bold text-white">{rawDeals.filter(d => d.stage === "lead").length}</p>
-              </div>
-              <div className="w-px h-10 bg-white/20" />
-              <div className="text-right">
-                <p className="text-xs text-white/60 mb-0.5">Agreement</p>
-                <p className="text-2xl font-bold text-white">{rawDeals.filter(d => d.stage === "agreement").length}</p>
-              </div>
-              <div className="w-px h-10 bg-white/20" />
-              <div className="text-right">
-                <p className="text-xs text-white/60 mb-0.5">Completed</p>
-                <p className="text-2xl font-bold text-white">{rawDeals.filter(d => d.stage === "completed").length}</p>
-              </div>
-            </div>
+          <div className="relative">
+            <p className="text-xs font-medium text-white/70 uppercase tracking-wider mb-0.5">Total Commission Earned</p>
+            <p className="text-3xl font-extrabold text-white tracking-tight leading-none">{fmtLakh(totalEarnings)}</p>
           </div>
         </div>
       )}
