@@ -44,13 +44,13 @@ function WelcomeDashboard({
           Welcome, {brokerName} <span className="inline-block">👋</span>
         </h1>
         <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={onGenerateAgreement} className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors">
+          <button onClick={onGenerateAgreement} className="inline-flex items-center gap-2 h-10 px-5 rounded-full bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors">
             <Plus size={16} /> Generate Rent Agreement
           </button>
-          <button onClick={onAddProperty} className="inline-flex items-center gap-2 h-9 px-4 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5 transition-colors">
+          <button onClick={onAddProperty} className="inline-flex items-center gap-2 h-10 px-5 rounded-full border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors">
             <Plus size={16} /> Add Property
           </button>
-          <button onClick={onAddTenant} className="inline-flex items-center gap-2 h-9 px-4 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5 transition-colors">
+          <button onClick={onAddTenant} className="inline-flex items-center gap-2 h-10 px-5 rounded-full border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors">
             <UserPlus size={16} /> Add Tenant
           </button>
         </div>
@@ -317,15 +317,15 @@ function ActiveDashboard({
           </h1>
           <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={onGenerateAgreement} className="inline-flex items-center gap-2 h-9 px-3 sm:px-4 rounded-lg bg-primary text-white text-xs sm:text-sm font-semibold hover:bg-primary/90 transition-colors">
-            <Plus size={14} /> <span className="hidden xs:inline">Generate Rent Agreement</span><span className="xs:hidden">Agreement</span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <button onClick={onGenerateAgreement} className="inline-flex items-center gap-2 h-10 px-5 rounded-full bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors">
+            <Plus size={15} /> Generate Rent Agreement
           </button>
-          <button onClick={onAddProperty} className="inline-flex items-center gap-2 h-9 px-3 sm:px-4 rounded-lg border border-gray-300 text-gray-700 text-xs sm:text-sm font-medium hover:bg-gray-50 transition-colors">
-            <Plus size={14} /> Property
+          <button onClick={onAddProperty} className="inline-flex items-center gap-2 h-10 px-5 rounded-full border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors">
+            <Plus size={15} /> Add Property
           </button>
-          <button onClick={onAddTenant} className="inline-flex items-center gap-2 h-9 px-3 sm:px-4 rounded-lg border border-gray-300 text-gray-700 text-xs sm:text-sm font-medium hover:bg-gray-50 transition-colors">
-            <Plus size={14} /> Tenant
+          <button onClick={onAddTenant} className="inline-flex items-center gap-2 h-10 px-5 rounded-full border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors">
+            <UserPlus size={15} /> Add Tenant
           </button>
         </div>
       </div>
