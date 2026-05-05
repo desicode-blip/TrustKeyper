@@ -327,8 +327,10 @@ export default function BrokerDeals() {
     );
   }, [rawDeals, search]);
 
-  // Stats
-  const totalEarnings = rawDeals.reduce((s, d) => s + (Number(d.brokerageAmount) || 0), 0);
+  // Stats — earnings only accrue once the deal is fully signed (Completed stage)
+  const totalEarnings = rawDeals
+    .filter((d) => d.stage === "completed")
+    .reduce((s, d) => s + (Number(d.brokerageAmount) || 0), 0);
   const totalCount = rawDeals.length;
 
   const byStage = (stage: Stage) => filtered.filter((d) => d.stage === stage);

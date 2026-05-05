@@ -200,8 +200,10 @@ function ActiveDashboard({
   const tenants = getTenants();
   const agreements = getAgreements();
 
-  // Stats
-  const totalEarned = agreements.reduce((s, a) => s + (Number(a.brokerageAmount) || 0), 0);
+  // Stats — earnings only count once the agreement is fully signed
+  const totalEarned = agreements
+    .filter((a) => a.status === "Signed")
+    .reduce((s, a) => s + (Number(a.brokerageAmount) || 0), 0);
   const activePropertyCount = properties.filter((p) => p.status === "Active").length;
   const leadsInPipeline = tenants.length;
 
