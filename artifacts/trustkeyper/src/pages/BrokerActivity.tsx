@@ -218,7 +218,6 @@ export default function BrokerActivity() {
           <CheckCheck size={13} /> <span className="hidden sm:inline">Mark all read</span>
         </button>
       </div>
-
       {/* ── Filter + Search bar ── */}
       <div className="flex items-center gap-2 sm:gap-3 mb-5 flex-wrap">
         {/* Type filter tabs */}
@@ -227,11 +226,7 @@ export default function BrokerActivity() {
             <button
               key={opt.id}
               onClick={() => setFilter(opt.id)}
-              className={`h-8 px-3.5 rounded-lg text-sm font-medium transition-colors ${
-                filter === opt.id
-                  ? "bg-gray-900 text-white"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
+              className="h-8 px-3.5 rounded-lg text-sm font-medium transition-colors text-white bg-[00A251]"
             >
               {opt.label}
             </button>
@@ -249,7 +244,6 @@ export default function BrokerActivity() {
           />
         </div>
       </div>
-
       {/* ── Activity list ── */}
       {grouped.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-32 text-center">
