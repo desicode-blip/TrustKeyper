@@ -24,7 +24,6 @@ const navItems = [
   { id: "properties", label: "Properties", icon: Building2, href: "/broker/properties" },
   { id: "tenants", label: "Tenants", icon: Users, href: "/broker/tenants" },
   { id: "deals", label: "Deals", icon: Handshake, href: "/broker/deals" },
-  { id: "commission", label: "Commission", icon: IndianRupee, href: "/broker/commission" },
   { id: "documents", label: "Documents", icon: FileText, href: "/broker/documents" },
 ];
 
