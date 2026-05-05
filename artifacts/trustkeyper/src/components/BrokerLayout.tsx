@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
-import brandLogo from "@assets/logo_1777462358045.png";
+import brandLogo from "@assets/Trustkeyper_Logo_1777989635996.png";
 import footerLogo from "@assets/Frame_3466296_1777451511864.png";
 import footerWave from "@assets/Vector_20_1777451511865.png";
 import { Phone, Mail } from "lucide-react";
@@ -216,7 +216,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
       </nav>
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
-      <footer className="w-full bg-[#1A2438] text-white relative overflow-hidden hidden md:block">
+      <footer className="w-full bg-[#0D1A48] text-white relative overflow-hidden hidden md:block">
         <img
           src={footerWave}
           alt=""
