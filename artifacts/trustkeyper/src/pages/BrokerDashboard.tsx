@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import {
   Plus, UserPlus, FilePlus2, ArrowRight, Check,
   IndianRupee, Building2, Users, ChevronRight,
-  Clock, FileCheck2, Dot,
+  Clock, FileCheck2, ArrowUpRight,
 } from "lucide-react";
 import BrokerLayout, { getBrokerName } from "@/components/BrokerLayout";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
@@ -112,31 +112,65 @@ type DealCard = {
   tenantName: string;
   monthlyRent: string;
   brokerageAmount: string;
+  brokeragePaidBy: string;
   createdAt: number;
   stage: "lead" | "agreement" | "completed";
 };
 
+const STAGE_CFG = {
+  lead:      { label: "Lead",      border: "border-l-primary",    chip: "bg-blue-50 text-primary border-primary/20",   dot: "bg-primary" },
+  agreement: { label: "Agreement", border: "border-l-amber-500",  chip: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },
+  completed: { label: "Completed", border: "border-l-green-500",  chip: "bg-green-50 text-green-700 border-green-200", dot: "bg-green-500" },
+} as const;
+
 function DealCardItem({ card, onClick }: { card: DealCard; onClick?: () => void }) {
+  const cfg = STAGE_CFG[card.stage];
+  const initials = card.tenantName
+    ? card.tenantName.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()
+    : "??";
+
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-xl border border-gray-200 p-4 cursor-pointer hover:shadow-md hover:border-primary/30 transition-all"
+      className={`bg-white rounded-xl border border-gray-200 border-l-4 ${cfg.border} shadow-sm hover:shadow-md transition-shadow p-4 cursor-pointer group`}
     >
-      <p className="text-sm font-bold text-gray-900 mb-1 truncate">{card.propertyTitle}</p>
-      <p className="text-xs text-gray-500 mb-4">
-        {card.tenantName ? `Tenant: ${card.tenantName}` : "Tenant TBD"}
-      </p>
-      <div className="flex items-center justify-between">
-        <div>
-          {card.monthlyRent ? (
-            <p className="text-xs text-gray-500">{fmtINR(Number(card.monthlyRent))}/mo</p>
-          ) : (
-            <p className="text-xs text-gray-400">Rent TBD</p>
-          )}
-          <p className="text-[11px] text-gray-400 mt-0.5">{timeAgo(card.createdAt)}</p>
+      {/* Stage chip + arrow */}
+      <div className="flex items-center justify-between mb-3">
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.chip}`}>{cfg.label}</span>
+        <ArrowUpRight size={13} className="text-gray-300 group-hover:text-primary transition-colors" />
+      </div>
+
+      {/* Property */}
+      <p className="text-sm font-bold text-gray-900 mb-1 truncate leading-tight">{card.propertyTitle || "—"}</p>
+
+      {/* Tenant */}
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold shrink-0">
+          {initials}
         </div>
+        <p className="text-xs text-gray-500 truncate">{card.tenantName ? `Tenant: ${card.tenantName}` : "Tenant TBD"}</p>
+      </div>
+
+      <div className="border-t border-gray-100 mb-3" />
+
+      {/* Rent + Brokerage */}
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs text-gray-500">{card.monthlyRent ? `${fmtINR(Number(card.monthlyRent))}/mo` : "Rent TBD"}</p>
         {card.brokerageAmount && Number(card.brokerageAmount) > 0 && (
           <p className="text-sm font-bold text-primary">{fmtINR(Number(card.brokerageAmount))}</p>
+        )}
+      </div>
+
+      {/* Time + Paid by */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1 text-[11px] text-gray-400">
+          <Clock size={10} /> {timeAgo(card.createdAt)}
+        </div>
+        {card.brokeragePaidBy && (
+          <div className="text-right">
+            <p className="text-[9px] text-gray-400 leading-tight">Brokerage paid by</p>
+            <p className="text-[11px] font-semibold text-gray-600">{card.brokeragePaidBy}</p>
+          </div>
         )}
       </div>
     </div>
@@ -186,6 +220,7 @@ function ActiveDashboard({
     tenantName: t.name,
     monthlyRent: "",
     brokerageAmount: "",
+    brokeragePaidBy: "",
     createdAt: t.createdAt,
     stage: "lead",
   }));
@@ -198,6 +233,7 @@ function ActiveDashboard({
       tenantName: a.tenantName,
       monthlyRent: a.monthlyRent,
       brokerageAmount: a.brokerageAmount,
+      brokeragePaidBy: a.brokeragePaidBy,
       createdAt: a.createdAt,
       stage: "agreement",
     }));
@@ -210,12 +246,15 @@ function ActiveDashboard({
       tenantName: a.tenantName,
       monthlyRent: a.monthlyRent,
       brokerageAmount: a.brokerageAmount,
+      brokeragePaidBy: a.brokeragePaidBy,
       createdAt: a.createdAt,
       stage: "completed",
     }));
 
-  const visibleCards =
+  const allTabCards =
     activeTab === "lead" ? leadCards : activeTab === "agreement" ? agreementCards : completedCards;
+  const visibleCards = allTabCards.slice(0, 2);
+  const hasMore = allTabCards.length > 2;
 
   // Subtitle
   const inProgress = agreementCount;
@@ -378,15 +417,25 @@ function ActiveDashboard({
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-4">
-            {visibleCards.map((card) => (
-              <DealCardItem
-                key={card.id}
-                card={card}
-                onClick={activeTab !== "lead" ? onViewDocuments : undefined}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-3 gap-4">
+              {visibleCards.map((card) => (
+                <DealCardItem
+                  key={card.id}
+                  card={card}
+                  onClick={activeTab !== "lead" ? onViewDocuments : undefined}
+                />
+              ))}
+            </div>
+            {hasMore && (
+              <button
+                onClick={onViewDeals}
+                className="mt-3 w-full py-2.5 rounded-xl border border-dashed border-gray-300 text-sm text-primary font-medium hover:bg-primary/5 transition-colors flex items-center justify-center gap-1"
+              >
+                View all {allTabCards.length} deals <ChevronRight size={14} />
+              </button>
+            )}
+          </>
         )}
       </div>
 
