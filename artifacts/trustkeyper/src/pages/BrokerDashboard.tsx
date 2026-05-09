@@ -38,77 +38,84 @@ function WelcomeDashboard({
   onAddTenant: () => void;
 }) {
   return (
-    <>
-      <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
-        <h1 className="text-xl sm:text-2xl font-bold text-primary">
-          Welcome, {brokerName} <span className="inline-block">👋</span>
-        </h1>
+    <div className="max-w-7xl mx-auto space-y-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+            Welcome, {brokerName} <span className="inline-block animate-wave">👋</span>
+          </h1>
+          <p className="text-gray-500 mt-2 text-base">Get started by generating an agreement or adding a property.</p>
+        </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={onGenerateAgreement} className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors">
+          <button onClick={onGenerateAgreement} className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95">
             <Plus size={16} /> Generate Rent Agreement
           </button>
-          <button onClick={onAddProperty} className="inline-flex items-center gap-2 h-10 px-5 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors">
+          <button onClick={onAddProperty} className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-white border border-gray-200 text-gray-700 text-sm font-semibold hover:border-primary/30 hover:bg-primary/5 transition-all active:scale-95">
             <Plus size={16} /> Add Property
           </button>
-          <button onClick={onAddTenant} className="inline-flex items-center gap-2 h-10 px-5 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors">
+          <button onClick={onAddTenant} className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-white border border-gray-200 text-gray-700 text-sm font-semibold hover:border-primary/30 hover:bg-primary/5 transition-all active:scale-95">
             <UserPlus size={16} /> Add Tenant
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
-        <div className="rounded-xl border border-gray-200 bg-white p-6 relative overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 relative overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
           <img
             src="/agreement-bg.png"
             alt=""
             aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-cover opacity-[0.08] pointer-events-none select-none"
+            className="absolute inset-0 w-full h-full object-cover opacity-[0.04] pointer-events-none select-none group-hover:opacity-[0.08] transition-opacity"
           />
-          <div className="relative z-10">
-            <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700 mb-6">
-              <FilePlus2 size={20} />
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-6 ring-8 ring-primary/5">
+              <FilePlus2 size={24} />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Generate Rental Agreement</h3>
-            <p className="text-sm text-gray-500 mb-6">Generate rental agreements, collect documents, and complete digital signing, all in one place with TrustKeyper.</p>
-            <button onClick={onGenerateAgreement} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors">
-              Continue <ArrowRight size={14} />
+            <h3 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">Generate Rental Agreement</h3>
+            <p className="text-gray-500 mb-8 leading-relaxed flex-grow">Generate rental agreements, collect documents, and complete digital signing, all in one place with TrustKeyper.</p>
+            <button onClick={onGenerateAgreement} className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95 mt-auto">
+              Continue <ArrowRight size={16} />
             </button>
           </div>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700 mb-6">
-            <Plus size={20} />
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm hover:shadow-md transition-shadow group flex flex-col">
+          <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-gray-700 mb-6 group-hover:bg-primary/10 group-hover:text-primary transition-colors ring-8 ring-gray-50 group-hover:ring-primary/5">
+            <Plus size={24} />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Add Your First Property</h3>
-          <p className="text-sm text-gray-500 mb-6">List and manage your property details to start renting seamlessly through TrustKeyper.</p>
-          <button onClick={onAddProperty} className="inline-flex items-center gap-1 text-accent text-sm font-medium hover:underline transition-colors">
-            <Plus size={14} /> Add Property
+          <h3 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">Add Your First Property</h3>
+          <p className="text-gray-500 mb-8 leading-relaxed flex-grow">List and manage your property details to start renting seamlessly through TrustKeyper.</p>
+          <button onClick={onAddProperty} className="inline-flex items-center gap-2 text-primary font-semibold hover:gap-3 transition-all mt-auto w-fit">
+            <Plus size={16} /> Add Property
           </button>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700 mb-6">
-            <UserPlus size={20} />
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm hover:shadow-md transition-shadow group flex flex-col">
+          <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-gray-700 mb-6 group-hover:bg-accent/10 group-hover:text-accent transition-colors ring-8 ring-gray-50 group-hover:ring-accent/5">
+            <UserPlus size={24} />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Add Potential Tenants</h3>
-          <p className="text-sm text-gray-500 mb-6">Add tenant details, send invitations, and manage the rental process digitally through TrustKeyper.</p>
-          <button onClick={onAddTenant} className="inline-flex items-center gap-1 text-accent text-sm font-medium hover:underline transition-colors">
-            <UserPlus size={14} /> Add Tenant
+          <h3 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">Add Potential Tenants</h3>
+          <p className="text-gray-500 mb-8 leading-relaxed flex-grow">Add tenant details, send invitations, and manage the rental process digitally through TrustKeyper.</p>
+          <button onClick={onAddTenant} className="inline-flex items-center gap-2 text-accent font-semibold hover:gap-3 transition-all mt-auto w-fit">
+            <UserPlus size={16} /> Add Tenant
           </button>
         </div>
       </div>
 
-      <h2 className="text-lg font-semibold text-gray-900 mb-3">Recent Activity</h2>
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
-        <div className="flex items-center gap-4 py-3 border-b border-gray-100">
-          <span className="text-sm text-gray-500 w-12">22:40</span>
-          <div className="w-8 h-8 rounded-full bg-accent/15 flex items-center justify-center text-accent">
-            <Check size={16} />
+      <div>
+        <h2 className="text-xl font-bold text-gray-900 mb-6 tracking-tight">Recent Activity</h2>
+        <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+          <div className="flex items-center gap-5 px-6 py-4 hover:bg-gray-50 transition-colors">
+            <span className="text-sm text-gray-400 font-mono w-14 shrink-0">22:40</span>
+            <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center text-accent shrink-0">
+              <Check size={18} />
+            </div>
+            <span className="text-base font-medium text-gray-900">Your Profile has been created</span>
           </div>
-          <span className="text-sm text-gray-900">Your Profile has been created</span>
+          <div className="bg-gray-50 border-t border-gray-100 px-6 py-4">
+            <button className="w-full text-center text-sm text-primary font-semibold hover:text-primary/80 transition-colors">View All Activity</button>
+          </div>
         </div>
-        <button className="w-full text-center text-sm text-accent font-medium pt-4 hover:underline">View All Activity</button>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -126,9 +133,9 @@ type DealCard = {
 };
 
 const STAGE_CFG = {
-  lead:      { label: "Lead",      border: "border-l-primary",    chip: "bg-blue-50 text-primary border-primary/20",   dot: "bg-primary" },
-  agreement: { label: "Agreement", border: "border-l-amber-500",  chip: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },
-  completed: { label: "Completed", border: "border-l-green-500",  chip: "bg-green-50 text-green-700 border-green-200", dot: "bg-green-500" },
+  lead: { label: "Lead", border: "border-l-primary", chip: "bg-blue-50 text-primary border-primary/20", dot: "bg-primary" },
+  agreement: { label: "Agreement", border: "border-l-amber-500", chip: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },
+  completed: { label: "Completed", border: "border-l-green-500", chip: "bg-green-50 text-green-700 border-green-200", dot: "bg-green-500" },
 } as const;
 
 function DealCardItem({ card, onClick }: { card: DealCard; onClick?: () => void }) {
@@ -140,44 +147,50 @@ function DealCardItem({ card, onClick }: { card: DealCard; onClick?: () => void 
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-xl border border-gray-200 border-l-4 ${cfg.border} shadow-sm hover:shadow-md transition-shadow p-4 cursor-pointer group`}
+      className={`bg-white rounded-xl border border-gray-200 border-l-4 ${cfg.border} shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 p-5 cursor-pointer group`}
     >
       {/* Stage chip + arrow */}
-      <div className="flex items-center justify-between mb-3">
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.chip}`}>{cfg.label}</span>
-        <ArrowUpRight size={13} className="text-gray-300 group-hover:text-primary transition-colors" />
+      <div className="flex items-center justify-between mb-4">
+        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md border ${cfg.chip} uppercase tracking-wider`}>{cfg.label}</span>
+        <ArrowUpRight size={16} className="text-gray-300 group-hover:text-primary transition-colors" />
       </div>
 
       {/* Property */}
-      <p className="text-sm font-bold text-gray-900 mb-1 truncate leading-tight">{card.propertyTitle || "—"}</p>
+      <p className="text-base font-bold text-gray-900 mb-2 truncate leading-tight">{card.propertyTitle || "—"}</p>
 
       {/* Tenant */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold shrink-0">
+      <div className="flex items-center gap-3 mb-5 bg-gray-50 rounded-lg p-2.5">
+        <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[11px] font-bold shrink-0">
           {initials}
         </div>
-        <p className="text-xs text-gray-500 truncate">{card.tenantName ? `Tenant: ${card.tenantName}` : "Tenant TBD"}</p>
+        <p className="text-sm text-gray-600 font-medium truncate">{card.tenantName ? `Tenant: ${card.tenantName}` : "Tenant TBD"}</p>
       </div>
 
-      <div className="border-t border-gray-100 mb-3" />
+      <div className="border-t border-gray-100 mb-4" />
 
       {/* Rent + Brokerage */}
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs text-gray-500">{card.monthlyRent ? `${fmtINR(Number(card.monthlyRent))}/mo` : "Rent TBD"}</p>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-col">
+          <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-0.5">Monthly Rent</span>
+          <p className="text-sm font-medium text-gray-700">{card.monthlyRent ? `${fmtINR(Number(card.monthlyRent))}` : "TBD"}</p>
+        </div>
         {card.brokerageAmount && Number(card.brokerageAmount) > 0 && (
-          <p className="text-sm font-bold text-primary">{fmtINR(Number(card.brokerageAmount))}</p>
+          <div className="flex flex-col items-end">
+            <span className="text-[10px] text-primary/60 font-semibold uppercase tracking-wider mb-0.5">Brokerage</span>
+            <p className="text-sm font-bold text-primary">{fmtINR(Number(card.brokerageAmount))}</p>
+          </div>
         )}
       </div>
 
       {/* Time + Paid by */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 text-[11px] text-gray-400">
-          <Clock size={10} /> {timeAgo(card.createdAt)}
+      <div className="flex items-end justify-between mt-4">
+        <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium bg-gray-50 px-2 py-1 rounded-md">
+          <Clock size={12} /> {timeAgo(card.createdAt)}
         </div>
         {card.brokeragePaidBy && (
           <div className="text-right">
-            <p className="text-[9px] text-gray-400 leading-tight">Brokerage paid by</p>
-            <p className="text-[11px] font-semibold text-gray-600">{card.brokeragePaidBy}</p>
+            <p className="text-[10px] text-gray-400 font-medium leading-tight mb-0.5">Paid by</p>
+            <p className="text-xs font-bold text-gray-700">{card.brokeragePaidBy}</p>
           </div>
         )}
       </div>
@@ -254,9 +267,9 @@ function ActiveDashboard({
     }));
 
   const COLUMNS = [
-    { stage: "lead" as const,      label: "Lead",      dot: "bg-primary",    headerBg: "bg-blue-50",  headerText: "text-primary",   countBg: "bg-primary/15 text-primary",      cards: leadCards },
-    { stage: "agreement" as const, label: "Agreement", dot: "bg-amber-500",  headerBg: "bg-amber-50", headerText: "text-amber-700", countBg: "bg-amber-100 text-amber-700",     cards: agreementCards },
-    { stage: "completed" as const, label: "Completed", dot: "bg-green-500",  headerBg: "bg-green-50", headerText: "text-green-700", countBg: "bg-green-100 text-green-700",     cards: completedCards },
+    { stage: "lead" as const, label: "Lead", dot: "bg-primary", headerBg: "bg-blue-50", headerText: "text-primary", countBg: "bg-primary/15 text-primary", cards: leadCards },
+    { stage: "agreement" as const, label: "Agreement", dot: "bg-amber-500", headerBg: "bg-amber-50", headerText: "text-amber-700", countBg: "bg-amber-100 text-amber-700", cards: agreementCards },
+    { stage: "completed" as const, label: "Completed", dot: "bg-green-500", headerBg: "bg-green-50", headerText: "text-green-700", countBg: "bg-green-100 text-green-700", cards: completedCards },
   ];
 
   // Subtitle
@@ -266,10 +279,10 @@ function ActiveDashboard({
     inProgress > 0 && newLeads > 0
       ? `You have ${inProgress} deal${inProgress !== 1 ? "s" : ""} in progress and ${newLeads} new lead${newLeads !== 1 ? "s" : ""}`
       : inProgress > 0
-      ? `You have ${inProgress} deal${inProgress !== 1 ? "s" : ""} in progress`
-      : newLeads > 0
-      ? `You have ${newLeads} new lead${newLeads !== 1 ? "s" : ""}`
-      : `Welcome back, let's close some deals`;
+        ? `You have ${inProgress} deal${inProgress !== 1 ? "s" : ""} in progress`
+        : newLeads > 0
+          ? `You have ${newLeads} new lead${newLeads !== 1 ? "s" : ""}`
+          : `Welcome back, let's close some deals`;
 
   // Recent activity feed
   const recentActivity: { id: string; label: string; time: number; type: "agreement" | "property" | "tenant" }[] = [
@@ -308,100 +321,111 @@ function ActiveDashboard({
   };
 
   return (
-    <>
+    <div className="max-w-7xl mx-auto space-y-10">
       {/* ── Header ── */}
-      <div className="flex items-start justify-between flex-wrap gap-4 mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
             {getGreeting()}, {brokerName} 👋
           </h1>
-          <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+          <p className="text-gray-500 mt-2 text-base">{subtitle}</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={onGenerateAgreement} className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors">
-            <Plus size={15} /> Generate Rent Agreement
+          <button onClick={onGenerateAgreement} className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95">
+            <Plus size={16} /> Generate Rent Agreement
           </button>
-          <button onClick={onAddProperty} className="inline-flex items-center gap-2 h-10 px-5 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors">
-            <Plus size={15} /> Add Property
+          <button onClick={onAddProperty} className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-white border border-gray-200 text-gray-700 text-sm font-semibold hover:border-primary/30 hover:bg-primary/5 transition-all active:scale-95">
+            <Plus size={16} /> Add Property
           </button>
-          <button onClick={onAddTenant} className="inline-flex items-center gap-2 h-10 px-5 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors">
-            <UserPlus size={15} /> Add Tenant
+          <button onClick={onAddTenant} className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-white border border-gray-200 text-gray-700 text-sm font-semibold hover:border-primary/30 hover:bg-primary/5 transition-all active:scale-95">
+            <UserPlus size={16} /> Add Tenant
           </button>
         </div>
       </div>
+
       {/* ── Stats ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center mb-3">
-            <IndianRupee size={18} className="text-amber-500" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow group flex items-start gap-5">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <IndianRupee size={24} className="text-amber-500" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">{fmtINR(totalEarned)}</p>
-          <p className="text-xs text-gray-500 mt-1">Total Earned</p>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Earned</p>
+            <p className="text-3xl font-bold text-gray-900 tracking-tight">{fmtINR(totalEarned)}</p>
+          </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
-            <Building2 size={18} className="text-primary" />
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow group flex items-start gap-5">
+          <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <Building2 size={24} className="text-primary" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">{activePropertyCount}</p>
-          <p className="text-xs text-gray-500 mt-1">Active Properties</p>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Active Properties</p>
+            <p className="text-3xl font-bold text-gray-900 tracking-tight">{activePropertyCount}</p>
+          </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center mb-3">
-            <Users size={18} className="text-orange-500" />
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow group flex items-start gap-5">
+          <div className="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <Users size={24} className="text-orange-500" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">{leadsInPipeline}</p>
-          <p className="text-xs text-gray-500 mt-1">Leads in Pipeline</p>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Leads in Pipeline</p>
+            <p className="text-3xl font-bold text-gray-900 tracking-tight">{leadsInPipeline}</p>
+          </div>
         </div>
       </div>
+
       {/* ── Deals Pipeline ── */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-900">Deals Pipeline</h2>
-          <button onClick={onViewDeals} className="flex items-center gap-1 text-sm text-primary font-medium hover:underline">
-            View All Deals <ChevronRight size={15} />
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight">Deals Pipeline</h2>
+          <button onClick={onViewDeals} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gray-50 text-sm text-gray-700 font-semibold hover:bg-gray-100 transition-colors">
+            View All Deals <ChevronRight size={16} />
           </button>
         </div>
 
         {/* 3-column Kanban board */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {COLUMNS.map((col) => {
-            const preview = col.cards.slice(0, 2);
-            const remaining = col.cards.length - 2;
+            const preview = col.cards.slice(0, 3);
+            const remaining = col.cards.length - 3;
             return (
-              <div key={col.stage} className="flex flex-col gap-3">
+              <div key={col.stage} className="flex flex-col gap-4 bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                 {/* Column header */}
-                <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl ${col.headerBg}`}>
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${col.dot}`} />
-                    <span className={`text-sm font-bold ${col.headerText}`}>{col.label}</span>
+                <div className={`flex items-center justify-between px-4 py-3 rounded-xl ${col.headerBg}`}>
+                  <div className="flex items-center gap-2.5">
+                    <span className={`w-2.5 h-2.5 rounded-full ${col.dot} shadow-sm`} />
+                    <span className={`text-sm font-bold tracking-wide ${col.headerText}`}>{col.label}</span>
                   </div>
-                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded-lg ${col.countBg}`}>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-md ${col.countBg}`}>
                     {col.cards.length}
                   </span>
                 </div>
 
                 {/* Cards */}
-                {preview.length === 0 ? (
-                  <div className="border border-dashed border-gray-200 rounded-xl py-8 text-center text-xs text-gray-400">
-                    No deals here yet
-                  </div>
-                ) : (
-                  preview.map((card) => (
-                    <DealCardItem
-                      key={card.id}
-                      card={card}
-                      onClick={col.stage !== "lead" ? onViewDocuments : undefined}
-                    />
-                  ))
-                )}
+                <div className="flex flex-col gap-3">
+                  {preview.length === 0 ? (
+                    <div className="border-2 border-dashed border-gray-200 rounded-xl py-10 flex flex-col items-center justify-center text-gray-400 bg-white/50">
+                      <FileCheck2 size={24} className="mb-2 opacity-20" />
+                      <span className="text-sm font-medium">No deals here yet</span>
+                    </div>
+                  ) : (
+                    preview.map((card) => (
+                      <DealCardItem
+                        key={card.id}
+                        card={card}
+                        onClick={col.stage !== "lead" ? onViewDocuments : undefined}
+                      />
+                    ))
+                  )}
+                </div>
 
                 {/* View more */}
                 {remaining > 0 && (
                   <button
                     onClick={onViewDeals}
-                    className="py-2 rounded-xl border border-dashed border-gray-300 text-xs text-primary font-semibold hover:bg-primary/5 transition-colors"
+                    className="py-3 rounded-xl border-2 border-dashed border-gray-200 text-sm text-gray-500 font-semibold hover:border-primary/30 hover:text-primary transition-colors bg-white/50 hover:bg-white"
                   >
-                    +{remaining} more deal{remaining !== 1 ? "s" : ""}
+                    View {remaining} more deal{remaining !== 1 ? "s" : ""}
                   </button>
                 )}
               </div>
@@ -409,32 +433,42 @@ function ActiveDashboard({
           })}
         </div>
       </div>
+
       {/* ── Recent Activity ── */}
       <div>
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Recent Activity</h2>
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-          {recentActivity.length === 0 ? (
-            <div className="py-8 text-center text-sm text-gray-400">No activity yet</div>
-          ) : (
-            recentActivity.map((item) => (
-              <div key={item.id} className="flex items-center gap-4 px-5 py-3.5">
-                <span className="text-xs text-gray-400 w-16 shrink-0 font-mono">
-                  {new Date(item.time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false })}
-                </span>
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${activityBg(item.type)}`}>
-                  {activityIcon(item.type)}
-                </div>
-                <span className="text-sm text-gray-800 flex-1 truncate">{item.label}</span>
-                <span className="text-xs text-gray-400 shrink-0">{timeAgo(item.time)}</span>
+        <h2 className="text-xl font-bold text-gray-900 mb-6 tracking-tight">Recent Activity</h2>
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="divide-y divide-gray-100">
+            {recentActivity.length === 0 ? (
+              <div className="py-12 flex flex-col items-center justify-center text-gray-400">
+                <Clock size={32} className="mb-3 opacity-20" />
+                <span className="text-sm font-medium">No activity yet</span>
               </div>
-            ))
-          )}
-          <div className="px-5 py-3 text-center">
-            <button onClick={onViewActivity} className="text-sm text-primary font-medium hover:underline">View All Activity</button>
+            ) : (
+              recentActivity.map((item) => (
+                <div key={item.id} className="flex items-center gap-5 px-6 py-4 hover:bg-gray-50 transition-colors">
+                  <span className="text-sm text-gray-400 font-mono w-14 shrink-0">
+                    {new Date(item.time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                  </span>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${activityBg(item.type)}`}>
+                    {activityIcon(item.type)}
+                  </div>
+                  <span className="text-base text-gray-800 flex-1 truncate font-medium">{item.label}</span>
+                  <span className="text-sm text-gray-400 shrink-0 font-medium bg-gray-50 px-3 py-1 rounded-full">{timeAgo(item.time)}</span>
+                </div>
+              ))
+            )}
           </div>
+          {recentActivity.length > 0 && (
+            <div className="bg-gray-50 border-t border-gray-100 px-6 py-4">
+              <button onClick={onViewActivity} className="w-full text-center text-sm text-primary font-semibold hover:text-primary/80 transition-colors">
+                View All Activity
+              </button>
+            </div>
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

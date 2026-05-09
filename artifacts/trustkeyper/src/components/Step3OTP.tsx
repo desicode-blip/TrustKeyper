@@ -13,10 +13,9 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
   const [countdown, setCountdown] = useState(10);
 
   useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
-      return () => clearTimeout(timer);
-    }
+    if (countdown <= 0) return;
+    const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(timer);
   }, [countdown]);
 
   const handleChange = (index: number, value: string) => {
