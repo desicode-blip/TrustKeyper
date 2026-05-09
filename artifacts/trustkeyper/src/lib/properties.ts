@@ -35,6 +35,7 @@ export interface Property {
   imageCount: number;
   status: PropertyStatus;
   createdAt: number;
+  uploadedBy?: "owner" | "broker";
 }
 
 const KEY = "broker_properties";

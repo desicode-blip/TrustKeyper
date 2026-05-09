@@ -17,6 +17,15 @@ import GenerateAgreement from "@/pages/GenerateAgreement";
 import AddProperty2 from "@/pages/AddProperty2";
 import BrokerSettings from "@/pages/BrokerProfile";
 import BrokerActivity from "@/pages/BrokerActivity";
+import OwnerAddProperty from "@/pages/OwnerAddProperty";
+import OwnerDashboard from "@/pages/OwnerDashboard";
+import OwnerProperties from "@/pages/OwnerProperties";
+import OwnerPropertyDetails from "@/pages/OwnerPropertyDetails";
+import OwnerTenants from "@/pages/OwnerTenants";
+import OwnerTenantProfile from "@/pages/OwnerTenantProfile";
+import OwnerTickets from "@/pages/OwnerTickets";
+import OwnerAgreements from "@/pages/OwnerAgreements";
+import OwnerFinances from "@/pages/OwnerFinances";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +33,15 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Onboarding} />
+      <Route path="/owner/properties/add" component={OwnerAddProperty} />
+      <Route path="/owner/dashboard" component={OwnerDashboard} />
+      <Route path="/owner/properties" component={OwnerProperties} />
+      <Route path="/owner/properties/:id" component={OwnerPropertyDetails} />
+      <Route path="/owner/tenants" component={OwnerTenants} />
+      <Route path="/owner/tenants/:id" component={OwnerTenantProfile} />
+      <Route path="/owner/tickets" component={OwnerTickets} />
+      <Route path="/owner/agreements" component={OwnerAgreements} />
+      <Route path="/owner/finances" component={OwnerFinances} />
       <Route path="/broker/dashboard" component={BrokerDashboard} />
       <Route path="/broker/properties" component={BrokerProperties} />
       <Route path="/broker/properties/add" component={AddProperty} />
