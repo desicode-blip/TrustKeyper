@@ -49,6 +49,7 @@ export default function OwnerProperties() {
             Add Property <Plus size={18} />
           </button>
         </div>
+        <div className="flex items-center gap-3 mb-8">
           {TABS.map((t) => {
             const count = counts[t.id as keyof typeof counts];
             const isActive = activeTab === t.id;
