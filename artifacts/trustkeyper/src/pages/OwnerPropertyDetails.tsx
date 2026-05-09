@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
-import { MapPin, ChevronLeft, PhoneCall, Edit } from "lucide-react";
+import { MapPin, ChevronLeft, PhoneCall, Edit, Plus, Eye, Check } from "lucide-react";
 import OwnerLayout from "@/components/OwnerLayout";
 import { getProperties, type Property } from "@/lib/properties";
 import { Button } from "@/components/ui/button";
