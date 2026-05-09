@@ -1,155 +1,136 @@
 import React, { useState } from "react";
-import { ChevronLeft, Send, Clock, Check, AlertTriangle } from "lucide-react";
-import { useLocation } from "wouter";
+import { Bell, Send, Check, Clock, AlertTriangle } from "lucide-react";
 import OwnerLayout from "@/components/OwnerLayout";
-
-const RENT_DATA = [
-  {
-    id: "r1",
-    property: "3 BHK in Prestige Lakeside",
-    tenant: "Karthik Manjunath",
-    dueDate: "Apr 1, 2026",
-    paidDate: null,
-    amount: "₹28,000",
-    status: "Due"
-  },
-  {
-    id: "r2",
-    property: "2 BHK in Phoenix Towers",
-    tenant: "Priya Sharma",
-    dueDate: "Apr 1, 2026",
-    paidDate: "Mar 29, 2026",
-    amount: "₹22,000",
-    status: "Paid"
-  },
-  {
-    id: "r3",
-    property: "1 BHK in Hi-Tech City",
-    tenant: "Ravi Kumar",
-    dueDate: "Apr 1, 2026",
-    paidDate: null,
-    amount: "₹15,000",
-    status: "Overdue"
-  }
-];
+import { Button } from "@/components/ui/button";
 
 export default function OwnerFinances() {
-  const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState("all");
-  const [rentData, setRentData] = useState(RENT_DATA);
+  const [activeTab, setActiveTab] = useState("All");
 
-  const handleMarkPaid = (id: string) => {
-    setRentData(prev => prev.map(item => {
-      if (item.id === id) {
-        return { ...item, status: "Paid", paidDate: "Apr 2, 2026" };
-      }
-      return item;
-    }));
-  };
+  const rentData = [
+    {
+      id: 1,
+      property: "3 BHK in Prestige Lakeside",
+      tenant: "Karthik Manjunath",
+      dueDate: "Apr 1, 2026",
+      amount: "₹28,000",
+      status: "Due",
+      statusType: "due",
+    },
+    {
+      id: 2,
+      property: "2 BHK in Phoenix Towers",
+      tenant: "Priya Sharma",
+      dueDate: "Apr 1, 2026",
+      paidDate: "Mar 29, 2026",
+      amount: "₹22,000",
+      status: "Paid",
+      statusType: "paid",
+    },
+    {
+      id: 3,
+      property: "1 BHK in Hi-Tech City",
+      tenant: "Ravi Kumar",
+      dueDate: "Apr 1, 2026",
+      amount: "₹15,000",
+      status: "Overdue",
+      statusType: "overdue",
+    }
+  ];
 
-  const visibleData = rentData.filter(item => {
-    if (activeTab === "all") return true;
-    if (activeTab === "overdue") return item.status === "Overdue";
-    if (activeTab === "paid") return item.status === "Paid";
-    return true;
-  });
+  const filteredData = activeTab === "All" 
+    ? rentData 
+    : rentData.filter(item => item.statusType === activeTab.toLowerCase());
 
   return (
     <OwnerLayout>
-      <div className="p-4 sm:p-8 max-w-5xl mx-auto">
-        <button onClick={() => setLocation("/owner/dashboard")} className="flex items-center gap-2 text-primary font-medium text-lg mb-6 hover:underline">
-          <ChevronLeft size={20} /> Back to Dashboard
-        </button>
-
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-[#1E293B] mb-1">Rent Management</h1>
-          <p className="text-[#64748B] text-sm">Track and manage rent payments across all properties</p>
+      <div className="p-4 sm:p-8 max-w-[1000px] mx-auto">
+        <div className="mb-6">
+          <h1 className="text-[26px] font-bold text-gray-900 mb-1">Rent Management</h1>
+          <p className="text-gray-500 text-[15px]">Track and manage rent payments across all properties</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
-            <p className="text-sm font-medium text-[#94A3B8] mb-2">Total Due</p>
-            <h2 className="text-3xl font-bold text-[#EF4444]">₹43,000</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+            <p className="text-[14px] font-medium text-gray-500 mb-3">Total Due</p>
+            <h2 className="text-[32px] font-bold text-[#E64848]">₹43,000</h2>
           </div>
-          <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
-            <p className="text-sm font-medium text-[#94A3B8] mb-2">Total Collected</p>
-            <h2 className="text-3xl font-bold text-[#22C55E]">₹1.4L</h2>
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+            <p className="text-[14px] font-medium text-gray-500 mb-3">Total Collected</p>
+            <h2 className="text-[32px] font-bold text-[#27AE60]">₹1.4L</h2>
           </div>
-          <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
-            <p className="text-sm font-medium text-[#94A3B8] mb-2">Collection Rate</p>
-            <h2 className="text-3xl font-bold text-[#0F172A]">76%</h2>
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+            <p className="text-[14px] font-medium text-gray-500 mb-3">Collection Rate</p>
+            <h2 className="text-[32px] font-bold text-[#1F2937]">76%</h2>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mb-6 bg-white border border-gray-200 rounded-lg p-1.5 w-fit shadow-sm">
-          <button
-            onClick={() => setActiveTab("all")}
-            className={`h-9 px-5 rounded-md text-sm font-medium transition-colors ${
-              activeTab === "all" ? "bg-[#DCFCE7] text-[#166534]" : "text-[#64748B] hover:bg-gray-50"
-            }`}
-          >
-            All (8)
-          </button>
-          <button
-            onClick={() => setActiveTab("overdue")}
-            className={`h-9 px-5 rounded-md text-sm font-medium transition-colors ${
-              activeTab === "overdue" ? "bg-[#DCFCE7] text-[#166534]" : "text-[#64748B] hover:bg-gray-50"
-            }`}
-          >
-            Overdue (2)
-          </button>
-          <button
-            onClick={() => setActiveTab("paid")}
-            className={`h-9 px-5 rounded-md text-sm font-medium transition-colors ${
-              activeTab === "paid" ? "bg-[#DCFCE7] text-[#166534]" : "text-[#64748B] hover:bg-gray-50"
-            }`}
-          >
-            Paid (6)
-          </button>
+        <div className="flex items-center gap-2 mb-8 bg-white border border-gray-200 rounded-xl p-1.5 w-fit shadow-sm">
+          {[
+            { label: "All (8)", id: "All" },
+            { label: "Overdue (2)", id: "Overdue" },
+            { label: "Paid (6)", id: "Paid" }
+          ].map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  isActive 
+                    ? "bg-[#E8F5EE] text-[#27AE60]" 
+                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
         <div className="space-y-4">
-          {visibleData.map(item => (
-            <div key={item.id} className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-                  item.status === "Due" ? "bg-[#FEF3C7] text-[#D97706]" :
-                  item.status === "Paid" ? "bg-[#DCFCE7] text-[#16A34A]" :
-                  "bg-[#FEE2E2] text-[#DC2626]"
+          {filteredData.map((item) => (
+            <div key={item.id} className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 shadow-sm transition-all hover:border-gray-200">
+              <div className="flex items-center gap-5">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border transition-colors ${
+                  item.statusType === 'due' ? "bg-[#FFF9EB] border-[#FFEBBD] text-[#F2994A]" :
+                  item.statusType === 'paid' ? "bg-[#E8F5EE] border-[#D1EBDD] text-[#27AE60]" :
+                  "bg-[#FFF0F0] border-[#FFD9D9] text-[#EB5757]"
                 }`}>
-                  {item.status === "Due" && <Clock size={20} strokeWidth={2.5} />}
-                  {item.status === "Paid" && <Check size={20} strokeWidth={3} />}
-                  {item.status === "Overdue" && <AlertTriangle size={20} strokeWidth={2.5} />}
+                  {item.statusType === 'due' && <Clock size={22} />}
+                  {item.statusType === 'paid' && <Check size={22} strokeWidth={3} />}
+                  {item.statusType === 'overdue' && <AlertTriangle size={22} />}
                 </div>
                 <div>
-                  <h3 className="font-bold text-[#0F172A] text-[15px] mb-1">{item.property}</h3>
-                  <p className="text-[13px] text-[#64748B]">
-                    {item.tenant} • Due {item.dueDate}
+                  <h3 className="font-bold text-gray-900 text-[17px] mb-0.5">{item.property}</h3>
+                  <p className="text-[13px] text-gray-500 font-medium">
+                    {item.tenant} <span className="mx-1">•</span> Due {item.dueDate}
                   </p>
                   {item.paidDate && (
-                    <p className="text-[12px] text-[#22C55E] mt-0.5 font-medium">Paid on {item.paidDate}</p>
+                    <p className="text-[12px] text-[#27AE60] mt-1 font-semibold">Paid on {item.paidDate}</p>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-6 sm:gap-8">
-                <div className="flex items-center gap-3">
-                  <span className="font-bold text-[#0F172A] text-lg">{item.amount}</span>
-                  <span className={`px-2.5 py-1 rounded text-xs font-semibold ${
-                    item.status === "Due" ? "bg-[#FEF3C7] text-[#D97706]" :
-                    item.status === "Paid" ? "bg-[#DCFCE7] text-[#16A34A]" :
-                    "bg-[#FEE2E2] text-[#DC2626]"
+              
+              <div className="flex items-center gap-6 w-full sm:w-auto">
+                <div className="flex items-center gap-3 ml-auto sm:ml-0">
+                  <p className="font-bold text-[#1F2937] text-[18px]">{item.amount}</p>
+                  <span className={`px-3 py-1 rounded-lg text-xs font-bold border ${
+                    item.statusType === 'due' ? "bg-[#FFF9EB] text-[#F2994A] border-[#FFEBBD]" :
+                    item.statusType === 'paid' ? "bg-[#E8F5EE] text-[#27AE60] border-[#D1EBDD]" :
+                    "bg-[#FFF0F0] text-[#EB5757] border-[#FFD9D9]"
                   }`}>
                     {item.status}
                   </span>
                 </div>
-                {item.status !== "Paid" && (
-                  <div className="flex items-center gap-2">
-                    <button className="hidden sm:flex items-center gap-2 h-9 px-4 rounded-md border border-gray-200 text-[#334155] text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm">
-                      <Send size={14} /> Remind
-                    </button>
-                    <button onClick={() => handleMarkPaid(item.id)} className="h-9 px-4 rounded-md bg-[#2D31A6] text-white text-sm font-semibold hover:bg-[#2D31A6]/90 transition-colors shadow-sm">
+                
+                {item.statusType !== 'paid' && (
+                  <div className="flex items-center gap-3">
+                    <Button variant="outline" className="h-10 gap-2 border-gray-200 text-gray-700 font-bold px-4 rounded-xl hover:bg-gray-50">
+                      <Send size={16} /> Remind
+                    </Button>
+                    <Button className="h-10 bg-[#2F65FF] hover:bg-[#1E50FF] text-white font-bold px-5 rounded-xl shadow-[0_4px_10px_-4px_rgba(47,101,255,0.5)]">
                       Mark Paid
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>

@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import brandLogo from "@assets/Trustkeyper_Logo_1777989635996.png";
 import footerLogo from "@assets/Frame_3466296_1777451511864.png";
 import footerWave from "@assets/Vector_20_1777451511865.png";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Phone, Mail } from "lucide-react";
 import {
   LayoutDashboard,
@@ -19,9 +20,9 @@ import {
   Menu,
   X,
   History,
-  CheckCircle2,
+  AlertTriangle,
+  Check,
 } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const navItems = [
   { id: "dashboards", label: "Dashboards", icon: LayoutDashboard, href: "/owner/dashboard" },
@@ -100,56 +101,51 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
           </div>
           <Popover>
             <PopoverTrigger asChild>
-              <button className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 focus:outline-none">
-                <Bell size={17} />
-                <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-primary text-[10px] font-bold text-white flex items-center justify-center">3</span>
+              <button className="relative w-10 h-10 rounded-xl border border-gray-100 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50 focus:outline-none transition-all hover:border-gray-200 shadow-sm">
+                <Bell size={18} className="text-gray-500" />
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#EB5757] text-[10px] font-black text-white flex items-center justify-center border-2 border-white">3</span>
               </button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 p-0 rounded-xl shadow-lg border border-gray-100">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                <h3 className="font-semibold text-gray-900">Notifications</h3>
-                <button className="text-xs text-primary font-medium hover:underline">Mark all as read</button>
+            <PopoverContent align="end" className="w-[360px] p-0 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-gray-100 z-50 overflow-hidden">
+              <div className="flex items-center justify-between p-5 bg-[#F8FAFC] border-b border-gray-100">
+                <h3 className="font-black text-gray-900 text-lg">Notifications</h3>
+                <button className="text-xs text-[#3B82F6] font-bold hover:underline">Mark all as read</button>
               </div>
-              <div className="max-h-[300px] overflow-y-auto">
-                <div className="px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 cursor-pointer">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center shrink-0 mt-0.5">
-                      <CheckCircle2 size={16} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Rent Received</p>
-                      <p className="text-xs text-gray-500 mt-0.5">₹28,000 received for Prestige Lakeside Unit 1204</p>
-                      <p className="text-[10px] text-gray-400 mt-1">2 hours ago</p>
-                    </div>
+              <div className="max-h-[400px] overflow-y-auto">
+                <div className="p-5 border-b border-gray-50 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer group">
+                  <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center shrink-0 border border-green-100 text-[#27AE60]">
+                    <Check size={18} strokeWidth={3} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-[14px] mb-0.5 group-hover:text-[#3B82F6] transition-colors">Rent Received</p>
+                    <p className="text-[12px] text-gray-500 leading-relaxed font-medium">Rent for Prestige Lakeside Unit 1204 has been received successfully.</p>
+                    <p className="text-[10px] text-gray-400 mt-2 font-bold flex items-center gap-1.5"><Clock size={10} /> 2 hours ago</p>
                   </div>
                 </div>
-                <div className="px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 cursor-pointer">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-                      <Ticket size={16} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">New Ticket Created</p>
-                      <p className="text-xs text-gray-500 mt-0.5">AC Not cooling in Unit 1806</p>
-                      <p className="text-[10px] text-gray-400 mt-1">5 hours ago</p>
-                    </div>
+                <div className="p-5 border-b border-gray-50 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer bg-blue-50/20 group relative">
+                  <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center shrink-0 border border-red-100 text-[#EB5757]">
+                    <Ticket size={18} />
                   </div>
+                  <div className="flex-1">
+                    <p className="font-bold text-gray-900 text-[14px] mb-0.5 group-hover:text-[#3B82F6] transition-colors">New Ticket Created</p>
+                    <p className="text-[12px] text-gray-500 leading-relaxed font-medium">Tenant reported an issue with the plumbing in Unit 305.</p>
+                    <p className="text-[10px] text-gray-400 mt-2 font-bold flex items-center gap-1.5"><Clock size={10} /> 4 hours ago</p>
+                  </div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#3B82F6] mt-1.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
                 </div>
-                <div className="px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
-                      <Clock size={16} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Rent Reminder Sent</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Automated reminder sent to Ravi Kumar</p>
-                      <p className="text-[10px] text-gray-400 mt-1">1 day ago</p>
-                    </div>
+                <div className="p-5 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer group">
+                  <div className="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center shrink-0 border border-yellow-100 text-[#F2994A]">
+                    <AlertTriangle size={18} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-[14px] mb-0.5 group-hover:text-[#3B82F6] transition-colors">Inspection Alert</p>
+                    <p className="text-[12px] text-gray-500 leading-relaxed font-medium">Minor leak detected in Prestige Heights Unit 1107.</p>
+                    <p className="text-[10px] text-gray-400 mt-2 font-bold flex items-center gap-1.5"><Clock size={10} /> 5 hours ago</p>
                   </div>
                 </div>
               </div>
-              <div className="p-2 border-t border-gray-100 bg-gray-50/50 text-center rounded-b-xl">
-                <Link href="/owner/dashboard" className="text-xs font-semibold text-primary hover:underline">View all notifications</Link>
+              <div className="p-4 border-t border-gray-100 text-center bg-white">
+                <button className="text-[13px] font-black text-[#3B82F6] hover:underline">View All Notifications</button>
               </div>
             </PopoverContent>
           </Popover>

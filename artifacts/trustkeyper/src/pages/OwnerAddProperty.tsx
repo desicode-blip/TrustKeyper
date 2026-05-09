@@ -180,9 +180,9 @@ function AmenityCheck({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex items-center gap-3 cursor-pointer select-none py-1" onClick={(e) => { e.preventDefault(); onChange(!checked); }}>
-      <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 transition-colors ${
-        checked ? "bg-primary border-primary" : "bg-white border-gray-400 hover:border-primary/50"
+    <label className="flex items-center gap-3 cursor-pointer select-none py-1 group" onClick={(e) => { e.preventDefault(); onChange(!checked); }}>
+      <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 transition-colors shadow-sm ${
+        checked ? "bg-primary border-primary" : "bg-white border-gray-400 group-hover:border-primary"
       }`}>
         {checked && <Check size={12} strokeWidth={3} className="text-white" />}
       </div>
@@ -225,7 +225,8 @@ export default function OwnerAddProperty() {
 
   // Sub-step 3 – Amenities
   const [amenities, setAmenities] = useState<string[]>([]);
-  const [customAmenity, setCustomAmenity] = useState("");
+  const [amenityOtherChecked, setAmenityOtherChecked] = useState(false);
+  const [amenityOtherText, setAmenityOtherText] = useState("");
 
   // Sub-step 4 – Rental Details
   const [tenantsPreferred, setTenantsPreferred] = useState<string[]>([]);
@@ -242,14 +243,74 @@ export default function OwnerAddProperty() {
   const [isManagedPopupOpen, setIsManagedPopupOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialization
+  // Initialization & Persistence
   useEffect(() => {
     // Pre-fill owner details from onboarding if available
     const storedName = sessionStorage.getItem("owner_name");
     const storedContact = sessionStorage.getItem("owner_contact");
     if (storedName) setOwnerName(storedName);
     if (storedContact) setOwnerContact(storedContact);
+
+    // Load persisted property data
+    const savedData = localStorage.getItem("trustkeyper_onboarding_data");
+    if (savedData) {
+      try {
+        const data = JSON.parse(savedData);
+        setNickname(data.nickname || "");
+        setAddress(data.address || "");
+        setArea(data.area || "");
+        setCity(data.city || "Hyderabad");
+        setPincode(data.pincode || "");
+        setCountry(data.country || "India");
+        setPropertyType(data.propertyType || "");
+        setPropertyTypeOther(data.propertyTypeOther || "");
+        setUnitSize(data.unitSize || "");
+        setUnitSizeOther(data.unitSizeOther || "");
+        setFurnishing(data.furnishing || "");
+        setBuiltUpArea(data.builtUpArea || "");
+        setBuiltUpUnits(data.builtUpUnits || "sq ft");
+        setTotalFloors(data.totalFloors || "");
+        setBedrooms(data.bedrooms || "");
+        setBathrooms(data.bathrooms || "");
+        setBalconies(data.balconies || "");
+        setFloorLevel(data.floorLevel || "");
+        setMainDoorDirection(data.mainDoorDirection || "");
+        setAmenities(data.amenities || []);
+        setAmenityOtherChecked(data.amenityOtherChecked || false);
+        setAmenityOtherText(data.amenityOtherText || "");
+        setTenantsPreferred(data.tenantsPreferred || []);
+        setMonthlyRent(data.monthlyRent || "");
+        setRentNegotiable(data.rentNegotiable || false);
+        setMaintenanceIncluded(data.maintenanceIncluded || false);
+        setMonthlyMaintenance(data.monthlyMaintenance || "");
+        setSecurityDeposit(data.securityDeposit || "");
+        setAvailableFrom(data.availableFrom || "");
+        setSubStep(data.subStep || 0);
+      } catch (e) {
+        console.error("Error loading saved onboarding data", e);
+      }
+    }
   }, []);
+
+  // Save data on every change
+  useEffect(() => {
+    const data = {
+      nickname, address, area, city, pincode, country,
+      propertyType, propertyTypeOther, unitSize, unitSizeOther, furnishing,
+      builtUpArea, builtUpUnits, totalFloors, bedrooms, bathrooms, balconies, floorLevel, mainDoorDirection,
+      amenities, amenityOtherChecked, amenityOtherText,
+      tenantsPreferred, monthlyRent, rentNegotiable, maintenanceIncluded, monthlyMaintenance, securityDeposit, availableFrom,
+      subStep
+    };
+    localStorage.setItem("trustkeyper_onboarding_data", JSON.stringify(data));
+  }, [
+    nickname, address, area, city, pincode, country,
+    propertyType, propertyTypeOther, unitSize, unitSizeOther, furnishing,
+    builtUpArea, builtUpUnits, totalFloors, bedrooms, bathrooms, balconies, floorLevel, mainDoorDirection,
+    amenities, amenityOtherChecked, amenityOtherText,
+    tenantsPreferred, monthlyRent, rentNegotiable, maintenanceIncluded, monthlyMaintenance, securityDeposit, availableFrom,
+    subStep
+  ]);
 
   const toggleAmenity = (a: string) =>
     setAmenities((prev) =>
@@ -309,16 +370,24 @@ export default function OwnerAddProperty() {
   };
 
   const handleSubmit = () => {
+    const finalAmenities = [...amenities];
+    if (amenityOtherChecked && amenityOtherText.trim() !== "") {
+      finalAmenities.push(amenityOtherText.trim());
+    }
+
     addProperty({
       nickname, address, area, city, pincode, country,
       ownerName, ownerContact,
       propertyType, propertyTypeOther, unitSize, unitSizeOther, furnishing,
       builtUpArea, builtUpUnits, totalFloors, bedrooms, bathrooms, balconies, floorLevel, mainDoorDirection,
-      amenities: amenities.includes("Other") && customAmenity.trim() ? [...amenities.filter(a => a !== "Other"), customAmenity.trim()] : amenities,
-      tenantsPreferred, monthlyRent, rentNegotiable, maintenanceIncluded, monthlyMaintenance, securityDeposit, availableFrom,
+      amenities: finalAmenities, tenantsPreferred, monthlyRent, rentNegotiable, maintenanceIncluded, monthlyMaintenance, securityDeposit, availableFrom,
       images: imageUrls, imageCount: imageUrls.length, status: "Active",
       uploadedBy: "owner",
     });
+    
+    // Clear persistence on success
+    localStorage.removeItem("trustkeyper_onboarding_data");
+    
     setShowSuccess(true);
     setTimeout(() => {
       setShowSuccess(false);
@@ -453,7 +522,7 @@ export default function OwnerAddProperty() {
         </div>
         <div>
           <FieldLabel required>Total Floors</FieldLabel>
-          <SelectField value={totalFloors} onChange={setTotalFloors} options={FLOORS_OPTIONS} placeholder="Select" />
+          <Input placeholder="Type here" value={totalFloors} onChange={(e) => setTotalFloors(e.target.value)} type="number" className="h-10 rounded-sm border-gray-200 focus:border-primary/50" />
         </div>
         <div>
           <FieldLabel required>Bedrooms</FieldLabel>
@@ -485,7 +554,7 @@ export default function OwnerAddProperty() {
         <h2 className="text-[22px] font-medium text-gray-800 mb-1">Tell us more about your property</h2>
         <p className="text-[13px] text-gray-400">Providing these details will boost your chances of finding a tenant</p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-4 max-w-lg mx-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8 max-w-lg mx-auto mb-10">
         <div className="space-y-4">
           {AMENITIES_LEFT.map((a) => (
             <AmenityCheck key={a} label={a} checked={amenities.includes(a)} onChange={(v) => toggleAmenity(a)} />
@@ -495,14 +564,21 @@ export default function OwnerAddProperty() {
           {AMENITIES_RIGHT.map((a) => (
             <AmenityCheck key={a} label={a} checked={amenities.includes(a)} onChange={(v) => toggleAmenity(a)} />
           ))}
-          <AmenityCheck label="Other" checked={amenities.includes("Other")} onChange={(v) => toggleAmenity("Other")} />
-          {amenities.includes("Other") && (
-            <div className="mt-2 pl-7">
-              <Input placeholder="Specify other amenities" value={customAmenity} onChange={(e) => setCustomAmenity(e.target.value)} className="h-9 rounded-sm text-sm" />
-            </div>
-          )}
+          <AmenityCheck label="Other (specify)" checked={amenityOtherChecked} onChange={setAmenityOtherChecked} />
         </div>
       </div>
+      
+      {amenityOtherChecked && (
+        <div className="max-w-lg mx-auto animate-in fade-in slide-in-from-top-2 duration-200">
+          <FieldLabel>Please specify your other amenities</FieldLabel>
+          <Input 
+            placeholder="E.g. Security Cameras, Internet, Solar Panels" 
+            value={amenityOtherText} 
+            onChange={(e) => setAmenityOtherText(e.target.value)} 
+            className="h-11 rounded-xl border-gray-200 focus:border-primary/50 shadow-sm" 
+          />
+        </div>
+      )}
     </div>
   );
 
@@ -516,9 +592,9 @@ export default function OwnerAddProperty() {
           <FieldLabel required>Tenants Preferred</FieldLabel>
           <div className="flex items-center gap-6 flex-wrap mt-2">
             {["Family", "Bachelors - Male", "Bachelors - Female"].map((t) => (
-              <label key={t} className="flex items-center gap-2 cursor-pointer" onClick={(e) => { e.preventDefault(); toggleTenant(t); }}>
-                <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 transition-colors ${
-                  tenantsPreferred.includes(t) ? "bg-primary border-primary" : "bg-white border-gray-400 hover:border-primary/50"
+              <label key={t} className="flex items-center gap-2 cursor-pointer group" onClick={(e) => { e.preventDefault(); toggleTenant(t); }}>
+                <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 transition-colors shadow-sm ${
+                  tenantsPreferred.includes(t) ? "bg-primary border-primary" : "bg-white border-gray-400 group-hover:border-primary"
                 }`}>
                   {tenantsPreferred.includes(t) && <Check size={12} strokeWidth={3} className="text-white" />}
                 </div>
@@ -538,14 +614,14 @@ export default function OwnerAddProperty() {
         </div>
 
         <div className="flex items-center gap-6 pb-2">
-          <label className="flex items-center gap-2 cursor-pointer" onClick={(e) => { e.preventDefault(); setRentNegotiable(!rentNegotiable); }}>
-            <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 transition-colors ${rentNegotiable ? "bg-primary border-primary" : "bg-white border-gray-400 hover:border-primary/50"}`}>
+          <label className="flex items-center gap-2 cursor-pointer group" onClick={(e) => { e.preventDefault(); setRentNegotiable(!rentNegotiable); }}>
+            <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 transition-colors shadow-sm ${rentNegotiable ? "bg-primary border-primary" : "bg-white border-gray-400 group-hover:border-primary"}`}>
               {rentNegotiable && <Check size={12} strokeWidth={3} className="text-white" />}
             </div>
             <span className="text-[13px] text-gray-600">Rent Negotiable</span>
           </label>
-          <label className="flex items-center gap-2 cursor-pointer" onClick={(e) => { e.preventDefault(); setMaintenanceIncluded(!maintenanceIncluded); if (!maintenanceIncluded) setMonthlyMaintenance(""); }}>
-            <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 transition-colors ${maintenanceIncluded ? "bg-primary border-primary" : "bg-white border-gray-400 hover:border-primary/50"}`}>
+          <label className="flex items-center gap-2 cursor-pointer group" onClick={(e) => { e.preventDefault(); setMaintenanceIncluded(!maintenanceIncluded); if (!maintenanceIncluded) setMonthlyMaintenance(""); }}>
+            <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 transition-colors shadow-sm ${maintenanceIncluded ? "bg-primary border-primary" : "bg-white border-gray-400 group-hover:border-primary"}`}>
               {maintenanceIncluded && <Check size={12} strokeWidth={3} className="text-white" />}
             </div>
             <span className="text-[13px] text-gray-600">Maintenance included</span>
@@ -632,7 +708,7 @@ export default function OwnerAddProperty() {
       
       {/* Top Header */}
       <header className="bg-white px-6 py-4 flex items-center justify-between border-b border-gray-100 z-10 relative">
-        <button onClick={() => { if (subStep > 0) { setSubStep(s => s - 1); window.scrollTo({ top: 0, behavior: 'smooth' }); } else { setLocation("/"); } }} className="flex items-center gap-2 text-sm text-gray-700 hover:text-primary transition-colors font-medium">
+        <button onClick={() => subStep > 0 ? setSubStep(s => s - 1) : setLocation("/")} className="flex items-center gap-2 text-sm text-gray-700 hover:text-primary transition-colors font-medium">
           <ChevronLeft size={16} /> Go back
         </button>
         <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center">

@@ -42,12 +42,12 @@ export default function OwnerStep2Intent({ propertyIntent, setPropertyIntent, on
                   : "bg-white border-gray-200 hover:border-gray-300 text-gray-600"
               }`}
             >
-              <div className={`w-5 h-5 border rounded-sm flex items-center justify-center shrink-0 ${
-                isSelected ? "bg-primary border-primary" : "border-gray-300 bg-white"
+              <div className={`w-5 h-5 border-2 rounded-sm flex items-center justify-center shrink-0 transition-colors shadow-sm ${
+                isSelected ? "bg-primary border-primary" : "border-gray-400 bg-white"
               }`}>
                 {isSelected && (
                   <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
                   </svg>
                 )}
               </div>
