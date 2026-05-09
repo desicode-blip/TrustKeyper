@@ -1,4 +1,5 @@
 {
+  "framework": "vite",
   "buildCommand": "pnpm --filter @workspace/trustkeyper run build",
   "outputDirectory": "artifacts/trustkeyper/dist/public",
   "installCommand": "pnpm install",
