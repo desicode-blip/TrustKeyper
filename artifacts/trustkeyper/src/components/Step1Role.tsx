@@ -19,7 +19,7 @@ export default function Step1Role({ role, setRole, onNext }: Step1RoleProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">I am a</h1>
+        <h1 className="text-3xl font-semibold text-gray-900 mb-2">I am a</h1>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">

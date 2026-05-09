@@ -231,7 +231,7 @@ export default function AddTenant() {
           </button>
         )}
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Add Tenant</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 mb-6">Add Tenant</h1>
 
         {/* Generate Link card (always visible) */}
         <div className="rounded-xl border border-gray-200 bg-white p-5 mb-8 flex items-center justify-between gap-4">
@@ -642,7 +642,7 @@ export default function AddTenant() {
             <div className="p-6">
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">
+                  <h2 className="text-lg font-semibold text-gray-900">
                     Send Onboarding Link
                   </h2>
                   <p className="text-sm text-gray-500 mt-1">
@@ -712,7 +712,7 @@ export default function AddTenant() {
           {modalStep === "share" && (
             <div className="p-6">
               <div className="flex items-start justify-between mb-6">
-                <h2 className="text-lg font-bold text-gray-900">
+                <h2 className="text-lg font-semibold text-gray-900">
                   Share link with {linkName}
                 </h2>
                 <button
@@ -790,7 +790,7 @@ export default function AddTenant() {
             <div className="w-16 h-16 rounded-full bg-accent/15 mx-auto mb-4 flex items-center justify-center">
               <CheckCircle2 size={36} className="text-accent" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">
+            <h2 className="text-xl font-semibold text-gray-900 mb-1">
               Tenant Profile Created!
             </h2>
             <p className="text-sm text-gray-500 mb-6">

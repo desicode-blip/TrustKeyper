@@ -30,9 +30,7 @@ const navItems = [
   { id: "tenants", label: "Tenants", icon: Users, href: "/owner/tenants" },
   { id: "finances", label: "Finances & Expenses", icon: CreditCard, href: "/owner/finances" },
   { id: "tickets", label: "Tickets", icon: Ticket, href: "/owner/tickets" },
-  { id: "report", label: "Report", icon: FileText, href: "/owner/reports" },
   { id: "agreement", label: "Agreement", icon: FileSignature, href: "/owner/agreements" },
-  { id: "subscription", label: "Subscription History", icon: History, href: "/owner/subscriptions" },
 ];
 
 const helpItems = [
@@ -103,13 +101,13 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
             <PopoverTrigger asChild>
               <button className="relative w-10 h-10 rounded-xl border border-gray-100 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50 focus:outline-none transition-all hover:border-gray-200 shadow-sm">
                 <Bell size={18} className="text-gray-500" />
-                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#EB5757] text-[10px] font-black text-white flex items-center justify-center border-2 border-white">3</span>
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#EB5757] text-[10px] font-semibold text-white flex items-center justify-center border-2 border-white">3</span>
               </button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-[360px] p-0 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-gray-100 z-50 overflow-hidden">
               <div className="flex items-center justify-between p-5 bg-[#F8FAFC] border-b border-gray-100">
-                <h3 className="font-black text-gray-900 text-lg">Notifications</h3>
-                <button className="text-xs text-[#3B82F6] font-bold hover:underline">Mark all as read</button>
+                <h3 className="font-semibold text-gray-900 text-lg">Notifications</h3>
+                <button className="text-xs text-[#3B82F6] font-semibold hover:underline">Mark all as read</button>
               </div>
               <div className="max-h-[400px] overflow-y-auto">
                 <div className="p-5 border-b border-gray-50 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer group">
@@ -117,9 +115,9 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
                     <Check size={18} strokeWidth={3} />
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900 text-[14px] mb-0.5 group-hover:text-[#3B82F6] transition-colors">Rent Received</p>
+                    <p className="font-semibold text-gray-900 text-[14px] mb-0.5 group-hover:text-[#3B82F6] transition-colors">Rent Received</p>
                     <p className="text-[12px] text-gray-500 leading-relaxed font-medium">Rent for Prestige Lakeside Unit 1204 has been received successfully.</p>
-                    <p className="text-[10px] text-gray-400 mt-2 font-bold flex items-center gap-1.5"><Clock size={10} /> 2 hours ago</p>
+                    <p className="text-[10px] text-gray-400 mt-2 font-semibold flex items-center gap-1.5"><Clock size={10} /> 2 hours ago</p>
                   </div>
                 </div>
                 <div className="p-5 border-b border-gray-50 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer bg-blue-50/20 group relative">
@@ -127,9 +125,9 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
                     <Ticket size={18} />
                   </div>
                   <div className="flex-1">
-                    <p className="font-bold text-gray-900 text-[14px] mb-0.5 group-hover:text-[#3B82F6] transition-colors">New Ticket Created</p>
+                    <p className="font-semibold text-gray-900 text-[14px] mb-0.5 group-hover:text-[#3B82F6] transition-colors">New Ticket Created</p>
                     <p className="text-[12px] text-gray-500 leading-relaxed font-medium">Tenant reported an issue with the plumbing in Unit 305.</p>
-                    <p className="text-[10px] text-gray-400 mt-2 font-bold flex items-center gap-1.5"><Clock size={10} /> 4 hours ago</p>
+                    <p className="text-[10px] text-gray-400 mt-2 font-semibold flex items-center gap-1.5"><Clock size={10} /> 4 hours ago</p>
                   </div>
                   <div className="w-2.5 h-2.5 rounded-full bg-[#3B82F6] mt-1.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
                 </div>
@@ -138,14 +136,14 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
                     <AlertTriangle size={18} />
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900 text-[14px] mb-0.5 group-hover:text-[#3B82F6] transition-colors">Inspection Alert</p>
+                    <p className="font-semibold text-gray-900 text-[14px] mb-0.5 group-hover:text-[#3B82F6] transition-colors">Inspection Alert</p>
                     <p className="text-[12px] text-gray-500 leading-relaxed font-medium">Minor leak detected in Prestige Heights Unit 1107.</p>
-                    <p className="text-[10px] text-gray-400 mt-2 font-bold flex items-center gap-1.5"><Clock size={10} /> 5 hours ago</p>
+                    <p className="text-[10px] text-gray-400 mt-2 font-semibold flex items-center gap-1.5"><Clock size={10} /> 5 hours ago</p>
                   </div>
                 </div>
               </div>
               <div className="p-4 border-t border-gray-100 text-center bg-white">
-                <button className="text-[13px] font-black text-[#3B82F6] hover:underline">View All Notifications</button>
+                <button className="text-[13px] font-semibold text-[#3B82F6] hover:underline">View All Notifications</button>
               </div>
             </PopoverContent>
           </Popover>

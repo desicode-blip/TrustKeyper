@@ -285,7 +285,7 @@ function DocumentRow({
             Rental Agreement – {agreement.propertyTitle}
           </p>
           {isNew && (
-            <span className="text-[10px] font-bold text-primary bg-blue-50 border border-primary/20 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-semibold text-primary bg-blue-50 border border-primary/20 px-1.5 py-0.5 rounded">
               NEW
             </span>
           )}
@@ -366,7 +366,7 @@ export default function BrokerDocuments() {
 
   return (
     <BrokerLayout>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Documents</h1>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-6">Documents</h1>
 
       {agreements.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-40 text-center">

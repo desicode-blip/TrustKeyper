@@ -222,7 +222,7 @@ function Step1Property({
         <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4 mb-4">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-gray-900 text-sm">
+              <p className="font-semibold text-gray-900 text-sm">
                 {getPropertyTitle(selected)}
               </p>
               <p className="text-xs text-gray-500 mt-0.5">
@@ -341,7 +341,7 @@ function PartyCard({ name, contact, badge, onRemove }: {
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-sm font-semibold text-gray-900 truncate">{name}</p>
           {badge && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/15 text-primary uppercase tracking-wide">
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/15 text-primary uppercase tracking-wide">
               {badge}
             </span>
           )}
@@ -498,7 +498,7 @@ function Step2Parties({
   return (
     <div className="max-w-2xl">
       <div className="text-center mb-8">
-        <h2 className="text-xl font-bold text-gray-900">Rental Agreement Between</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Rental Agreement Between</h2>
         <p className="text-sm text-gray-500 mt-1">Who will be part of this agreement?</p>
       </div>
 
@@ -662,7 +662,7 @@ function BankModal({ onSave, onClose }: { onSave: (d: BankData) => void; onClose
           <X size={14} className="text-gray-600" />
         </button>
         <div className="px-6 pt-6 pb-2 border-b border-gray-100">
-          <h3 className="text-base font-bold text-gray-900 text-center mb-5">Add Bank Details</h3>
+          <h3 className="text-base font-semibold text-gray-900 text-center mb-5">Add Bank Details</h3>
           <div className="flex gap-2 mb-1">
             <button
               onClick={() => setTab("bank")}
@@ -949,7 +949,7 @@ function Step3Documents({
         <div className="px-5 pt-4 pb-3">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-bold text-teal-600 tracking-widest mb-2">{person.personLabel}</p>
+              <p className="text-xs font-semibold text-teal-600 tracking-widest mb-2">{person.personLabel}</p>
               <div className="flex items-center gap-2 mb-1">
                 <User size={14} className="text-gray-400 shrink-0" />
                 <p className="text-sm font-semibold text-gray-900">{person.name || "—"}</p>
@@ -1182,7 +1182,7 @@ function Step5Brokerage({
       {bankMissing && (
         <div className="mb-4 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
           <div className="mt-0.5 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shrink-0">
-            <span className="text-white text-xs font-bold">!</span>
+            <span className="text-white text-xs font-semibold">!</span>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-amber-800">Save your bank details to your profile</p>
@@ -1684,7 +1684,7 @@ function SuccessOverlay({ onDone }: { onDone: () => void }) {
         <div className="w-20 h-20 rounded-full bg-accent/15 mx-auto mb-5 flex items-center justify-center">
           <CheckCircle2 size={44} className="text-accent" />
         </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Agreement Sent!</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Agreement Sent!</h2>
         <p className="text-sm text-gray-500 mb-4">
           The rental agreement has been created and sent to both parties for e-signing.
         </p>
@@ -1847,7 +1847,7 @@ export default function GenerateAgreement() {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Generate Rental Agreement</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">Generate Rental Agreement</h1>
         <p className="text-sm text-gray-500 mt-1">Create and send agreement for e-signing</p>
       </div>
 

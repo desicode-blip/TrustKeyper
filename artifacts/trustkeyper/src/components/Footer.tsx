@@ -14,7 +14,7 @@ export default function Footer() {
         
         {/* Logo Section */}
         <div className="lg:w-1/4">
-          <div className="text-white font-bold text-2xl flex flex-col leading-none tracking-tight">
+          <div className="text-white font-semibold text-2xl flex flex-col leading-none tracking-tight">
             <span>TRUST</span>
             <span>KEYPER</span>
           </div>

@@ -283,7 +283,7 @@ function AboutOwnerTab({ property }: { property: Property }) {
     <div className="bg-white rounded-xl border border-gray-200 p-6">
       <h3 className="text-base font-semibold text-gray-900 mb-5">About Owner</h3>
       <div className="flex items-start gap-4">
-        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold shrink-0">
+        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-semibold shrink-0">
           {(property.ownerName || "O").charAt(0).toUpperCase()}
         </div>
         <div className="flex-1">
@@ -479,7 +479,7 @@ export default function PropertyDetails() {
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
               {/* Title */}
               <div>
-                <h1 className="text-lg font-bold text-gray-900 leading-tight">{title}</h1>
+                <h1 className="text-lg font-semibold text-gray-900 leading-tight">{title}</h1>
                 <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
                   <MapPin size={13} className="text-gray-400" />
                   <span>{property.area}, {property.city}</span>
@@ -489,17 +489,17 @@ export default function PropertyDetails() {
               {/* Stats row */}
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <p className="text-lg font-bold text-accent">{formatRent(property.monthlyRent)}</p>
+                  <p className="text-lg font-semibold text-accent">{formatRent(property.monthlyRent)}</p>
                   <p className="text-[10px] text-gray-500">Rent/month</p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-lg font-semibold text-gray-900">
                     {property.builtUpArea || "—"}
                   </p>
                   <p className="text-[10px] text-gray-500">{property.builtUpArea ? property.builtUpUnits : ""}</p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-gray-900">{formatDeposit(property.securityDeposit)}</p>
+                  <p className="text-lg font-semibold text-gray-900">{formatDeposit(property.securityDeposit)}</p>
                   <p className="text-[10px] text-gray-500">Deposit</p>
                 </div>
               </div>

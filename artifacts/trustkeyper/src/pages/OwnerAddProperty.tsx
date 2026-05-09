@@ -708,7 +708,7 @@ export default function OwnerAddProperty() {
       
       {/* Top Header */}
       <header className="bg-white px-6 py-4 flex items-center justify-between border-b border-gray-100 z-10 relative">
-        <button onClick={() => subStep > 0 ? setSubStep(s => s - 1) : setLocation("/")} className="flex items-center gap-2 text-sm text-gray-700 hover:text-primary transition-colors font-medium">
+        <button onClick={() => subStep > 0 ? setSubStep(s => s - 1) : window.history.back()} className="flex items-center gap-2 text-sm text-gray-700 hover:text-primary transition-colors font-medium">
           <ChevronLeft size={16} /> Go back
         </button>
         <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center">
@@ -717,10 +717,10 @@ export default function OwnerAddProperty() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 pb-32">
+      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 pb-40">
         <ProgressBar subStep={subStep} />
 
-        <div className="bg-white rounded-lg shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] p-8 md:p-14 mx-auto max-w-[850px] mb-8">
+        <div className="bg-white rounded-lg shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] p-8 md:p-14 mx-auto max-w-[850px] mb-12">
           {subStep === 0 && renderStep0()}
           {subStep === 1 && renderStep1()}
           {subStep === 2 && renderStep2()}
@@ -736,17 +736,17 @@ export default function OwnerAddProperty() {
           </div>
 
           {/* Let us help you Banner */}
-          <div className="w-full bg-white rounded-md border border-gray-200 p-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3 text-center sm:text-left">
-              <div className="w-10 h-10 rounded-full bg-blue-50 text-primary flex items-center justify-center shrink-0">
+          <div className="w-full bg-white rounded-xl border border-gray-200 p-5 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 mt-12 shadow-sm">
+            <div className="flex items-center gap-4 text-center sm:text-left">
+              <div className="w-12 h-12 rounded-full bg-blue-50 text-primary flex items-center justify-center shrink-0 border border-blue-100">
                 <PhoneCall size={18} />
               </div>
               <div>
-                <p className="text-[13px] font-bold text-gray-800">Don't want to fill all the details? Let us help you!</p>
-                <p className="text-[11px] text-gray-500">Our Manager will help you out</p>
+                <p className="text-[13px] font-semibold text-gray-800">Don't want to fill all the details? Let us help you!</p>
+                <p className="text-[11px] text-gray-500">Our expert Property Manager will guide you through the process</p>
               </div>
             </div>
-            <Button variant="outline" className="border-primary text-primary hover:bg-blue-50 text-xs px-6 h-8 rounded-sm" onClick={() => setIsManagedPopupOpen(true)}>
+            <Button variant="outline" className="border-primary text-primary hover:bg-blue-50 text-xs px-8 h-10 rounded-sm font-semibold transition-all" onClick={() => setIsManagedPopupOpen(true)}>
               I'm interested
             </Button>
           </div>
@@ -768,7 +768,7 @@ export default function OwnerAddProperty() {
           <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mb-2">
             <Check size={28} className="text-green-500" />
           </div>
-          <DialogTitle className="text-lg font-bold text-gray-900">Successfully Verified!</DialogTitle>
+          <DialogTitle className="text-lg font-semibold text-gray-900">Successfully Verified!</DialogTitle>
           <DialogDescription className="text-sm text-gray-500">Property details have been saved</DialogDescription>
         </DialogContent>
       </Dialog>
@@ -779,7 +779,7 @@ export default function OwnerAddProperty() {
           <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4 text-primary">
             <PhoneCall size={24} />
           </div>
-          <DialogTitle className="text-2xl font-bold text-center">We're on it!</DialogTitle>
+          <DialogTitle className="text-2xl font-semibold text-center">We're on it!</DialogTitle>
           <DialogDescription className="text-center text-base mt-3 text-gray-600">
             {ownerContact.includes("@") 
               ? "Thank you for showing interest. You will receive a meeting link at your registered email address shortly to discuss your property."

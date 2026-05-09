@@ -38,11 +38,17 @@ export default function OwnerProperties() {
   return (
     <OwnerLayout>
       <div className="p-4 sm:p-8 max-w-6xl mx-auto">
-        <button onClick={() => setLocation("/owner/dashboard")} className="flex items-center gap-2 text-primary font-medium text-lg mb-6 hover:underline">
-          <ChevronLeft size={20} /> Back to Dashboard
-        </button>
-
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <button onClick={() => window.history.back()} className="flex items-center gap-2 text-primary font-semibold text-lg hover:underline w-fit">
+            <ChevronLeft size={20} /> Back
+          </button>
+          <button
+            onClick={() => setLocation("/owner/properties/add")}
+            className="bg-[#3B82F6] hover:bg-[#2563EB] text-white px-6 h-10 rounded-xl font-semibold flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all w-fit"
+          >
+            Add Property <Plus size={18} />
+          </button>
+        </div>
           {TABS.map((t) => {
             const count = counts[t.id as keyof typeof counts];
             const isActive = activeTab === t.id;
@@ -104,7 +110,7 @@ export default function OwnerProperties() {
                   
                   <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between">
                     <div>
-                      <p className="font-bold text-gray-900 text-[15px]">
+                      <p className="font-semibold text-gray-900 text-[15px]">
                         ₹{Number(property.monthlyRent || 0).toLocaleString("en-IN")}<span className="text-xs text-gray-500 font-normal">/mo</span>
                       </p>
                     </div>

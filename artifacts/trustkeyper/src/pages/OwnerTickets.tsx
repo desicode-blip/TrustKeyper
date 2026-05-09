@@ -55,11 +55,11 @@ export default function OwnerTickets() {
   return (
     <OwnerLayout>
       <div className="p-4 sm:p-8 max-w-6xl mx-auto">
-        <button onClick={() => setLocation("/owner/dashboard")} className="flex items-center gap-2 text-primary font-medium text-lg mb-6 hover:underline">
-          <ChevronLeft size={20} /> Back to Dashboard
+        <button onClick={() => window.history.back()} className="flex items-center gap-2 text-primary font-semibold text-lg mb-6 hover:underline w-fit">
+          <ChevronLeft size={20} /> Back
         </button>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Maintenance Tickets</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 mb-6">Maintenance Tickets</h1>
 
         <div className="flex items-center gap-1 mb-8 bg-white border border-gray-200 rounded-md p-1 w-fit overflow-x-auto max-w-full">
           {TABS.map((t) => (
@@ -90,13 +90,13 @@ export default function OwnerTickets() {
                     <div>
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                         <span className="text-xs text-gray-500 font-medium">⚠️ {t.id}</span>
-                        <span className="text-xs font-bold text-red-600">{t.urgency}</span>
+                        <span className="text-xs font-semibold text-red-600">{t.urgency}</span>
                         {t.status === "New" && <span className="bg-[#0A84FF] text-white text-[10px] px-2 py-0.5 rounded font-medium">New</span>}
                         {t.status === "In Progress" && <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded font-medium">Work in progress</span>}
                       </div>
                       {t.status === "In Progress" && <p className="text-xs text-gray-500 mb-0.5">{t.category}</p>}
                       <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
-                        <span className="font-bold">{t.title}</span> at {t.property}
+                        <span className="font-semibold">{t.title}</span> at {t.property}
                       </h3>
                       <p className="text-xs text-gray-500 mt-1">Reported on {t.date}</p>
                     </div>
@@ -123,7 +123,7 @@ export default function OwnerTickets() {
             <DialogTitle className="sr-only">Repair Details</DialogTitle>
             <DialogDescription className="sr-only">Repair Details Modal</DialogDescription>
             <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">Repair Details</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Repair Details</h2>
               <div className="flex items-center gap-2">
                 <button className="h-8 px-3 rounded bg-[#2D31A6] text-white text-xs font-medium flex items-center gap-1.5 hover:bg-[#2D31A6]/90">
                   <Plus size={14} /> Raise Complaint
@@ -138,15 +138,15 @@ export default function OwnerTickets() {
               <div className="p-6">
                 <div className="mb-4 flex items-center gap-2">
                   <span className="text-xs text-gray-500 font-medium flex items-center gap-1">
-                    <span className="text-red-500 border border-red-500 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold">!</span>
+                    <span className="text-red-500 border border-red-500 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-semibold">!</span>
                     {selectedTicket.id}
                   </span>
-                  <span className="text-xs font-bold text-red-600">{selectedTicket.urgency}</span>
+                  <span className="text-xs font-semibold text-red-600">{selectedTicket.urgency}</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                   <div>
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Photos</h3>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Photos</h3>
                     <div className="bg-gray-200 h-48 rounded-lg overflow-hidden mb-2 relative">
                       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=500&auto=format&fit=crop&q=60')] bg-cover bg-center"></div>
                     </div>
@@ -160,7 +160,7 @@ export default function OwnerTickets() {
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Tenant Report</h3>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Tenant Report</h3>
                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                       <div className="flex items-start gap-3 p-4 border-b border-gray-50">
                         <div className="w-5 flex justify-center mt-0.5"><span className="text-[10px]">🏷️</span></div>

@@ -171,7 +171,7 @@ export default function BrokerSettings() {
     <BrokerLayout>
       <div className="max-w-2xl">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
           <p className="text-sm text-gray-500 mt-1">Manage your profile and payment details</p>
         </div>
 
@@ -229,7 +229,7 @@ export default function BrokerSettings() {
           {!savedBank && (
             <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
               <div className="mt-0.5 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shrink-0">
-                <span className="text-white text-xs font-bold">!</span>
+                <span className="text-white text-xs font-semibold">!</span>
               </div>
               <div>
                 <p className="text-sm font-semibold text-amber-800">Add your bank details</p>
@@ -390,7 +390,7 @@ export default function BrokerSettings() {
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-50 mx-auto mb-4">
               <AlertTriangle size={22} className="text-red-500" />
             </div>
-            <h3 className="text-base font-bold text-gray-900 text-center mb-1">
+            <h3 className="text-base font-semibold text-gray-900 text-center mb-1">
               Delete {confirmDelete === "bank" ? "Bank Account" : "UPI"} Details?
             </h3>
             <p className="text-sm text-gray-500 text-center mb-6">

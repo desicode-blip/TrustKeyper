@@ -13,7 +13,7 @@ export default function OwnerStep1Properties({ propertiesCount, setPropertiesCou
   return (
     <div className="flex flex-col h-full max-w-2xl">
       <div className="mb-8 border-b pb-6">
-        <h1 className="text-3xl font-bold text-gray-900">How many properties do you own?</h1>
+        <h1 className="text-3xl font-semibold text-gray-900">How many properties do you own?</h1>
       </div>
 
       <div className="flex flex-wrap gap-4 mb-10">

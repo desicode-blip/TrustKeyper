@@ -10,7 +10,7 @@ export default function OwnerStep5Plan({ onSelectPlan }: OwnerStep5PlanProps) {
   return (
     <div className="flex flex-col h-full max-w-4xl">
       <div className="mb-10 border-b pb-6">
-        <h1 className="text-3xl font-bold text-gray-900">How Would You Like to Set Up your account</h1>
+        <h1 className="text-3xl font-semibold text-gray-900">How Would You Like to Set Up your account</h1>
       </div>
 
       <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-0 mt-4 relative pb-10">
@@ -58,7 +58,7 @@ export default function OwnerStep5Plan({ onSelectPlan }: OwnerStep5PlanProps) {
         {/* End-to-End Managed Card */}
         <div className="w-full md:w-[420px] bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-8 relative z-10 flex flex-col items-center border border-gray-100 py-10">
           <div className="absolute top-6">
-            <span className="text-[10px] font-bold text-primary border border-primary/30 rounded-full px-4 py-1 uppercase tracking-wider bg-blue-50/50">
+            <span className="text-[10px] font-semibold text-primary border border-primary/30 rounded-full px-4 py-1 uppercase tracking-wider bg-blue-50/50">
               Most Popular
             </span>
           </div>

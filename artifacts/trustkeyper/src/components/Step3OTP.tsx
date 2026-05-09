@@ -36,7 +36,7 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
   return (
     <div className="flex flex-col h-full max-w-md">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Let's know you better</h1>
+        <h1 className="text-3xl font-semibold text-gray-900">Let's know you better</h1>
       </div>
 
       <div className="space-y-6 mb-6 opacity-70 pointer-events-none">

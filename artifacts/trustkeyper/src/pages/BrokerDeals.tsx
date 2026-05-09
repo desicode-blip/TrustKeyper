@@ -77,20 +77,20 @@ function KanbanCard({ deal }: { deal: Deal }) {
     <div className={`bg-white rounded-xl border border-gray-200 border-l-4 ${cfg.border} shadow-sm hover:shadow-md transition-shadow p-4 cursor-pointer group`}>
       {/* Top row: stage chip + arrow */}
       <div className="flex items-center justify-between mb-3">
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.chip}`}>
+        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${cfg.chip}`}>
           {cfg.label}
         </span>
         <ArrowUpRight size={13} className="text-gray-300 group-hover:text-primary transition-colors" />
       </div>
 
       {/* Property name */}
-      <p className="text-sm font-bold text-gray-900 mb-1 truncate leading-tight">
+      <p className="text-sm font-semibold text-gray-900 mb-1 truncate leading-tight">
         {deal.propertyTitle || "—"}
       </p>
 
       {/* Tenant row */}
       <div className="flex items-center gap-2 mb-4">
-        <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold shrink-0">
+        <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-semibold shrink-0">
           {initials}
         </div>
         <p className="text-xs text-gray-500 truncate">
@@ -107,7 +107,7 @@ function KanbanCard({ deal }: { deal: Deal }) {
           {deal.monthlyRent ? `${fmtINR(Number(deal.monthlyRent))}/mo` : "Rent TBD"}
         </p>
         {deal.brokerageAmount && Number(deal.brokerageAmount) > 0 && (
-          <p className="text-sm font-bold text-primary">{fmtINR(Number(deal.brokerageAmount))}</p>
+          <p className="text-sm font-semibold text-primary">{fmtINR(Number(deal.brokerageAmount))}</p>
         )}
       </div>
 
@@ -138,9 +138,9 @@ function KanbanColumn({ stage, deals }: { stage: Stage; deals: Deal[] }) {
       <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl mb-4 ${cfg.headerBg}`}>
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-          <span className={`text-sm font-bold ${cfg.headerText}`}>{cfg.label}</span>
+          <span className={`text-sm font-semibold ${cfg.headerText}`}>{cfg.label}</span>
         </div>
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-lg ${cfg.countBg} ${cfg.countText}`}>
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-lg ${cfg.countBg} ${cfg.countText}`}>
           {deals.length}
         </span>
       </div>
@@ -166,7 +166,7 @@ function TenantAvatar({ name }: { name: string }) {
     ? name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()
     : "?";
   return (
-    <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
+    <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-semibold shrink-0">
       {initials}
     </div>
   );
@@ -203,7 +203,7 @@ function TableRow({ deal }: { deal: Deal }) {
         <StatusPill stage={deal.stage} />
       </td>
       <td className="px-4 py-4">
-        <span className="text-sm font-bold text-primary">
+        <span className="text-sm font-semibold text-primary">
           {deal.brokerageAmount && Number(deal.brokerageAmount) > 0
             ? fmtINR(Number(deal.brokerageAmount))
             : "—"}
@@ -244,7 +244,7 @@ function EmptyState() {
       <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mb-5">
         <Briefcase size={30} className="text-primary" />
       </div>
-      <h3 className="text-base font-bold text-gray-900 mb-1">No deals yet</h3>
+      <h3 className="text-base font-semibold text-gray-900 mb-1">No deals yet</h3>
       <p className="text-sm text-gray-400 max-w-xs">
         Add a property, register a tenant, or generate an agreement to start tracking deals.
       </p>
@@ -333,7 +333,7 @@ export default function BrokerDeals() {
     <BrokerLayout>
       {/* ── Header row ── */}
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
           Deals <span className="text-gray-400 font-semibold text-lg sm:text-xl">({totalCount})</span>
         </h1>
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
@@ -406,7 +406,7 @@ export default function BrokerDeals() {
                 {["Property", "Tenant", "Rent", "Status", "Brokerage", "Paid By", "Updated", "Actions"].map((h) => (
                   <th
                     key={h}
-                    className="px-5 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap"
+                    className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap"
                   >
                     {h}
                   </th>

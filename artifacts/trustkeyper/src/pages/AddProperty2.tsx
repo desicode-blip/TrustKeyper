@@ -331,7 +331,7 @@ export default function AddProperty2() {
 
   const renderStep0 = () => (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 text-center mb-6 pb-4 border-b border-gray-100">
+      <h2 className="text-xl font-semibold text-gray-900 text-center mb-6 pb-4 border-b border-gray-100">
         Property details
       </h2>
       <div className="space-y-4">
@@ -391,7 +391,7 @@ export default function AddProperty2() {
 
   const renderStep1 = () => (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 text-center mb-4 pb-4 border-b border-gray-100">
+      <h2 className="text-xl font-semibold text-gray-900 text-center mb-4 pb-4 border-b border-gray-100">
         Tell us more about your property
       </h2>
       <SkipBanner onSkip={handleSkip} />
@@ -436,7 +436,7 @@ export default function AddProperty2() {
 
   const renderStep2 = () => (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 text-center mb-4 pb-4 border-b border-gray-100">
+      <h2 className="text-xl font-semibold text-gray-900 text-center mb-4 pb-4 border-b border-gray-100">
         Tell us more about your property
       </h2>
       <SkipBanner onSkip={handleSkip} />
@@ -487,7 +487,7 @@ export default function AddProperty2() {
 
   const renderStep3 = () => (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 text-center mb-4 pb-4 border-b border-gray-100">
+      <h2 className="text-xl font-semibold text-gray-900 text-center mb-4 pb-4 border-b border-gray-100">
         Tell us more about your property
       </h2>
       <SkipBanner onSkip={handleSkip} />
@@ -508,7 +508,7 @@ export default function AddProperty2() {
 
   const renderStep4 = () => (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 text-center mb-6 pb-4 border-b border-gray-100">
+      <h2 className="text-xl font-semibold text-gray-900 text-center mb-6 pb-4 border-b border-gray-100">
         Rental details for the property
       </h2>
       <div className="space-y-4">
@@ -574,7 +574,7 @@ export default function AddProperty2() {
 
   const renderStep5 = () => (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 text-center mb-4 pb-4 border-b border-gray-100">
+      <h2 className="text-xl font-semibold text-gray-900 text-center mb-4 pb-4 border-b border-gray-100">
         Upload property images
       </h2>
 
@@ -687,7 +687,7 @@ export default function AddProperty2() {
             <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
               <Check size={28} className="text-green-500" />
             </div>
-            <p className="text-lg font-bold text-gray-900">Property Added!</p>
+            <p className="text-lg font-semibold text-gray-900">Property Added!</p>
             <p className="text-sm text-gray-500">Taking you back to the agreement…</p>
           </div>
         </div>

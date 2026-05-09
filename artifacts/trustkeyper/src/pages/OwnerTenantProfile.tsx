@@ -21,7 +21,7 @@ export default function OwnerTenantProfile() {
                 <img src="https://ui-avatars.com/api/?name=Karthik+M&background=EBF4FF&color=1E40AF&size=128" alt="Karthik M." className="w-full h-full object-cover" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-1">Karthik M.</h1>
+                <h1 className="text-2xl font-semibold text-gray-900 mb-1">Karthik M.</h1>
                 <p className="text-sm text-gray-500">Prestige Unit - 1806</p>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
@@ -44,7 +44,7 @@ export default function OwnerTenantProfile() {
             <div className="h-2 bg-gray-200 rounded-full w-full">
               <div className="h-2 bg-blue-600 rounded-full" style={{ width: "55%" }}></div>
             </div>
-            <div className="absolute top-1/2 left-[55%] -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white border-2 border-blue-600 text-blue-600 text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">
+            <div className="absolute top-1/2 left-[55%] -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white border-2 border-blue-600 text-blue-600 text-[10px] font-semibold rounded-full flex items-center justify-center shadow-sm">
               55%
             </div>
             <div className="flex justify-between mt-3 text-xs text-gray-500 font-medium">
@@ -60,7 +60,7 @@ export default function OwnerTenantProfile() {
               <PhoneCall size={18} />
             </div>
             <div>
-              <p className="text-[13px] font-bold text-gray-800">Need help with maintaining your property?</p>
+              <p className="text-[13px] font-semibold text-gray-800">Need help with maintaining your property?</p>
               <p className="text-[11px] text-gray-500">Our Manager will help you out</p>
             </div>
           </div>
@@ -71,7 +71,7 @@ export default function OwnerTenantProfile() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 flex flex-col">
-            <h2 className="text-base font-bold text-gray-900 mb-1">Property Maintenance</h2>
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Property Maintenance</h2>
             <p className="text-xs text-gray-500 mb-2">Last inspection: 15 days ago</p>
             <p className="text-xs text-red-500 font-medium mb-6">1 active issues</p>
 
@@ -96,7 +96,7 @@ export default function OwnerTenantProfile() {
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 flex flex-col">
-            <h2 className="text-base font-bold text-gray-900 mb-6">Lease Information</h2>
+            <h2 className="text-base font-semibold text-gray-900 mb-6">Lease Information</h2>
 
             <div className="space-y-4 mb-8 flex-1">
               <div className="flex items-center justify-between py-1">
@@ -133,7 +133,7 @@ export default function OwnerTenantProfile() {
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-          <h2 className="text-base font-bold text-gray-900 mb-6">Recent Payments</h2>
+          <h2 className="text-base font-semibold text-gray-900 mb-6">Recent Payments</h2>
           <div className="space-y-4">
             {[
               { month: "Jan 2026", date: "Paid 3 Jan 2026", early: "2 days early", amount: "₹28,000" },

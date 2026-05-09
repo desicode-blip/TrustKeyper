@@ -41,7 +41,7 @@ function WelcomeDashboard({
     <div className="max-w-7xl mx-auto space-y-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">
             Welcome, {brokerName} <span className="inline-block animate-wave">👋</span>
           </h1>
           <p className="text-gray-500 mt-2 text-base">Get started by generating an agreement or adding a property.</p>
@@ -71,7 +71,7 @@ function WelcomeDashboard({
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-6 ring-8 ring-primary/5">
               <FilePlus2 size={24} />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">Generate Rental Agreement</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3 tracking-tight">Generate Rental Agreement</h3>
             <p className="text-gray-500 mb-8 leading-relaxed flex-grow">Generate rental agreements, collect documents, and complete digital signing, all in one place with TrustKeyper.</p>
             <button onClick={onGenerateAgreement} className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95 mt-auto">
               Continue <ArrowRight size={16} />
@@ -82,7 +82,7 @@ function WelcomeDashboard({
           <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-gray-700 mb-6 group-hover:bg-primary/10 group-hover:text-primary transition-colors ring-8 ring-gray-50 group-hover:ring-primary/5">
             <Plus size={24} />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">Add Your First Property</h3>
+          <h3 className="text-xl font-semibold text-gray-900 mb-3 tracking-tight">Add Your First Property</h3>
           <p className="text-gray-500 mb-8 leading-relaxed flex-grow">List and manage your property details to start renting seamlessly through TrustKeyper.</p>
           <button onClick={onAddProperty} className="inline-flex items-center gap-2 text-primary font-semibold hover:gap-3 transition-all mt-auto w-fit">
             <Plus size={16} /> Add Property
@@ -92,7 +92,7 @@ function WelcomeDashboard({
           <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-gray-700 mb-6 group-hover:bg-accent/10 group-hover:text-accent transition-colors ring-8 ring-gray-50 group-hover:ring-accent/5">
             <UserPlus size={24} />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">Add Potential Tenants</h3>
+          <h3 className="text-xl font-semibold text-gray-900 mb-3 tracking-tight">Add Potential Tenants</h3>
           <p className="text-gray-500 mb-8 leading-relaxed flex-grow">Add tenant details, send invitations, and manage the rental process digitally through TrustKeyper.</p>
           <button onClick={onAddTenant} className="inline-flex items-center gap-2 text-accent font-semibold hover:gap-3 transition-all mt-auto w-fit">
             <UserPlus size={16} /> Add Tenant
@@ -101,7 +101,7 @@ function WelcomeDashboard({
       </div>
 
       <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-6 tracking-tight">Recent Activity</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-6 tracking-tight">Recent Activity</h2>
         <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
           <div className="flex items-center gap-5 px-6 py-4 hover:bg-gray-50 transition-colors">
             <span className="text-sm text-gray-400 font-mono w-14 shrink-0">22:40</span>
@@ -151,16 +151,16 @@ function DealCardItem({ card, onClick }: { card: DealCard; onClick?: () => void 
     >
       {/* Stage chip + arrow */}
       <div className="flex items-center justify-between mb-4">
-        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md border ${cfg.chip} uppercase tracking-wider`}>{cfg.label}</span>
+        <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-md border ${cfg.chip} uppercase tracking-wider`}>{cfg.label}</span>
         <ArrowUpRight size={16} className="text-gray-300 group-hover:text-primary transition-colors" />
       </div>
 
       {/* Property */}
-      <p className="text-base font-bold text-gray-900 mb-2 truncate leading-tight">{card.propertyTitle || "—"}</p>
+      <p className="text-base font-semibold text-gray-900 mb-2 truncate leading-tight">{card.propertyTitle || "—"}</p>
 
       {/* Tenant */}
       <div className="flex items-center gap-3 mb-5 bg-gray-50 rounded-lg p-2.5">
-        <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[11px] font-bold shrink-0">
+        <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[11px] font-semibold shrink-0">
           {initials}
         </div>
         <p className="text-sm text-gray-600 font-medium truncate">{card.tenantName ? `Tenant: ${card.tenantName}` : "Tenant TBD"}</p>
@@ -177,7 +177,7 @@ function DealCardItem({ card, onClick }: { card: DealCard; onClick?: () => void 
         {card.brokerageAmount && Number(card.brokerageAmount) > 0 && (
           <div className="flex flex-col items-end">
             <span className="text-[10px] text-primary/60 font-semibold uppercase tracking-wider mb-0.5">Brokerage</span>
-            <p className="text-sm font-bold text-primary">{fmtINR(Number(card.brokerageAmount))}</p>
+            <p className="text-sm font-semibold text-primary">{fmtINR(Number(card.brokerageAmount))}</p>
           </div>
         )}
       </div>
@@ -190,7 +190,7 @@ function DealCardItem({ card, onClick }: { card: DealCard; onClick?: () => void 
         {card.brokeragePaidBy && (
           <div className="text-right">
             <p className="text-[10px] text-gray-400 font-medium leading-tight mb-0.5">Paid by</p>
-            <p className="text-xs font-bold text-gray-700">{card.brokeragePaidBy}</p>
+            <p className="text-xs font-semibold text-gray-700">{card.brokeragePaidBy}</p>
           </div>
         )}
       </div>
@@ -325,7 +325,7 @@ function ActiveDashboard({
       {/* ── Header ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">
             {getGreeting()}, {brokerName} 👋
           </h1>
           <p className="text-gray-500 mt-2 text-base">{subtitle}</p>
@@ -351,7 +351,7 @@ function ActiveDashboard({
           </div>
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Earned</p>
-            <p className="text-3xl font-bold text-gray-900 tracking-tight">{fmtINR(totalEarned)}</p>
+            <p className="text-3xl font-semibold text-gray-900 tracking-tight">{fmtINR(totalEarned)}</p>
           </div>
         </div>
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow group flex items-start gap-5">
@@ -360,7 +360,7 @@ function ActiveDashboard({
           </div>
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Active Properties</p>
-            <p className="text-3xl font-bold text-gray-900 tracking-tight">{activePropertyCount}</p>
+            <p className="text-3xl font-semibold text-gray-900 tracking-tight">{activePropertyCount}</p>
           </div>
         </div>
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow group flex items-start gap-5">
@@ -369,7 +369,7 @@ function ActiveDashboard({
           </div>
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Leads in Pipeline</p>
-            <p className="text-3xl font-bold text-gray-900 tracking-tight">{leadsInPipeline}</p>
+            <p className="text-3xl font-semibold text-gray-900 tracking-tight">{leadsInPipeline}</p>
           </div>
         </div>
       </div>
@@ -377,7 +377,7 @@ function ActiveDashboard({
       {/* ── Deals Pipeline ── */}
       <div>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900 tracking-tight">Deals Pipeline</h2>
+          <h2 className="text-xl font-semibold text-gray-900 tracking-tight">Deals Pipeline</h2>
           <button onClick={onViewDeals} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gray-50 text-sm text-gray-700 font-semibold hover:bg-gray-100 transition-colors">
             View All Deals <ChevronRight size={16} />
           </button>
@@ -394,9 +394,9 @@ function ActiveDashboard({
                 <div className={`flex items-center justify-between px-4 py-3 rounded-xl ${col.headerBg}`}>
                   <div className="flex items-center gap-2.5">
                     <span className={`w-2.5 h-2.5 rounded-full ${col.dot} shadow-sm`} />
-                    <span className={`text-sm font-bold tracking-wide ${col.headerText}`}>{col.label}</span>
+                    <span className={`text-sm font-semibold tracking-wide ${col.headerText}`}>{col.label}</span>
                   </div>
-                  <span className={`text-xs font-bold px-2 py-1 rounded-md ${col.countBg}`}>
+                  <span className={`text-xs font-semibold px-2 py-1 rounded-md ${col.countBg}`}>
                     {col.cards.length}
                   </span>
                 </div>
@@ -436,7 +436,7 @@ function ActiveDashboard({
 
       {/* ── Recent Activity ── */}
       <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-6 tracking-tight">Recent Activity</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-6 tracking-tight">Recent Activity</h2>
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="divide-y divide-gray-100">
             {recentActivity.length === 0 ? (

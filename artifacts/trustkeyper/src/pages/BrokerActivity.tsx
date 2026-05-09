@@ -150,7 +150,7 @@ function ActivityRow({ item }: { item: ActivityItem }) {
             )}
           </div>
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-2 shrink-0">
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.text}`}>
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.text}`}>
               {cfg.label}
             </span>
             <span className="text-[11px] text-gray-400 whitespace-nowrap">{timeStr}</span>
@@ -205,9 +205,9 @@ export default function BrokerActivity() {
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Recent Activity</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Recent Activity</h1>
             {unreadCount > 0 && (
-              <span className="h-5 px-1.5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center">
+              <span className="h-5 px-1.5 rounded-full bg-primary text-white text-[10px] font-semibold flex items-center">
                 {unreadCount} new
               </span>
             )}
@@ -259,7 +259,7 @@ export default function BrokerActivity() {
             <div key={group.label}>
               {/* Date separator */}
               <div className="flex items-center gap-3 px-6 py-2.5 bg-gray-50 border-b border-gray-100">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">{group.label}</span>
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{group.label}</span>
                 <span className="text-xs text-gray-400">({group.items.length})</span>
               </div>
               {/* Rows */}

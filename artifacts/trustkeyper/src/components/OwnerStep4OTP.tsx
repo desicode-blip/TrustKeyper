@@ -36,7 +36,7 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
   return (
     <div className="flex flex-col h-full max-w-2xl">
       <div className="mb-8 border-b pb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Let's know you better</h1>
+        <h1 className="text-3xl font-semibold text-gray-900">Let's know you better</h1>
       </div>
 
       <div className="space-y-6 mb-8 max-w-md">

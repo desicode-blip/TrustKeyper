@@ -44,8 +44,8 @@ export default function OwnerTenants() {
     <OwnerLayout>
       <div className="p-4 sm:p-8 max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <button onClick={() => setLocation("/owner/dashboard")} className="flex items-center gap-2 text-primary font-medium text-lg hover:underline">
-            <ChevronLeft size={20} /> Back to Dashboard
+          <button onClick={() => window.history.back()} className="flex items-center gap-2 text-primary font-semibold text-lg hover:underline w-fit">
+            <ChevronLeft size={20} /> Back
           </button>
           {activeTab === "inquiries" && (
             <Button className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2">
@@ -84,7 +84,7 @@ export default function OwnerTenants() {
                   <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50/50">
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-semibold shrink-0">
                           {getInitials(t.name)}
                         </div>
                         <div>
@@ -121,7 +121,7 @@ export default function OwnerTenants() {
             {mockInquiries.map(t => (
               <div key={t.id} className="bg-white rounded-lg border border-gray-200 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-lg font-bold shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-lg font-semibold shrink-0">
                     {getInitials(t.name)}
                   </div>
                   <div>

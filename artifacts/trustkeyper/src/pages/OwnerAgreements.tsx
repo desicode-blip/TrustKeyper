@@ -17,7 +17,7 @@ export default function OwnerAgreements() {
           <ChevronLeft size={20} /> Back to Dashboard
         </button>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Agreement</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 mb-6">Agreement</h1>
 
         <div className="space-y-4">
           {agreements.map(a => (
@@ -27,7 +27,7 @@ export default function OwnerAgreements() {
                   <FileText size={20} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900 text-sm">{a.name}</h3>
+                  <h3 className="font-semibold text-gray-900 text-sm">{a.name}</h3>
                   <p className="text-xs text-gray-500 mt-0.5">Agreement- {a.date}</p>
                 </div>
               </div>
