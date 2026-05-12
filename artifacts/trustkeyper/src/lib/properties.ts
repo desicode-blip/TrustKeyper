@@ -40,14 +40,30 @@ export interface Property {
 
 const KEY = "broker_properties";
 
-export function getProperties(): Property[] {
+const readProperties = (): Property[] => {
   if (typeof window === "undefined") return [];
   try {
-    const raw = sessionStorage.getItem(KEY);
+    const localRaw = localStorage.getItem(KEY);
+    const sessionRaw = sessionStorage.getItem(KEY);
+    const raw = localRaw ?? sessionRaw;
     return raw ? (JSON.parse(raw) as Property[]) : [];
   } catch {
     return [];
   }
+};
+
+const saveProperties = (list: Property[]) => {
+  try {
+    const payload = JSON.stringify(list);
+    localStorage.setItem(KEY, payload);
+    sessionStorage.setItem(KEY, payload);
+  } catch {
+    // ignore write errors
+  }
+};
+
+export function getProperties(): Property[] {
+  return readProperties();
 }
 
 export function addProperty(p: Omit<Property, "id" | "createdAt" | "status"> & { status?: PropertyStatus }): Property {
@@ -59,9 +75,7 @@ export function addProperty(p: Omit<Property, "id" | "createdAt" | "status"> & {
   };
   const list = getProperties();
   list.unshift(property);
-  try {
-    sessionStorage.setItem(KEY, JSON.stringify(list));
-  } catch {}
+  saveProperties(list);
   return property;
 }
 
@@ -70,9 +84,7 @@ export function updatePropertyStatus(id: string, status: PropertyStatus): void {
   const idx = list.findIndex((p) => p.id === id);
   if (idx !== -1) {
     list[idx].status = status;
-    try {
-      sessionStorage.setItem(KEY, JSON.stringify(list));
-    } catch {}
+    saveProperties(list);
   }
 }
 
@@ -81,9 +93,7 @@ export function updateProperty(id: string, changes: Partial<Omit<Property, "id" 
   const idx = list.findIndex((p) => p.id === id);
   if (idx !== -1) {
     list[idx] = { ...list[idx], ...changes };
-    try {
-      sessionStorage.setItem(KEY, JSON.stringify(list));
-    } catch {}
+    saveProperties(list);
   }
 }
 
