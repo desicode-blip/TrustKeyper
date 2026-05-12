@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Building2, Eye, Heart, Phone } from "lucide-react";
+import { Plus, Building2, Eye, Heart, Phone, Share2, Copy, Mail } from "lucide-react";
 import { useLocation } from "wouter";
 import BrokerLayout from "@/components/BrokerLayout";
 import { Input } from "@/components/ui/input";
@@ -63,39 +63,7 @@ function PropertyCard({
     ? `${property.builtUpArea} ${property.builtUpUnits}`
     : "";
 
-  const [editing, setEditing] = useState(false);
-  const [draftNickname, setDraftNickname] = useState(property.nickname ?? "");
-  const [draftArea, setDraftArea] = useState(property.area);
-  const [draftCity, setDraftCity] = useState(property.city);
-  const [draftMonthlyRent, setDraftMonthlyRent] = useState(property.monthlyRent);
-  const [draftAvailableFrom, setDraftAvailableFrom] = useState(property.availableFrom);
-  const [draftTotalFloors, setDraftTotalFloors] = useState(property.totalFloors);
-  const [draftFloorLevel, setDraftFloorLevel] = useState(property.floorLevel);
 
-  React.useEffect(() => {
-    if (!editing) {
-      setDraftNickname(property.nickname ?? "");
-      setDraftArea(property.area);
-      setDraftCity(property.city);
-      setDraftMonthlyRent(property.monthlyRent);
-      setDraftAvailableFrom(property.availableFrom);
-      setDraftTotalFloors(property.totalFloors);
-      setDraftFloorLevel(property.floorLevel);
-    }
-  }, [editing, property]);
-
-  const handleSave = () => {
-    onUpdate(property.id, {
-      nickname: draftNickname,
-      area: draftArea,
-      city: draftCity,
-      monthlyRent: draftMonthlyRent,
-      availableFrom: draftAvailableFrom,
-      totalFloors: draftTotalFloors,
-      floorLevel: draftFloorLevel,
-    });
-    setEditing(false);
-  };
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
@@ -145,18 +113,29 @@ function PropertyCard({
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setEditing((prev) => !prev)}
+              onClick={() => onViewDetails(property.id)}
+              className="h-9 sm:h-8 px-4 sm:px-3 rounded border border-gray-300 text-sm sm:text-xs font-medium text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+            >
+              View Details
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const link = `${window.location.origin}/broker/properties/${property.id}`;
+                const msg = encodeURIComponent(`Hi! Your broker shared this property with you: ${title} in ${property.area}, ${property.city}. View details here: ${link}`);
+                window.open(`https://wa.me/?text=${msg}`, "_blank");
+              }}
+              className="h-9 sm:h-8 px-4 sm:px-3 rounded border border-emerald-500 text-sm sm:text-xs font-medium text-emerald-600 hover:bg-emerald-50 flex items-center gap-1.5"
+            >
+              <Share2 size={14} /> Share
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocation(`/broker/properties/${property.id}?edit=true`)}
               className="h-9 sm:h-8 px-4 sm:px-3 rounded border border-primary text-sm sm:text-xs font-medium text-primary hover:bg-primary/5"
             >
-              {editing ? "Cancel Edit" : "Edit Property"}
+              Edit Property
             </button>
-          <button
-            type="button"
-            onClick={() => onViewDetails(property.id)}
-            className="h-9 sm:h-8 px-4 sm:px-3 rounded border border-gray-300 text-sm sm:text-xs font-medium text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-          >
-            View Details
-          </button>
             {property.status !== "Rented" && (
               <button
                 type="button"
@@ -168,89 +147,7 @@ function PropertyCard({
             )}
           </div>
 
-          {editing && (
-            <div className="border border-gray-200 rounded-2xl bg-gray-50 p-4">
-              <p className="text-sm font-semibold text-gray-900 mb-3">Edit property details</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nickname</label>
-                  <Input
-                    value={draftNickname}
-                    onChange={(e) => setDraftNickname(e.target.value)}
-                    placeholder="My property 01"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Area / Landmark</label>
-                  <Input
-                    value={draftArea}
-                    onChange={(e) => setDraftArea(e.target.value)}
-                    placeholder="Area or landmark"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                  <Input
-                    value={draftCity}
-                    onChange={(e) => setDraftCity(e.target.value)}
-                    placeholder="City"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Total Floors</label>
-                  <Input
-                    value={draftTotalFloors}
-                    onChange={(e) => setDraftTotalFloors(e.target.value)}
-                    placeholder="e.g. 10"
-                    type="text"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Floor Level</label>
-                  <Input
-                    value={draftFloorLevel}
-                    onChange={(e) => setDraftFloorLevel(e.target.value)}
-                    placeholder="e.g. 3rd"
-                    type="text"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Expected Monthly Rent</label>
-                  <Input
-                    type="number"
-                    value={draftMonthlyRent}
-                    onChange={(e) => setDraftMonthlyRent(e.target.value)}
-                    placeholder="Rent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Available From</label>
-                  <Input
-                    type="date"
-                    value={draftAvailableFrom}
-                    onChange={(e) => setDraftAvailableFrom(e.target.value)}
-                    className="appearance-none"
-                  />
-                </div>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setEditing(false)}
-                  className="h-9 px-4 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                >
-                  Discard
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  className="h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
     </div>

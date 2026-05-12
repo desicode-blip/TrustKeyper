@@ -38,7 +38,9 @@ import {
   IndianRupee,
   SquareDashedBottom,
 } from "lucide-react";
-import { getProperties, type Property } from "@/lib/properties";
+import { getProperties, updateProperty, type Property } from "@/lib/properties";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import BrokerLayout from "@/components/BrokerLayout";
 
 // ─── Neighbourhood data keyed by city ─────────────────────────────────────────
@@ -380,12 +382,53 @@ export default function PropertyDetails() {
   const [property, setProperty] = useState<Property | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isEditing, setIsEditing] = useState(false);
+  const { toast } = useToast();
+
+  // Form states
+  const [draftNickname, setDraftNickname] = useState("");
+  const [draftRent, setDraftRent] = useState("");
+  const [draftArea, setDraftArea] = useState("");
+  const [draftCity, setDraftCity] = useState("");
 
   useEffect(() => {
     const list = getProperties();
     const found = list.find((p) => p.id === id);
-    setProperty(found ?? null);
+    if (found) {
+      setProperty(found);
+      setDraftNickname(found.nickname || "");
+      setDraftRent(found.monthlyRent || "");
+      setDraftArea(found.area || "");
+      setDraftCity(found.city || "");
+    }
   }, [id]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("edit") === "true") {
+      setIsEditing(true);
+    }
+  }, []);
+
+  const handleSave = () => {
+    if (!property) return;
+    updateProperty(property.id, {
+      nickname: draftNickname,
+      monthlyRent: draftRent,
+      area: draftArea,
+      city: draftCity,
+    });
+    toast({ description: "Property updated successfully!" });
+    setIsEditing(false);
+    // Update local state
+    setProperty({
+      ...property,
+      nickname: draftNickname,
+      monthlyRent: draftRent,
+      area: draftArea,
+      city: draftCity,
+    });
+  };
 
   if (!property) {
     return (
@@ -421,23 +464,33 @@ export default function PropertyDetails() {
     { id: "owner", label: "About Owner" },
   ];
 
-  const whatsappMsg = encodeURIComponent(
-    `Hi, I'm interested in the property: ${title} in ${property.area}, ${property.city}. Rent: ₹${property.monthlyRent}/month.`
+const whatsappMsg = encodeURIComponent(
+    `${property.ownerName || "Broker"} wants to share this property with you: ${title} in ${property.area}, ${property.city}.`
   );
 
   return (
     <BrokerLayout>
       <div>
         {/* Back */}
-        <button
-          onClick={() => setLocation("/broker/properties")}
-          className="flex items-center gap-1.5 text-sm text-gray-600 font-medium mb-5 hover:text-primary transition-colors"
-        >
-          <ArrowLeft size={15} /> Back to Properties
-        </button>
+        <div className="flex items-center justify-between mb-5">
+          <button
+            onClick={() => setLocation("/broker/properties")}
+            className="flex items-center gap-1.5 text-sm text-gray-600 font-medium hover:text-primary transition-colors"
+          >
+            <ArrowLeft size={15} /> Back to Properties
+          </button>
+          {!isEditing && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Edit Property
+            </button>
+          )}
+        </div>
 
         {/* Main grid */}
-        <div className="grid grid-cols-[1fr_296px] gap-6 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_296px] gap-6 items-start">
           {/* ── Left column ─────────────────────────────────────────────── */}
           <div className="min-w-0">
             {/* Gallery */}
@@ -466,10 +519,25 @@ export default function PropertyDetails() {
 
             {/* Tab content */}
             <div className="mt-4">
-              {activeTab === "overview" && <OverviewTab property={property} />}
-              {activeTab === "amenities" && <AmenitiesTab property={property} />}
-              {activeTab === "neighbourhood" && <NeighbourhoodTab property={property} />}
-              {activeTab === "owner" && <AboutOwnerTab property={property} />}
+              {isEditing ? (
+                <EditForm 
+                  onSave={handleSave} 
+                  onCancel={() => setIsEditing(false)} 
+                  drafts={{
+                    nickname: draftNickname, setNickname: setDraftNickname,
+                    rent: draftRent, setRent: setDraftRent,
+                    area: draftArea, setArea: setDraftArea,
+                    city: draftCity, setCity: setDraftCity
+                  }}
+                />
+              ) : (
+                <>
+                  {activeTab === "overview" && <OverviewTab property={property} />}
+                  {activeTab === "amenities" && <AmenitiesTab property={property} />}
+                  {activeTab === "neighbourhood" && <NeighbourhoodTab property={property} />}
+                  {activeTab === "owner" && <AboutOwnerTab property={property} />}
+                </>
+              )}
             </div>
           </div>
 
@@ -578,5 +646,74 @@ export default function PropertyDetails() {
         </div>
       </div>
     </BrokerLayout>
+  );
+}
+
+function EditForm({ 
+  onSave, 
+  onCancel,
+  drafts: { nickname, setNickname, rent, setRent, area, setArea, city, setCity }
+}: { 
+  onSave: () => void; 
+  onCancel: () => void;
+  drafts: any;
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <h2 className="text-xl font-semibold text-gray-900 mb-6">Edit Property Details</h2>
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">Property Nickname</label>
+            <Input 
+              value={nickname} 
+              onChange={(e) => setNickname(e.target.value)} 
+              placeholder="e.g. Sunny Apartment"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">Monthly Rent (₹)</label>
+            <Input 
+              type="number"
+              value={rent} 
+              onChange={(e) => setRent(e.target.value)} 
+              placeholder="e.g. 25000"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">Area / Landmark</label>
+            <Input 
+              value={area} 
+              onChange={(e) => setArea(e.target.value)} 
+              placeholder="e.g. Madhapur"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">City</label>
+            <Input 
+              value={city} 
+              onChange={(e) => setCity(e.target.value)} 
+              placeholder="e.g. Hyderabad"
+            />
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-end gap-3 mt-8 pt-6 border-t border-gray-100">
+        <button
+          onClick={onCancel}
+          className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onSave}
+          className="px-6 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+        >
+          Save Changes
+        </button>
+      </div>
+    </div>
   );
 }

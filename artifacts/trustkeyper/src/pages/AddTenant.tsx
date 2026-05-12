@@ -205,11 +205,38 @@ export default function AddTenant() {
     (l) => !localities.includes(l),
   );
 
+  const shareMessage = `Hi ${linkName}! Your broker wants to onboard you into TrustKeyper. Please complete your tenant profile using this link: ${generatedLink}`;
+  const encodedMsg = encodeURIComponent(shareMessage);
+
   const shareTargets = [
-    { id: "whatsapp", label: "WhatsApp", icon: MessageCircle, color: "bg-emerald-50 text-emerald-600" },
-    { id: "instagram", label: "Instagram", icon: Instagram, color: "bg-pink-50 text-pink-600" },
-    { id: "telegram", label: "Telegram", icon: Send, color: "bg-sky-50 text-sky-600" },
-    { id: "sms", label: "SMS", icon: Smartphone, color: "bg-gray-100 text-gray-700" },
+    {
+      id: "whatsapp",
+      label: "WhatsApp",
+      icon: MessageCircle,
+      color: "bg-emerald-50 text-emerald-600",
+      href: `https://wa.me/${linkPhone.startsWith("+") ? linkPhone : "+91" + linkPhone}?text=${encodedMsg}`,
+    },
+    {
+      id: "instagram",
+      label: "Instagram",
+      icon: Instagram,
+      color: "bg-pink-50 text-pink-600",
+      href: `https://www.instagram.com/direct/inbox/`, // Instagram doesn't support direct message pre-fill via URL easily
+    },
+    {
+      id: "telegram",
+      label: "Telegram",
+      icon: Send,
+      color: "bg-sky-50 text-sky-600",
+      href: `https://t.me/share/url?url=${encodeURIComponent(generatedLink)}&text=${encodedMsg}`,
+    },
+    {
+      id: "sms",
+      label: "SMS",
+      icon: Smartphone,
+      color: "bg-gray-100 text-gray-700",
+      href: `sms:${linkPhone.startsWith("+") ? linkPhone : "+91" + linkPhone}?body=${encodedMsg}`,
+    },
   ];
 
   return (
@@ -728,17 +755,20 @@ export default function AddTenant() {
                 {shareTargets.map((t) => {
                   const Icon = t.icon;
                   return (
-                    <button
+                    <a
                       key={t.id}
-                      className="flex flex-col items-center gap-2"
+                      href={t.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center gap-2 transition-transform hover:scale-105"
                     >
                       <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center ${t.color}`}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm ${t.color}`}
                       >
                         <Icon size={20} />
                       </div>
-                      <span className="text-xs text-gray-700">{t.label}</span>
-                    </button>
+                      <span className="text-xs text-gray-700 font-medium">{t.label}</span>
+                    </a>
                   );
                 })}
               </div>
