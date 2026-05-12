@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { ChevronLeft, Check } from "lucide-react";
+import brandLogo from "@assets/Trustkeyper_Logo_1777989635996.png";
 import sidebarImage from "@assets/Frame_3466237_1777382669479.png";
 import Step1Role from "@/components/Step1Role";
 import Step2Details from "@/components/Step2Details";
@@ -71,9 +72,10 @@ export default function Onboarding() {
       </div>
 
       {/* Right Content Area */}
-      <div className="w-full flex-1 flex flex-col pt-[120px] pb-[120px] px-6 lg:px-[140px]">
+      <div className="w-full flex-1 flex flex-col pt-[120px] pb-[180px] px-6 lg:px-[140px]">
         {/* Header / Nav */}
-        <div className="flex items-center gap-4 mb-10">
+      <div className="mb-10">
+        <div className="relative flex items-center justify-between">
           <button
             onClick={goBack}
             disabled={step === 1}
@@ -81,22 +83,29 @@ export default function Onboarding() {
           >
             <ChevronLeft size={20} />
           </button>
-          
-          <div className="flex items-center gap-2">
-            {Array.from({ length: totalDots }).map((_, idx) => {
-              const i = idx + 1;
-              const activeIndex = isBrokerFlow ? step - 1 : isOwnerFlow ? step - 1 : step;
-              return (
-                <div
-                  key={i}
-                  className={`w-2 h-2 rounded-full ${
-                    i <= activeIndex ? "bg-primary" : "bg-gray-300"
-                  }`}
-                />
-              );
-            })}
+
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 sm:hidden">
+            <img src={brandLogo} alt="TrustKeyper" className="h-10 w-auto" />
           </div>
+
+          <div className="w-10" />
         </div>
+
+        <div className="mt-4 flex items-center justify-center gap-2">
+          {Array.from({ length: totalDots }).map((_, idx) => {
+            const i = idx + 1;
+            const activeIndex = isBrokerFlow ? step - 1 : isOwnerFlow ? step - 1 : step;
+            return (
+              <div
+                key={i}
+                className={`w-2 h-2 rounded-full ${
+                  i <= activeIndex ? "bg-primary" : "bg-gray-300"
+                }`}
+              />
+            );
+          })}
+        </div>
+      </div>
 
         {/* Step Content */}
         <div className="flex-1">

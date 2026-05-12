@@ -127,11 +127,21 @@ export default function Step4KYC({ onComplete }: Step4KYCProps) {
         <UploadCard title="Cancelled Cheque (optional)" uploadKey="cheque" />
       </div>
 
-      <div className="mt-10">
+      <div className="mt-10 hidden sm:block">
         <Button size="lg"
           onClick={onComplete} 
           disabled={!isComplete}
           className="w-48 bg-primary hover:bg-primary/90"
+        >
+          Continue
+        </Button>
+      </div>
+
+      <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] safe-area-bottom">
+        <Button size="lg"
+          onClick={onComplete} 
+          disabled={!isComplete}
+          className="w-full bg-primary hover:bg-primary/90"
         >
           Continue
         </Button>

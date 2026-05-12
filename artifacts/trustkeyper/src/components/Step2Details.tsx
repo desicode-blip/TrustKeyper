@@ -43,7 +43,7 @@ export default function Step2Details({ details, setDetails, onNext }: Step2Detai
         </div>
       </div>
 
-      <div className="mt-10">
+      <div className="mt-10 hidden sm:block">
         <Button size="lg"
           onClick={onNext} 
           disabled={!isComplete}
@@ -56,6 +56,16 @@ export default function Step2Details({ details, setDetails, onNext }: Step2Detai
           By continuing, you agree to TrustKeyper{" "}
           <a href="#" className="text-accent hover:underline">Terms and Conditions</a>
         </p>
+      </div>
+
+      <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] safe-area-bottom">
+        <Button size="lg"
+          onClick={onNext}
+          disabled={!isComplete}
+          className="w-full bg-primary hover:bg-primary/90"
+        >
+          Request OTP &rarr;
+        </Button>
       </div>
     </div>
   );

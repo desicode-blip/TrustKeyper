@@ -48,11 +48,21 @@ export default function Step1Role({ role, setRole, onNext }: Step1RoleProps) {
 
       <p className="text-gray-500">This will help us personalize your journey</p>
 
-      <div className="mt-10">
+      <div className="mt-10 hidden sm:block">
         <Button size="lg"
           onClick={onNext} 
           disabled={!role}
           className="w-40 bg-primary hover:bg-primary/90"
+        >
+          Continue
+        </Button>
+      </div>
+
+      <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] safe-area-bottom">
+        <Button size="lg"
+          onClick={onNext}
+          disabled={!role}
+          className="w-full bg-primary hover:bg-primary/90"
         >
           Continue
         </Button>
