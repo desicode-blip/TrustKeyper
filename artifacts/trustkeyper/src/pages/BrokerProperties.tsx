@@ -99,8 +99,8 @@ function PropertyCard({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-      <div className="flex flex-col sm:flex-row w-full">
-        <div className="w-full sm:w-36 h-52 sm:h-auto bg-gray-100 relative flex items-center justify-center overflow-hidden">
+      <div className="flex flex-col sm:flex-row w-full gap-4">
+        <div className="w-full sm:w-36 aspect-[4/3] bg-gray-100 relative flex items-center justify-center overflow-hidden">
           {property.images && property.images.length > 0 ? (
             <img
               src={property.images[0]}
@@ -117,11 +117,11 @@ function PropertyCard({
           )}
         </div>
 
-        <div className="flex-1 p-3 sm:p-4 flex flex-col gap-3">
+        <div className="flex-1 p-3 sm:p-4 flex flex-col gap-3 min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
-              <p className="font-semibold text-gray-900 leading-tight">{title}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>
+                             <p className="font-semibold text-gray-900 leading-tight truncate" title={title}>{title}</p>
+               <p className="text-xs text-gray-500 mt-0.5 truncate" title={subtitle}>{subtitle}</p>
             </div>
             <StatusBadge status={property.status} />
           </div>
@@ -150,13 +150,13 @@ function PropertyCard({
             >
               {editing ? "Cancel Edit" : "Edit Property"}
             </button>
-            <button
-              type="button"
-              onClick={() => onViewDetails(property.id)}
-              className="h-9 sm:h-8 px-4 sm:px-3 rounded border border-gray-300 text-sm sm:text-xs font-medium text-gray-700 hover:bg-gray-50"
-            >
-              View Details
-            </button>
+          <button
+            type="button"
+            onClick={() => onViewDetails(property.id)}
+            className="h-9 sm:h-8 px-4 sm:px-3 rounded border border-gray-300 text-sm sm:text-xs font-medium text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+          >
+            View Details
+          </button>
             {property.status !== "Rented" && (
               <button
                 type="button"
