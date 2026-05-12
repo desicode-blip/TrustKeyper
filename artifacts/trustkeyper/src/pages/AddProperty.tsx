@@ -202,46 +202,59 @@ function AmenityCheck({
 
 export default function AddProperty() {
   const [, setLocation] = useLocation();
-  const [subStep, setSubStep] = useState(0);
+
+  const STORAGE_KEY = "broker_add_property_data";
+  const loadSavedData = () => {
+    if (typeof window === "undefined") return null;
+    try {
+      return JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? "null");
+    } catch {
+      return null;
+    }
+  };
+  const savedData = loadSavedData();
+  const [subStep, setSubStep] = useState(savedData?.subStep ?? 0);
 
   // Sub-step 0 – Property Details
-  const [nickname, setNickname] = useState("");
-  const [address, setAddress] = useState("");
-  const [area, setArea] = useState("");
-  const [city, setCity] = useState("");
-  const [pincode, setPincode] = useState("");
-  const [country, setCountry] = useState("India");
-  const [ownerName, setOwnerName] = useState("");
-  const [ownerContact, setOwnerContact] = useState("");
+  const [nickname, setNickname] = useState(savedData?.nickname ?? "");
+  const [address, setAddress] = useState(savedData?.address ?? "");
+  const [area, setArea] = useState(savedData?.area ?? "");
+  const [city, setCity] = useState(savedData?.city ?? "");
+  const [pincode, setPincode] = useState(savedData?.pincode ?? "");
+  const [country, setCountry] = useState(savedData?.country ?? "India");
+  const [ownerName, setOwnerName] = useState(savedData?.ownerName ?? "");
+  const [ownerContact, setOwnerContact] = useState(savedData?.ownerContact ?? "");
 
   // Sub-step 1 – Type/Size/Furnishing
-  const [propertyType, setPropertyType] = useState("");
-  const [propertyTypeOther, setPropertyTypeOther] = useState("");
-  const [unitSize, setUnitSize] = useState("");
-  const [unitSizeOther, setUnitSizeOther] = useState("");
-  const [furnishing, setFurnishing] = useState("");
+  const [propertyType, setPropertyType] = useState(savedData?.propertyType ?? "");
+  const [propertyTypeOther, setPropertyTypeOther] = useState(savedData?.propertyTypeOther ?? "");
+  const [unitSize, setUnitSize] = useState(savedData?.unitSize ?? "");
+  const [unitSizeOther, setUnitSizeOther] = useState(savedData?.unitSizeOther ?? "");
+  const [furnishing, setFurnishing] = useState(savedData?.furnishing ?? "");
 
   // Sub-step 2 – Dimensions
-  const [builtUpArea, setBuiltUpArea] = useState("");
-  const [builtUpUnits, setBuiltUpUnits] = useState("sq ft");
-  const [totalFloors, setTotalFloors] = useState("");
-  const [bedrooms, setBedrooms] = useState("");
-  const [bathrooms, setBathrooms] = useState("");
-  const [balconies, setBalconies] = useState("");
-  const [floorLevel, setFloorLevel] = useState("");
-  const [mainDoorDirection, setMainDoorDirection] = useState("");
+  const [builtUpArea, setBuiltUpArea] = useState(savedData?.builtUpArea ?? "");
+  const [builtUpUnits, setBuiltUpUnits] = useState(savedData?.builtUpUnits ?? "sq ft");
+  const [totalFloors, setTotalFloors] = useState(savedData?.totalFloors ?? "");
+  const [bedrooms, setBedrooms] = useState(savedData?.bedrooms ?? "");
+  const [bathrooms, setBathrooms] = useState(savedData?.bathrooms ?? "");
+  const [balconies, setBalconies] = useState(savedData?.balconies ?? "");
+  const [floorLevel, setFloorLevel] = useState(savedData?.floorLevel ?? "");
+  const [mainDoorDirection, setMainDoorDirection] = useState(savedData?.mainDoorDirection ?? "");
 
   // Sub-step 3 – Amenities
-  const [amenities, setAmenities] = useState<string[]>([]);
+  const [amenities, setAmenities] = useState<string[]>(savedData?.amenities ?? []);
+  const [amenityOtherChecked, setAmenityOtherChecked] = useState(savedData?.amenityOtherChecked ?? false);
+  const [amenityOtherText, setAmenityOtherText] = useState(savedData?.amenityOtherText ?? "");
 
   // Sub-step 4 – Rental Details
-  const [tenantsPreferred, setTenantsPreferred] = useState<string[]>([]);
-  const [monthlyRent, setMonthlyRent] = useState("");
-  const [rentNegotiable, setRentNegotiable] = useState(false);
-  const [maintenanceIncluded, setMaintenanceIncluded] = useState(false);
-  const [monthlyMaintenance, setMonthlyMaintenance] = useState("");
-  const [securityDeposit, setSecurityDeposit] = useState("");
-  const [availableFrom, setAvailableFrom] = useState("");
+  const [tenantsPreferred, setTenantsPreferred] = useState<string[]>(savedData?.tenantsPreferred ?? []);
+  const [monthlyRent, setMonthlyRent] = useState(savedData?.monthlyRent ?? "");
+  const [rentNegotiable, setRentNegotiable] = useState(savedData?.rentNegotiable ?? false);
+  const [maintenanceIncluded, setMaintenanceIncluded] = useState(savedData?.maintenanceIncluded ?? false);
+  const [monthlyMaintenance, setMonthlyMaintenance] = useState(savedData?.monthlyMaintenance ?? "");
+  const [securityDeposit, setSecurityDeposit] = useState(savedData?.securityDeposit ?? "");
+  const [availableFrom, setAvailableFrom] = useState(savedData?.availableFrom ?? "");
 
   // Sub-step 5 – Images
   const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -278,41 +291,45 @@ export default function AddProperty() {
     setImageUrls((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  // ── Validation ────────────────────────────────────────────────────────────────
+  const parseAddressDetails = (value: string) => {
+    const pincodeMatch = value.match(/\b\d{6}\b/);
+    if (pincodeMatch) {
+      setPincode((current) => current || pincodeMatch[0]);
+    }
 
-  const isValidContact = (v: string): boolean => {
-    if (!v.trim()) return false;
-    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
-    const phoneOk = /^\+?[\d\s\-().]{7,15}$/.test(v.trim());
-    return emailOk || phoneOk;
+    if (!city) {
+      const foundCity = CITIES.find((c) => value.toLowerCase().includes(c.toLowerCase()));
+      if (foundCity) setCity(foundCity);
+    }
+
+    if (!area) {
+      const segments = value.split(",").map((part) => part.trim()).filter(Boolean);
+      if (segments.length > 0) {
+        setArea(segments[0]);
+      }
+    }
   };
 
-  const contactTouched = ownerContact.length > 0;
-  const contactError = contactTouched && !isValidContact(ownerContact);
-
-  const canContinue = (): boolean => {
-    if (subStep === 0) {
-      return !!(address && area && city && pincode && country && ownerName && isValidContact(ownerContact));
-    }
-    if (subStep === 1) {
-      const typeOk = propertyType !== "" && (propertyType !== "Other" || propertyTypeOther.trim() !== "");
-      const sizeOk = unitSize !== "" && (unitSize !== "Other" || unitSizeOther.trim() !== "");
-      return typeOk && sizeOk && furnishing !== "";
-    }
-    if (subStep === 2) {
-      return !!(builtUpArea && builtUpUnits && totalFloors && bedrooms && bathrooms && balconies && floorLevel && mainDoorDirection);
-    }
-    if (subStep === 3) return true;
-    if (subStep === 4) {
-      return tenantsPreferred.length > 0 && !!monthlyRent && !!securityDeposit && !!availableFrom;
-    }
-    return true;
+  const handleAddressChange = (value: string) => {
+    setAddress(value);
+    if (value.length > 10) parseAddressDetails(value);
   };
 
-  // ── Submit ────────────────────────────────────────────────────────────────────
+  const handleAddressPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pastedText = event.clipboardData.getData("Text");
+    if (pastedText) {
+      parseAddressDetails(pastedText);
+    }
+  };
 
-  const handleSubmit = () => {
-    addProperty({
+  const pincodeTouched = pincode.length > 0;
+  const pincodeError = pincodeTouched && !/^\d{6}$/.test(pincode);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const data = {
+      subStep,
       nickname,
       address,
       area,
@@ -335,6 +352,121 @@ export default function AddProperty() {
       floorLevel,
       mainDoorDirection,
       amenities,
+      amenityOtherChecked,
+      amenityOtherText,
+      tenantsPreferred,
+      monthlyRent,
+      rentNegotiable,
+      maintenanceIncluded,
+      monthlyMaintenance,
+      securityDeposit,
+      availableFrom,
+      imageUrls,
+    };
+
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch {
+      // ignore storage errors
+    }
+  }, [
+    subStep,
+    nickname,
+    address,
+    area,
+    city,
+    pincode,
+    country,
+    ownerName,
+    ownerContact,
+    propertyType,
+    propertyTypeOther,
+    unitSize,
+    unitSizeOther,
+    furnishing,
+    builtUpArea,
+    builtUpUnits,
+    totalFloors,
+    bedrooms,
+    bathrooms,
+    balconies,
+    floorLevel,
+    mainDoorDirection,
+    amenities,
+    amenityOtherChecked,
+    amenityOtherText,
+    tenantsPreferred,
+    monthlyRent,
+    rentNegotiable,
+    maintenanceIncluded,
+    monthlyMaintenance,
+    securityDeposit,
+    availableFrom,
+    imageUrls,
+  ]);
+
+  // ── Validation ────────────────────────────────────────────────────────────────
+
+  const isValidContact = (v: string): boolean => {
+    if (!v.trim()) return false;
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+    const phoneOk = /^\+?[\d\s\-().]{7,15}$/.test(v.trim());
+    return emailOk || phoneOk;
+  };
+
+  const contactTouched = ownerContact.length > 0;
+  const contactError = contactTouched && !isValidContact(ownerContact);
+
+  const canContinue = (): boolean => {
+    if (subStep === 0) {
+      return !!(address && area && city && pincode && !pincodeError && country && ownerName && isValidContact(ownerContact));
+    }
+    if (subStep === 1) {
+      const typeOk = propertyType !== "" && (propertyType !== "Other" || propertyTypeOther.trim() !== "");
+      const sizeOk = unitSize !== "" && (unitSize !== "Other" || unitSizeOther.trim() !== "");
+      return typeOk && sizeOk && furnishing !== "";
+    }
+    if (subStep === 2) {
+      return !!(builtUpArea && builtUpUnits && totalFloors && bedrooms && bathrooms && balconies && floorLevel && mainDoorDirection);
+    }
+    if (subStep === 3) return true;
+    if (subStep === 4) {
+      return tenantsPreferred.length > 0 && !!monthlyRent && !!securityDeposit && !!availableFrom;
+    }
+    return true;
+  };
+
+  // ── Submit ────────────────────────────────────────────────────────────────────
+
+  const handleSubmit = () => {
+    const finalAmenities = [...amenities];
+    if (amenityOtherChecked && amenityOtherText.trim()) {
+      finalAmenities.push(amenityOtherText.trim());
+    }
+
+    addProperty({
+      nickname,
+      address,
+      area,
+      city,
+      pincode,
+      country,
+      ownerName,
+      ownerContact,
+      propertyType,
+      propertyTypeOther,
+      unitSize,
+      unitSizeOther,
+      furnishing,
+      builtUpArea,
+      builtUpUnits,
+      totalFloors,
+      bedrooms,
+      bathrooms,
+      balconies,
+      floorLevel,
+      mainDoorDirection,
+      amenities: finalAmenities,
       tenantsPreferred,
       monthlyRent,
       rentNegotiable,
@@ -346,11 +478,30 @@ export default function AddProperty() {
       imageCount: imageUrls.length,
       status: "Active",
     });
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
+    }
     setShowSuccess(true);
     setTimeout(() => {
       setShowSuccess(false);
       setLocation("/broker/properties");
     }, 2000);
+  };
+
+  const handleBack = () => {
+    if (subStep > 0) {
+      setSubStep((s) => s - 1);
+      return;
+    }
+
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    setLocation("/broker/properties");
   };
 
   const handleContinue = () => {
@@ -381,8 +532,9 @@ export default function AddProperty() {
           <FieldLabel required>Address</FieldLabel>
           <textarea
             value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="Placeholder"
+            onChange={(e) => handleAddressChange(e.target.value)}
+            onPaste={handleAddressPaste}
+            placeholder="e.g. 201, Orchid Residency, Sector 76, Noida, 201301"
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none h-20"
           />
         </div>
@@ -409,6 +561,9 @@ export default function AddProperty() {
               placeholder=""
               maxLength={6}
             />
+            {pincodeError && (
+              <p className="text-xs text-red-500 mt-1">Enter a valid 6-digit pincode.</p>
+            )}
           </div>
           <div>
             <FieldLabel required>Country</FieldLabel>
@@ -544,7 +699,12 @@ export default function AddProperty() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <FieldLabel required>Total Floors</FieldLabel>
-            <SelectField value={totalFloors} onChange={setTotalFloors} options={FLOORS_OPTIONS} placeholder="Select" />
+            <Input
+              value={totalFloors}
+              onChange={(e) => setTotalFloors(e.target.value)}
+              placeholder="e.g. 10"
+              type="text"
+            />
           </div>
           <div>
             <FieldLabel required>Bedrooms</FieldLabel>
@@ -564,7 +724,12 @@ export default function AddProperty() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <FieldLabel required>Floor Level</FieldLabel>
-            <SelectField value={floorLevel} onChange={setFloorLevel} options={FLOOR_LEVEL_OPTIONS} placeholder="Select" />
+            <Input
+              value={floorLevel}
+              onChange={(e) => setFloorLevel(e.target.value)}
+              placeholder="e.g. 3rd"
+              type="text"
+            />
           </div>
           <div>
             <FieldLabel required>Direction of main door</FieldLabel>
@@ -587,7 +752,7 @@ export default function AddProperty() {
               key={a}
               label={a}
               checked={amenities.includes(a)}
-              onChange={(v) => toggleAmenity(a)}
+              onChange={() => toggleAmenity(a)}
             />
           ))}
         </div>
@@ -597,10 +762,30 @@ export default function AddProperty() {
               key={a}
               label={a}
               checked={amenities.includes(a)}
-              onChange={(v) => toggleAmenity(a)}
+              onChange={() => toggleAmenity(a)}
             />
           ))}
         </div>
+      </div>
+      <div className="mt-6 border-t border-gray-100 pt-4">
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={amenityOtherChecked}
+            onChange={(e) => setAmenityOtherChecked(e.target.checked)}
+            className="w-4 h-4 accent-primary"
+          />
+          <span className="text-sm text-gray-700">Other</span>
+        </label>
+        {amenityOtherChecked && (
+          <div className="mt-3">
+            <Input
+              value={amenityOtherText}
+              onChange={(e) => setAmenityOtherText(e.target.value)}
+              placeholder="Type other amenities"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -811,17 +996,17 @@ export default function AddProperty() {
     <BrokerLayout>
       {/* Back link */}
       <button
-        onClick={() => setLocation("/broker/dashboard")}
+        onClick={handleBack}
         className="flex items-center gap-1.5 text-sm text-primary font-medium mb-4 hover:underline"
       >
-        <ArrowLeft size={16} /> Back to Dashboard
+        <ArrowLeft size={16} /> Back
       </button>
 
       {/* Progress bar */}
       <ProgressBar subStep={subStep} />
 
       {/* Card */}
-      <div className="max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-8 pb-6 sm:pb-8">
+      <div className="max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-8 pb-24 sm:pb-8">
         {subStep === 0 && renderStep0()}
         {subStep === 1 && renderStep1()}
         {subStep === 2 && renderStep2()}
