@@ -98,9 +98,9 @@ export default function OwnerProperties() {
                     {property.status === "Rented" ? "Occupied" : "Live"}
                   </div>
                 </div>
-                <div className="p-4 flex-1 flex flex-col">
+                <div className="p-3 sm:p-4 flex-1 flex flex-col">
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <h3 className="font-semibold text-gray-900 text-base">{property.nickname || property.address || "Property Name"}</h3>
+                    <h3 className="font-semibold text-gray-900 text-lg sm:text-base">{property.nickname || property.address || "Property Name"}</h3>
                     <div className="w-6 h-6 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:bg-gray-50 shrink-0">
                       <span className="text-[10px]">›</span>
                     </div>
@@ -111,12 +111,12 @@ export default function OwnerProperties() {
                   
                   <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-gray-900 text-[15px]">
+                      <p className="font-semibold text-gray-900 text-base sm:text-[15px]">
                         ₹{Number(property.monthlyRent || 0).toLocaleString("en-IN")}<span className="text-xs text-gray-500 font-normal">/mo</span>
                       </p>
                     </div>
                   </div>
-                  <div className="mt-2 flex items-center gap-1.5 text-[11px] text-gray-400">
+                  <div className="mt-2 flex items-center gap-1.5 text-xs sm:text-[11px] text-gray-400">
                     <span>10 tenants have viewed the property</span>
                   </div>
                 </div>
