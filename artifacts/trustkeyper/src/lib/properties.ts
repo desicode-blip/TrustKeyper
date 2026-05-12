@@ -76,6 +76,17 @@ export function updatePropertyStatus(id: string, status: PropertyStatus): void {
   }
 }
 
+export function updateProperty(id: string, changes: Partial<Omit<Property, "id" | "createdAt" | "uploadedBy">>): void {
+  const list = getProperties();
+  const idx = list.findIndex((p) => p.id === id);
+  if (idx !== -1) {
+    list[idx] = { ...list[idx], ...changes };
+    try {
+      sessionStorage.setItem(KEY, JSON.stringify(list));
+    } catch {}
+  }
+}
+
 export function getPropertyTitle(p: Property): string {
   const type = p.propertyType === "Other" ? (p.propertyTypeOther || "Property") : p.propertyType;
   const size = p.unitSize === "Other" ? (p.unitSizeOther || "") : p.unitSize;

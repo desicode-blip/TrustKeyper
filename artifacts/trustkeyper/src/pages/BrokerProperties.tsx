@@ -2,9 +2,11 @@ import React, { useState, useEffect } from "react";
 import { Plus, Building2, Eye, Heart, Phone } from "lucide-react";
 import { useLocation } from "wouter";
 import BrokerLayout from "@/components/BrokerLayout";
+import { Input } from "@/components/ui/input";
 import {
   getProperties,
   updatePropertyStatus,
+  updateProperty,
   getPropertyTitle,
   type Property,
   type PropertyStatus,
@@ -36,10 +38,12 @@ function PropertyCard({
   property,
   onMarkRented,
   onViewDetails,
+  onUpdate,
 }: {
   property: Property;
   onMarkRented: (id: string) => void;
   onViewDetails: (id: string) => void;
+  onUpdate: (id: string, updates: Partial<Omit<Property, "id" | "createdAt" | "uploadedBy">>) => void;
 }) {
   const type = property.propertyType === "Other"
     ? (property.propertyTypeOther || "Property")
@@ -59,69 +63,193 @@ function PropertyCard({
     ? `${property.builtUpArea} ${property.builtUpUnits}`
     : "";
 
+  const [editing, setEditing] = useState(false);
+  const [draftNickname, setDraftNickname] = useState(property.nickname ?? "");
+  const [draftArea, setDraftArea] = useState(property.area);
+  const [draftCity, setDraftCity] = useState(property.city);
+  const [draftMonthlyRent, setDraftMonthlyRent] = useState(property.monthlyRent);
+  const [draftAvailableFrom, setDraftAvailableFrom] = useState(property.availableFrom);
+  const [draftTotalFloors, setDraftTotalFloors] = useState(property.totalFloors);
+  const [draftFloorLevel, setDraftFloorLevel] = useState(property.floorLevel);
+
+  React.useEffect(() => {
+    if (!editing) {
+      setDraftNickname(property.nickname ?? "");
+      setDraftArea(property.area);
+      setDraftCity(property.city);
+      setDraftMonthlyRent(property.monthlyRent);
+      setDraftAvailableFrom(property.availableFrom);
+      setDraftTotalFloors(property.totalFloors);
+      setDraftFloorLevel(property.floorLevel);
+    }
+  }, [editing, property]);
+
+  const handleSave = () => {
+    onUpdate(property.id, {
+      nickname: draftNickname,
+      area: draftArea,
+      city: draftCity,
+      monthlyRent: draftMonthlyRent,
+      availableFrom: draftAvailableFrom,
+      totalFloors: draftTotalFloors,
+      floorLevel: draftFloorLevel,
+    });
+    setEditing(false);
+  };
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200 flex overflow-hidden">
-      {/* Thumbnail */}
-      <div className="w-36 shrink-0 bg-gray-100 relative flex items-center justify-center overflow-hidden">
-        {property.images && property.images.length > 0 ? (
-          <img
-            src={property.images[0]}
-            alt="property"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <Building2 size={32} className="text-gray-400" />
-        )}
-        {property.imageCount > 0 && (
-          <span className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded">
-            {property.imageCount} pics
-          </span>
-        )}
-      </div>
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="flex flex-col sm:flex-row w-full">
+        <div className="w-full sm:w-36 h-52 sm:h-auto bg-gray-100 relative flex items-center justify-center overflow-hidden">
+          {property.images && property.images.length > 0 ? (
+            <img
+              src={property.images[0]}
+              alt="property"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <Building2 size={32} className="text-gray-400" />
+          )}
+          {property.imageCount > 0 && (
+            <span className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded">
+              {property.imageCount} pics
+            </span>
+          )}
+        </div>
 
-      {/* Details */}
-      <div className="flex-1 p-4 flex flex-col gap-2">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="font-semibold text-gray-900 leading-tight">{title}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>
+        <div className="flex-1 p-4 flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div>
+              <p className="font-semibold text-gray-900 leading-tight">{title}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>
+            </div>
+            <StatusBadge status={property.status} />
           </div>
-          <StatusBadge status={property.status} />
-        </div>
 
-        <p className="text-sm text-gray-700">
-          {[rent, deposit].filter(Boolean).join(" • ")}
-        </p>
+          <p className="text-sm text-gray-700">
+            {[rent, deposit].filter(Boolean).join(" • ")}
+          </p>
 
-        <p className="text-xs text-gray-500">
-          {[area, property.furnishing, `Listed ${timeAgo(property.createdAt)}`]
-            .filter(Boolean)
-            .join(" • ")}
-        </p>
+          <p className="text-xs text-gray-500">
+            {[area, property.furnishing, `Listed ${timeAgo(property.createdAt)}`]
+              .filter(Boolean)
+              .join(" • ")}
+          </p>
 
-        <div className="flex items-center gap-4 text-xs text-gray-500">
-          <span className="flex items-center gap-1"><Eye size={12} /> 0 views</span>
-          <span className="flex items-center gap-1"><Heart size={12} /> 0 shortlists</span>
-          <span className="flex items-center gap-1"><Phone size={12} /> 0 contacts</span>
-        </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+            <span className="flex items-center gap-1"><Eye size={12} /> 0 views</span>
+            <span className="flex items-center gap-1"><Heart size={12} /> 0 shortlists</span>
+            <span className="flex items-center gap-1"><Phone size={12} /> 0 contacts</span>
+          </div>
 
-        <div className="flex items-center gap-2 mt-1">
-          <button
-            onClick={() => onViewDetails(property.id)}
-            className="h-7 px-3 rounded border border-primary text-xs font-medium text-primary hover:bg-primary/5"
-          >
-            View Details
-          </button>
-          <button className="h-7 px-3 rounded border border-gray-300 text-xs font-medium text-gray-700 hover:bg-gray-50">
-            Edit
-          </button>
-          {property.status !== "Rented" && (
+          <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => onMarkRented(property.id)}
-              className="h-7 px-3 rounded border border-gray-300 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              type="button"
+              onClick={() => setEditing((prev) => !prev)}
+              className="h-8 px-3 rounded border border-primary text-xs font-medium text-primary hover:bg-primary/5"
             >
-              Mark as Rented
+              {editing ? "Cancel Edit" : "Edit Property"}
             </button>
+            <button
+              type="button"
+              onClick={() => onViewDetails(property.id)}
+              className="h-8 px-3 rounded border border-gray-300 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            >
+              View Details
+            </button>
+            {property.status !== "Rented" && (
+              <button
+                type="button"
+                onClick={() => onMarkRented(property.id)}
+                className="h-8 px-3 rounded border border-primary text-xs font-medium text-primary hover:bg-primary/5"
+              >
+                Mark as Rented
+              </button>
+            )}
+          </div>
+
+          {editing && (
+            <div className="border border-gray-200 rounded-2xl bg-gray-50 p-4">
+              <p className="text-sm font-semibold text-gray-900 mb-3">Edit property details</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nickname</label>
+                  <Input
+                    value={draftNickname}
+                    onChange={(e) => setDraftNickname(e.target.value)}
+                    placeholder="My property 01"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Area / Landmark</label>
+                  <Input
+                    value={draftArea}
+                    onChange={(e) => setDraftArea(e.target.value)}
+                    placeholder="Area or landmark"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <Input
+                    value={draftCity}
+                    onChange={(e) => setDraftCity(e.target.value)}
+                    placeholder="City"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Total Floors</label>
+                  <Input
+                    value={draftTotalFloors}
+                    onChange={(e) => setDraftTotalFloors(e.target.value)}
+                    placeholder="e.g. 10"
+                    type="text"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Floor Level</label>
+                  <Input
+                    value={draftFloorLevel}
+                    onChange={(e) => setDraftFloorLevel(e.target.value)}
+                    placeholder="e.g. 3rd"
+                    type="text"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Expected Monthly Rent</label>
+                  <Input
+                    type="number"
+                    value={draftMonthlyRent}
+                    onChange={(e) => setDraftMonthlyRent(e.target.value)}
+                    placeholder="Rent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Available From</label>
+                  <Input
+                    type="date"
+                    value={draftAvailableFrom}
+                    onChange={(e) => setDraftAvailableFrom(e.target.value)}
+                    className="appearance-none"
+                  />
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEditing(false)}
+                  className="h-9 px-4 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                >
+                  Discard
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  className="h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -137,6 +265,10 @@ export default function BrokerProperties() {
   const refresh = () => setProperties(getProperties());
 
   const handleViewDetails = (id: string) => setLocation(`/broker/properties/${id}`);
+  const handleUpdate = (id: string, updates: Partial<Omit<Property, "id" | "createdAt" | "uploadedBy">>) => {
+    updateProperty(id, updates);
+    refresh();
+  };
 
   useEffect(() => {
     refresh();
@@ -204,7 +336,13 @@ export default function BrokerProperties() {
       ) : (
         <div className="flex flex-col gap-4">
           {visible.map((p) => (
-            <PropertyCard key={p.id} property={p} onMarkRented={handleMarkRented} onViewDetails={handleViewDetails} />
+            <PropertyCard
+              key={p.id}
+              property={p}
+              onMarkRented={handleMarkRented}
+              onViewDetails={handleViewDetails}
+              onUpdate={handleUpdate}
+            />
           ))}
         </div>
       )}

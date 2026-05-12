@@ -544,23 +544,7 @@ export default function PropertyDetails() {
                 <Share2 size={15} /> Share via WhatsApp
               </a>
 
-              {/* Report */}
-              <div className="pt-2 border-t border-gray-100">
-                <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
-                  <Flag size={11} />
-                  <span>Report what was not correct</span>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  {["Listed by Broker", "Rented Out", "Wrong Info"].map((r) => (
-                    <button
-                      key={r}
-                      className="h-7 px-2.5 rounded border border-gray-200 text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              </div>
+
             </div>
 
             {/* Activity card */}

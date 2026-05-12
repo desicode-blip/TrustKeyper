@@ -202,8 +202,8 @@ function AmenityCheck({
 
 export default function AddProperty() {
   const [, setLocation] = useLocation();
-
   const STORAGE_KEY = "broker_add_property_data";
+
   const loadSavedData = () => {
     if (typeof window === "undefined") return null;
     try {
@@ -260,6 +260,52 @@ export default function AddProperty() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const availableFromRef = useRef<HTMLInputElement>(null);
+
+  const clearDraft = () => {
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch {}
+    setSubStep(0);
+    setNickname("");
+    setAddress("");
+    setArea("");
+    setCity("");
+    setPincode("");
+    setCountry("India");
+    setOwnerName("");
+    setOwnerContact("");
+    setPropertyType("");
+    setPropertyTypeOther("");
+    setUnitSize("");
+    setUnitSizeOther("");
+    setFurnishing("");
+    setBuiltUpArea("");
+    setBuiltUpUnits("sq ft");
+    setTotalFloors("");
+    setBedrooms("");
+    setBathrooms("");
+    setBalconies("");
+    setFloorLevel("");
+    setMainDoorDirection("");
+    setAmenities([]);
+    setAmenityOtherChecked(false);
+    setAmenityOtherText("");
+    setTenantsPreferred([]);
+    setMonthlyRent("");
+    setRentNegotiable(false);
+    setMaintenanceIncluded(false);
+    setMonthlyMaintenance("");
+    setSecurityDeposit("");
+    setAvailableFrom("");
+    setImageUrls([]);
+    setShowSuccess(false);
+  };
+
+  const openDatePicker = () => {
+    availableFromRef.current?.showPicker?.();
+    availableFromRef.current?.focus();
+  };
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -294,7 +340,7 @@ export default function AddProperty() {
   const parseAddressDetails = (value: string) => {
     const pincodeMatch = value.match(/\b\d{6}\b/);
     if (pincodeMatch) {
-      setPincode((current) => current || pincodeMatch[0]);
+      setPincode((current: string) => current || pincodeMatch[0]);
     }
 
     if (!city) {
@@ -492,7 +538,7 @@ export default function AddProperty() {
 
   const handleBack = () => {
     if (subStep > 0) {
-      setSubStep((s) => s - 1);
+      setSubStep((s: number) => s - 1);
       return;
     }
 
@@ -504,48 +550,9 @@ export default function AddProperty() {
     setLocation("/broker/properties");
   };
 
-  const handleClear = () => {
-    setSubStep(0);
-    setNickname("");
-    setAddress("");
-    setArea("");
-    setCity("");
-    setPincode("");
-    setCountry("India");
-    setOwnerName("");
-    setOwnerContact("");
-    setPropertyType("");
-    setPropertyTypeOther("");
-    setUnitSize("");
-    setUnitSizeOther("");
-    setFurnishing("");
-    setBuiltUpArea("");
-    setBuiltUpUnits("sq ft");
-    setTotalFloors("");
-    setBedrooms("");
-    setBathrooms("");
-    setBalconies("");
-    setFloorLevel("");
-    setMainDoorDirection("");
-    setAmenities([]);
-    setAmenityOtherChecked(false);
-    setAmenityOtherText("");
-    setTenantsPreferred([]);
-    setMonthlyRent("");
-    setRentNegotiable(false);
-    setMaintenanceIncluded(false);
-    setMonthlyMaintenance("");
-    setSecurityDeposit("");
-    setAvailableFrom("");
-    setImageUrls([]);
-    try {
-      sessionStorage.removeItem(STORAGE_KEY);
-    } catch {}
-  };
-
   const handleContinue = () => {
     if (subStep < 5) {
-      setSubStep((s) => s + 1);
+      setSubStep((s: number) => s + 1);
     } else {
       handleSubmit();
     }
@@ -642,7 +649,7 @@ export default function AddProperty() {
   const renderStep1 = () => (
     <div>
       <h2 className="text-xl font-semibold text-gray-900 text-center mb-6 pb-4 border-b border-gray-100">
-        Tell us more about the property
+        Tell us more about your property
       </h2>
       <div className="space-y-6">
         <div>
@@ -717,7 +724,7 @@ export default function AddProperty() {
   const renderStep2 = () => (
     <div>
       <h2 className="text-xl font-semibold text-gray-900 text-center mb-6 pb-4 border-b border-gray-100">
-        Tell us more about the property
+        Tell us more about your property
       </h2>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -782,7 +789,7 @@ export default function AddProperty() {
   const renderStep3 = () => (
     <div>
       <h2 className="text-xl font-semibold text-gray-900 text-center mb-6 pb-4 border-b border-gray-100">
-        Tell us more about the property
+        Tell us more about your property
       </h2>
       <div className="grid grid-cols-2 gap-y-4 gap-x-12">
         <div className="space-y-4">
@@ -923,16 +930,19 @@ export default function AddProperty() {
 
         <div>
           <FieldLabel required>Available From</FieldLabel>
-          <div className="flex items-center border border-input rounded-md overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20">
-            <span className="px-3 text-gray-400 h-9 flex items-center">
+          <div
+            className="flex items-center border border-input rounded-md overflow-hidden cursor-text"
+            onClick={openDatePicker}
+          >
+            <span className="px-3 text-primary h-9 flex items-center">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </span>
             <input
+              ref={availableFromRef}
               type="date"
               value={availableFrom}
               onChange={(e) => setAvailableFrom(e.target.value)}
-              className="flex-1 h-9 px-2 text-sm focus:outline-none bg-white cursor-pointer appearance-none"
-              style={{ WebkitAppearance: "none", MozAppearance: "textfield" }}
+              className="flex-1 h-9 px-2 text-sm focus:outline-none bg-white appearance-none"
             />
           </div>
         </div>
@@ -1034,21 +1044,13 @@ export default function AddProperty() {
 
   return (
     <BrokerLayout>
-      <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
-        <button
-          onClick={handleBack}
-          className="flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
-        >
-          <ArrowLeft size={16} /> Back
-        </button>
-        <button
-          type="button"
-          onClick={handleClear}
-          className="text-sm text-gray-600 hover:text-gray-900"
-        >
-          Clear
-        </button>
-      </div>
+      {/* Back link */}
+      <button
+        onClick={handleBack}
+        className="flex items-center gap-1.5 text-sm text-primary font-medium mb-4 hover:underline"
+      >
+        <ArrowLeft size={16} /> Back
+      </button>
 
       {/* Progress bar */}
       <ProgressBar subStep={subStep} />
