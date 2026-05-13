@@ -288,22 +288,25 @@ function ActiveDashboard({
           : `Welcome back, let's close some deals`;
 
   // Recent activity feed
-  const recentActivity: { id: string; label: string; time: number; type: "agreement" | "property" | "tenant" }[] = [
+  const recentActivity: { id: string; label: string; description?: string; time: number; type: "agreement" | "property" | "tenant" }[] = [
     ...agreements.map((a) => ({
       id: a.id,
       label: `Agreement sent for ${a.propertyTitle}`,
+      description: a.tenantName ? `Tenant: ${a.tenantName}` : undefined,
       time: a.createdAt,
       type: "agreement" as const,
     })),
     ...properties.map((p) => ({
       id: p.id,
       label: `Property added: ${getPropertyTitle(p)}`,
+      description: `${p.area}, ${p.city} · ₹${Number(p.monthlyRent).toLocaleString("en-IN")}/mo`,
       time: p.createdAt,
       type: "property" as const,
     })),
     ...tenants.map((t) => ({
       id: t.id,
       label: `Tenant registered: ${t.name}`,
+      description: t.phone ? `+91 ${t.phone}` : undefined,
       time: t.createdAt,
       type: "tenant" as const,
     })),
@@ -456,7 +459,10 @@ function ActiveDashboard({
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${activityBg(item.type)}`}>
                     {activityIcon(item.type)}
                   </div>
-                  <span className="text-base text-gray-800 flex-1 truncate font-medium">{item.label}</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-base text-gray-800 font-medium block">{item.label}</span>
+                    {item.description && <span className="text-xs text-gray-500 mt-0.5">{item.description}</span>}
+                  </div>
                   <span className="text-sm text-gray-400 shrink-0 font-medium bg-gray-50 px-3 py-1 rounded-full">{timeAgo(item.time)}</span>
                 </div>
               ))
