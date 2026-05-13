@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   ArrowLeft,
@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BrokerLayout from "@/components/BrokerLayout";
+import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
 import { addProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 
@@ -268,6 +269,7 @@ export default function AddProperty2() {
     setAvailableFrom("");
     setImageUrls([]);
     setShowSuccess(false);
+    broadcastBrokerPendingFlowsUpdated();
   };
 
   const openDatePicker = () => {
@@ -383,6 +385,7 @@ export default function AddProperty2() {
 
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      broadcastBrokerPendingFlowsUpdated();
     } catch {
       // ignore storage failure
     }
@@ -488,6 +491,7 @@ export default function AddProperty2() {
     try {
       sessionStorage.setItem("agreement_pending_property", newProp.id);
       sessionStorage.removeItem(STORAGE_KEY);
+      broadcastBrokerPendingFlowsUpdated();
     } catch {}
     setShowSuccess(true);
     setTimeout(() => {
@@ -876,9 +880,9 @@ export default function AddProperty2() {
         <button
           type="button"
           onClick={clearDraft}
-          className="text-sm text-gray-600 hover:text-gray-900"
+          className="text-xs font-semibold text-primary border-0 bg-transparent shadow-none px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors shrink-0"
         >
-          Clear form
+          Clear
         </button>
       </div>
 

@@ -10,6 +10,8 @@ export interface Property {
   country: string;
   ownerName: string;
   ownerContact: string;
+  /** Additional owners saved from agreement flow, shown on property details. */
+  coOwners?: { name: string; contact: string }[];
   propertyType: string;
   propertyTypeOther?: string;
   unitSize: string;

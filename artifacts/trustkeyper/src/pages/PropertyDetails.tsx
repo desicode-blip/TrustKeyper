@@ -391,6 +391,7 @@ function NeighbourhoodTab({ property }: { property: Property }) {
 }
 
 function AboutOwnerTab({ property }: { property: Property }) {
+  const co = property.coOwners ?? [];
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6">
       <h3 className="text-base font-semibold text-gray-900 mb-5">About Owner</h3>
@@ -405,6 +406,19 @@ function AboutOwnerTab({ property }: { property: Property }) {
             <div className="mt-3 flex items-center gap-2 text-sm text-gray-700">
               <span className="text-gray-400">Contact:</span>
               <span className="font-medium">{property.ownerContact}</span>
+            </div>
+          )}
+          {co.length > 0 && (
+            <div className="mt-5 pt-4 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Additional owners</p>
+              <ul className="space-y-3">
+                {co.map((o, i) => (
+                  <li key={i} className="flex flex-col sm:flex-row sm:items-center sm:gap-3 text-sm">
+                    <span className="font-medium text-gray-900">{o.name || "—"}</span>
+                    {o.contact && <span className="text-gray-600">{o.contact}</span>}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
           <div className="mt-3 flex items-center gap-1.5 text-xs text-green-600 font-medium">

@@ -35,8 +35,9 @@ import {
   QrCode,
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
-import { getProperties, getPropertyTitle, type Property } from "@/lib/properties";
-import { getTenants, type Tenant } from "@/lib/tenants";
+import { broadcastBrokerPendingFlowsUpdated, clearAgreementDraftStorage } from "@/lib/brokerPendingFlows";
+import { getProperties, getPropertyTitle, updateProperty, type Property } from "@/lib/properties";
+import { ensureTenantFromAgreement, getTenants, type Tenant } from "@/lib/tenants";
 import { addAgreement } from "@/lib/agreements";
 import { getBrokerProfile, saveBrokerProfile, hasBankDetails } from "@/lib/brokerProfile";
 
@@ -474,12 +475,14 @@ function Step2Parties({
   ownerName, ownerContact,
   additionalOwners, setAdditionalOwners,
   selectedTenants, setSelectedTenants,
+  onManualTenantAdd,
   onContinue,
 }: {
   property: Property | null;
   ownerName: string; ownerContact: string;
   additionalOwners: Party[]; setAdditionalOwners: (v: Party[]) => void;
   selectedTenants: Party[]; setSelectedTenants: (v: Party[]) => void;
+  onManualTenantAdd?: (name: string, contact: string) => void;
   onContinue: () => void;
 }) {
   const allTenants = getTenants();
@@ -503,6 +506,7 @@ function Step2Parties({
   };
 
   const addTenantManual = (name: string, contact: string) => {
+    onManualTenantAdd?.(name, contact.trim());
     setSelectedTenants([...selectedTenants, { name, contact: contact ? `+91 ${contact}` : "" }]);
     setShowTenantForm(false);
   };
@@ -1684,8 +1688,8 @@ function Step6Review({
           <SectionHeader title="Documents" section={null} onNavigate={() => onGoToStep(3)} />
           <div className="px-5 py-3">
             {documentsComplete ? (
-              <div className="flex items-start gap-2 text-sm text-green-600">
-                <CheckCircle2 size={14} className="shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 rounded-lg bg-orange-50 border border-orange-100 px-3 py-2.5 text-sm text-orange-700">
+                <Clock size={14} className="shrink-0 mt-0.5 text-orange-600" />
                 <span>Documents collected via upload or send-link flow</span>
               </div>
             ) : (
@@ -1770,6 +1774,9 @@ export default function GenerateAgreement() {
   const [submitting, setSubmitting] = useState(false);
   const [documentsComplete, setDocumentsComplete] = useState(false);
 
+  const skipOwnerAutofillNext = useRef(false);
+  const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Step 1
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
 
@@ -1796,6 +1803,80 @@ export default function GenerateAgreement() {
   const [brokerageAmountTenant, setBrokerageAmountTenant] = useState("");
   const [brokeragePaidBy, setBrokeragePaidBy] = useState<"Owner" | "Tenant" | "Both">("Tenant");
   const [brokerageMode, setBrokerageMode] = useState<"Bank Transfer" | "UPI">("Bank Transfer");
+
+  const syncPartiesToSelectedProperty = useCallback(
+    (owner: string, ownerC: string, co: Party[]) => {
+      if (!selectedProperty?.id) return;
+      const id = selectedProperty.id;
+      const coOwners = co.length ? co.map((p) => ({ name: p.name, contact: p.contact })) : undefined;
+      updateProperty(id, {
+        ownerName: owner,
+        ownerContact: ownerC,
+        coOwners,
+      });
+      setSelectedProperty((prev) =>
+        prev && prev.id === id ? { ...prev, ownerName: owner, ownerContact: ownerC, coOwners } : prev,
+      );
+    },
+    [selectedProperty],
+  );
+
+  // Resume saved flow (?resume=1) from dashboard banner
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("resume") !== "1") return;
+    const raw = localStorage.getItem("broker_agreement_draft");
+    if (!raw) return;
+    try {
+      const d = JSON.parse(raw) as {
+        step?: Step;
+        selectedPropertyId?: string | null;
+        ownerName?: string;
+        ownerContact?: string;
+        additionalOwners?: Party[];
+        selectedTenants?: Party[];
+        documentsComplete?: boolean;
+        startDate?: string;
+        monthlyRent?: string;
+        securityDeposit?: string;
+        lockInPeriod?: string;
+        noticePeriod?: string;
+        rentDueDay?: string;
+        maintenanceCharges?: string;
+        brokerageAmount?: string;
+        brokerageAmountOwner?: string;
+        brokerageAmountTenant?: string;
+        brokeragePaidBy?: "Owner" | "Tenant" | "Both";
+        brokerageMode?: "Bank Transfer" | "UPI";
+      };
+      const prop = d.selectedPropertyId
+        ? getProperties().find((p) => p.id === d.selectedPropertyId) ?? null
+        : null;
+      skipOwnerAutofillNext.current = true;
+      if (prop) setSelectedProperty(prop);
+      if (typeof d.step === "number" && d.step >= 1 && d.step <= 6) setStep(d.step);
+      setOwnerName(d.ownerName ?? "");
+      setOwnerContact(d.ownerContact ?? "");
+      setAdditionalOwners(d.additionalOwners ?? []);
+      setSelectedTenants(d.selectedTenants ?? []);
+      setDocumentsComplete(!!d.documentsComplete);
+      setStartDate(d.startDate ?? "");
+      setMonthlyRent(d.monthlyRent ?? "");
+      setSecurityDeposit(d.securityDeposit ?? "");
+      setLockInPeriod(d.lockInPeriod ?? "");
+      setNoticePeriod(d.noticePeriod ?? "");
+      setRentDueDay(d.rentDueDay ?? "");
+      setMaintenanceCharges(d.maintenanceCharges ?? "");
+      setBrokerageAmount(d.brokerageAmount ?? "");
+      setBrokerageAmountOwner(d.brokerageAmountOwner ?? "");
+      setBrokerageAmountTenant(d.brokerageAmountTenant ?? "");
+      if (d.brokeragePaidBy) setBrokeragePaidBy(d.brokeragePaidBy);
+      if (d.brokerageMode) setBrokerageMode(d.brokerageMode);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   // Load edit draft if coming from Documents → Edit Details
   useEffect(() => {
@@ -1840,13 +1921,103 @@ export default function GenerateAgreement() {
     if (step === 3) setDocumentsComplete(false);
   }, [step]);
 
-  // Auto-fill owner from selected property (new selections only)
+  // Auto-fill owner from selected property (skip once after resuming a saved draft)
   useEffect(() => {
+    if (skipOwnerAutofillNext.current) {
+      skipOwnerAutofillNext.current = false;
+      return;
+    }
     if (selectedProperty) {
       setOwnerName(selectedProperty.ownerName || "");
       setOwnerContact(selectedProperty.ownerContact || "");
     }
   }, [selectedProperty]);
+
+  // Autosave draft for resume + pending banner
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!selectedProperty && step === 1) return;
+    if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+    draftSaveTimerRef.current = setTimeout(() => {
+      try {
+        const draft = {
+          v: 1 as const,
+          step,
+          selectedPropertyId: selectedProperty?.id ?? null,
+          ownerName,
+          ownerContact,
+          additionalOwners,
+          selectedTenants,
+          documentsComplete,
+          startDate,
+          monthlyRent,
+          securityDeposit,
+          lockInPeriod,
+          noticePeriod,
+          rentDueDay,
+          maintenanceCharges,
+          brokerageAmount,
+          brokerageAmountOwner,
+          brokerageAmountTenant,
+          brokeragePaidBy,
+          brokerageMode,
+          savedAt: Date.now(),
+        };
+        localStorage.setItem("broker_agreement_draft", JSON.stringify(draft));
+        broadcastBrokerPendingFlowsUpdated();
+      } catch {
+        /* ignore */
+      }
+    }, 450);
+    return () => {
+      if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+    };
+  }, [
+    step,
+    selectedProperty,
+    ownerName,
+    ownerContact,
+    additionalOwners,
+    selectedTenants,
+    documentsComplete,
+    startDate,
+    monthlyRent,
+    securityDeposit,
+    lockInPeriod,
+    noticePeriod,
+    rentDueDay,
+    maintenanceCharges,
+    brokerageAmount,
+    brokerageAmountOwner,
+    brokerageAmountTenant,
+    brokeragePaidBy,
+    brokerageMode,
+  ]);
+
+  const handleClearFlow = () => {
+    clearAgreementDraftStorage();
+    setStep(1);
+    setShowSuccess(false);
+    setSubmitting(false);
+    setDocumentsComplete(false);
+    setSelectedProperty(null);
+    setOwnerName("");
+    setOwnerContact("");
+    setAdditionalOwners([]);
+    setSelectedTenants([]);
+    setStartDate("");
+    setMonthlyRent("");
+    setSecurityDeposit("");
+    setLockInPeriod("");
+    setNoticePeriod("");
+    setRentDueDay("");
+    setMaintenanceCharges("");
+    setBrokerageAmount("");
+    setBrokerageAmountOwner("");
+    setBrokerageAmountTenant("");
+    setBrokeragePaidBy("Tenant");
+    setBrokerageMode("Bank Transfer");
+  };
 
   // Step 3 — managed internally by Step3Documents
 
@@ -1890,6 +2061,7 @@ export default function GenerateAgreement() {
       });
       setSubmitting(false);
       setShowSuccess(true);
+      clearAgreementDraftStorage();
     }, 1200);
   };
 
@@ -1900,14 +2072,23 @@ export default function GenerateAgreement() {
       )}
 
       <div className={`min-w-0 w-full max-w-full ${step !== 6 ? "pb-32 sm:pb-6" : "pb-6"}`}>
-      {/* Back */}
-      <button
-        onClick={() => step === 1 ? setLocation("/broker/dashboard") : setStep((s) => (s - 1) as Step)}
-        className="flex items-center gap-1.5 text-sm text-gray-600 font-medium mb-4 sm:mb-5 hover:text-primary transition-colors"
-      >
-        <ArrowLeft size={15} />
-        {step === 1 ? "Back to Dashboard" : "Back"}
-      </button>
+      <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5">
+        <button
+          type="button"
+          onClick={() => step === 1 ? setLocation("/broker/dashboard") : setStep((s) => (s - 1) as Step)}
+          className="flex items-center gap-1.5 text-sm text-gray-600 font-medium hover:text-primary transition-colors"
+        >
+          <ArrowLeft size={15} />
+          {step === 1 ? "Back to Dashboard" : "Back"}
+        </button>
+        <button
+          type="button"
+          onClick={handleClearFlow}
+          className="text-xs font-semibold text-primary border-0 bg-transparent shadow-none px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors"
+        >
+          Clear
+        </button>
+      </div>
 
       {/* Header */}
       <div className="mb-4 sm:mb-6">
@@ -1937,7 +2118,11 @@ export default function GenerateAgreement() {
           ownerName={ownerName} ownerContact={ownerContact}
           additionalOwners={additionalOwners} setAdditionalOwners={setAdditionalOwners}
           selectedTenants={selectedTenants} setSelectedTenants={setSelectedTenants}
-          onContinue={() => setStep(3)}
+          onManualTenantAdd={(name, contact) => ensureTenantFromAgreement(name, contact)}
+          onContinue={() => {
+            syncPartiesToSelectedProperty(ownerName, ownerContact, additionalOwners);
+            setStep(3);
+          }}
         />
       )}
       {step === 3 && (
@@ -1993,6 +2178,7 @@ export default function GenerateAgreement() {
           onUpdateParties={(d) => {
             setOwnerName(d.ownerName); setOwnerContact(d.ownerContact);
             setAdditionalOwners(d.additionalOwners); setSelectedTenants(d.selectedTenants);
+            syncPartiesToSelectedProperty(d.ownerName, d.ownerContact, d.additionalOwners);
           }}
           onUpdateDetails={(d) => {
             setStartDate(d.startDate); setMonthlyRent(d.monthlyRent); setSecurityDeposit(d.securityDeposit);

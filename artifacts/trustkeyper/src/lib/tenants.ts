@@ -32,10 +32,25 @@ export interface Tenant {
 
 const KEY = "broker_tenants";
 
+function readTenantsJson(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(KEY) ?? localStorage.getItem(KEY);
+}
+
+function persistTenantList(list: Tenant[]): void {
+  try {
+    const payload = JSON.stringify(list);
+    sessionStorage.setItem(KEY, payload);
+    localStorage.setItem(KEY, payload);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function getTenants(): Tenant[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = sessionStorage.getItem(KEY);
+    const raw = readTenantsJson();
     return raw ? (JSON.parse(raw) as Tenant[]) : [];
   } catch {
     return [];
@@ -59,10 +74,33 @@ export function addTenant(
   };
   const list = getTenants();
   list.unshift(tenant);
-  try {
-    sessionStorage.setItem(KEY, JSON.stringify(list));
-  } catch {}
+  persistTenantList(list);
   return tenant;
+}
+
+function phoneLast10(phone: string): string {
+  const d = phone.replace(/\D/g, "");
+  return d.slice(-10);
+}
+
+/** Upsert tenant by phone when added from agreement flow so they appear under Tenants. */
+export function ensureTenantFromAgreement(name: string, contact: string): void {
+  const digits = phoneLast10(contact);
+  if (digits.length !== 10 || !name.trim()) return;
+  const phone = `+91${digits}`;
+  const list = getTenants();
+  const idx = list.findIndex((t) => phoneLast10(t.phone) === digits);
+  if (idx !== -1) {
+    list[idx] = { ...list[idx], name: name.trim() };
+    persistTenantList(list);
+    return;
+  }
+  addTenant({
+    name: name.trim(),
+    phone,
+    invitationSent: false,
+    detailsComplete: false,
+  });
 }
 
 export function timeAgo(ts: number): string {

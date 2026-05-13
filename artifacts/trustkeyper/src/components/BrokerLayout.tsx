@@ -1,10 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import brandLogo from "@assets/Trustkeyper_Logo_1777989635996.png";
 import footerLogo from "@assets/Frame_3466296_1777451511864.png";
 import footerWave from "@assets/Vector_20_1777451511865.png";
 import { Phone, Mail } from "lucide-react";
 import { hasBankDetails } from "@/lib/brokerProfile";
+import {
+  BROKER_PENDING_FLOWS_EVENT,
+  getPendingFlowItems,
+  type PendingFlowItem,
+} from "@/lib/brokerPendingFlows";
 import {
   LayoutDashboard,
   Building2,
@@ -64,8 +69,22 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
   const brokerName = getBrokerName();
   const initials = getInitials(brokerName);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingFlows, setPendingFlows] = useState<PendingFlowItem[]>(() =>
+    typeof window !== "undefined" ? getPendingFlowItems() : [],
+  );
 
   const closeSidebar = () => setSidebarOpen(false);
+
+  useEffect(() => {
+    const sync = () => setPendingFlows(getPendingFlowItems());
+    sync();
+    window.addEventListener(BROKER_PENDING_FLOWS_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(BROKER_PENDING_FLOWS_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen w-full bg-[#F5F7FA] flex flex-col">
@@ -92,7 +111,9 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
           </div>
           <Link href="/broker/activity" className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50">
             <Bell size={17} />
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" />
+            {pendingFlows.length > 0 && (
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" aria-hidden />
+            )}
           </Link>
           <Link href="/broker/settings" className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50">
             <Settings size={17} />
@@ -102,6 +123,26 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
           </Link>
         </div>
       </header>
+
+      {pendingFlows.length > 0 && (
+        <div className="shrink-0 z-10 border-b border-amber-100 bg-amber-50/95 px-4 py-2.5 sm:px-8">
+          <div className="max-w-4xl mx-auto flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-2">
+            {pendingFlows.map((p) => (
+              <div key={p.kind} className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
+                <p className="text-xs sm:text-sm text-amber-900 font-medium leading-snug min-w-0 flex-1 sm:flex-none">
+                  {p.title}
+                </p>
+                <Link
+                  href={p.continueHref}
+                  className="inline-flex items-center justify-center shrink-0 h-8 px-3 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors"
+                >
+                  Continue
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-1 min-h-0">
         {/* ── Mobile sidebar backdrop ─────────────────────────────────────── */}

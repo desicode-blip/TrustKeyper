@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import {
   ArrowLeft,
@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
 import {
   addTenant,
   CITY_LOCALITIES,
@@ -56,6 +57,9 @@ const SHARING_OPTIONS: Sharing[] = ["Single", "Double", "Triple", "Entire Proper
 export default function AddTenant() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  const TENANT_DRAFT_KEY = "broker_add_tenant_draft";
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // wizard step
   const [step, setStep] = useState<Step>(1);
@@ -85,6 +89,103 @@ export default function AddTenant() {
 
   // Success modal
   const [successOpen, setSuccessOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = sessionStorage.getItem(TENANT_DRAFT_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw) as Record<string, unknown>;
+      if (d.step === 1 || d.step === 2) setStep(d.step as Step);
+      if (typeof d.name === "string") setName(d.name);
+      if (typeof d.phone === "string") setPhone(d.phone);
+      if (typeof d.occupancyFrom === "string") setOccupancyFrom(d.occupancyFrom);
+      if (d.who === "Family" || d.who === "Bachelor") setWho(d.who);
+      if (Array.isArray(d.identify)) setIdentify(d.identify as Identify[]);
+      if (d.food === "Veg" || d.food === "Non-Veg") setFood(d.food);
+      if (typeof d.city === "string" && d.city) setCity(d.city);
+      if (Array.isArray(d.localities)) setLocalities(d.localities as string[]);
+      if (d.propertyType) setPropertyType(d.propertyType as PropertyType);
+      if (d.sharing) setSharing(d.sharing as Sharing);
+      if (Array.isArray(d.roommate)) setRoommate(d.roommate as Roommate[]);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      try {
+        sessionStorage.setItem(
+          TENANT_DRAFT_KEY,
+          JSON.stringify({
+            v: 1,
+            step,
+            name,
+            phone,
+            occupancyFrom,
+            who,
+            identify,
+            food,
+            city,
+            localities,
+            propertyType,
+            sharing,
+            roommate,
+          }),
+        );
+        broadcastBrokerPendingFlowsUpdated();
+      } catch {
+        /* ignore */
+      }
+    }, 450);
+    return () => {
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    };
+  }, [
+    step,
+    name,
+    phone,
+    occupancyFrom,
+    who,
+    identify,
+    food,
+    city,
+    localities,
+    propertyType,
+    sharing,
+    roommate,
+  ]);
+
+  const handleClearTenantForm = () => {
+    try {
+      sessionStorage.removeItem(TENANT_DRAFT_KEY);
+    } catch {
+      /* ignore */
+    }
+    setStep(1);
+    setModalStep("closed");
+    setLinkName("");
+    setLinkPhone("");
+    setGeneratedLink("");
+    setCopied(false);
+    setName("");
+    setPhone("");
+    setOccupancyFrom("");
+    setWho("");
+    setIdentify([]);
+    setFood("");
+    setCity("Hyderabad");
+    setLocalities([]);
+    setPropertyType("");
+    setSharing("");
+    setRoommate([]);
+    setLocalityInput("");
+    setSuccessOpen(false);
+    broadcastBrokerPendingFlowsUpdated();
+  };
 
   const linkValid =
     linkName.trim().length > 0 && linkPhone.trim().length === 10;
@@ -161,6 +262,12 @@ export default function AddTenant() {
         complete && sharing !== "Entire Property" ? roommate : undefined,
       detailsComplete: complete,
     });
+    try {
+      sessionStorage.removeItem(TENANT_DRAFT_KEY);
+    } catch {
+      /* ignore */
+    }
+    broadcastBrokerPendingFlowsUpdated();
     toast({ description: "Tenant added successfully!" });
     setSuccessOpen(true);
   };
@@ -258,7 +365,16 @@ export default function AddTenant() {
           </button>
         )}
 
-        <h1 className="text-2xl font-semibold text-gray-900 mb-6">Add Tenant</h1>
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <h1 className="text-2xl font-semibold text-gray-900">Add Tenant</h1>
+          <button
+            type="button"
+            onClick={handleClearTenantForm}
+            className="text-xs font-semibold text-primary border-0 bg-transparent shadow-none px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors shrink-0"
+          >
+            Clear
+          </button>
+        </div>
 
         {/* Generate Link card (always visible) */}
         <div className="rounded-xl border border-gray-200 bg-white p-5 mb-8 flex items-center justify-between gap-4">
