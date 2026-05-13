@@ -226,7 +226,11 @@ export default function BrokerActivity() {
             <button
               key={opt.id}
               onClick={() => setFilter(opt.id)}
-              className="h-8 px-3.5 rounded-lg text-sm font-medium transition-colors text-white bg-[00A251]"
+              className={`h-8 px-3.5 rounded-lg text-sm font-medium transition-colors ${
+                filter === opt.id
+                  ? "text-white bg-primary"
+                  : "text-gray-700 bg-white hover:bg-gray-100"
+              }`}
             >
               {opt.label}
             </button>
