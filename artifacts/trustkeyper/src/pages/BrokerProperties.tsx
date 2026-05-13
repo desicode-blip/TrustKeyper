@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Building2, Eye, Heart, Phone, Share2, Copy, Mail } from "lucide-react";
+import { Plus, Building2, Eye, Heart, Phone } from "lucide-react";
 import { useLocation } from "wouter";
 import BrokerLayout from "@/components/BrokerLayout";
-import { Input } from "@/components/ui/input";
 import {
   getProperties,
   updatePropertyStatus,
-  updateProperty,
   getPropertyTitle,
   type Property,
   type PropertyStatus,
@@ -38,12 +36,12 @@ function PropertyCard({
   property,
   onMarkRented,
   onViewDetails,
-  onUpdate,
+  onEditProperty,
 }: {
   property: Property;
   onMarkRented: (id: string) => void;
   onViewDetails: (id: string) => void;
-  onUpdate: (id: string, updates: Partial<Omit<Property, "id" | "createdAt" | "uploadedBy">>) => void;
+  onEditProperty: (id: string) => void;
 }) {
   const type = property.propertyType === "Other"
     ? (property.propertyTypeOther || "Property")
@@ -66,7 +64,11 @@ function PropertyCard({
 
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+    <button
+      type="button"
+      onClick={() => onViewDetails(property.id)}
+      className="w-full text-left bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+    >
       <div className="flex flex-col sm:flex-row w-full gap-4">
         <div className="w-full sm:w-36 aspect-[4/3] bg-gray-100 relative flex items-center justify-center overflow-hidden">
           {property.images && property.images.length > 0 ? (
@@ -113,25 +115,20 @@ function PropertyCard({
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => onViewDetails(property.id)}
-              className="h-9 sm:h-8 px-4 sm:px-3 rounded border border-gray-300 text-sm sm:text-xs font-medium text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+              onClick={(event) => {
+                event.stopPropagation();
+                onViewDetails(property.id);
+              }}
+              className="h-9 sm:h-8 px-4 sm:px-3 rounded border border-primary bg-primary text-sm sm:text-xs font-medium text-white hover:bg-primary/90 whitespace-nowrap"
             >
               View Details
             </button>
             <button
               type="button"
-              onClick={() => {
-                const link = `${window.location.origin}/broker/properties/${property.id}`;
-                const msg = encodeURIComponent(`Hi! Your broker shared this property with you: ${title} in ${property.area}, ${property.city}. View details here: ${link}`);
-                window.open(`https://wa.me/?text=${msg}`, "_blank");
+              onClick={(event) => {
+                event.stopPropagation();
+                onEditProperty(property.id);
               }}
-              className="h-9 sm:h-8 px-4 sm:px-3 rounded border border-emerald-500 text-sm sm:text-xs font-medium text-emerald-600 hover:bg-emerald-50 flex items-center gap-1.5"
-            >
-              <Share2 size={14} /> Share
-            </button>
-            <button
-              type="button"
-              onClick={() => setLocation(`/broker/properties/${property.id}?edit=true`)}
               className="h-9 sm:h-8 px-4 sm:px-3 rounded border border-primary text-sm sm:text-xs font-medium text-primary hover:bg-primary/5"
             >
               Edit Property
@@ -139,7 +136,10 @@ function PropertyCard({
             {property.status !== "Rented" && (
               <button
                 type="button"
-                onClick={() => onMarkRented(property.id)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onMarkRented(property.id);
+                }}
                 className="h-9 sm:h-8 px-4 sm:px-3 rounded border border-primary text-sm sm:text-xs font-medium text-primary hover:bg-primary/5"
               >
                 Mark as Rented
@@ -150,7 +150,7 @@ function PropertyCard({
 
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -162,10 +162,7 @@ export default function BrokerProperties() {
   const refresh = () => setProperties(getProperties());
 
   const handleViewDetails = (id: string) => setLocation(`/broker/properties/${id}`);
-  const handleUpdate = (id: string, updates: Partial<Omit<Property, "id" | "createdAt" | "uploadedBy">>) => {
-    updateProperty(id, updates);
-    refresh();
-  };
+  const handleEditProperty = (id: string) => setLocation(`/broker/properties/${id}?edit=true`);
 
   useEffect(() => {
     refresh();
@@ -238,7 +235,7 @@ export default function BrokerProperties() {
               property={p}
               onMarkRented={handleMarkRented}
               onViewDetails={handleViewDetails}
-              onUpdate={handleUpdate}
+              onEditProperty={handleEditProperty}
             />
           ))}
         </div>

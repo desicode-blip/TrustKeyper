@@ -173,12 +173,12 @@ function OverviewTab({ property }: { property: Property }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6">
       <h3 className="text-base font-semibold text-gray-900 mb-4">Property Details</h3>
-      <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
         {rows.map(({ icon: Icon, label, value }) => (
-          <div key={label} className="flex items-center gap-2 text-sm">
+          <div key={label} className="flex items-start gap-2 text-sm min-w-0">
             <Icon size={14} className="text-gray-400 shrink-0" />
             <span className="text-gray-500">{label}:</span>
-            <span className="font-medium text-gray-800">{value}</span>
+            <span className="font-medium text-gray-800 break-words">{value}</span>
           </div>
         ))}
       </div>
@@ -391,15 +391,19 @@ export default function PropertyDetails() {
   const [draftArea, setDraftArea] = useState("");
   const [draftCity, setDraftCity] = useState("");
 
+  const syncDraftsFromProperty = (value: Property) => {
+    setDraftNickname(value.nickname || "");
+    setDraftRent(value.monthlyRent || "");
+    setDraftArea(value.area || "");
+    setDraftCity(value.city || "");
+  };
+
   useEffect(() => {
     const list = getProperties();
     const found = list.find((p) => p.id === id);
     if (found) {
       setProperty(found);
-      setDraftNickname(found.nickname || "");
-      setDraftRent(found.monthlyRent || "");
-      setDraftArea(found.area || "");
-      setDraftCity(found.city || "");
+      syncDraftsFromProperty(found);
     }
   }, [id]);
 
@@ -428,6 +432,12 @@ export default function PropertyDetails() {
       area: draftArea,
       city: draftCity,
     });
+  };
+
+  const handleDiscard = () => {
+    if (!property) return;
+    syncDraftsFromProperty(property);
+    setIsEditing(false);
   };
 
   if (!property) {
@@ -522,7 +532,7 @@ const whatsappMsg = encodeURIComponent(
               {isEditing ? (
                 <EditForm 
                   onSave={handleSave} 
-                  onCancel={() => setIsEditing(false)} 
+                  onCancel={handleDiscard} 
                   drafts={{
                     nickname: draftNickname, setNickname: setDraftNickname,
                     rent: draftRent, setRent: setDraftRent,
@@ -602,15 +612,26 @@ const whatsappMsg = encodeURIComponent(
                 <span>Verified Available</span>
               </div>
 
-              {/* Share button */}
-              <a
-                href={`https://wa.me/?text=${whatsappMsg}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 h-10 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
-              >
-                <Share2 size={15} /> Share via WhatsApp
-              </a>
+              {/* Action buttons */}
+              <div className="flex flex-col gap-2">
+                <a
+                  href={`https://wa.me/?text=${whatsappMsg}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center justify-center gap-2 h-10 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <Share2 size={15} /> Share via WhatsApp
+                </a>
+                {!isEditing && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="flex w-full items-center justify-center gap-2 h-10 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5 transition-colors"
+                  >
+                    Edit Property
+                  </button>
+                )}
+              </div>
 
 
             </div>
@@ -705,7 +726,7 @@ function EditForm({
           onClick={onCancel}
           className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900"
         >
-          Cancel
+          Discard Changes
         </button>
         <button
           onClick={onSave}
