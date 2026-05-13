@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import {
   ArrowLeft,
@@ -224,6 +224,125 @@ function AmenitiesTab({ property }: { property: Property }) {
   );
 }
 
+function buildMapsSearchQuery(property: Property): string | null {
+  const addr = property.address?.trim() ?? "";
+  if (addr.length < 3) return null;
+  const tail = [property.area, property.city, property.pincode, property.country]
+    .map((s) => (typeof s === "string" ? s.trim() : ""))
+    .filter(Boolean)
+    .filter((part) => !addr.toLowerCase().includes(part.toLowerCase()));
+  return [addr, ...tail].join(", ");
+}
+
+function googleMapsSearchUrl(query: string) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+function googleMapsEmbedUrl(query: string) {
+  return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+}
+
+function NeighbourhoodAddressMap({ property }: { property: Property }) {
+  const query = useMemo(
+    () => buildMapsSearchQuery(property),
+    [property.address, property.area, property.city, property.pincode, property.country],
+  );
+  /** Optional: enables Geocoding validation so bogus addresses show “Not available”. */
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+
+  const [validated, setValidated] = useState<"yes" | "no" | "pending">(() => {
+    if (!query) return "no";
+    if (!apiKey) return "yes";
+    return "pending";
+  });
+
+  useEffect(() => {
+    if (!query) {
+      setValidated("no");
+      return;
+    }
+    if (!apiKey) {
+      setValidated("yes");
+      return;
+    }
+
+    setValidated("pending");
+    let cancelled = false;
+    const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+    url.searchParams.set("address", query);
+    url.searchParams.set("key", apiKey);
+
+    fetch(url.toString())
+      .then((res) => res.json() as Promise<{ status?: string; results?: unknown[] }>)
+      .then((data) => {
+        if (cancelled) return;
+        const ok = data.status === "OK" && Array.isArray(data.results) && data.results.length > 0;
+        setValidated(ok ? "yes" : "no");
+      })
+      .catch(() => {
+        if (!cancelled) setValidated("no");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [query, apiKey]);
+
+  if (!query || validated === "no") {
+    return (
+      <div className="rounded-xl border border-gray-200 overflow-hidden bg-gray-50 h-44 flex flex-col items-center justify-center gap-2 px-4 text-center">
+        <MapPin size={28} className="text-gray-400" />
+        <p className="text-sm font-medium text-gray-600">Not available</p>
+        <p className="text-xs text-gray-500 max-w-xs">
+          Add a valid property address to see the location on the map.
+        </p>
+      </div>
+    );
+  }
+
+  if (validated === "pending") {
+    return (
+      <div className="rounded-xl border border-gray-200 h-44 flex items-center justify-center bg-gray-50">
+        <p className="text-sm text-gray-500">Loading map…</p>
+      </div>
+    );
+  }
+
+  const openMaps = () => {
+    window.open(googleMapsSearchUrl(query), "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      className="relative rounded-xl border border-gray-200 overflow-hidden h-44 sm:h-52 cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+      onClick={openMaps}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openMaps();
+        }
+      }}
+      aria-label="Open this address in Google Maps"
+    >
+      <iframe
+        title="Property location on Google Maps"
+        className="absolute inset-0 w-full h-full border-0 pointer-events-none"
+        src={googleMapsEmbedUrl(query)}
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+      />
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/[0.04] transition-colors pointer-events-none" />
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 pointer-events-none max-w-[90%]">
+        <span className="text-xs font-medium text-white bg-black/60 px-3 py-1 rounded-full shadow-sm">
+          Tap to open in Google Maps
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function NeighbourhoodTab({ property }: { property: Property }) {
   const data = CITY_NEIGHBOURHOOD[property.city] ?? {
     transit: [
@@ -237,16 +356,7 @@ function NeighbourhoodTab({ property }: { property: Property }) {
     <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
       <h3 className="text-base font-semibold text-gray-900">Neighbourhood</h3>
 
-      {/* Map placeholder */}
-      <div className="rounded-xl border border-gray-200 overflow-hidden bg-gradient-to-br from-blue-50 to-gray-100 h-44 flex flex-col items-center justify-center gap-2">
-        <MapPin size={28} className="text-gray-400" />
-        <p className="text-sm font-medium text-gray-600">
-          Map showing {property.area}, {property.city}
-        </p>
-        {property.address && (
-          <p className="text-xs text-gray-500 text-center max-w-xs px-4">{property.address}</p>
-        )}
-      </div>
+      <NeighbourhoodAddressMap property={property} />
 
       {/* Transit */}
       <div>

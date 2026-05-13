@@ -1,7 +1,7 @@
 import React from "react";
 import { useLocation } from "wouter";
 import {
-  Plus, UserPlus, FilePlus2, ArrowRight, Check,
+  Plus, UserPlus, FilePlus2, Check,
   IndianRupee, Building2, Users, ChevronRight,
   Clock, FileCheck2, ArrowUpRight,
 } from "lucide-react";
@@ -73,8 +73,11 @@ function WelcomeDashboard({
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-3 tracking-tight">Generate Rental Agreement</h3>
             <p className="text-gray-500 mb-8 leading-relaxed flex-grow">Generate rental agreements, collect documents, and complete digital signing, all in one place with TrustKeyper.</p>
-            <button onClick={onGenerateAgreement} className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95 mt-auto">
-              Continue <ArrowRight size={16} />
+            <button
+              onClick={onGenerateAgreement}
+              className="inline-flex items-center gap-2 text-primary font-semibold hover:gap-3 transition-all mt-auto w-fit"
+            >
+              <FilePlus2 size={16} /> Generate Agreement
             </button>
           </div>
         </div>
