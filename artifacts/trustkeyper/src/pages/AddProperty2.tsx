@@ -778,7 +778,7 @@ export default function AddProperty2() {
               type="date"
               value={availableFrom}
               onChange={(e) => setAvailableFrom(e.target.value)}
-              className="flex-1 h-9 px-2 text-sm focus:outline-none bg-white appearance-none"
+              className="flex-1 h-9 px-2 text-sm focus:outline-none bg-white appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:w-0 [&::-webkit-calendar-picker-indicator]:h-0"
             />
           </div>
         </div>

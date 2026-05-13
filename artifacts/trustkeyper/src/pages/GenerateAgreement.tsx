@@ -56,8 +56,14 @@ const STEPS: { id: Step; label: string; shortLabel: string; Icon: React.ElementT
 // ─── Progress Bar ─────────────────────────────────────────────────────────────
 
 function ProgressBar({ current }: { current: Step }) {
+  const activeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [current]);
+
   return (
-    <div className="flex items-center gap-0 mb-8 overflow-x-auto pb-1">
+    <div className="flex items-center gap-0 mb-6 sm:mb-8 overflow-x-auto overflow-y-hidden pb-2 -mx-1 px-1 scroll-smooth snap-x snap-mandatory sm:snap-none [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300">
       {STEPS.map((s, i) => {
         const active = s.id === current;
         const done = s.id < current;
@@ -65,7 +71,8 @@ function ProgressBar({ current }: { current: Step }) {
         return (
           <React.Fragment key={s.id}>
             <div
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+              ref={active ? activeRef : undefined}
+              className={`snap-center shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
                 active
                   ? "bg-primary/10 text-primary border border-primary/30"
                   : done
@@ -77,13 +84,22 @@ function ProgressBar({ current }: { current: Step }) {
               <span>{s.label === "Review & Send" ? "Review & Send" : s.label}</span>
             </div>
             {i < STEPS.length - 1 && (
-              <ChevronRight size={14} className="text-gray-300 shrink-0 mx-0.5" />
+              <ChevronRight size={14} className="text-gray-300 shrink-0 mx-0.5 self-center snap-none" />
             )}
           </React.Fragment>
         );
       })}
     </div>
   );
+}
+
+function brokeragePercentOfRent(brokerage: string, rent: string): string | null {
+  const b = Number(brokerage);
+  const r = Number(rent);
+  if (!Number.isFinite(r) || r <= 0) return null;
+  if (!Number.isFinite(b) || b < 0) return null;
+  const pct = (b / r) * 100;
+  return `${pct >= 10 ? pct.toFixed(1) : pct.toFixed(2)}% of monthly rent`;
 }
 
 // ─── Field helpers ────────────────────────────────────────────────────────────
@@ -144,7 +160,7 @@ function ContinueButton({ onClick, disabled, label = "Continue" }: { onClick: ()
         {label} <ChevronRight size={16} />
       </button>
       {/* Mobile: sticky above bottom nav */}
-      <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white border-t border-gray-200 px-4 py-3">
+      <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <button
           onClick={onClick}
           disabled={disabled}
@@ -216,7 +232,7 @@ function Step1Property({
   };
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl w-full">
 
       {selected ? (
         <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4 mb-4">
@@ -496,13 +512,13 @@ function Step2Parties({
   const canContinue = selectedTenants.length > 0;
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl w-full">
       <div className="text-center mb-8">
         <h2 className="text-xl font-semibold text-gray-900">Rental Agreement Between</h2>
         <p className="text-sm text-gray-500 mt-1">Who will be part of this agreement?</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {/* ── Owner(s) ── */}
         <div>
           <p className="text-sm font-semibold text-gray-800 mb-3">Owner(s)</p>
@@ -682,7 +698,7 @@ function BankModal({ onSave, onClose }: { onSave: (d: BankData) => void; onClose
         <div className="px-6 py-5 space-y-4">
           {tab === "bank" ? (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Account Holder Name*</label>
                   <input value={holderName} onChange={(e) => setHolderName(e.target.value)} className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
@@ -757,7 +773,7 @@ function DocRow({ doc, personName, onUpload, onSendLink, onRemove, onAddDetails 
   const fileRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${doc.status === "uploaded" ? "bg-white border-gray-200" : doc.status === "link_sent" ? "bg-white border-gray-200" : "bg-amber-50/40 border-amber-100"}`}>
+    <div className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 rounded-xl border px-4 py-3 transition-colors ${doc.status === "uploaded" ? "bg-white border-gray-200" : doc.status === "link_sent" ? "bg-white border-gray-200" : "bg-amber-50/40 border-amber-100"}`}>
       {/* Status icon */}
       <div className="shrink-0">
         {doc.status === "uploaded" && <CheckCircle2 size={20} className="text-green-500" />}
@@ -780,12 +796,12 @@ function DocRow({ doc, personName, onUpload, onSendLink, onRemove, onAddDetails 
           </p>
         )}
         {doc.status === "pending" && (
-          <p className="text-xs text-gray-400 mt-0.5">Pending upload</p>
+          <p className="text-xs text-amber-700 mt-0.5">Pending upload</p>
         )}
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-2 shrink-0 flex-wrap sm:justify-end w-full sm:w-auto pt-1 sm:pt-0 border-t border-gray-100/80 sm:border-0 mt-1 sm:mt-0">
         {doc.status === "uploaded" && (
           <>
             <button className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors">
@@ -834,7 +850,7 @@ function Step3Documents({
 }: {
   allParties: Party[];
   ownerCount: number;
-  onContinue: () => void;
+  onContinue: (result: { documentsComplete: boolean }) => void;
 }) {
   const [persons, setPersons] = useState<PersonState[]>(() => {
     if (!allParties || allParties.length === 0) return [initPersonDocs("Owner", "", "OWNER 1")];
@@ -905,19 +921,19 @@ function Step3Documents({
     return (
       <div className="max-w-lg text-center py-12">
         <p className="text-sm text-gray-500 mb-4">No parties selected. Go back and add owners and tenants first.</p>
-        <ContinueButton onClick={onContinue} label="Skip" />
+        <ContinueButton onClick={() => onContinue({ documentsComplete: false })} label="Skip" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-xl">
+    <div className="max-w-xl w-full">
       {/* Bank modal */}
       {bankModal && <BankModal onSave={handleBankSave} onClose={() => setBankModal(null)} />}
 
       {/* Toast */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2 bg-gray-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg">
+        <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-40 flex max-w-[min(100%,22rem)] items-center gap-2 bg-gray-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg sm:bottom-6 sm:left-auto sm:right-6 sm:translate-x-0">
           <CheckCircle2 size={16} className="text-green-400 shrink-0" />
           {toast}
         </div>
@@ -999,7 +1015,7 @@ function Step3Documents({
       {/* Navigation button */}
       <div className="mt-4">
         {isLast ? (
-          <ContinueButton onClick={onContinue} disabled={!allDoneForPerson} label="Continue" />
+          <ContinueButton onClick={() => onContinue({ documentsComplete: allDone })} disabled={!allDoneForPerson} label="Continue" />
         ) : (
           <ContinueButton onClick={() => setPersonIdx((i) => i + 1)} disabled={!allDoneForPerson} label="Next Person" />
         )}
@@ -1055,14 +1071,14 @@ function Step4Details({
   const valid = startDate && monthlyRent && securityDeposit && lockInPeriod && noticePeriod && rentDueDay;
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl w-full">
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-5">
         {/* Duration */}
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
             <Calendar size={12} /> Agreement Duration
           </p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <FieldLabel required>Start Date</FieldLabel>
               <TextInput type="date" value={startDate} onChange={setStartDate} />
@@ -1095,7 +1111,7 @@ function Step4Details({
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
             <IndianRupee size={12} /> Financial Terms
           </p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <FieldLabel required>Monthly Rent (₹)</FieldLabel>
               <TextInput type="number" value={monthlyRent} onChange={setMonthlyRent} placeholder="e.g. 25000" />
@@ -1140,6 +1156,7 @@ function Step4Details({
 // ─── Step 5 — Brokerage ───────────────────────────────────────────────────────
 
 function Step5Brokerage({
+  monthlyRent,
   brokerageAmount, setBrokerageAmount,
   brokerageAmountOwner, setBrokerageAmountOwner,
   brokerageAmountTenant, setBrokerageAmountTenant,
@@ -1147,6 +1164,7 @@ function Step5Brokerage({
   brokerageMode, setBrokerageMode,
   onContinue,
 }: {
+  monthlyRent: string;
   brokerageAmount: string; setBrokerageAmount: (v: string) => void;
   brokerageAmountOwner: string; setBrokerageAmountOwner: (v: string) => void;
   brokerageAmountTenant: string; setBrokerageAmountTenant: (v: string) => void;
@@ -1177,7 +1195,7 @@ function Step5Brokerage({
   const valid = amountFilled && bankDetailsFilled;
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl w-full">
       {/* Banner if broker profile bank details are missing */}
       {bankMissing && (
         <div className="mb-4 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
@@ -1202,7 +1220,7 @@ function Step5Brokerage({
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
             Who pays the brokerage?
           </p>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             {(["Owner", "Tenant", "Both"] as const).map((opt) => (
               <button
                 key={opt}
@@ -1225,20 +1243,29 @@ function Step5Brokerage({
             Brokerage Amount
           </p>
           {brokeragePaidBy === "Both" ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <FieldLabel required>Owner pays (₹)</FieldLabel>
                 <TextInput type="number" value={brokerageAmountOwner} onChange={setBrokerageAmountOwner} placeholder="e.g. 7500" />
+                {brokeragePercentOfRent(brokerageAmountOwner, monthlyRent) && (
+                  <p className="text-sm font-medium text-green-600 mt-1">{brokeragePercentOfRent(brokerageAmountOwner, monthlyRent)}</p>
+                )}
               </div>
               <div>
                 <FieldLabel required>Tenant pays (₹)</FieldLabel>
                 <TextInput type="number" value={brokerageAmountTenant} onChange={setBrokerageAmountTenant} placeholder="e.g. 7500" />
+                {brokeragePercentOfRent(brokerageAmountTenant, monthlyRent) && (
+                  <p className="text-sm font-medium text-green-600 mt-1">{brokeragePercentOfRent(brokerageAmountTenant, monthlyRent)}</p>
+                )}
               </div>
             </div>
           ) : (
             <div>
               <FieldLabel required>Amount (₹)</FieldLabel>
               <TextInput type="number" value={brokerageAmount} onChange={setBrokerageAmount} placeholder="e.g. 15000" />
+              {brokeragePercentOfRent(brokerageAmount, monthlyRent) && (
+                <p className="text-sm font-medium text-green-600 mt-1">{brokeragePercentOfRent(brokerageAmount, monthlyRent)}</p>
+              )}
               <p className="text-xs text-gray-400 mt-1">Enter 0 if no brokerage is charged</p>
             </div>
           )}
@@ -1249,7 +1276,7 @@ function Step5Brokerage({
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
             How will the broker receive payment?
           </p>
-          <div className="flex gap-3 mb-5">
+          <div className="flex flex-wrap gap-2 sm:gap-3 mb-5">
             {(["Bank Transfer", "UPI"] as const).map((opt) => (
               <button
                 key={opt}
@@ -1269,7 +1296,7 @@ function Step5Brokerage({
           {brokerageMode === "Bank Transfer" && (
             <div className="space-y-4">
               <p className="text-xs text-gray-500 font-medium">Enter your bank account details</p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <FieldLabel required>Account Holder Name</FieldLabel>
                   <TextInput value={holderName} onChange={setHolderName} placeholder="Full name" />
@@ -1349,10 +1376,12 @@ function Step5Brokerage({
 
 function ReviewRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
-      <Icon size={14} className="text-gray-400 shrink-0" />
-      <span className="text-xs text-gray-500 w-36 shrink-0">{label}</span>
-      <span className="text-sm font-medium text-gray-800 flex-1 text-right truncate">{value || "—"}</span>
+    <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3 py-2.5 border-b border-gray-100 last:border-0">
+      <div className="flex items-center gap-2 min-w-0">
+        <Icon size={14} className="text-gray-400 shrink-0" />
+        <span className="text-xs text-gray-500 sm:w-32 shrink-0">{label}</span>
+      </div>
+      <span className="text-sm font-medium text-gray-800 sm:flex-1 sm:text-right pl-6 sm:pl-0 break-words">{value || "—"}</span>
     </div>
   );
 }
@@ -1363,6 +1392,7 @@ function Step6Review({
   startDate, monthlyRent, securityDeposit,
   lockInPeriod, noticePeriod, rentDueDay, maintenanceCharges,
   brokerageAmount, brokerageAmountOwner, brokerageAmountTenant, brokeragePaidBy, brokerageMode,
+  documentsComplete,
   onUpdateParties, onUpdateDetails, onUpdateBrokerage,
   onGoToStep, onSubmit, submitting,
 }: {
@@ -1374,6 +1404,7 @@ function Step6Review({
   lockInPeriod: string; noticePeriod: string; rentDueDay: string; maintenanceCharges: string;
   brokerageAmount: string; brokerageAmountOwner: string; brokerageAmountTenant: string;
   brokeragePaidBy: string; brokerageMode: string;
+  documentsComplete: boolean;
   onUpdateParties: (d: { ownerName: string; ownerContact: string; additionalOwners: Party[]; selectedTenants: Party[] }) => void;
   onUpdateDetails: (d: { startDate: string; monthlyRent: string; securityDeposit: string; lockInPeriod: string; noticePeriod: string; rentDueDay: string; maintenanceCharges: string }) => void;
   onUpdateBrokerage: (d: { brokerageAmount: string; brokerageAmountOwner: string; brokerageAmountTenant: string; brokeragePaidBy: "Owner" | "Tenant" | "Both"; brokerageMode: "Bank Transfer" | "UPI" }) => void;
@@ -1463,7 +1494,7 @@ function Step6Review({
   );
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl w-full">
       <div className="space-y-4 mb-6">
 
         {/* ── Property ── */}
@@ -1483,7 +1514,7 @@ function Step6Review({
             <div className="px-5 py-4 space-y-4">
               <div>
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Primary Owner</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div><FieldLabel>Name</FieldLabel><TextInput value={dOwnerName} onChange={setDOwnerName} placeholder="Owner name" /></div>
                   <div><FieldLabel>Phone</FieldLabel><TextInput value={dOwnerContact} onChange={setDOwnerContact} placeholder="Phone number" /></div>
                 </div>
@@ -1491,7 +1522,7 @@ function Step6Review({
               {dAddlOwners.map((o, i) => (
                 <div key={i}>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Additional Owner {i + 1}</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div><FieldLabel>Name</FieldLabel><TextInput value={o.name} onChange={(v) => setDAddlOwners((arr) => arr.map((x, j) => j === i ? { ...x, name: v } : x))} placeholder="Name" /></div>
                     <div><FieldLabel>Phone</FieldLabel><TextInput value={o.contact} onChange={(v) => setDAddlOwners((arr) => arr.map((x, j) => j === i ? { ...x, contact: v } : x))} placeholder="Phone" /></div>
                   </div>
@@ -1500,7 +1531,7 @@ function Step6Review({
               {dTenants.map((t, i) => (
                 <div key={i}>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Tenant {i + 1}</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div><FieldLabel>Name</FieldLabel><TextInput value={t.name} onChange={(v) => setDTenants((arr) => arr.map((x, j) => j === i ? { ...x, name: v } : x))} placeholder="Name" /></div>
                     <div><FieldLabel>Phone</FieldLabel><TextInput value={t.contact} onChange={(v) => setDTenants((arr) => arr.map((x, j) => j === i ? { ...x, contact: v } : x))} placeholder="Phone" /></div>
                   </div>
@@ -1521,7 +1552,7 @@ function Step6Review({
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <SectionHeader title="Agreement Details" section="details" />
           {editing === "details" ? (
-            <div className="px-5 py-4 grid grid-cols-2 gap-4">
+            <div className="px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <FieldLabel required>Start Date</FieldLabel>
                 <input type="date" value={dStartDate} onChange={(e) => setDStartDate(e.target.value)} className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
@@ -1599,12 +1630,30 @@ function Step6Review({
                 </div>
               </div>
               {dBroPaidBy === "Both" ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <div><FieldLabel required>Owner pays (₹)</FieldLabel><TextInput type="number" value={dBroAmtOwner} onChange={setDBroAmtOwner} placeholder="e.g. 7500" /></div>
-                  <div><FieldLabel required>Tenant pays (₹)</FieldLabel><TextInput type="number" value={dBroAmtTenant} onChange={setDBroAmtTenant} placeholder="e.g. 7500" /></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <FieldLabel required>Owner pays (₹)</FieldLabel>
+                    <TextInput type="number" value={dBroAmtOwner} onChange={setDBroAmtOwner} placeholder="e.g. 7500" />
+                    {brokeragePercentOfRent(dBroAmtOwner, monthlyRent) && (
+                      <p className="text-sm font-medium text-green-600 mt-1">{brokeragePercentOfRent(dBroAmtOwner, monthlyRent)}</p>
+                    )}
+                  </div>
+                  <div>
+                    <FieldLabel required>Tenant pays (₹)</FieldLabel>
+                    <TextInput type="number" value={dBroAmtTenant} onChange={setDBroAmtTenant} placeholder="e.g. 7500" />
+                    {brokeragePercentOfRent(dBroAmtTenant, monthlyRent) && (
+                      <p className="text-sm font-medium text-green-600 mt-1">{brokeragePercentOfRent(dBroAmtTenant, monthlyRent)}</p>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <div><FieldLabel required>Amount (₹)</FieldLabel><TextInput type="number" value={dBroAmt} onChange={setDBroAmt} placeholder="e.g. 15000" /></div>
+                <div>
+                  <FieldLabel required>Amount (₹)</FieldLabel>
+                  <TextInput type="number" value={dBroAmt} onChange={setDBroAmt} placeholder="e.g. 15000" />
+                  {brokeragePercentOfRent(dBroAmt, monthlyRent) && (
+                    <p className="text-sm font-medium text-green-600 mt-1">{brokeragePercentOfRent(dBroAmt, monthlyRent)}</p>
+                  )}
+                </div>
               )}
               <div>
                 <FieldLabel>Payment Mode</FieldLabel>
@@ -1634,25 +1683,33 @@ function Step6Review({
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <SectionHeader title="Documents" section={null} onNavigate={() => onGoToStep(3)} />
           <div className="px-5 py-3">
-            <div className="flex items-center gap-2 text-sm text-green-600">
-              <CheckCircle2 size={14} /> Documents collected via upload or send-link flow
-            </div>
+            {documentsComplete ? (
+              <div className="flex items-start gap-2 text-sm text-green-600">
+                <CheckCircle2 size={14} className="shrink-0 mt-0.5" />
+                <span>Documents collected via upload or send-link flow</span>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2 text-sm text-amber-700">
+                <Clock size={14} className="shrink-0 mt-0.5" />
+                <span>Documents still pending — finish uploads or send links from the Documents step</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="flex gap-3 mt-2">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:gap-3 mt-2">
         <button
           onClick={() => onGoToStep(1)}
           disabled={submitting}
-          className="flex items-center justify-center gap-2 flex-1 h-12 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          className="flex items-center justify-center gap-2 w-full sm:flex-1 h-12 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
         >
           <Edit2 size={15} /> Edit Details
         </button>
         <button
           onClick={onSubmit}
           disabled={submitting}
-          className={`flex items-center justify-center gap-2 flex-[2] h-12 rounded-xl text-sm font-semibold transition-colors ${
+          className={`flex items-center justify-center gap-2 w-full sm:flex-[2] h-12 rounded-xl text-sm font-semibold transition-colors ${
             submitting ? "bg-primary/60 text-white cursor-not-allowed" : "bg-primary text-white hover:bg-primary/90"
           }`}
         >
@@ -1711,6 +1768,7 @@ export default function GenerateAgreement() {
   const [step, setStep] = useState<Step>(1);
   const [showSuccess, setShowSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [documentsComplete, setDocumentsComplete] = useState(false);
 
   // Step 1
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
@@ -1722,6 +1780,22 @@ export default function GenerateAgreement() {
   const [selectedTenants, setSelectedTenants] = useState<Party[]>([]);
   const tenantAadhaar = "";
   const tenantPan = "";
+
+  // Step 4
+  const [startDate, setStartDate] = useState("");
+  const [monthlyRent, setMonthlyRent] = useState("");
+  const [securityDeposit, setSecurityDeposit] = useState("");
+  const [lockInPeriod, setLockInPeriod] = useState("");
+  const [noticePeriod, setNoticePeriod] = useState("");
+  const [rentDueDay, setRentDueDay] = useState("");
+  const [maintenanceCharges, setMaintenanceCharges] = useState("");
+
+  // Step 5
+  const [brokerageAmount, setBrokerageAmount] = useState("");
+  const [brokerageAmountOwner, setBrokerageAmountOwner] = useState("");
+  const [brokerageAmountTenant, setBrokerageAmountTenant] = useState("");
+  const [brokeragePaidBy, setBrokeragePaidBy] = useState<"Owner" | "Tenant" | "Both">("Tenant");
+  const [brokerageMode, setBrokerageMode] = useState<"Bank Transfer" | "UPI">("Bank Transfer");
 
   // Load edit draft if coming from Documents → Edit Details
   useEffect(() => {
@@ -1753,6 +1827,7 @@ export default function GenerateAgreement() {
       setBrokerageAmountTenant(d.brokerageAmountTenant || "");
       setBrokeragePaidBy(d.brokeragePaidBy || "Tenant");
       setBrokerageMode(d.brokerageMode || "Bank Transfer");
+      setDocumentsComplete(false);
       // Override owner name/contact after the property auto-fill runs
       setTimeout(() => {
         setOwnerName(d.ownerName || "");
@@ -1760,6 +1835,10 @@ export default function GenerateAgreement() {
       }, 0);
     } catch {}
   }, []);
+
+  useEffect(() => {
+    if (step === 3) setDocumentsComplete(false);
+  }, [step]);
 
   // Auto-fill owner from selected property (new selections only)
   useEffect(() => {
@@ -1770,22 +1849,6 @@ export default function GenerateAgreement() {
   }, [selectedProperty]);
 
   // Step 3 — managed internally by Step3Documents
-
-  // Step 4
-  const [startDate, setStartDate] = useState("");
-  const [monthlyRent, setMonthlyRent] = useState("");
-  const [securityDeposit, setSecurityDeposit] = useState("");
-  const [lockInPeriod, setLockInPeriod] = useState("");
-  const [noticePeriod, setNoticePeriod] = useState("");
-  const [rentDueDay, setRentDueDay] = useState("");
-  const [maintenanceCharges, setMaintenanceCharges] = useState("");
-
-  // Step 5
-  const [brokerageAmount, setBrokerageAmount] = useState("");
-  const [brokerageAmountOwner, setBrokerageAmountOwner] = useState("");
-  const [brokerageAmountTenant, setBrokerageAmountTenant] = useState("");
-  const [brokeragePaidBy, setBrokeragePaidBy] = useState<"Owner" | "Tenant" | "Both">("Tenant");
-  const [brokerageMode, setBrokerageMode] = useState<"Bank Transfer" | "UPI">("Bank Transfer");
 
   const stepTitles: Record<Step, string> = {
     1: "Select a property for the agreement",
@@ -1836,19 +1899,20 @@ export default function GenerateAgreement() {
         <SuccessOverlay onDone={() => { setShowSuccess(false); setLocation("/broker/documents"); }} />
       )}
 
+      <div className={`min-w-0 w-full max-w-full ${step !== 6 ? "pb-32 sm:pb-6" : "pb-6"}`}>
       {/* Back */}
       <button
         onClick={() => step === 1 ? setLocation("/broker/dashboard") : setStep((s) => (s - 1) as Step)}
-        className="flex items-center gap-1.5 text-sm text-gray-600 font-medium mb-5 hover:text-primary transition-colors"
+        className="flex items-center gap-1.5 text-sm text-gray-600 font-medium mb-4 sm:mb-5 hover:text-primary transition-colors"
       >
         <ArrowLeft size={15} />
         {step === 1 ? "Back to Dashboard" : "Back"}
       </button>
 
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Generate Rental Agreement</h1>
-        <p className="text-sm text-gray-500 mt-1">Create and send agreement for e-signing</p>
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 leading-tight">Generate Rental Agreement</h1>
+        <p className="text-xs sm:text-sm text-gray-500 mt-1">Create and send agreement for e-signing</p>
       </div>
 
       {/* Progress */}
@@ -1856,7 +1920,7 @@ export default function GenerateAgreement() {
 
       {/* Step label — hidden on step 2 which has its own heading */}
       {step !== 2 && (
-        <p className="text-base font-semibold text-gray-800 mb-5">{stepTitles[step]}</p>
+        <p className="text-sm sm:text-base font-semibold text-gray-800 mb-4 sm:mb-5">{stepTitles[step]}</p>
       )}
 
       {/* Step Content */}
@@ -1884,7 +1948,10 @@ export default function GenerateAgreement() {
             ...selectedTenants,
           ]}
           ownerCount={1 + additionalOwners.length}
-          onContinue={() => setStep(4)}
+          onContinue={(result) => {
+            setDocumentsComplete(result.documentsComplete);
+            setStep(4);
+          }}
         />
       )}
       {step === 4 && (
@@ -1902,6 +1969,7 @@ export default function GenerateAgreement() {
       )}
       {step === 5 && (
         <Step5Brokerage
+          monthlyRent={monthlyRent}
           brokerageAmount={brokerageAmount} setBrokerageAmount={setBrokerageAmount}
           brokerageAmountOwner={brokerageAmountOwner} setBrokerageAmountOwner={setBrokerageAmountOwner}
           brokerageAmountTenant={brokerageAmountTenant} setBrokerageAmountTenant={setBrokerageAmountTenant}
@@ -1921,6 +1989,7 @@ export default function GenerateAgreement() {
           rentDueDay={rentDueDay} maintenanceCharges={maintenanceCharges}
           brokerageAmount={brokerageAmount} brokerageAmountOwner={brokerageAmountOwner} brokerageAmountTenant={brokerageAmountTenant}
           brokeragePaidBy={brokeragePaidBy} brokerageMode={brokerageMode}
+          documentsComplete={documentsComplete}
           onUpdateParties={(d) => {
             setOwnerName(d.ownerName); setOwnerContact(d.ownerContact);
             setAdditionalOwners(d.additionalOwners); setSelectedTenants(d.selectedTenants);
@@ -1940,6 +2009,7 @@ export default function GenerateAgreement() {
           submitting={submitting}
         />
       )}
+      </div>
     </BrokerLayout>
   );
 }

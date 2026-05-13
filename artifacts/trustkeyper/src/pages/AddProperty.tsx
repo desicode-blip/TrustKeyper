@@ -942,7 +942,7 @@ export default function AddProperty() {
               type="date"
               value={availableFrom}
               onChange={(e) => setAvailableFrom(e.target.value)}
-              className="flex-1 h-9 px-2 text-sm focus:outline-none bg-white appearance-none"
+              className="flex-1 h-9 px-2 text-sm focus:outline-none bg-white appearance-none [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:w-0 [&::-webkit-calendar-picker-indicator]:h-0"
             />
           </div>
         </div>
@@ -1056,7 +1056,7 @@ export default function AddProperty() {
       <ProgressBar subStep={subStep} />
 
       {/* Card */}
-      <div className="max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-8 pb-24 sm:pb-8">
+      <div className="max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-8 pb-32 sm:pb-8">
         {subStep === 0 && renderStep0()}
         {subStep === 1 && renderStep1()}
         {subStep === 2 && renderStep2()}
@@ -1078,7 +1078,7 @@ export default function AddProperty() {
       </div>
 
       {/* Continue / Submit — mobile sticky */}
-      <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white border-t border-gray-200 px-4 py-3">
+      <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <Button
           size="lg"
           onClick={handleContinue}
