@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Building2, Eye, Heart, Phone } from "lucide-react";
+import { Plus, Building2, Eye, Heart, Phone, KeyRound } from "lucide-react";
 import { useLocation } from "wouter";
 import BrokerLayout from "@/components/BrokerLayout";
 import {
@@ -64,62 +64,71 @@ function PropertyCard({
 
 
   return (
-    <button
-      type="button"
-      onClick={() => onViewDetails(property.id)}
-      className="w-full text-left bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-    >
-      <div className="flex flex-col sm:flex-row w-full gap-4">
-        <div className="w-full sm:w-36 aspect-[4/3] bg-gray-100 relative flex items-center justify-center overflow-hidden">
-          {property.images && property.images.length > 0 ? (
-            <img
-              src={property.images[0]}
-              alt="property"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          ) : (
-            <Building2 size={32} className="text-gray-400" />
-          )}
-          {property.imageCount > 0 && (
-            <span className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded">
-              {property.imageCount} pics
-            </span>
-          )}
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col h-full">
+      {/* Image */}
+      <button
+        type="button"
+        onClick={() => onViewDetails(property.id)}
+        className="w-full aspect-video bg-gray-100 relative flex items-center justify-center overflow-hidden"
+      >
+        {property.images && property.images.length > 0 ? (
+          <img
+            src={property.images[0]}
+            alt="property"
+            className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform"
+          />
+        ) : (
+          <Building2 size={48} className="text-gray-400" />
+        )}
+        {property.imageCount > 0 && (
+          <span className="absolute bottom-3 left-3 bg-black/60 text-white text-xs px-2.5 py-1 rounded-lg font-medium">
+            {property.imageCount} pics
+          </span>
+        )}
+      </button>
+
+      {/* Content */}
+      <div className="p-4 flex flex-col gap-3 flex-1">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-gray-900 leading-tight truncate" title={title}>{title}</p>
+            <p className="text-xs text-gray-500 mt-0.5 truncate" title={subtitle}>{subtitle}</p>
+          </div>
+          <StatusBadge status={property.status} />
         </div>
 
-        <div className="flex-1 p-3 sm:p-4 flex flex-col gap-3 min-w-0">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            <div>
-                             <p className="font-semibold text-gray-900 leading-tight truncate" title={title}>{title}</p>
-               <p className="text-xs text-gray-500 mt-0.5 truncate" title={subtitle}>{subtitle}</p>
-            </div>
-            <StatusBadge status={property.status} />
-          </div>
-
-          <p className="text-sm text-gray-700">
-            {[rent, deposit].filter(Boolean).join(" • ")}
+        {/* Price & Details */}
+        <div>
+          <p className="text-base font-semibold text-gray-900">
+            {rent}
           </p>
+          {deposit && <p className="text-xs text-gray-500 mt-0.5">{deposit}</p>}
+        </div>
 
-          <p className="text-xs text-gray-500">
-            {[area, property.furnishing, `Listed ${timeAgo(property.createdAt)}`]
-              .filter(Boolean)
-              .join(" • ")}
-          </p>
+        <p className="text-xs text-gray-500">
+          {[area, property.furnishing, `Listed ${timeAgo(property.createdAt)}`]
+            .filter(Boolean)
+            .join(" • ")}
+        </p>
 
-          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-            <span className="flex items-center gap-1"><Eye size={12} /> 0 views</span>
-            <span className="flex items-center gap-1"><Heart size={12} /> 0 shortlists</span>
-            <span className="flex items-center gap-1"><Phone size={12} /> 0 contacts</span>
-          </div>
+        {/* Stats */}
+        <div className="flex items-center gap-3 text-xs text-gray-500 pt-2 border-t border-gray-100">
+          <span className="flex items-center gap-1"><Eye size={12} /> 0</span>
+          <span className="flex items-center gap-1"><Heart size={12} /> 0</span>
+          <span className="flex items-center gap-1"><Phone size={12} /> 0</span>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+        {/* CTAs */}
+        <div className="flex flex-col gap-2 pt-2 mt-auto">
+          <div className="flex gap-2 w-full min-w-0">
             <button
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
                 onViewDetails(property.id);
               }}
-              className="h-9 sm:h-8 px-4 sm:px-3 rounded border border-primary bg-primary text-sm sm:text-xs font-medium text-white hover:bg-primary/90 whitespace-nowrap"
+              className="flex-1 min-w-0 h-9 px-3 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors"
             >
               View Details
             </button>
@@ -129,28 +138,27 @@ function PropertyCard({
                 event.stopPropagation();
                 onEditProperty(property.id);
               }}
-              className="h-9 sm:h-8 px-4 sm:px-3 rounded border border-primary text-sm sm:text-xs font-medium text-primary hover:bg-primary/5"
+              className="flex-1 min-w-0 h-9 px-3 rounded-lg border border-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-50 transition-colors"
             >
-              Edit Property
+              Edit
             </button>
-            {property.status !== "Rented" && (
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onMarkRented(property.id);
-                }}
-                className="h-9 sm:h-8 px-4 sm:px-3 rounded border border-primary text-sm sm:text-xs font-medium text-primary hover:bg-primary/5"
-              >
-                Mark as Rented
-              </button>
-            )}
           </div>
-
-
+          {property.status !== "Rented" && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onMarkRented(property.id);
+              }}
+              className="inline-flex items-center justify-center gap-1.5 self-center sm:self-end w-fit border-0 bg-transparent shadow-none px-2 py-1 rounded-lg text-xs font-semibold text-primary hover:bg-primary/10 transition-colors"
+            >
+              <KeyRound size={14} className="shrink-0 text-primary" aria-hidden />
+              Mark as Rented
+            </button>
+          )}
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -228,7 +236,7 @@ export default function BrokerProperties() {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-3 auto-rows-fr">
           {visible.map((p) => (
             <PropertyCard
               key={p.id}
