@@ -1,11 +1,21 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { toast } from "@/hooks/use-toast";
+import {
+  profileExists,
+  signUpSuccess,
+  loginSuccess,
+  dashboardRouteFor,
+  ALL_ROLES,
+  type Role,
+} from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface BrokerFormProps {
-  onComplete: (data: { fullName: string; firm: string; phone: string }) => void;
+  onComplete?: () => void;
 }
 
 export default function BrokerForm({ onComplete }: BrokerFormProps) {
@@ -16,6 +26,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   const [otpStage, setOtpStage] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [countdown, setCountdown] = useState(12);
+  const [, setLocation] = useLocation();
 
   const formValid =
     fullName.trim().length > 0 && phone.trim().length === 10 && agreed;
@@ -44,15 +55,32 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
     }
 
     if (next.every((d) => d !== "")) {
-      try {
-        sessionStorage.setItem("broker_name", fullName);
-        sessionStorage.setItem("broker_firm", firm);
-        sessionStorage.setItem("broker_phone", phone);
-      } catch {}
-      setTimeout(
-        () => onComplete({ fullName, firm, phone }),
-        300
-      );
+      const phoneDigits = phone.replace(/\D/g, "").slice(0, 10);
+      const pending = sessionStorage.getItem("tk_pending_role") || "broker";
+      const role = (ALL_ROLES.includes(pending as Role) ? pending : "broker") as Role;
+      if (profileExists(phoneDigits, role)) {
+        toast({
+          title: `You already have a ${role} account. Logging you in.`,
+        });
+        loginSuccess(phoneDigits, role);
+      } else {
+        signUpSuccess(phoneDigits, role, {
+          name: fullName,
+          firm,
+          phone: phoneDigits,
+          email: "",
+          bankHolderName: "",
+          bankName: "",
+          bankAccountNumber: "",
+          bankIFSC: "",
+          upiId: "",
+          upiQrFileName: "",
+        });
+      }
+      setTimeout(() => {
+        onComplete?.();
+        setLocation(dashboardRouteFor(role));
+      }, 300);
     }
   };
 

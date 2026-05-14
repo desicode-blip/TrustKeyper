@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import BrokerLayout from "@/components/BrokerLayout";
 import { addProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
+import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -202,12 +203,11 @@ function AmenityCheck({
 
 export default function AddProperty() {
   const [, setLocation] = useLocation();
-  const STORAGE_KEY = "broker_add_property_data";
 
   const loadSavedData = () => {
     if (typeof window === "undefined") return null;
     try {
-      return JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? "null");
+      return JSON.parse(getSessionItem("add_property_data") ?? "null");
     } catch {
       return null;
     }
@@ -264,7 +264,7 @@ export default function AddProperty() {
 
   const clearDraft = () => {
     try {
-      sessionStorage.removeItem(STORAGE_KEY);
+      removeSessionItem("add_property_data");
     } catch {}
     setSubStep(0);
     setNickname("");
@@ -411,7 +411,7 @@ export default function AddProperty() {
     };
 
     try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      setSessionItem("add_property_data", JSON.stringify(data));
     } catch {
       // ignore storage errors
     }
@@ -525,7 +525,7 @@ export default function AddProperty() {
       status: "Active",
     });
     try {
-      sessionStorage.removeItem(STORAGE_KEY);
+      removeSessionItem("add_property_data");
     } catch {
       // ignore
     }

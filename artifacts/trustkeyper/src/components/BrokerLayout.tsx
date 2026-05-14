@@ -4,8 +4,10 @@ import brandLogo from "@assets/Trustkeyper_Logo_1777989635996.png";
 import footerLogo from "@assets/Frame_3466296_1777451511864.png";
 import footerWave from "@assets/Vector_20_1777451511865.png";
 import { Phone, Mail } from "lucide-react";
-import { hasBankDetails } from "@/lib/brokerProfile";
+import { hasBankDetails, getBrokerProfile } from "@/lib/brokerProfile";
 import { BROKER_PENDING_FLOWS_EVENT, getPendingFlowItems } from "@/lib/brokerPendingFlows";
+import { AccountSwitcher } from "@/components/AccountSwitcher";
+import { logout } from "@/lib/auth";
 import {
   LayoutDashboard,
   Building2,
@@ -46,7 +48,8 @@ function TrustKeyperLogo() {
 
 export function getBrokerName(): string {
   if (typeof window === "undefined") return "Rahul Sharma";
-  return sessionStorage.getItem("broker_name") || localStorage.getItem("broker_name") || "Rahul Sharma";
+  const n = getBrokerProfile().name;
+  return n || "Rahul Sharma";
 }
 
 function getInitials(name: string): string {
@@ -61,7 +64,7 @@ interface BrokerLayoutProps {
 }
 
 export default function BrokerLayout({ children }: BrokerLayoutProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const brokerName = getBrokerName();
   const initials = getInitials(brokerName);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -105,6 +108,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
             <Clock size={14} />
             <span>IST</span>
           </div>
+          <AccountSwitcher />
           <Link href="/broker/activity" className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50">
             <Bell size={17} />
             {pendingFlows.length > 0 && (
@@ -191,6 +195,23 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
           <nav className="flex flex-col gap-1">
             {helpItems.map((item) => {
               const Icon = item.icon;
+              if (item.id === "logout") {
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      closeSidebar();
+                      setLocation("/");
+                    }}
+                    className="flex items-center gap-3 h-9 px-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 w-full text-left"
+                  >
+                    <Icon size={18} />
+                    {item.label}
+                  </button>
+                );
+              }
               return (
                 <Link
                   key={item.id}

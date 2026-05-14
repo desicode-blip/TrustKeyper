@@ -40,6 +40,7 @@ import {
   type Sharing,
   type Roommate,
 } from "@/lib/tenants";
+import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
 
 type ModalStep = "closed" | "form" | "share";
 type Step = 1 | 2;
@@ -58,7 +59,6 @@ export default function AddTenant() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const TENANT_DRAFT_KEY = "broker_add_tenant_draft";
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // wizard step
@@ -93,7 +93,7 @@ export default function AddTenant() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const raw = sessionStorage.getItem(TENANT_DRAFT_KEY);
+      const raw = getSessionItem("add_tenant_draft");
       if (!raw) return;
       const d = JSON.parse(raw) as Record<string, unknown>;
       if (d.step === 1 || d.step === 2) setStep(d.step as Step);
@@ -118,8 +118,8 @@ export default function AddTenant() {
     if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
     draftTimerRef.current = setTimeout(() => {
       try {
-        sessionStorage.setItem(
-          TENANT_DRAFT_KEY,
+        setSessionItem(
+          "add_tenant_draft",
           JSON.stringify({
             v: 1,
             step,
@@ -161,7 +161,7 @@ export default function AddTenant() {
 
   const handleClearTenantForm = () => {
     try {
-      sessionStorage.removeItem(TENANT_DRAFT_KEY);
+      removeSessionItem("add_tenant_draft");
     } catch {
       /* ignore */
     }
@@ -263,7 +263,7 @@ export default function AddTenant() {
       detailsComplete: complete,
     });
     try {
-      sessionStorage.removeItem(TENANT_DRAFT_KEY);
+      removeSessionItem("add_tenant_draft");
     } catch {
       /* ignore */
     }

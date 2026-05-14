@@ -1,3 +1,5 @@
+import { getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
+
 export interface BrokerProfile {
   name: string;
   firm: string;
@@ -13,40 +15,43 @@ export interface BrokerProfile {
   upiQrFileName: string;
 }
 
-const KEY = "broker_profile_v1";
-
 const defaults: BrokerProfile = {
-  name: "", firm: "", phone: "", email: "",
-  bankHolderName: "", bankName: "", bankAccountNumber: "", bankIFSC: "",
-  upiId: "", upiQrFileName: "",
+  name: "",
+  firm: "",
+  phone: "",
+  email: "",
+  bankHolderName: "",
+  bankName: "",
+  bankAccountNumber: "",
+  bankIFSC: "",
+  upiId: "",
+  upiQrFileName: "",
 };
 
 export function getBrokerProfile(): BrokerProfile {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = getItem("profile");
     const stored = raw ? (JSON.parse(raw) as Partial<BrokerProfile>) : {};
-    // Merge sessionStorage basics set during onboarding
-    const name = stored.name || sessionStorage.getItem("broker_name") || "";
-    const firm = stored.firm || sessionStorage.getItem("broker_firm") || "";
-    const phone = stored.phone || sessionStorage.getItem("broker_phone") || "";
+    const name = stored.name || getSessionItem("name") || "";
+    const firm = stored.firm || getSessionItem("firm") || "";
+    const phone = stored.phone || getSessionItem("phone") || "";
     return { ...defaults, ...stored, name, firm, phone };
   } catch {
     return {
       ...defaults,
-      name: sessionStorage.getItem("broker_name") || "",
-      firm: sessionStorage.getItem("broker_firm") || "",
-      phone: sessionStorage.getItem("broker_phone") || "",
+      name: getSessionItem("name") || "",
+      firm: getSessionItem("firm") || "",
+      phone: getSessionItem("phone") || "",
     };
   }
 }
 
 export function saveBrokerProfile(profile: BrokerProfile): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(profile));
-    // Keep sessionStorage in sync
-    sessionStorage.setItem("broker_name", profile.name);
-    sessionStorage.setItem("broker_firm", profile.firm);
-    sessionStorage.setItem("broker_phone", profile.phone);
+    setItem("profile", JSON.stringify(profile));
+    setSessionItem("name", profile.name);
+    setSessionItem("firm", profile.firm);
+    setSessionItem("phone", profile.phone);
   } catch {}
 }
 

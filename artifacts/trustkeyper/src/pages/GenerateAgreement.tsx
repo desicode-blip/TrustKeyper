@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
 import { broadcastBrokerPendingFlowsUpdated, clearAgreementDraftStorage } from "@/lib/brokerPendingFlows";
+import { getItem, getSessionItem, removeSessionItem, setItem, setSessionItem } from "@/lib/storageKeys";
 import { getProperties, getPropertyTitle, updateProperty, type Property } from "@/lib/properties";
 import { ensureTenantFromAgreement, getTenants, type Tenant } from "@/lib/tenants";
 import { addAgreement } from "@/lib/agreements";
@@ -200,11 +201,11 @@ function Step1Property({
     const props = getProperties();
     setProperties(props);
     try {
-      const pendingId = sessionStorage.getItem("agreement_pending_property");
+      const pendingId = getSessionItem("agreement_pending_property");
       if (pendingId) {
         const pending = props.find((p) => p.id === pendingId);
         if (pending) { onSelect(pending); }
-        sessionStorage.removeItem("agreement_pending_property");
+        removeSessionItem("agreement_pending_property");
       }
     } catch {}
   }, []);
@@ -1826,7 +1827,7 @@ export default function GenerateAgreement() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("resume") !== "1") return;
-    const raw = localStorage.getItem("broker_agreement_draft");
+    const raw = getItem("agreement_draft");
     if (!raw) return;
     try {
       const d = JSON.parse(raw) as {
@@ -1880,7 +1881,7 @@ export default function GenerateAgreement() {
 
   // Load edit draft if coming from Documents → Edit Details
   useEffect(() => {
-    const raw = sessionStorage.getItem("agreement_edit_draft");
+    const raw = getSessionItem("agreement_edit_draft");
     if (!raw) return;
     try {
       const d = JSON.parse(raw) as {
@@ -1891,7 +1892,7 @@ export default function GenerateAgreement() {
         brokerageAmount: string; brokerageAmountOwner: string; brokerageAmountTenant: string;
         brokeragePaidBy: "Owner" | "Tenant" | "Both"; brokerageMode: "Bank Transfer" | "UPI";
       };
-      sessionStorage.removeItem("agreement_edit_draft");
+      removeSessionItem("agreement_edit_draft");
       const prop = getProperties().find((p) => p.id === d.propertyId) || null;
       if (prop) setSelectedProperty(prop);
       setAdditionalOwners(d.additionalOwners || []);
@@ -1963,7 +1964,7 @@ export default function GenerateAgreement() {
           brokerageMode,
           savedAt: Date.now(),
         };
-        localStorage.setItem("broker_agreement_draft", JSON.stringify(draft));
+        setItem("agreement_draft", JSON.stringify(draft));
         broadcastBrokerPendingFlowsUpdated();
       } catch {
         /* ignore */

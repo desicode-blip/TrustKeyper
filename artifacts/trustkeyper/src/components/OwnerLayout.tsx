@@ -5,6 +5,9 @@ import footerLogo from "@assets/Frame_3466296_1777451511864.png";
 import footerWave from "@assets/Vector_20_1777451511865.png";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Phone, Mail } from "lucide-react";
+import { getBrokerProfile } from "@/lib/brokerProfile";
+import { AccountSwitcher } from "@/components/AccountSwitcher";
+import { logout } from "@/lib/auth";
 import {
   LayoutDashboard,
   Building2,
@@ -52,7 +55,8 @@ function TrustKeyperLogo() {
 
 export function getOwnerName(): string {
   if (typeof window === "undefined") return "Meena!";
-  return sessionStorage.getItem("owner_name") || "Meena!";
+  const n = getBrokerProfile().name;
+  return n || "Meena!";
 }
 
 function getInitials(name: string): string {
@@ -67,7 +71,7 @@ interface OwnerLayoutProps {
 }
 
 export default function OwnerLayout({ children }: OwnerLayoutProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const ownerName = getOwnerName();
   const initials = getInitials(ownerName);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -97,6 +101,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
             <Clock size={14} />
             <span>IST</span>
           </div>
+          <AccountSwitcher />
           <Popover>
             <PopoverTrigger asChild>
               <button className="relative w-10 h-10 rounded-xl border border-gray-100 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50 focus:outline-none transition-all hover:border-gray-200 shadow-sm">
@@ -217,6 +222,23 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
           <nav className="flex flex-col gap-1">
             {helpItems.map((item) => {
               const Icon = item.icon;
+              if (item.id === "logout") {
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      closeSidebar();
+                      setLocation("/");
+                    }}
+                    className="flex items-center gap-3 h-10 px-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 w-full text-left"
+                  >
+                    <Icon size={18} className="text-gray-500" />
+                    {item.label}
+                  </button>
+                );
+              }
               return (
                 <Link
                   key={item.id}

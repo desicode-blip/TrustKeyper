@@ -1,3 +1,5 @@
+import { getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
+
 export type PropertyStatus = "Active" | "Draft" | "Rented";
 
 export interface Property {
@@ -40,13 +42,11 @@ export interface Property {
   uploadedBy?: "owner" | "broker";
 }
 
-const KEY = "broker_properties";
-
 const readProperties = (): Property[] => {
   if (typeof window === "undefined") return [];
   try {
-    const localRaw = localStorage.getItem(KEY);
-    const sessionRaw = sessionStorage.getItem(KEY);
+    const localRaw = getItem("properties");
+    const sessionRaw = getSessionItem("properties");
     const raw = localRaw ?? sessionRaw;
     return raw ? (JSON.parse(raw) as Property[]) : [];
   } catch {
@@ -57,8 +57,8 @@ const readProperties = (): Property[] => {
 const saveProperties = (list: Property[]) => {
   try {
     const payload = JSON.stringify(list);
-    localStorage.setItem(KEY, payload);
-    sessionStorage.setItem(KEY, payload);
+    setItem("properties", payload);
+    setSessionItem("properties", payload);
   } catch {
     // ignore write errors
   }

@@ -1,3 +1,5 @@
+import { getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
+
 export type TenantWho = "Family" | "Bachelor";
 export type Identify = "Male" | "Female";
 export type Food = "Veg" | "Non-Veg";
@@ -30,18 +32,16 @@ export interface Tenant {
   createdAt: number;
 }
 
-const KEY = "broker_tenants";
-
 function readTenantsJson(): string | null {
   if (typeof window === "undefined") return null;
-  return sessionStorage.getItem(KEY) ?? localStorage.getItem(KEY);
+  return getSessionItem("tenants") ?? getItem("tenants");
 }
 
 function persistTenantList(list: Tenant[]): void {
   try {
     const payload = JSON.stringify(list);
-    sessionStorage.setItem(KEY, payload);
-    localStorage.setItem(KEY, payload);
+    setSessionItem("tenants", payload);
+    setItem("tenants", payload);
   } catch {
     /* ignore */
   }

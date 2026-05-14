@@ -1,6 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Check } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import {
+  ALL_ROLES,
+  type Role,
+  dashboardRouteFor,
+  loginSuccess,
+  profileExists,
+  signUpSuccess,
+} from "@/lib/auth";
+import { setSessionItem } from "@/lib/storageKeys";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
 import { AuthGoToLoginLink } from "@/components/AuthFlowFooterLinks";
 import Step1Role from "@/components/Step1Role";
@@ -35,6 +45,13 @@ export default function Onboarding() {
   const [isManagedPopupOpen, setIsManagedPopupOpen] = useState(false);
   const [, setLocation] = useLocation();
 
+  useEffect(() => {
+    const pending = sessionStorage.getItem("tk_pending_role");
+    if (pending && ALL_ROLES.includes(pending as Role)) {
+      setRole(pending);
+    }
+  }, []);
+
   const isBrokerFlow = role === "broker" && step >= 2;
   const isOwnerFlow = role === "owner" && step >= 2;
 
@@ -48,9 +65,8 @@ export default function Onboarding() {
 
   const handleOwnerSuccessNext = () => {
     try {
-      sessionStorage.setItem("owner_name", ownerDetails.name);
-      sessionStorage.setItem("owner_phone", ownerDetails.phone);
-      sessionStorage.setItem("owner_contact", ownerDetails.phone);
+      setSessionItem("name", ownerDetails.name);
+      setSessionItem("contact", ownerDetails.phone.replace(/\D/g, "").slice(0, 10));
     } catch {
       /* ignore */
     }
@@ -86,11 +102,18 @@ export default function Onboarding() {
     <AuthFlowLayout onBack={goBack} backDisabled={step === 1} headerFooter={progressDots}>
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex-1 min-h-0">
-          {step === 1 && <Step1Role role={role} setRole={setRole} onNext={goNext} />}
-
-          {step >= 2 && role === "broker" && (
-            <BrokerForm onComplete={() => setLocation("/broker/dashboard")} />
+          {step === 1 && (
+            <Step1Role
+              role={role}
+              setRole={setRole}
+              onNext={() => {
+                if (role) sessionStorage.setItem("tk_pending_role", role);
+                goNext();
+              }}
+            />
           )}
+
+          {step >= 2 && role === "broker" && <BrokerForm />}
 
           {step === 2 && role === "owner" && (
             <OwnerStep1Properties
@@ -103,7 +126,35 @@ export default function Onboarding() {
             <OwnerStep3Details details={ownerDetails} setDetails={setOwnerDetails} onNext={goNext} />
           )}
           {step === 4 && role === "owner" && (
-            <OwnerStep4OTP details={ownerDetails} onNext={() => setIsSuccessOpen(true)} />
+            <OwnerStep4OTP
+              details={ownerDetails}
+              onNext={() => {
+                const phoneDigits = ownerDetails.phone.replace(/\D/g, "").slice(0, 10);
+                const pending = sessionStorage.getItem("tk_pending_role") || "owner";
+                const r = (ALL_ROLES.includes(pending as Role) ? pending : "owner") as Role;
+                if (profileExists(phoneDigits, r)) {
+                  toast({
+                    title: `You already have an Owner account. Logging you in.`,
+                  });
+                  loginSuccess(phoneDigits, r);
+                  setLocation(dashboardRouteFor(r));
+                  return;
+                }
+                signUpSuccess(phoneDigits, r, {
+                  name: ownerDetails.name,
+                  phone: phoneDigits,
+                  email: "",
+                  firm: "",
+                  bankHolderName: "",
+                  bankName: "",
+                  bankAccountNumber: "",
+                  bankIFSC: "",
+                  upiId: "",
+                  upiQrFileName: "",
+                });
+                setIsSuccessOpen(true);
+              }}
+            />
           )}
           {step === 5 && role === "owner" && (
             <OwnerStep2Intent
@@ -120,14 +171,43 @@ export default function Onboarding() {
             <Step2Details details={details} setDetails={setDetails} onNext={goNext} />
           )}
           {step === 3 && role !== "broker" && role !== "owner" && (
-            <Step3OTP details={details} onNext={goNext} />
+            <Step3OTP
+              details={details}
+              onNext={() => {
+                const phoneDigits = details.phone.replace(/\D/g, "").slice(0, 10);
+                const pending = sessionStorage.getItem("tk_pending_role") || role;
+                const r = (ALL_ROLES.includes(pending as Role) ? pending : role) as Role;
+                if (!ALL_ROLES.includes(r)) return;
+                if (profileExists(phoneDigits, r)) {
+                  toast({
+                    title: `You already have a ${r} account. Logging you in.`,
+                  });
+                  loginSuccess(phoneDigits, r);
+                  setLocation(dashboardRouteFor(r));
+                  return;
+                }
+                signUpSuccess(phoneDigits, r, {
+                  name: details.name,
+                  phone: phoneDigits,
+                  email: "",
+                  firm: "",
+                  bankHolderName: "",
+                  bankName: "",
+                  bankAccountNumber: "",
+                  bankIFSC: "",
+                  upiId: "",
+                  upiQrFileName: "",
+                });
+                goNext();
+              }}
+            />
           )}
           {step === 4 && role !== "broker" && role !== "owner" && (
             <Step4KYC onComplete={() => setIsSuccessOpen(true)} />
           )}
         </div>
 
-        {step > 1 ? <AuthGoToLoginLink /> : null}
+        {step > 1 ? <AuthGoToLoginLink persistRole={role} /> : null}
 
         <Dialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
         <DialogContent className="sm:max-w-md text-center p-10 flex flex-col items-center">
@@ -149,6 +229,19 @@ export default function Onboarding() {
                 onClick={handleOwnerSuccessNext}
               >
                 Add Property
+              </Button>
+            </div>
+          )}
+          {role !== "owner" && role !== "broker" && (
+            <div className="mt-6 w-full">
+              <Button
+                className="w-full bg-primary hover:bg-primary/90 text-white rounded-sm"
+                onClick={() => {
+                  setIsSuccessOpen(false);
+                  setLocation(dashboardRouteFor(role as Role));
+                }}
+              >
+                Go to dashboard
               </Button>
             </div>
           )}

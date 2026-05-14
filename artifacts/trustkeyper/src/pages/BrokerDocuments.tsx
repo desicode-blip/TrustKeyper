@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { FileText, Eye, Pencil, Download, Clock, Edit, PenLine, X, CheckCircle2 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
 import { getAgreements, updateAgreement, type Agreement, type AgreementStatus } from "@/lib/agreements";
+import { setSessionItem } from "@/lib/storageKeys";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -413,7 +414,7 @@ export default function BrokerDocuments() {
                   brokeragePaidBy: agr.brokeragePaidBy,
                   brokerageMode: agr.brokerageMode === "Cash" ? "Bank Transfer" : agr.brokerageMode,
                 };
-                sessionStorage.setItem("agreement_edit_draft", JSON.stringify(draft));
+                setSessionItem("agreement_edit_draft", JSON.stringify(draft));
                 setLocation("/broker/agreements/generate");
               }}
             />

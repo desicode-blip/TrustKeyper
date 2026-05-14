@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import BrokerLayout from "@/components/BrokerLayout";
 import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
 import { addProperty } from "@/lib/properties";
+import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -172,11 +173,10 @@ function SkipBanner({ onSkip }: { onSkip: () => void }) {
 export default function AddProperty2() {
   const [, setLocation] = useLocation();
 
-  const STORAGE_KEY = "broker_add_property_data";
   const loadSavedData = () => {
     if (typeof window === "undefined") return null;
     try {
-      return JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? "null");
+      return JSON.parse(getSessionItem("add_property_data") ?? "null");
     } catch {
       return null;
     }
@@ -233,7 +233,7 @@ export default function AddProperty2() {
 
   const clearDraft = () => {
     try {
-      sessionStorage.removeItem(STORAGE_KEY);
+      removeSessionItem("add_property_data");
     } catch {}
     setSubStep(0);
     setNickname("");
@@ -384,7 +384,7 @@ export default function AddProperty2() {
     };
 
     try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      setSessionItem("add_property_data", JSON.stringify(data));
       broadcastBrokerPendingFlowsUpdated();
     } catch {
       // ignore storage failure
@@ -489,8 +489,8 @@ export default function AddProperty2() {
       status: "Active",
     });
     try {
-      sessionStorage.setItem("agreement_pending_property", newProp.id);
-      sessionStorage.removeItem(STORAGE_KEY);
+      setSessionItem("agreement_pending_property", newProp.id);
+      removeSessionItem("add_property_data");
       broadcastBrokerPendingFlowsUpdated();
     } catch {}
     setShowSuccess(true);

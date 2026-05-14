@@ -1,5 +1,7 @@
 /** Cross-page “resume” items for broker dashboards (local/session storage). */
 
+import { getItem, getSessionItem, removeItem, removeSessionItem, setSessionItem } from "./storageKeys";
+
 export const BROKER_PENDING_FLOWS_EVENT = "broker-pending-flows";
 
 export type PendingFlowKind = "agreement" | "add_property" | "add_tenant";
@@ -9,9 +11,6 @@ export interface PendingFlowItem {
   title: string;
   continueHref: string;
 }
-
-const PROPERTY_DRAFT_KEY = "broker_add_property_data";
-const TENANT_DRAFT_KEY = "broker_add_tenant_draft";
 
 export function broadcastBrokerPendingFlowsUpdated(): void {
   if (typeof window === "undefined") return;
@@ -49,7 +48,7 @@ function hasMeaningfulTenantDraft(raw: string | null): boolean {
 export function hasPendingAgreementDraft(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    const raw = localStorage.getItem("broker_agreement_draft");
+    const raw = getItem("agreement_draft");
     if (!raw) return false;
     const d = JSON.parse(raw) as {
       sentCompleted?: boolean;
@@ -77,7 +76,7 @@ export function getPendingFlowItems(): PendingFlowItem[] {
   }
 
   try {
-    const prop = sessionStorage.getItem(PROPERTY_DRAFT_KEY);
+    const prop = getSessionItem("add_property_data");
     if (hasMeaningfulPropertyDraft(prop)) {
       items.push({
         kind: "add_property",
@@ -90,7 +89,7 @@ export function getPendingFlowItems(): PendingFlowItem[] {
   }
 
   try {
-    const ten = sessionStorage.getItem(TENANT_DRAFT_KEY);
+    const ten = getSessionItem("add_tenant_draft");
     if (hasMeaningfulTenantDraft(ten)) {
       items.push({
         kind: "add_tenant",
@@ -107,7 +106,8 @@ export function getPendingFlowItems(): PendingFlowItem[] {
 
 export function clearAgreementDraftStorage(): void {
   try {
-    localStorage.removeItem("broker_agreement_draft");
+    removeItem("agreement_draft");
+    removeSessionItem("agreement_draft");
   } catch {
     /* ignore */
   }

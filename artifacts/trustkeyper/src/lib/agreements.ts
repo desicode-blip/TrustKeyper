@@ -1,3 +1,5 @@
+import { getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
+
 export type AgreementStatus = "Draft" | "Sent" | "Signed" | "Expired";
 
 export interface Agreement {
@@ -30,12 +32,25 @@ export interface Agreement {
   createdAt: number;
 }
 
-const KEY = "broker_agreements";
+function readAgreementsRaw(): string | null {
+  if (typeof window === "undefined") return null;
+  return getItem("agreements") ?? getSessionItem("agreements");
+}
+
+function persistAgreements(list: Agreement[]): void {
+  try {
+    const payload = JSON.stringify(list);
+    setItem("agreements", payload);
+    setSessionItem("agreements", payload);
+  } catch {
+    /* ignore */
+  }
+}
 
 export function getAgreements(): Agreement[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = sessionStorage.getItem(KEY);
+    const raw = readAgreementsRaw();
     return raw ? (JSON.parse(raw) as Agreement[]) : [];
   } catch {
     return [];
@@ -47,7 +62,9 @@ export function updateAgreement(id: string, patch: Partial<Agreement>): void {
   const idx = list.findIndex((a) => a.id === id);
   if (idx === -1) return;
   list[idx] = { ...list[idx], ...patch };
-  try { sessionStorage.setItem(KEY, JSON.stringify(list)); } catch {}
+  try {
+    persistAgreements(list);
+  } catch {}
 }
 
 export function addAgreement(
@@ -62,7 +79,7 @@ export function addAgreement(
   const list = getAgreements();
   list.unshift(agreement);
   try {
-    sessionStorage.setItem(KEY, JSON.stringify(list));
+    persistAgreements(list);
   } catch {}
   return agreement;
 }

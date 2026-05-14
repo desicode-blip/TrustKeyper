@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import Footer from "@/components/Footer";
 import { addProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
+import { getItem, getSessionItem, removeItem, setItem } from "@/lib/storageKeys";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -246,14 +247,13 @@ export default function OwnerAddProperty() {
   // Initialization & Persistence
   useEffect(() => {
     // Pre-fill owner details from onboarding if available
-    const storedName = sessionStorage.getItem("owner_name");
-    const storedPhone =
-      sessionStorage.getItem("owner_phone") || sessionStorage.getItem("owner_contact");
+    const storedName = getSessionItem("name");
+    const storedPhone = getSessionItem("phone") || getSessionItem("contact");
     if (storedName) setOwnerName(storedName);
     if (storedPhone) setOwnerContact(storedPhone);
 
     // Load persisted property data
-    const savedData = localStorage.getItem("trustkeyper_onboarding_data");
+    const savedData = getItem("onboarding_data");
     if (savedData) {
       try {
         const data = JSON.parse(savedData);
@@ -303,7 +303,7 @@ export default function OwnerAddProperty() {
       tenantsPreferred, monthlyRent, rentNegotiable, maintenanceIncluded, monthlyMaintenance, securityDeposit, availableFrom,
       subStep
     };
-    localStorage.setItem("trustkeyper_onboarding_data", JSON.stringify(data));
+    setItem("onboarding_data", JSON.stringify(data));
   }, [
     nickname, address, area, city, pincode, country,
     propertyType, propertyTypeOther, unitSize, unitSizeOther, furnishing,
@@ -385,7 +385,7 @@ export default function OwnerAddProperty() {
     });
     
     // Clear persistence on success
-    localStorage.removeItem("trustkeyper_onboarding_data");
+    removeItem("onboarding_data");
     
     setShowSuccess(true);
     setTimeout(() => {
