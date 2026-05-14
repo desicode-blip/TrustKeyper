@@ -24,7 +24,7 @@ export function AuthFlowLayout({
         <img src={sidebarImage} alt="" className="h-full w-auto block" />
       </div>
 
-      <div className="w-full flex-1 flex flex-col pt-[120px] pb-[180px] px-6 lg:px-[140px] relative min-h-screen">
+      <div className="w-full flex-1 flex flex-col pt-[60px] pb-[180px] px-6 lg:px-[140px] relative min-h-screen">
         <AuthCornerDecor className="absolute bottom-4 right-2 lg:right-8 z-0" />
 
         <div className="relative z-10 flex-1 flex flex-col min-h-0">
