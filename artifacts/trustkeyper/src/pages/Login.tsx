@@ -119,9 +119,14 @@ export default function Login() {
     });
   };
 
-  const loginHeading = activeRole
-    ? `Login to TrustKeyper as ${roleTitle(activeRole)}`
-    : "Login to TrustKeyper";
+  const headingRoleFromSession = ((): Role | null => {
+    const p = sessionStorage.getItem("tk_pending_role");
+    return p && ALL_ROLES.includes(p as Role) ? (p as Role) : null;
+  })();
+  const loginHeading =
+    headingRoleFromSession || (phase !== "role" && activeRole)
+      ? `Login to TrustKeyper as ${roleTitle((headingRoleFromSession ?? activeRole) as Role)}`
+      : "Login to TrustKeyper";
 
   return (
     <AuthFlowLayout onBack={() => setLocation("/")} backDisabled={false}>
