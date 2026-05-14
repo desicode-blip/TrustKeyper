@@ -9,14 +9,11 @@ import {
   X,
   Copy,
   Check,
-  MessageCircle,
-  Instagram,
-  Send,
-  Smartphone,
   MapPin,
   CheckCircle2,
   FileText,
 } from "lucide-react";
+import { FaInstagram, FaSms, FaTelegramPlane, FaWhatsapp } from "react-icons/fa";
 import BrokerLayout from "@/components/BrokerLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -315,34 +312,40 @@ export default function AddTenant() {
   const shareMessage = `Hi ${linkName}! Your broker wants to onboard you into TrustKeyper. Please complete your tenant profile using this link: ${generatedLink}`;
   const encodedMsg = encodeURIComponent(shareMessage);
 
-  const shareTargets = [
+  const shareTargets: {
+    id: string;
+    label: string;
+    Icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+    bg: string;
+    href: string;
+  }[] = [
     {
       id: "whatsapp",
       label: "WhatsApp",
-      icon: MessageCircle,
-      color: "bg-emerald-50 text-emerald-600",
-      href: `https://wa.me/${linkPhone.startsWith("+") ? linkPhone : "+91" + linkPhone}?text=${encodedMsg}`,
+      Icon: FaWhatsapp,
+      bg: "bg-[#25D366]",
+      href: `https://wa.me/91${linkPhone}?text=${encodedMsg}`,
     },
     {
       id: "instagram",
       label: "Instagram",
-      icon: Instagram,
-      color: "bg-pink-50 text-pink-600",
-      href: `https://www.instagram.com/direct/inbox/`, // Instagram doesn't support direct message pre-fill via URL easily
+      Icon: FaInstagram,
+      bg: "bg-gradient-to-br from-[#f58529] via-[#dd2a7b] to-[#8134af]",
+      href: "https://www.instagram.com/",
     },
     {
       id: "telegram",
       label: "Telegram",
-      icon: Send,
-      color: "bg-sky-50 text-sky-600",
+      Icon: FaTelegramPlane,
+      bg: "bg-[#229ED9]",
       href: `https://t.me/share/url?url=${encodeURIComponent(generatedLink)}&text=${encodedMsg}`,
     },
     {
       id: "sms",
       label: "SMS",
-      icon: Smartphone,
-      color: "bg-gray-100 text-gray-700",
-      href: `sms:${linkPhone.startsWith("+") ? linkPhone : "+91" + linkPhone}?body=${encodedMsg}`,
+      Icon: FaSms,
+      bg: "bg-[#5f6368]",
+      href: `sms:+91${linkPhone}?body=${encodedMsg}`,
     },
   ];
 
@@ -525,7 +528,7 @@ export default function AddTenant() {
                         onClick={() => setFood(opt)}
                         className={`py-3 rounded-lg border text-sm font-medium transition-colors ${
                           isActive
-                            ? "border-primary bg-primary/5 text-primary"
+                            ? "border-accent bg-accent/10 text-accent"
                             : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                         }`}
                       >
@@ -542,7 +545,7 @@ export default function AddTenant() {
               size="lg"
               onClick={handleStep1Continue}
               disabled={!step1Valid}
-              className="hidden sm:flex w-full mt-8 bg-primary hover:bg-primary/90"
+              className="hidden sm:flex w-48 mx-auto mt-8 bg-primary hover:bg-primary/90"
             >
               Continue <ArrowRight size={16} className="ml-1" />
             </Button>
@@ -721,18 +724,18 @@ export default function AddTenant() {
             </div>
 
             {/* Step 2 CTA — desktop */}
-            <div className="hidden sm:flex items-center justify-center gap-3 mt-6">
+            <div className="hidden sm:flex justify-center gap-3 mt-6">
               <Button
                 variant="outline"
                 onClick={handleSkipSave}
-                className="border-primary text-primary hover:bg-primary/5"
+                className="w-48 border-primary text-primary hover:bg-primary/5"
               >
                 Skip and Save details
               </Button>
               <Button
                 onClick={handleSaveDetails}
                 disabled={!step2Valid}
-                className="bg-primary hover:bg-primary/90"
+                className="w-48 bg-primary hover:bg-primary/90"
               >
                 Save Details
               </Button>
@@ -869,7 +872,7 @@ export default function AddTenant() {
               <p className="text-sm text-gray-500 mb-3">Share this link via</p>
               <div className="grid grid-cols-4 gap-3 mb-6">
                 {shareTargets.map((t) => {
-                  const Icon = t.icon;
+                  const Icon = t.Icon;
                   return (
                     <a
                       key={t.id}
@@ -879,9 +882,9 @@ export default function AddTenant() {
                       className="flex flex-col items-center gap-2 transition-transform hover:scale-105"
                     >
                       <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm ${t.color}`}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm text-white ${t.bg}`}
                       >
-                        <Icon size={20} />
+                        <Icon className="w-6 h-6" aria-hidden />
                       </div>
                       <span className="text-xs text-gray-700 font-medium">{t.label}</span>
                     </a>

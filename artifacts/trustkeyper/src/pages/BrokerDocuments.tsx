@@ -396,6 +396,7 @@ export default function BrokerDocuments() {
                     : []),
                 ].filter((t) => t.name);
                 const draft = {
+                  agreementId: agr.id,
                   propertyId: agr.propertyId,
                   ownerName: agr.ownerName,
                   ownerContact: agr.ownerContact,

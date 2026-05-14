@@ -39,7 +39,7 @@ import { broadcastBrokerPendingFlowsUpdated, clearAgreementDraftStorage } from "
 import { getItem, getSessionItem, removeSessionItem, setItem, setSessionItem } from "@/lib/storageKeys";
 import { getProperties, getPropertyTitle, updateProperty, type Property } from "@/lib/properties";
 import { ensureTenantFromAgreement, getTenants, type Tenant } from "@/lib/tenants";
-import { addAgreement } from "@/lib/agreements";
+import { addAgreement, getAgreements, updateAgreement, type Agreement } from "@/lib/agreements";
 import { getBrokerProfile, saveBrokerProfile, hasBankDetails } from "@/lib/brokerProfile";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -153,15 +153,15 @@ function ContinueButton({ onClick, disabled, label = "Continue" }: { onClick: ()
     : "bg-primary text-white hover:bg-primary/90";
   return (
     <>
-      {/* Desktop: inline */}
-      <button
-        onClick={onClick}
-        disabled={disabled}
-        className={`hidden sm:flex items-center justify-center gap-2 w-full h-11 rounded-xl text-sm font-semibold transition-colors mt-6 ${cls}`}
-      >
-        {label} <ChevronRight size={16} />
-      </button>
-      {/* Mobile: sticky above bottom nav */}
+      <div className="hidden sm:flex justify-center mt-6">
+        <button
+          onClick={onClick}
+          disabled={disabled}
+          className={`flex items-center justify-center gap-2 w-48 h-11 rounded-xl text-sm font-semibold transition-colors ${cls}`}
+        >
+          {label} <ChevronRight size={16} />
+        </button>
+      </div>
       <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <button
           onClick={onClick}
@@ -386,6 +386,8 @@ function InlinePartyForm({ label, onAdd, onCancel }: {
 }) {
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
+  const digits = contact.replace(/\D/g, "").slice(0, 10);
+  const canAdd = name.trim().length > 0 && digits.length === 10;
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3 mb-3">
       <input
@@ -397,21 +399,28 @@ function InlinePartyForm({ label, onAdd, onCancel }: {
       <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
         <span className="px-3 h-9 flex items-center text-sm text-gray-500 border-r border-gray-200 bg-gray-50 shrink-0">+91</span>
         <input
-          value={contact}
-          onChange={(e) => setContact(e.target.value)}
-          placeholder="Phone"
+          type="tel"
+          inputMode="numeric"
+          maxLength={10}
+          value={digits}
+          onChange={(e) => setContact(e.target.value.replace(/\D/g, "").slice(0, 10))}
+          placeholder="10-digit number"
           className="flex-1 h-9 px-3 text-sm focus:outline-none"
         />
       </div>
       <div className="flex items-center gap-2">
         <button
-          onClick={() => { if (name.trim()) onAdd(name.trim(), contact.trim()); }}
-          disabled={!name.trim()}
+          type="button"
+          onClick={() => {
+            if (canAdd) onAdd(name.trim(), digits);
+          }}
+          disabled={!canAdd}
           className="px-5 h-9 rounded-lg bg-primary text-white text-sm font-semibold disabled:opacity-50 hover:bg-primary/90 transition-colors"
         >
           Add
         </button>
         <button
+          type="button"
           onClick={onCancel}
           className="px-5 h-9 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
         >
@@ -1398,7 +1407,6 @@ function Step6Review({
   lockInPeriod, noticePeriod, rentDueDay, maintenanceCharges,
   brokerageAmount, brokerageAmountOwner, brokerageAmountTenant, brokeragePaidBy, brokerageMode,
   documentsComplete,
-  onUpdateParties, onUpdateDetails, onUpdateBrokerage,
   onGoToStep, onSubmit, submitting,
 }: {
   property: Property | null;
@@ -1410,60 +1418,10 @@ function Step6Review({
   brokerageAmount: string; brokerageAmountOwner: string; brokerageAmountTenant: string;
   brokeragePaidBy: string; brokerageMode: string;
   documentsComplete: boolean;
-  onUpdateParties: (d: { ownerName: string; ownerContact: string; additionalOwners: Party[]; selectedTenants: Party[] }) => void;
-  onUpdateDetails: (d: { startDate: string; monthlyRent: string; securityDeposit: string; lockInPeriod: string; noticePeriod: string; rentDueDay: string; maintenanceCharges: string }) => void;
-  onUpdateBrokerage: (d: { brokerageAmount: string; brokerageAmountOwner: string; brokerageAmountTenant: string; brokeragePaidBy: "Owner" | "Tenant" | "Both"; brokerageMode: "Bank Transfer" | "UPI" }) => void;
   onGoToStep: (s: Step) => void;
   onSubmit: () => void;
   submitting: boolean;
 }) {
-  type EditSection = "parties" | "details" | "brokerage" | null;
-  const [editing, setEditing] = useState<EditSection>(null);
-
-  // Parties draft
-  const [dOwnerName, setDOwnerName] = useState(ownerName);
-  const [dOwnerContact, setDOwnerContact] = useState(ownerContact);
-  const [dAddlOwners, setDAddlOwners] = useState<Party[]>(additionalOwners);
-  const [dTenants, setDTenants] = useState<Party[]>(selectedTenants);
-
-  // Details draft
-  const [dStartDate, setDStartDate] = useState(startDate);
-  const [dRent, setDRent] = useState(monthlyRent);
-  const [dDeposit, setDDeposit] = useState(securityDeposit);
-  const [dLockIn, setDLockIn] = useState(lockInPeriod);
-  const [dNotice, setDNotice] = useState(noticePeriod);
-  const [dRentDay, setDRentDay] = useState(rentDueDay);
-  const [dMaint, setDMaint] = useState(maintenanceCharges);
-
-  // Brokerage draft
-  const [dBroPaidBy, setDBroPaidBy] = useState<"Owner" | "Tenant" | "Both">(brokeragePaidBy as "Owner" | "Tenant" | "Both");
-  const [dBroAmt, setDBroAmt] = useState(brokerageAmount);
-  const [dBroAmtOwner, setDBroAmtOwner] = useState(brokerageAmountOwner);
-  const [dBroAmtTenant, setDBroAmtTenant] = useState(brokerageAmountTenant);
-  const [dBroMode, setDBroMode] = useState<"Bank Transfer" | "UPI">(brokerageMode as "Bank Transfer" | "UPI");
-
-  const startEdit = (sec: EditSection) => {
-    if (sec === "parties") {
-      setDOwnerName(ownerName); setDOwnerContact(ownerContact);
-      setDAddlOwners([...additionalOwners]); setDTenants([...selectedTenants]);
-    } else if (sec === "details") {
-      setDStartDate(startDate); setDRent(monthlyRent); setDDeposit(securityDeposit);
-      setDLockIn(lockInPeriod); setDNotice(noticePeriod); setDRentDay(rentDueDay); setDMaint(maintenanceCharges);
-    } else if (sec === "brokerage") {
-      setDBroPaidBy(brokeragePaidBy as "Owner" | "Tenant" | "Both");
-      setDBroAmt(brokerageAmount); setDBroAmtOwner(brokerageAmountOwner); setDBroAmtTenant(brokerageAmountTenant);
-      setDBroMode(brokerageMode as "Bank Transfer" | "UPI");
-    }
-    setEditing(sec);
-  };
-
-  const saveEdit = () => {
-    if (editing === "parties") onUpdateParties({ ownerName: dOwnerName, ownerContact: dOwnerContact, additionalOwners: dAddlOwners, selectedTenants: dTenants });
-    else if (editing === "details") onUpdateDetails({ startDate: dStartDate, monthlyRent: dRent, securityDeposit: dDeposit, lockInPeriod: dLockIn, noticePeriod: dNotice, rentDueDay: dRentDay, maintenanceCharges: dMaint });
-    else if (editing === "brokerage") onUpdateBrokerage({ brokerageAmount: dBroAmt, brokerageAmountOwner: dBroAmtOwner, brokerageAmountTenant: dBroAmtTenant, brokeragePaidBy: dBroPaidBy, brokerageMode: dBroMode });
-    setEditing(null);
-  };
-
   const fmtDate = (v: string) => {
     if (!v) return "—";
     return new Date(v).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
@@ -1475,36 +1433,24 @@ function Step6Review({
   const tenantNames = selectedTenants.map((t) => t.name).join(", ") || "—";
   const tenantContacts = selectedTenants.map((t) => t.contact).filter(Boolean).join(", ");
 
-  const SectionHeader = ({ title, section, onNavigate }: { title: string; section: EditSection; onNavigate?: () => void }) => (
+  const SectionHeader = ({ title, stepTarget }: { title: string; stepTarget: Step }) => (
     <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50">
       <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{title}</p>
-      {editing !== null && editing === section ? (
-        <div className="flex items-center gap-2">
-          <button onClick={saveEdit} className="flex items-center gap-1 text-xs font-semibold text-white bg-primary px-2.5 py-1 rounded-lg hover:bg-primary/90 transition-colors">
-            <Check size={11} /> Save
-          </button>
-          <button onClick={() => setEditing(null)} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 px-1.5 py-1 rounded-lg hover:bg-gray-100 transition-colors">
-            <X size={11} /> Cancel
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => section ? startEdit(section) : onNavigate?.()}
-          className="flex items-center gap-1 text-xs text-primary hover:underline"
-        >
-          <Edit2 size={11} /> Edit
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => onGoToStep(stepTarget)}
+        className="flex items-center gap-1 text-xs text-primary hover:underline"
+      >
+        <Edit2 size={11} /> Edit
+      </button>
     </div>
   );
 
   return (
     <div className="max-w-2xl w-full">
       <div className="space-y-4 mb-6">
-
-        {/* ── Property ── */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <SectionHeader title="Property" section={null} onNavigate={() => onGoToStep(1)} />
+          <SectionHeader title="Property" stepTarget={1} />
           <div className="px-5 py-1">
             <ReviewRow icon={Home} label="Property" value={property ? getPropertyTitle(property) : "—"} />
             <ReviewRow icon={Building2} label="Location" value={property ? `${property.area}, ${property.city}` : "—"} />
@@ -1512,181 +1458,50 @@ function Step6Review({
           </div>
         </div>
 
-        {/* ── Parties ── */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <SectionHeader title="Parties" section="parties" />
-          {editing === "parties" ? (
-            <div className="px-5 py-4 space-y-4">
-              <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Primary Owner</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div><FieldLabel>Name</FieldLabel><TextInput value={dOwnerName} onChange={setDOwnerName} placeholder="Owner name" /></div>
-                  <div><FieldLabel>Phone</FieldLabel><TextInput value={dOwnerContact} onChange={setDOwnerContact} placeholder="Phone number" /></div>
-                </div>
-              </div>
-              {dAddlOwners.map((o, i) => (
-                <div key={i}>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Additional Owner {i + 1}</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div><FieldLabel>Name</FieldLabel><TextInput value={o.name} onChange={(v) => setDAddlOwners((arr) => arr.map((x, j) => j === i ? { ...x, name: v } : x))} placeholder="Name" /></div>
-                    <div><FieldLabel>Phone</FieldLabel><TextInput value={o.contact} onChange={(v) => setDAddlOwners((arr) => arr.map((x, j) => j === i ? { ...x, contact: v } : x))} placeholder="Phone" /></div>
-                  </div>
-                </div>
-              ))}
-              {dTenants.map((t, i) => (
-                <div key={i}>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Tenant {i + 1}</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div><FieldLabel>Name</FieldLabel><TextInput value={t.name} onChange={(v) => setDTenants((arr) => arr.map((x, j) => j === i ? { ...x, name: v } : x))} placeholder="Name" /></div>
-                    <div><FieldLabel>Phone</FieldLabel><TextInput value={t.contact} onChange={(v) => setDTenants((arr) => arr.map((x, j) => j === i ? { ...x, contact: v } : x))} placeholder="Phone" /></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="px-5 py-1">
-              <ReviewRow icon={User} label="Owner(s)" value={ownerNames} />
-              <ReviewRow icon={Phone} label="Owner Contact" value={ownerContacts} />
-              <ReviewRow icon={Users} label="Tenant(s)" value={tenantNames} />
-              <ReviewRow icon={Phone} label="Tenant Contact" value={tenantContacts} />
-            </div>
-          )}
+          <SectionHeader title="Parties" stepTarget={2} />
+          <div className="px-5 py-1">
+            <ReviewRow icon={User} label="Owner(s)" value={ownerNames} />
+            <ReviewRow icon={Phone} label="Owner Contact" value={ownerContacts} />
+            <ReviewRow icon={Users} label="Tenant(s)" value={tenantNames} />
+            <ReviewRow icon={Phone} label="Tenant Contact" value={tenantContacts} />
+          </div>
         </div>
 
-        {/* ── Agreement Details ── */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <SectionHeader title="Agreement Details" section="details" />
-          {editing === "details" ? (
-            <div className="px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <FieldLabel required>Start Date</FieldLabel>
-                <input type="date" value={dStartDate} onChange={(e) => setDStartDate(e.target.value)} className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
-              </div>
-              <div>
-                <FieldLabel required>Monthly Rent (₹)</FieldLabel>
-                <TextInput type="number" value={dRent} onChange={setDRent} placeholder="e.g. 25000" />
-              </div>
-              <div>
-                <FieldLabel>Security Deposit (₹)</FieldLabel>
-                <TextInput type="number" value={dDeposit} onChange={setDDeposit} placeholder="e.g. 50000" />
-              </div>
-              <div>
-                <FieldLabel>Maintenance Charges (₹)</FieldLabel>
-                <TextInput type="number" value={dMaint} onChange={setDMaint} placeholder="e.g. 2000" />
-              </div>
-              <div>
-                <FieldLabel>Lock-in Period</FieldLabel>
-                <div className="relative">
-                  <select value={dLockIn} onChange={(e) => setDLockIn(e.target.value)} className="w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white">
-                    <option value=""></option>
-                    {Array.from({ length: 11 }, (_, i) => i + 1).map((m) => <option key={m} value={`${m} month${m > 1 ? "s" : ""}`}>{m} month{m > 1 ? "s" : ""}</option>)}
-                  </select>
-                  <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
-              <div>
-                <FieldLabel>Notice Period</FieldLabel>
-                <div className="relative">
-                  <select value={dNotice} onChange={(e) => setDNotice(e.target.value)} className="w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white">
-                    <option value=""></option>
-                    {["1 month", "2 months", "3 months"].map((o) => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                  <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
-              <div>
-                <FieldLabel>Rent Due Day</FieldLabel>
-                <div className="relative">
-                  <select value={dRentDay} onChange={(e) => setDRentDay(e.target.value)} className="w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white">
-                    <option value=""></option>
-                    {Array.from({ length: 28 }, (_, i) => String(i + 1)).map((d) => <option key={d} value={d}>{d}{d === "1" ? "st" : d === "2" ? "nd" : d === "3" ? "rd" : "th"} of month</option>)}
-                  </select>
-                  <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="px-5 py-1">
-              <ReviewRow icon={Calendar} label="Start Date" value={fmtDate(startDate)} />
-              <ReviewRow icon={IndianRupee} label="Monthly Rent" value={monthlyRent ? `₹${Number(monthlyRent).toLocaleString("en-IN")}` : "—"} />
-              <ReviewRow icon={Wallet} label="Security Deposit" value={securityDeposit ? `₹${Number(securityDeposit).toLocaleString("en-IN")}` : "—"} />
-              <ReviewRow icon={Lock} label="Lock-in Period" value={lockInPeriod} />
-              <ReviewRow icon={Bell} label="Notice Period" value={noticePeriod} />
-              <ReviewRow icon={Calendar} label="Rent Due Day" value={rentDueDay ? `${rentDueDay}${rentDueDay === "1" ? "st" : rentDueDay === "2" ? "nd" : rentDueDay === "3" ? "rd" : "th"} of month` : "—"} />
-              <ReviewRow icon={IndianRupee} label="Maintenance" value={maintenanceCharges ? `₹${Number(maintenanceCharges).toLocaleString("en-IN")}` : "Not included"} />
-            </div>
-          )}
+          <SectionHeader title="Agreement Details" stepTarget={4} />
+          <div className="px-5 py-1">
+            <ReviewRow icon={Calendar} label="Start Date" value={fmtDate(startDate)} />
+            <ReviewRow icon={IndianRupee} label="Monthly Rent" value={monthlyRent ? `₹${Number(monthlyRent).toLocaleString("en-IN")}` : "—"} />
+            <ReviewRow icon={Wallet} label="Security Deposit" value={securityDeposit ? `₹${Number(securityDeposit).toLocaleString("en-IN")}` : "—"} />
+            <ReviewRow icon={Lock} label="Lock-in Period" value={lockInPeriod} />
+            <ReviewRow icon={Bell} label="Notice Period" value={noticePeriod} />
+            <ReviewRow icon={Calendar} label="Rent Due Day" value={rentDueDay ? `${rentDueDay}${rentDueDay === "1" ? "st" : rentDueDay === "2" ? "nd" : rentDueDay === "3" ? "rd" : "th"} of month` : "—"} />
+            <ReviewRow icon={IndianRupee} label="Maintenance" value={maintenanceCharges ? `₹${Number(maintenanceCharges).toLocaleString("en-IN")}` : "Not included"} />
+          </div>
         </div>
 
-        {/* ── Brokerage ── */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <SectionHeader title="Brokerage" section="brokerage" />
-          {editing === "brokerage" ? (
-            <div className="px-5 py-4 space-y-4">
-              <div>
-                <FieldLabel>Paid By</FieldLabel>
-                <div className="flex gap-2 mt-1">
-                  {(["Owner", "Tenant", "Both"] as const).map((opt) => (
-                    <button key={opt} onClick={() => { setDBroPaidBy(opt); setDBroAmt(""); setDBroAmtOwner(""); setDBroAmtTenant(""); }}
-                      className={`flex-1 h-9 rounded-xl border text-sm font-medium transition-colors ${dBroPaidBy === opt ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-600 hover:border-primary/40"}`}>
-                      {opt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {dBroPaidBy === "Both" ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <FieldLabel required>Owner pays (₹)</FieldLabel>
-                    <TextInput type="number" value={dBroAmtOwner} onChange={setDBroAmtOwner} placeholder="e.g. 7500" />
-                    {brokeragePercentOfRent(dBroAmtOwner, monthlyRent) && (
-                      <p className="text-sm font-medium text-green-600 mt-1">{brokeragePercentOfRent(dBroAmtOwner, monthlyRent)}</p>
-                    )}
-                  </div>
-                  <div>
-                    <FieldLabel required>Tenant pays (₹)</FieldLabel>
-                    <TextInput type="number" value={dBroAmtTenant} onChange={setDBroAmtTenant} placeholder="e.g. 7500" />
-                    {brokeragePercentOfRent(dBroAmtTenant, monthlyRent) && (
-                      <p className="text-sm font-medium text-green-600 mt-1">{brokeragePercentOfRent(dBroAmtTenant, monthlyRent)}</p>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <FieldLabel required>Amount (₹)</FieldLabel>
-                  <TextInput type="number" value={dBroAmt} onChange={setDBroAmt} placeholder="e.g. 15000" />
-                  {brokeragePercentOfRent(dBroAmt, monthlyRent) && (
-                    <p className="text-sm font-medium text-green-600 mt-1">{brokeragePercentOfRent(dBroAmt, monthlyRent)}</p>
-                  )}
-                </div>
-              )}
-              <div>
-                <FieldLabel>Payment Mode</FieldLabel>
-                <div className="flex gap-2 mt-1">
-                  {(["Bank Transfer", "UPI"] as const).map((opt) => (
-                    <button key={opt} onClick={() => setDBroMode(opt)}
-                      className={`flex-1 h-9 rounded-xl border text-sm font-medium transition-colors ${dBroMode === opt ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-600 hover:border-primary/40"}`}>
-                      {opt === "Bank Transfer" ? "🏦 Bank Transfer" : "📱 UPI"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="px-5 py-1">
-              <ReviewRow icon={IndianRupee} label="Brokerage Amount"
-                value={brokeragePaidBy === "Both"
+          <SectionHeader title="Brokerage" stepTarget={5} />
+          <div className="px-5 py-1">
+            <ReviewRow
+              icon={IndianRupee}
+              label="Brokerage Amount"
+              value={
+                brokeragePaidBy === "Both"
                   ? `Owner: ₹${Number(brokerageAmountOwner || 0).toLocaleString("en-IN")} + Tenant: ₹${Number(brokerageAmountTenant || 0).toLocaleString("en-IN")}`
-                  : brokerageAmount ? `₹${Number(brokerageAmount).toLocaleString("en-IN")}` : "₹0"} />
-              <ReviewRow icon={Users} label="Paid By" value={brokeragePaidBy} />
-              <ReviewRow icon={Wallet} label="Payment Mode" value={brokerageMode} />
-            </div>
-          )}
+                  : brokerageAmount
+                    ? `₹${Number(brokerageAmount).toLocaleString("en-IN")}`
+                    : "₹0"
+              }
+            />
+            <ReviewRow icon={Users} label="Paid By" value={brokeragePaidBy} />
+            <ReviewRow icon={Wallet} label="Payment Mode" value={brokerageMode} />
+          </div>
         </div>
 
-        {/* ── Documents ── */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <SectionHeader title="Documents" section={null} onNavigate={() => onGoToStep(3)} />
+          <SectionHeader title="Documents" stepTarget={3} />
           <div className="px-5 py-3">
             {documentsComplete ? (
               <div className="flex items-start gap-2 rounded-lg bg-orange-50 border border-orange-100 px-3 py-2.5 text-sm text-orange-700">
@@ -1703,30 +1518,36 @@ function Step6Review({
         </div>
       </div>
 
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:gap-3 mt-2">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-center sm:gap-4 mt-2">
         <button
+          type="button"
           onClick={() => onGoToStep(1)}
           disabled={submitting}
-          className="flex items-center justify-center gap-2 w-full sm:flex-1 h-12 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          className="flex items-center justify-center gap-2 w-full sm:w-48 h-12 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
         >
           <Edit2 size={15} /> Edit Details
         </button>
         <button
+          type="button"
           onClick={onSubmit}
           disabled={submitting}
-          className={`flex items-center justify-center gap-2 w-full sm:flex-[2] h-12 rounded-xl text-sm font-semibold transition-colors ${
+          className={`flex items-center justify-center gap-2 w-full sm:w-48 h-12 rounded-xl text-sm font-semibold transition-colors ${
             submitting ? "bg-primary/60 text-white cursor-not-allowed" : "bg-primary text-white hover:bg-primary/90"
           }`}
         >
           {submitting ? (
-            <><RefreshCw size={16} className="animate-spin" /> Sending…</>
+            <>
+              <RefreshCw size={16} className="animate-spin" /> Sending…
+            </>
           ) : (
-            <><Send size={16} /> Send for E-Signing</>
+            <>
+              <Send size={16} /> Send for E-Signing
+            </>
           )}
         </button>
       </div>
       <p className="text-xs text-gray-400 text-center mt-2">
-        "Edit Details" restarts the flow from Step 1 · Agreement will be sent to all parties for digital signatures
+        Section Edit jumps to that step. Edit Details returns to property selection. Agreement will be sent for digital signatures.
       </p>
     </div>
   );
@@ -1805,6 +1626,8 @@ export default function GenerateAgreement() {
   const [brokeragePaidBy, setBrokeragePaidBy] = useState<"Owner" | "Tenant" | "Both">("Tenant");
   const [brokerageMode, setBrokerageMode] = useState<"Bank Transfer" | "UPI">("Bank Transfer");
 
+  const [editingAgreementId, setEditingAgreementId] = useState<string | null>(null);
+
   const syncPartiesToSelectedProperty = useCallback(
     (owner: string, ownerC: string, co: Party[]) => {
       if (!selectedProperty?.id) return;
@@ -1850,6 +1673,7 @@ export default function GenerateAgreement() {
         brokerageAmountTenant?: string;
         brokeragePaidBy?: "Owner" | "Tenant" | "Both";
         brokerageMode?: "Bank Transfer" | "UPI";
+        editingAgreementId?: string | null;
       };
       const prop = d.selectedPropertyId
         ? getProperties().find((p) => p.id === d.selectedPropertyId) ?? null
@@ -1874,6 +1698,9 @@ export default function GenerateAgreement() {
       setBrokerageAmountTenant(d.brokerageAmountTenant ?? "");
       if (d.brokeragePaidBy) setBrokeragePaidBy(d.brokeragePaidBy);
       if (d.brokerageMode) setBrokerageMode(d.brokerageMode);
+      if (typeof d.editingAgreementId === "string" && d.editingAgreementId) {
+        setEditingAgreementId(d.editingAgreementId);
+      }
     } catch {
       /* ignore */
     }
@@ -1885,6 +1712,7 @@ export default function GenerateAgreement() {
     if (!raw) return;
     try {
       const d = JSON.parse(raw) as {
+        agreementId?: string;
         propertyId: string; ownerName: string; ownerContact: string;
         additionalOwners: Party[]; selectedTenants: Party[];
         startDate: string; monthlyRent: string; securityDeposit: string;
@@ -1893,6 +1721,8 @@ export default function GenerateAgreement() {
         brokeragePaidBy: "Owner" | "Tenant" | "Both"; brokerageMode: "Bank Transfer" | "UPI";
       };
       removeSessionItem("agreement_edit_draft");
+      if (d.agreementId) setEditingAgreementId(d.agreementId);
+      skipOwnerAutofillNext.current = true;
       const prop = getProperties().find((p) => p.id === d.propertyId) || null;
       if (prop) setSelectedProperty(prop);
       setAdditionalOwners(d.additionalOwners || []);
@@ -1915,6 +1745,7 @@ export default function GenerateAgreement() {
         setOwnerName(d.ownerName || "");
         setOwnerContact(d.ownerContact || "");
       }, 0);
+      setStep(6);
     } catch {}
   }, []);
 
@@ -1962,6 +1793,7 @@ export default function GenerateAgreement() {
           brokerageAmountTenant,
           brokeragePaidBy,
           brokerageMode,
+          editingAgreementId,
           savedAt: Date.now(),
         };
         setItem("agreement_draft", JSON.stringify(draft));
@@ -1993,6 +1825,7 @@ export default function GenerateAgreement() {
     brokerageAmountTenant,
     brokeragePaidBy,
     brokerageMode,
+    editingAgreementId,
   ]);
 
   const handleClearFlow = () => {
@@ -2018,6 +1851,7 @@ export default function GenerateAgreement() {
     setBrokerageAmountTenant("");
     setBrokeragePaidBy("Tenant");
     setBrokerageMode("Bank Transfer");
+    setEditingAgreementId(null);
   };
 
   // Step 3 — managed internally by Step3Documents
@@ -2036,7 +1870,8 @@ export default function GenerateAgreement() {
     setSubmitting(true);
     const primaryTenant = selectedTenants[0];
     setTimeout(() => {
-      addAgreement({
+      const mode = brokerageMode as Agreement["brokerageMode"];
+      const base = {
         propertyId: selectedProperty.id,
         propertyTitle: getPropertyTitle(selectedProperty),
         ownerName,
@@ -2057,9 +1892,25 @@ export default function GenerateAgreement() {
         maintenanceCharges,
         brokerageAmount,
         brokeragePaidBy,
-        brokerageMode,
-        status: "Sent",
-      });
+        brokerageMode: mode,
+      };
+
+      if (editingAgreementId) {
+        const existing = getAgreements().find((a) => a.id === editingAgreementId);
+        if (existing) {
+          updateAgreement(editingAgreementId, {
+            ...base,
+            tenantAadhaar: existing.tenantAadhaar,
+            tenantPan: existing.tenantPan,
+            documents: existing.documents,
+            customText: undefined,
+            status: "Sent",
+          });
+        }
+        setEditingAgreementId(null);
+      } else {
+        addAgreement({ ...base, status: "Sent" });
+      }
       setSubmitting(false);
       setShowSuccess(true);
       clearAgreementDraftStorage();
@@ -2176,21 +2027,6 @@ export default function GenerateAgreement() {
           brokerageAmount={brokerageAmount} brokerageAmountOwner={brokerageAmountOwner} brokerageAmountTenant={brokerageAmountTenant}
           brokeragePaidBy={brokeragePaidBy} brokerageMode={brokerageMode}
           documentsComplete={documentsComplete}
-          onUpdateParties={(d) => {
-            setOwnerName(d.ownerName); setOwnerContact(d.ownerContact);
-            setAdditionalOwners(d.additionalOwners); setSelectedTenants(d.selectedTenants);
-            syncPartiesToSelectedProperty(d.ownerName, d.ownerContact, d.additionalOwners);
-          }}
-          onUpdateDetails={(d) => {
-            setStartDate(d.startDate); setMonthlyRent(d.monthlyRent); setSecurityDeposit(d.securityDeposit);
-            setLockInPeriod(d.lockInPeriod); setNoticePeriod(d.noticePeriod); setRentDueDay(d.rentDueDay);
-            setMaintenanceCharges(d.maintenanceCharges);
-          }}
-          onUpdateBrokerage={(d) => {
-            setBrokerageAmount(d.brokerageAmount); setBrokerageAmountOwner(d.brokerageAmountOwner);
-            setBrokerageAmountTenant(d.brokerageAmountTenant); setBrokeragePaidBy(d.brokeragePaidBy);
-            setBrokerageMode(d.brokerageMode);
-          }}
           onGoToStep={setStep}
           onSubmit={handleSubmit}
           submitting={submitting}
