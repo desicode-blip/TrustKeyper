@@ -247,9 +247,10 @@ export default function OwnerAddProperty() {
   useEffect(() => {
     // Pre-fill owner details from onboarding if available
     const storedName = sessionStorage.getItem("owner_name");
-    const storedContact = sessionStorage.getItem("owner_contact");
+    const storedPhone =
+      sessionStorage.getItem("owner_phone") || sessionStorage.getItem("owner_contact");
     if (storedName) setOwnerName(storedName);
-    if (storedContact) setOwnerContact(storedContact);
+    if (storedPhone) setOwnerContact(storedPhone);
 
     // Load persisted property data
     const savedData = localStorage.getItem("trustkeyper_onboarding_data");
@@ -340,19 +341,17 @@ export default function OwnerAddProperty() {
     setImageUrls((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const isValidContact = (v: string): boolean => {
-    if (!v.trim()) return false;
-    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
-    const phoneOk = /^\+?[\d\s\-().]{7,15}$/.test(v.trim());
-    return emailOk || phoneOk;
+  const isValidPhone = (v: string): boolean => {
+    const digits = v.replace(/\D/g, "");
+    return digits.length >= 10 && digits.length <= 12;
   };
 
   const contactTouched = ownerContact.length > 0;
-  const contactError = contactTouched && !isValidContact(ownerContact);
+  const contactError = contactTouched && !isValidPhone(ownerContact);
 
   const canContinue = (): boolean => {
     if (subStep === 0) {
-      return !!(address && area && city && pincode && country && isValidContact(ownerContact));
+      return !!(address && area && city && pincode && country && isValidPhone(ownerContact));
     }
     if (subStep === 1) {
       const typeOk = propertyType !== "" && (propertyType !== "Other" || propertyTypeOther.trim() !== "");
@@ -408,11 +407,7 @@ export default function OwnerAddProperty() {
 
   const renderStep0 = () => (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-        <div>
-          <FieldLabel required>Your Email ID</FieldLabel>
-          <Input value={ownerContact.includes("@") ? ownerContact : "meena@trustkeyper.com"} disabled className="bg-[#D1DAE8] border-none text-gray-500 h-10 rounded-sm" />
-        </div>
+      <div className="max-w-md">
         <div>
           <FieldLabel required>Phone Number</FieldLabel>
           <div className="flex bg-[#F5F7FA] border border-gray-200 rounded-sm overflow-hidden h-10">
@@ -420,7 +415,11 @@ export default function OwnerAddProperty() {
               <span className="text-sm">🇮🇳</span>
               <ChevronDown size={14} className="text-gray-400" />
             </div>
-            <Input value={!ownerContact.includes("@") ? ownerContact : "+91 6369856040"} disabled className="border-none bg-transparent h-full" />
+            <Input
+              value={ownerContact ? `+91 ${ownerContact.replace(/\D/g, "").slice(0, 10)}` : ""}
+              disabled
+              className="border-none bg-transparent h-full"
+            />
           </div>
         </div>
       </div>
@@ -781,9 +780,8 @@ export default function OwnerAddProperty() {
           </div>
           <DialogTitle className="text-2xl font-semibold text-center">We're on it!</DialogTitle>
           <DialogDescription className="text-center text-base mt-3 text-gray-600">
-            {ownerContact.includes("@") 
-              ? "Thank you for showing interest. You will receive a meeting link at your registered email address shortly to discuss your property."
-              : "Thank you for showing interest. Our expert property manager will contact you at your registered mobile number shortly."}
+            Thank you for showing interest. Our expert property manager will contact you at your registered mobile number
+            shortly.
           </DialogDescription>
           <div className="mt-8 w-full">
             <Button className="w-full bg-primary hover:bg-primary/90 text-white rounded-sm" onClick={() => { setIsManagedPopupOpen(false); }}>

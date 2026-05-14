@@ -80,13 +80,14 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
         </div>
 
         <p className="text-sm text-gray-600">
-          Didn't receive the verification OTP?{" "}
+          Didn&apos;t receive the verification OTP?{" "}
           {countdown > 0 ? (
-            <span className="font-medium">Resend otp in {countdown}s</span>
+            <span className="font-medium text-[#2563EB]">Resend otp in {countdown}s</span>
           ) : (
-            <button 
-              onClick={() => setCountdown(10)} 
-              className="font-medium underline text-gray-900 hover:text-primary"
+            <button
+              type="button"
+              onClick={() => setCountdown(10)}
+              className="font-medium text-[#2563EB] hover:underline"
             >
               Resend otp
             </button>

@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Onboarding from "@/pages/Onboarding";
+import Login from "@/pages/Login";
 import BrokerDashboard from "@/pages/BrokerDashboard";
 import BrokerProperties from "@/pages/BrokerProperties";
 import BrokerTenants from "@/pages/BrokerTenants";
@@ -32,6 +33,7 @@ const queryClient = new QueryClient();
 function Router() {
   return (
     <Switch>
+      <Route path="/login" component={Login} />
       <Route path="/" component={Onboarding} />
       <Route path="/owner/properties/add" component={OwnerAddProperty} />
       <Route path="/owner/dashboard" component={OwnerDashboard} />

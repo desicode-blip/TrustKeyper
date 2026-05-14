@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 interface OwnerStep4OTPProps {
-  details: { name: string; contact: string };
+  details: { name: string; phone: string };
   onNext: () => void;
 }
 
@@ -24,7 +24,6 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
     newOtp[index] = value.replace(/\D/g, "");
     setOtp(newOtp);
 
-    // Auto-focus next input
     if (value && index < 3) {
       const nextInput = document.getElementById(`owner-otp-${index + 1}`);
       nextInput?.focus();
@@ -32,11 +31,12 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
   };
 
   const isComplete = otp.every((digit) => digit !== "");
+  const displayPhone = details.phone.replace(/\D/g, "").slice(0, 10);
 
   return (
     <div className="flex flex-col h-full max-w-2xl">
       <div className="mb-8 border-b pb-6">
-        <h1 className="text-3xl font-semibold text-gray-900">Let's know you better</h1>
+        <h1 className="text-3xl font-semibold text-gray-900">Let&apos;s know you better</h1>
       </div>
 
       <div className="space-y-6 mb-8 max-w-md">
@@ -46,14 +46,19 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
         </div>
 
         <div className="space-y-2">
-          <Label className="text-gray-700">Email/Phone Number</Label>
-          <Input value={details.contact} readOnly className="bg-[#E2E8F0] border-none text-gray-500 h-12" />
+          <Label className="text-gray-700">Phone Number</Label>
+          <Input
+            value={displayPhone ? `+91 ${displayPhone}` : ""}
+            readOnly
+            className="bg-[#E2E8F0] border-none text-gray-500 h-12"
+          />
         </div>
       </div>
 
       <div className="mb-8">
         <p className="text-gray-500 text-sm mb-4">
-          Enter the OTP that we have sent to <span className="font-semibold text-gray-900">{details.contact}</span>
+          Enter the OTP that we have sent to{" "}
+          <span className="font-semibold text-gray-900">+91 {displayPhone}</span>
         </p>
 
         <div className="flex gap-4 mb-4">
@@ -76,13 +81,11 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
         </div>
 
         <p className="text-sm text-gray-500">
-          Didn't receive the verification OTP?{" "}
+          Didn&apos;t receive the verification OTP?{" "}
           {countdown > 0 ? (
-            <span className="font-medium text-primary cursor-pointer hover:underline">
-              Resend otp in {countdown}s
-            </span>
+            <span className="font-medium text-[#2563EB]">Resend otp in {countdown}s</span>
           ) : (
-            <button onClick={() => setCountdown(10)} className="font-medium text-primary hover:underline">
+            <button type="button" onClick={() => setCountdown(10)} className="font-medium text-[#2563EB] hover:underline">
               Resend otp
             </button>
           )}
@@ -100,7 +103,10 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
         </Button>
 
         <p className="text-sm text-gray-400">
-          By continuing, you agree to TrustKeyper <a href="#" className="text-accent hover:underline">Terms and Conditions</a>
+          By continuing, you agree to TrustKeyper{" "}
+          <a href="#" className="text-accent hover:underline">
+            Terms and Conditions
+          </a>
         </p>
       </div>
 
