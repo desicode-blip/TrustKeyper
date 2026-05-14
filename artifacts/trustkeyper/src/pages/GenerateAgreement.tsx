@@ -237,16 +237,16 @@ function Step1Property({
     <div className="max-w-2xl w-full">
 
       {selected ? (
-        <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4 mb-4">
-          <div className="flex items-start justify-between gap-2">
+        <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4 mb-4 min-w-0 overflow-hidden">
+          <div className="flex items-start justify-between gap-2 min-w-0">
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-gray-900 text-sm">
+              <p className="font-semibold text-gray-900 text-sm break-words">
                 {getPropertyTitle(selected)}
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-gray-500 mt-0.5 break-words">
                 {selected.area}, {selected.city} · {selected.unitSize !== "Other" ? selected.unitSize : selected.unitSizeOther} · {selected.furnishing}
               </p>
-              <div className="flex items-center gap-3 mt-2 text-xs">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs min-w-0">
                 <span className="text-primary font-semibold">
                   ₹{Number(selected.monthlyRent).toLocaleString("en-IN")}/mo
                 </span>
@@ -316,7 +316,7 @@ function Step1Property({
                       className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${i > 0 ? "border-t border-gray-100" : ""}`}
                     >
                       <p className="text-sm font-semibold text-gray-900">{getPropertyTitle(p)}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-xs text-gray-500 mt-0.5 break-words">
                         {p.area} · {[size, type, p.furnishing].filter(Boolean).join(" · ")}
                         {p.monthlyRent && (
                           <span className="text-primary font-medium"> · {formatRentShort(p.monthlyRent)}</span>
@@ -351,7 +351,7 @@ function PartyCard({ name, contact, badge, onRemove }: {
   name: string; contact: string; badge?: string; onRemove?: () => void;
 }) {
   return (
-    <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 bg-white mb-2 ${badge ? "border-primary/30 bg-primary/5" : "border-gray-200"}`}>
+    <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 bg-white mb-2 min-w-0 overflow-hidden ${badge ? "border-primary/30 bg-primary/5" : "border-gray-200"}`}>
       <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
         <User size={15} className="text-gray-500" />
       </div>
@@ -364,7 +364,7 @@ function PartyCard({ name, contact, badge, onRemove }: {
             </span>
           )}
         </div>
-        <p className="text-xs text-gray-500 mt-0.5">{contact}</p>
+        <p className="text-xs text-gray-500 mt-0.5 break-words">{contact}</p>
       </div>
       {badge ? (
         <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center shrink-0">
@@ -778,7 +778,7 @@ function DocRow({ doc, personName, onUpload, onSendLink, onRemove, onAddDetails 
   const fileRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 rounded-xl border px-4 py-3 transition-colors ${doc.status === "uploaded" ? "bg-white border-gray-200" : doc.status === "link_sent" ? "bg-white border-gray-200" : "bg-amber-50/40 border-amber-100"}`}>
+    <div className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 rounded-xl border px-4 py-3 transition-colors min-w-0 overflow-hidden ${doc.status === "uploaded" ? "bg-white border-gray-200" : doc.status === "link_sent" ? "bg-white border-gray-200" : "bg-amber-50/40 border-amber-100"}`}>
       {/* Status icon */}
       <div className="shrink-0">
         {doc.status === "uploaded" && <CheckCircle2 size={20} className="text-green-500" />}
@@ -790,13 +790,13 @@ function DocRow({ doc, personName, onUpload, onSendLink, onRemove, onAddDetails 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-900">{doc.label}</p>
         {doc.status === "uploaded" && (
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-500 mt-0.5 break-words">
             {doc.fileName ? `${doc.fileName} · ${doc.fileSize ? fmtFileSize(doc.fileSize) : ""} · ` : ""}
             Uploaded just now · <span className="text-green-600 font-medium">Verified ✓</span>
           </p>
         )}
         {doc.status === "link_sent" && (
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-500 mt-0.5 break-words">
             Waiting for {personName} to upload · <span className="text-blue-500">Link sent Just now</span>
           </p>
         )}
@@ -1386,7 +1386,7 @@ function ReviewRow({ icon: Icon, label, value }: { icon: React.ElementType; labe
         <Icon size={14} className="text-gray-400 shrink-0" />
         <span className="text-xs text-gray-500 sm:w-32 shrink-0">{label}</span>
       </div>
-      <span className="text-sm font-medium text-gray-800 sm:flex-1 sm:text-right pl-6 sm:pl-0 break-words">{value || "—"}</span>
+      <span className="text-sm font-medium text-gray-800 sm:flex-1 sm:text-right pl-6 sm:pl-0 min-w-0 break-words">{value || "—"}</span>
     </div>
   );
 }
