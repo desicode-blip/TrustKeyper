@@ -15,7 +15,7 @@ export function AuthCornerDecor({ className }: { className?: string }) {
       <img
         src={houseDecor}
         alt=""
-        className="h-full w-full object-contain object-bottom-right opacity-[0.22] contrast-125"
+        className="h-full w-full object-contain object-bottom-right opacity-[0.62] contrast-110"
       />
     </div>
   );

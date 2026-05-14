@@ -127,7 +127,7 @@ export default function Onboarding() {
           )}
         </div>
 
-        <AuthGoToLoginLink />
+        {step > 1 ? <AuthGoToLoginLink /> : null}
 
         <Dialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
         <DialogContent className="sm:max-w-md text-center p-10 flex flex-col items-center">
