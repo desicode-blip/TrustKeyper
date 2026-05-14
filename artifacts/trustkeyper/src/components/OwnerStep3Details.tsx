@@ -2,6 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { profileExists } from "@/lib/auth";
 
 interface OwnerStep3DetailsProps {
   details: { name: string; phone: string };
@@ -11,7 +12,8 @@ interface OwnerStep3DetailsProps {
 
 export default function OwnerStep3Details({ details, setDetails, onNext }: OwnerStep3DetailsProps) {
   const digits = details.phone.replace(/\D/g, "").slice(0, 10);
-  const isComplete = details.name.trim().length > 0 && digits.length === 10;
+  const duplicateOwnerPhone = digits.length === 10 && profileExists(digits, "owner");
+  const isComplete = details.name.trim().length > 0 && digits.length === 10 && !duplicateOwnerPhone;
 
   return (
     <div className="flex flex-col h-full max-w-2xl">
@@ -57,6 +59,9 @@ export default function OwnerStep3Details({ details, setDetails, onNext }: Owner
               className="bg-[#F1F5F9] border-none text-gray-900 h-12 flex-1"
             />
           </div>
+          {duplicateOwnerPhone ? (
+            <p className="text-sm text-destructive">An account already exists for this number.</p>
+          ) : null}
         </div>
       </div>
 

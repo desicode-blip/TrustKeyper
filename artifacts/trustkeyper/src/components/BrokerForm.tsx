@@ -4,7 +4,6 @@ import { toast } from "@/hooks/use-toast";
 import {
   profileExists,
   signUpSuccess,
-  loginSuccess,
   dashboardRouteFor,
   ALL_ROLES,
   type Role,
@@ -28,8 +27,17 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   const [countdown, setCountdown] = useState(12);
   const [, setLocation] = useLocation();
 
+  const phoneDigits = phone.replace(/\D/g, "").slice(0, 10);
+  const pendingRole = sessionStorage.getItem("tk_pending_role") || "broker";
+  const signupRole = (ALL_ROLES.includes(pendingRole as Role) ? pendingRole : "broker") as Role;
+  const duplicateSignupPhone =
+    phoneDigits.length === 10 && profileExists(phoneDigits, signupRole);
+
   const formValid =
-    fullName.trim().length > 0 && phone.trim().length === 10 && agreed;
+    fullName.trim().length > 0 &&
+    phoneDigits.length === 10 &&
+    agreed &&
+    !duplicateSignupPhone;
 
   useEffect(() => {
     if (!otpStage || countdown <= 0) return;
@@ -39,6 +47,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
 
   const handleSendOtp = () => {
     if (!formValid) return;
+    if (profileExists(phoneDigits, signupRole)) return;
     setOtpStage(true);
     setCountdown(12);
   };
@@ -55,28 +64,28 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
     }
 
     if (next.every((d) => d !== "")) {
-      const phoneDigits = phone.replace(/\D/g, "").slice(0, 10);
       const pending = sessionStorage.getItem("tk_pending_role") || "broker";
       const role = (ALL_ROLES.includes(pending as Role) ? pending : "broker") as Role;
       if (profileExists(phoneDigits, role)) {
         toast({
-          title: `You already have a ${role} account. Logging you in.`,
+          title: "An account already exists for this number.",
+          variant: "destructive",
         });
-        loginSuccess(phoneDigits, role);
-      } else {
-        signUpSuccess(phoneDigits, role, {
-          name: fullName,
-          firm,
-          phone: phoneDigits,
-          email: "",
-          bankHolderName: "",
-          bankName: "",
-          bankAccountNumber: "",
-          bankIFSC: "",
-          upiId: "",
-          upiQrFileName: "",
-        });
+        setOtp(["", "", "", "", "", ""]);
+        return;
       }
+      signUpSuccess(phoneDigits, role, {
+        name: fullName,
+        firm,
+        phone: phoneDigits,
+        email: "",
+        bankHolderName: "",
+        bankName: "",
+        bankAccountNumber: "",
+        bankIFSC: "",
+        upiId: "",
+        upiQrFileName: "",
+      });
       setTimeout(() => {
         onComplete?.();
         setLocation(dashboardRouteFor(role));
@@ -152,7 +161,11 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
               className={`flex-1 ${otpStage ? "bg-blue-50/60" : "bg-white"}`}
             />
           </div>
-          <p className="text-xs text-gray-500">We'll send an OTP to verify</p>
+          {duplicateSignupPhone && !otpStage ? (
+            <p className="text-sm text-destructive">An account already exists for this number.</p>
+          ) : (
+            <p className="text-xs text-gray-500">We&apos;ll send an OTP to verify</p>
+          )}
         </div>
       </div>
 

@@ -2,6 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ALL_ROLES, profileExists, type Role } from "@/lib/auth";
 
 interface Step2DetailsProps {
   details: { name: string; phone: string };
@@ -10,7 +11,16 @@ interface Step2DetailsProps {
 }
 
 export default function Step2Details({ details, setDetails, onNext }: Step2DetailsProps) {
-  const isComplete = details.name.trim().length > 0 && details.phone.trim().length > 0;
+  const phoneDigits = details.phone.replace(/\D/g, "").slice(0, 10);
+  const pending = sessionStorage.getItem("tk_pending_role");
+  const signupRole = (pending && ALL_ROLES.includes(pending as Role) ? pending : "") as Role | "";
+  const duplicatePhone =
+    signupRole !== "" && phoneDigits.length === 10 && profileExists(phoneDigits, signupRole);
+  const isComplete =
+    details.name.trim().length > 0 &&
+    phoneDigits.length === 10 &&
+    signupRole !== "" &&
+    !duplicatePhone;
 
   return (
     <div className="flex flex-col h-full max-w-md">
@@ -35,11 +45,21 @@ export default function Step2Details({ details, setDetails, onNext }: Step2Detai
           <Input
             id="phone"
             type="tel"
+            inputMode="numeric"
+            maxLength={10}
             placeholder="Placeholder"
-            value={details.phone}
-            onChange={(e) => setDetails({ ...details, phone: e.target.value })}
+            value={phoneDigits}
+            onChange={(e) =>
+              setDetails({
+                ...details,
+                phone: e.target.value.replace(/\D/g, "").slice(0, 10),
+              })
+            }
             className="bg-white"
           />
+          {duplicatePhone ? (
+            <p className="text-sm text-destructive">An account already exists for this number.</p>
+          ) : null}
         </div>
       </div>
 

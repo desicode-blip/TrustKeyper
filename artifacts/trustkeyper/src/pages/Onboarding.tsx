@@ -6,7 +6,6 @@ import {
   ALL_ROLES,
   type Role,
   dashboardRouteFor,
-  loginSuccess,
   profileExists,
   signUpSuccess,
 } from "@/lib/auth";
@@ -103,14 +102,17 @@ export default function Onboarding() {
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex-1 min-h-0">
           {step === 1 && (
-            <Step1Role
-              role={role}
-              setRole={setRole}
-              onNext={() => {
-                if (role) sessionStorage.setItem("tk_pending_role", role);
-                goNext();
-              }}
-            />
+            <>
+              <Step1Role
+                role={role}
+                setRole={setRole}
+                onNext={() => {
+                  if (role) sessionStorage.setItem("tk_pending_role", role);
+                  goNext();
+                }}
+              />
+              {role ? <AuthGoToLoginLink persistRole={role} className="text-sm text-gray-500 mt-6 pb-28 sm:pb-0" /> : null}
+            </>
           )}
 
           {step >= 2 && role === "broker" && <BrokerForm />}
@@ -134,10 +136,9 @@ export default function Onboarding() {
                 const r = (ALL_ROLES.includes(pending as Role) ? pending : "owner") as Role;
                 if (profileExists(phoneDigits, r)) {
                   toast({
-                    title: `You already have an Owner account. Logging you in.`,
+                    title: "An account already exists for this number.",
+                    variant: "destructive",
                   });
-                  loginSuccess(phoneDigits, r);
-                  setLocation(dashboardRouteFor(r));
                   return;
                 }
                 signUpSuccess(phoneDigits, r, {
@@ -180,10 +181,9 @@ export default function Onboarding() {
                 if (!ALL_ROLES.includes(r)) return;
                 if (profileExists(phoneDigits, r)) {
                   toast({
-                    title: `You already have a ${r} account. Logging you in.`,
+                    title: "An account already exists for this number.",
+                    variant: "destructive",
                   });
-                  loginSuccess(phoneDigits, r);
-                  setLocation(dashboardRouteFor(r));
                   return;
                 }
                 signUpSuccess(phoneDigits, r, {

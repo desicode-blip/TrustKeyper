@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
 import { AuthGoToSignupLink } from "@/components/AuthFlowFooterLinks";
@@ -6,13 +6,6 @@ import Step1Role from "@/components/Step1Role";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import {
   ALL_ROLES,
@@ -39,22 +32,35 @@ function roleTitle(r: Role): string {
   }
 }
 
+function readPendingRoleForLogin(): { phase: Phase; role: string } {
+  if (typeof window === "undefined") return { phase: "role", role: "" };
+  const pending = sessionStorage.getItem("tk_pending_role");
+  if (pending && ALL_ROLES.includes(pending as Role)) {
+    return { phase: "phone", role: pending };
+  }
+  return { phase: "role", role: "" };
+}
+
+const loginCtaClass =
+  "rounded-lg bg-[#2563EB] hover:bg-[#1d4ed8] text-white border-0 shadow-none disabled:opacity-50";
+
 export default function Login() {
-  const [, setLocation] = useLocation();
-  const [phase, setPhase] = useState<Phase>("role");
-  const [role, setRole] = useState("");
+  const [loc, setLocation] = useLocation();
+  const [phase, setPhase] = useState<Phase>(() => readPendingRoleForLogin().phase);
+  const [role, setRole] = useState(() => readPendingRoleForLogin().role);
   const [phone, setPhone] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [countdown, setCountdown] = useState(10);
-  const [noAccountRole, setNoAccountRole] = useState<Role | null>(null);
 
-  useEffect(() => {
+  // Keep login aligned with signup flow: role was already chosen when tk_pending_role is set.
+  useLayoutEffect(() => {
     const pending = sessionStorage.getItem("tk_pending_role");
     if (pending && ALL_ROLES.includes(pending as Role)) {
       setRole(pending);
+      setPhase((p) => (p === "role" ? "phone" : p));
     }
-  }, []);
+  }, [loc]);
 
   useEffect(() => {
     if (!otpSent || countdown <= 0) return;
@@ -63,7 +69,17 @@ export default function Login() {
   }, [countdown, otpSent]);
 
   const phoneDigits = phone.replace(/\D/g, "").slice(0, 10);
-  const canRequest = phoneDigits.length === 10;
+  const activeRole = ((): Role | null => {
+    const p = sessionStorage.getItem("tk_pending_role");
+    if (p && ALL_ROLES.includes(p as Role)) return p as Role;
+    if (role && ALL_ROLES.includes(role as Role)) return role as Role;
+    return null;
+  })();
+  const accountExistsForLogin =
+    activeRole !== null && phoneDigits.length === 10 && profileExists(phoneDigits, activeRole);
+  const canRequest = phoneDigits.length === 10 && accountExistsForLogin;
+  const showNoAccountHint =
+    activeRole !== null && phoneDigits.length === 10 && !profileExists(phoneDigits, activeRole);
   const isOtpComplete = otp.every((d) => d !== "");
 
   const handleOtpChange = (index: number, value: string) => {
@@ -82,26 +98,36 @@ export default function Login() {
       toast({ title: "Select a role", variant: "destructive" });
       return;
     }
+    if (!profileExists(phoneDigits, r)) {
+      toast({
+        title: "No account found",
+        description: "There is no account for this number.",
+        variant: "destructive",
+      });
+      return;
+    }
     const ok = loginSuccess(phoneDigits, r);
     if (ok) {
       toast({ title: "Signed in", description: "Welcome back to TrustKeyper." });
       setLocation(dashboardRouteFor(r));
       return;
     }
-    setNoAccountRole(r);
+    toast({
+      title: "No account found",
+      description: "There is no account for this number.",
+      variant: "destructive",
+    });
   };
 
-  const goSignupForRole = () => {
-    if (noAccountRole) sessionStorage.setItem("tk_pending_role", noAccountRole);
-    setNoAccountRole(null);
-    setLocation("/");
-  };
+  const loginHeading = activeRole
+    ? `Login to TrustKeyper as ${roleTitle(activeRole)}`
+    : "Login to TrustKeyper";
 
   return (
     <AuthFlowLayout onBack={() => setLocation("/")} backDisabled={false}>
       <div className="max-w-md flex flex-col flex-1">
         <div className="mb-8 border-b border-gray-200 pb-4">
-          <h1 className="text-3xl font-semibold text-gray-900">Login to TrustKeyper</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">{loginHeading}</h1>
         </div>
 
         {phase === "role" && (
@@ -112,6 +138,7 @@ export default function Login() {
               onNext={() => {
                 if (!role) return;
                 sessionStorage.setItem("tk_pending_role", role);
+                setPhone("");
                 setPhase("phone");
               }}
             />
@@ -140,6 +167,9 @@ export default function Login() {
                   className="bg-white border-gray-200"
                 />
               </div>
+              {showNoAccountHint ? (
+                <p className="text-sm text-destructive">There is no account for this number.</p>
+              ) : null}
             </div>
 
             <div className="hidden sm:block">
@@ -147,12 +177,13 @@ export default function Login() {
                 size="lg"
                 disabled={!canRequest}
                 onClick={() => {
+                  if (!canRequest) return;
                   setOtpSent(true);
                   setCountdown(10);
                   setOtp(["", "", "", ""]);
                   setPhase("otp");
                 }}
-                className="w-full sm:w-52 rounded-lg bg-[#6B7280] hover:bg-[#4B5563] text-white"
+                className={`w-full sm:w-52 ${loginCtaClass}`}
               >
                 Request OTP &rarr;
               </Button>
@@ -162,12 +193,13 @@ export default function Login() {
                 size="lg"
                 disabled={!canRequest}
                 onClick={() => {
+                  if (!canRequest) return;
                   setOtpSent(true);
                   setCountdown(10);
                   setOtp(["", "", "", ""]);
                   setPhase("otp");
                 }}
-                className="w-full rounded-lg bg-[#6B7280] hover:bg-[#4B5563] text-white"
+                className={`w-full ${loginCtaClass}`}
               >
                 Request OTP &rarr;
               </Button>
@@ -227,7 +259,7 @@ export default function Login() {
                 size="lg"
                 disabled={!isOtpComplete}
                 onClick={finishLogin}
-                className="w-full sm:w-52 rounded-lg bg-[#6B7280] hover:bg-[#4B5563] text-white"
+                className={`w-full sm:w-52 ${loginCtaClass}`}
               >
                 Continue &rarr;
               </Button>
@@ -237,7 +269,7 @@ export default function Login() {
                 size="lg"
                 disabled={!isOtpComplete}
                 onClick={finishLogin}
-                className="w-full rounded-lg bg-[#6B7280] hover:bg-[#4B5563] text-white"
+                className={`w-full ${loginCtaClass}`}
               >
                 Continue &rarr;
               </Button>
@@ -246,27 +278,6 @@ export default function Login() {
             <AuthGoToSignupLink persistRole={role || sessionStorage.getItem("tk_pending_role") || undefined} />
           </>
         )}
-
-        <Dialog open={noAccountRole !== null} onOpenChange={(o) => !o && setNoAccountRole(null)}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>No account found</DialogTitle>
-              <DialogDescription>
-                {noAccountRole
-                  ? `No ${roleTitle(noAccountRole)} account found for this number. Would you like to Sign Up as ${roleTitle(noAccountRole)}?`
-                  : ""}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button type="button" variant="outline" onClick={() => setNoAccountRole(null)}>
-                Cancel
-              </Button>
-              <Button type="button" className="bg-primary hover:bg-primary/90" onClick={goSignupForRole}>
-                Sign Up
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </AuthFlowLayout>
   );
