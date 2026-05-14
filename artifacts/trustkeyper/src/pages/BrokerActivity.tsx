@@ -5,6 +5,7 @@ import {
   Filter, Search, CheckCheck, Bell,
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
+import BrokerPendingFlowBanners from "@/components/BrokerPendingFlowBanners";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import { getTenants, timeAgo } from "@/lib/tenants";
 import { getAgreements } from "@/lib/agreements";
@@ -195,6 +196,7 @@ export default function BrokerActivity() {
 
   return (
     <BrokerLayout>
+      <BrokerPendingFlowBanners className="mb-5" />
       {/* ── Page header ── */}
       <div className="flex items-center gap-3 mb-6">
         <button

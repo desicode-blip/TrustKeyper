@@ -5,11 +5,7 @@ import footerLogo from "@assets/Frame_3466296_1777451511864.png";
 import footerWave from "@assets/Vector_20_1777451511865.png";
 import { Phone, Mail } from "lucide-react";
 import { hasBankDetails } from "@/lib/brokerProfile";
-import {
-  BROKER_PENDING_FLOWS_EVENT,
-  getPendingFlowItems,
-  type PendingFlowItem,
-} from "@/lib/brokerPendingFlows";
+import { BROKER_PENDING_FLOWS_EVENT, getPendingFlowItems } from "@/lib/brokerPendingFlows";
 import {
   LayoutDashboard,
   Building2,
@@ -69,7 +65,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
   const brokerName = getBrokerName();
   const initials = getInitials(brokerName);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [pendingFlows, setPendingFlows] = useState<PendingFlowItem[]>(() =>
+  const [pendingFlows, setPendingFlows] = useState(() =>
     typeof window !== "undefined" ? getPendingFlowItems() : [],
   );
 
@@ -123,26 +119,6 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
           </Link>
         </div>
       </header>
-
-      {pendingFlows.length > 0 && (
-        <div className="shrink-0 z-10 border-b border-amber-100 bg-amber-50/95 px-4 py-2.5 sm:px-8">
-          <div className="max-w-4xl mx-auto flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-2">
-            {pendingFlows.map((p) => (
-              <div key={p.kind} className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
-                <p className="text-xs sm:text-sm text-amber-900 font-medium leading-snug min-w-0 flex-1 sm:flex-none">
-                  {p.title}
-                </p>
-                <Link
-                  href={p.continueHref}
-                  className="inline-flex items-center justify-center shrink-0 h-8 px-3 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors"
-                >
-                  Continue
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="flex flex-1 min-h-0">
         {/* ── Mobile sidebar backdrop ─────────────────────────────────────── */}
