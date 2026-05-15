@@ -108,7 +108,6 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
             <Clock size={14} />
             <span>IST</span>
           </div>
-          <AccountSwitcher />
           <Link href="/broker/activity" className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50">
             <Bell size={17} />
             {pendingFlows.length > 0 && (
@@ -193,6 +192,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
             </p>
           </div>
           <nav className="flex flex-col gap-1">
+            <AccountSwitcher onAfterSwitch={closeSidebar} />
             {helpItems.map((item) => {
               const Icon = item.icon;
               if (item.id === "logout") {

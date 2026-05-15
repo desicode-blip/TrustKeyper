@@ -101,7 +101,6 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
             <Clock size={14} />
             <span>IST</span>
           </div>
-          <AccountSwitcher />
           <Popover>
             <PopoverTrigger asChild>
               <button className="relative w-10 h-10 rounded-xl border border-gray-100 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50 focus:outline-none transition-all hover:border-gray-200 shadow-sm">
@@ -220,6 +219,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
             </p>
           </div>
           <nav className="flex flex-col gap-1">
+            <AccountSwitcher onAfterSwitch={closeSidebar} />
             {helpItems.map((item) => {
               const Icon = item.icon;
               if (item.id === "logout") {

@@ -80,9 +80,47 @@ export function profileExists(phone: string, role: Role): boolean {
   return localStorage.getItem(storageKey(phone, role, "profile")) !== null;
 }
 
+/** All roles this phone number has signed up for */
+export function getAccountsForPhone(phone: string): Role[] {
+  return ALL_ROLES.filter((r) => profileExists(phone, r));
+}
+
+/** True when the same phone has more than one role profile */
+export function hasMultipleAccounts(phone: string): boolean {
+  return getAccountsForPhone(phone).length > 1;
+}
+
 /** All OTHER roles this phone number has accounts for */
 export function getOtherAccounts(phone: string, currentRole: Role): Role[] {
   return ALL_ROLES.filter((r) => r !== currentRole && profileExists(phone, r));
+}
+
+export function roleDisplayLabel(role: Role): string {
+  switch (role) {
+    case "owner":
+      return "Property Owner";
+    case "broker":
+      return "Broker";
+    case "tenant":
+      return "Tenant";
+    case "manager":
+      return "Manager";
+    default:
+      return role;
+  }
+}
+
+/** Profile display name for a phone + role, or the role label if unset */
+export function getProfileDisplayName(phone: string, role: Role): string {
+  try {
+    const raw = localStorage.getItem(storageKey(phone, role, "profile"));
+    if (!raw) return roleDisplayLabel(role);
+    const p = JSON.parse(raw) as Record<string, string>;
+    const name = typeof p.name === "string" ? p.name.trim() : "";
+    return name || roleDisplayLabel(role);
+  } catch {
+    return roleDisplayLabel(role);
+  }
 }
 
 /** Switch to a different role (same phone) */
