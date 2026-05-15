@@ -1,4 +1,4 @@
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@workspace/db/client";
@@ -111,20 +111,4 @@ export async function getRolesForPhone(phone: string): Promise<string[]> {
     if (data.profile) roles.push(key.split(":")[1] ?? "");
   }
   return roles.filter(Boolean);
-}
-
-/** Remove every account profile and synced blob (server-side fresh start). */
-export async function clearAllAccountData(): Promise<{ store: "postgres" | "file" }> {
-  const db = getDb();
-  if (db) {
-    await db.delete(userDataTable);
-    return { store: "postgres" };
-  }
-
-  try {
-    await unlink(FILE_PATH);
-  } catch {
-    await writeFileStore({});
-  }
-  return { store: "file" };
 }

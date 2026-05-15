@@ -1,4 +1,3 @@
-import { clearAllLocalTrustKeyperData } from "./clearLocalData";
 import {
   clearActiveSessionBackup,
   persistActiveSessionBackup,
@@ -223,11 +222,3 @@ export function logout(): void {
   sessionStorage.removeItem("tk_pending_role");
   clearActiveSessionBackup();
 }
-
-/** Wipe every TrustKeyper key in this browser (use when starting completely fresh). */
-export function resetLocalAppData(): void {
-  logout();
-  clearAllLocalTrustKeyperData();
-}
-
-export { clearAllLocalTrustKeyperData } from "./clearLocalData";
