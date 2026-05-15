@@ -1,3 +1,8 @@
+import {
+  clearActiveSessionBackup,
+  persistActiveSessionBackup,
+} from "./initAppStorage";
+import { migrateLegacyStorage } from "./storageMigration";
 import { getActiveSession as readTkActiveSession, setSessionItem, storageKey } from "./storageKeys";
 
 export type Role = "broker" | "owner" | "tenant" | "manager";
@@ -33,6 +38,7 @@ export function signUpSuccess(phone: string, role: Role, profileData: object): v
   const merged = { ...emptyProfileRecord(), ...(profileData as Record<string, string>) };
   localStorage.setItem(key, JSON.stringify(merged));
   setActiveSession(phone, role);
+  migrateLegacyStorage(phone, role);
   if (merged.name) setSessionItem("name", merged.name);
   if (merged.firm) setSessionItem("firm", merged.firm);
   if (merged.phone) setSessionItem("phone", merged.phone);
@@ -44,6 +50,7 @@ export function loginSuccess(phone: string, role: Role): boolean {
   const exists = localStorage.getItem(key) !== null;
   if (exists) {
     setActiveSession(phone, role);
+    migrateLegacyStorage(phone, role);
     try {
       const raw = localStorage.getItem(key);
       if (raw) {
@@ -64,6 +71,7 @@ export function loginSuccess(phone: string, role: Role): boolean {
 export function setActiveSession(phone: string, role: Role): void {
   sessionStorage.setItem("tk_active_phone", phone);
   sessionStorage.setItem("tk_active_role", role);
+  persistActiveSessionBackup(phone, role);
 }
 
 /** Get active session (typed role) */
@@ -128,6 +136,8 @@ export function switchRole(role: Role): void {
   const phone = sessionStorage.getItem("tk_active_phone");
   if (!phone) return;
   sessionStorage.setItem("tk_active_role", role);
+  persistActiveSessionBackup(phone, role);
+  migrateLegacyStorage(phone, role);
   try {
     const key = storageKey(phone, role, "profile");
     const raw = localStorage.getItem(key);
@@ -147,4 +157,5 @@ export function logout(): void {
   sessionStorage.removeItem("tk_active_phone");
   sessionStorage.removeItem("tk_active_role");
   sessionStorage.removeItem("tk_pending_role");
+  clearActiveSessionBackup();
 }
