@@ -49,3 +49,29 @@ export function removeSessionItem(dataType: string): void {
   const key = activeKey(dataType);
   if (key) sessionStorage.removeItem(key);
 }
+
+/** Write local storage for a specific account (used when restoring from cloud). */
+export function writeLocalForAccount(
+  phone: string,
+  role: string,
+  dataType: string,
+  value: string,
+  mirrorSession = true,
+): void {
+  const key = storageKey(phone, role, dataType);
+  try {
+    localStorage.setItem(key, value);
+    if (mirrorSession) {
+      const session = getActiveSession();
+      if (session?.phone === phone && session?.role === role) {
+        sessionStorage.setItem(key, value);
+      }
+    }
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+export function normalizePhoneDigits(phone: string): string {
+  return phone.replace(/\D/g, "").slice(-10);
+}

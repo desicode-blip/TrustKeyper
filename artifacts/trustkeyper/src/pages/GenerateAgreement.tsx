@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
 import { broadcastBrokerPendingFlowsUpdated, clearAgreementDraftStorage } from "@/lib/brokerPendingFlows";
+import { queueCloudSync } from "@/lib/cloudSync";
 import { getItem, getSessionItem, removeSessionItem, setItem, setSessionItem } from "@/lib/storageKeys";
 import { getProperties, getPropertyTitle, updateProperty, type Property } from "@/lib/properties";
 import { ensureTenantFromAgreement, getTenants, type Tenant } from "@/lib/tenants";
@@ -1796,7 +1797,9 @@ export default function GenerateAgreement() {
           editingAgreementId,
           savedAt: Date.now(),
         };
-        setItem("agreement_draft", JSON.stringify(draft));
+        const draftJson = JSON.stringify(draft);
+        setItem("agreement_draft", draftJson);
+        queueCloudSync("agreement_draft", draftJson);
         broadcastBrokerPendingFlowsUpdated();
       } catch {
         /* ignore */

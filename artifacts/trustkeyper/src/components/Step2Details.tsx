@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ALL_ROLES, profileExists, type Role } from "@/lib/auth";
+import { ALL_ROLES, profileExistsAsync, type Role } from "@/lib/auth";
 
 interface Step2DetailsProps {
   details: { name: string; phone: string };
@@ -14,8 +14,21 @@ export default function Step2Details({ details, setDetails, onNext }: Step2Detai
   const phoneDigits = details.phone.replace(/\D/g, "").slice(0, 10);
   const pending = sessionStorage.getItem("tk_pending_role");
   const signupRole = (pending && ALL_ROLES.includes(pending as Role) ? pending : "") as Role | "";
-  const duplicatePhone =
-    signupRole !== "" && phoneDigits.length === 10 && profileExists(phoneDigits, signupRole);
+  const [duplicatePhone, setDuplicatePhone] = useState(false);
+
+  useEffect(() => {
+    if (signupRole === "" || phoneDigits.length !== 10) {
+      setDuplicatePhone(false);
+      return;
+    }
+    let cancelled = false;
+    void profileExistsAsync(phoneDigits, signupRole).then((exists) => {
+      if (!cancelled) setDuplicatePhone(exists);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [phoneDigits, signupRole]);
   const isComplete =
     details.name.trim().length > 0 &&
     phoneDigits.length === 10 &&

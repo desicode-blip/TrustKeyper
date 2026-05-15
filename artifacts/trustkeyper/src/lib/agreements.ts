@@ -1,3 +1,4 @@
+import { queueCloudSync } from "./cloudSync";
 import { getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
 
 export type AgreementStatus = "Draft" | "Sent" | "Signed" | "Expired";
@@ -42,6 +43,7 @@ function persistAgreements(list: Agreement[]): void {
     const payload = JSON.stringify(list);
     setItem("agreements", payload);
     setSessionItem("agreements", payload);
+    queueCloudSync("agreements", payload);
   } catch {
     /* ignore */
   }

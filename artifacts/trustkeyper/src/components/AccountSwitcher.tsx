@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Briefcase, Check, Home, IndianRupee, User, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import {
@@ -9,12 +9,11 @@ import {
 } from "@/components/ui/dialog";
 import {
   dashboardRouteFor,
-  getAccountsForPhone,
+  getAccountsForPhoneAsync,
   getActiveSession,
   getProfileDisplayName,
-  hasMultipleAccounts,
   roleDisplayLabel,
-  switchRole,
+  switchRoleAsync,
   type Role,
 } from "@/lib/auth";
 
@@ -50,17 +49,24 @@ export function AccountSwitcher({ onAfterSwitch, className }: AccountSwitcherPro
   const [, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
   const session = getActiveSession();
+  const [accounts, setAccounts] = useState<Role[]>([]);
 
-  if (!session || !hasMultipleAccounts(session.phone)) return null;
+  useEffect(() => {
+    if (!session) {
+      setAccounts([]);
+      return;
+    }
+    void getAccountsForPhoneAsync(session.phone).then(setAccounts);
+  }, [session?.phone, session?.role]);
 
-  const accounts = getAccountsForPhone(session.phone);
+  if (!session || accounts.length <= 1) return null;
 
-  const handleSwitch = (role: Role) => {
+  const handleSwitch = async (role: Role) => {
     if (role === session.role) {
       setOpen(false);
       return;
     }
-    switchRole(role);
+    await switchRoleAsync(role);
     setOpen(false);
     onAfterSwitch?.();
     setLocation(dashboardRouteFor(role));

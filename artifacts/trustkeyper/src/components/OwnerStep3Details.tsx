@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { profileExists } from "@/lib/auth";
+import { profileExistsAsync } from "@/lib/auth";
 
 interface OwnerStep3DetailsProps {
   details: { name: string; phone: string };
@@ -12,7 +12,21 @@ interface OwnerStep3DetailsProps {
 
 export default function OwnerStep3Details({ details, setDetails, onNext }: OwnerStep3DetailsProps) {
   const digits = details.phone.replace(/\D/g, "").slice(0, 10);
-  const duplicateOwnerPhone = digits.length === 10 && profileExists(digits, "owner");
+  const [duplicateOwnerPhone, setDuplicateOwnerPhone] = useState(false);
+
+  useEffect(() => {
+    if (digits.length !== 10) {
+      setDuplicateOwnerPhone(false);
+      return;
+    }
+    let cancelled = false;
+    void profileExistsAsync(digits, "owner").then((exists) => {
+      if (!cancelled) setDuplicateOwnerPhone(exists);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [digits]);
   const isComplete = details.name.trim().length > 0 && digits.length === 10 && !duplicateOwnerPhone;
 
   return (

@@ -1,3 +1,4 @@
+import { queueCloudSync } from "./cloudSync";
 import { getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
 
 export interface BrokerProfile {
@@ -48,10 +49,12 @@ export function getBrokerProfile(): BrokerProfile {
 
 export function saveBrokerProfile(profile: BrokerProfile): void {
   try {
-    setItem("profile", JSON.stringify(profile));
+    const payload = JSON.stringify(profile);
+    setItem("profile", payload);
     setSessionItem("name", profile.name);
     setSessionItem("firm", profile.firm);
     setSessionItem("phone", profile.phone);
+    queueCloudSync("profile", payload);
   } catch {}
 }
 

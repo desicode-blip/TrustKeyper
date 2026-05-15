@@ -12,7 +12,7 @@ import {
   type Role,
   dashboardRouteFor,
   loginSuccess,
-  profileExists,
+  profileExistsAsync,
 } from "@/lib/auth";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 
@@ -53,6 +53,8 @@ export default function Login() {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(10);
+  const [accountKnown, setAccountKnown] = useState<boolean | null>(null);
+  const [loggingIn, setLoggingIn] = useState(false);
 
   // Keep login aligned with signup flow: role was already chosen when tk_pending_role is set.
   useLayoutEffect(() => {
@@ -76,11 +78,24 @@ export default function Login() {
     if (role && ALL_ROLES.includes(role as Role)) return role as Role;
     return null;
   })();
-  const accountExistsForLogin =
-    activeRole !== null && phoneDigits.length === 10 && profileExists(phoneDigits, activeRole);
-  const canRequest = phoneDigits.length === 10 && accountExistsForLogin;
+  useEffect(() => {
+    if (!activeRole || phoneDigits.length !== 10) {
+      setAccountKnown(null);
+      return;
+    }
+    let cancelled = false;
+    void profileExistsAsync(phoneDigits, activeRole).then((exists) => {
+      if (!cancelled) setAccountKnown(exists);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [phoneDigits, activeRole]);
+
+  const accountExistsForLogin = activeRole !== null && phoneDigits.length === 10 && accountKnown === true;
+  const canRequest = accountExistsForLogin;
   const showNoAccountHint =
-    activeRole !== null && phoneDigits.length === 10 && !profileExists(phoneDigits, activeRole);
+    activeRole !== null && phoneDigits.length === 10 && accountKnown === false;
   const isOtpComplete = otp.every((d) => d !== "");
 
   const handleOtpChange = (index: number, value: string) => {
@@ -93,31 +108,37 @@ export default function Login() {
     }
   };
 
-  const finishLogin = () => {
+  const finishLogin = async () => {
     const r = (sessionStorage.getItem("tk_pending_role") || role) as Role;
     if (!ALL_ROLES.includes(r)) {
       toast({ title: "Select a role", variant: "destructive" });
       return;
     }
-    if (!profileExists(phoneDigits, r)) {
+    setLoggingIn(true);
+    try {
+      const exists = await profileExistsAsync(phoneDigits, r);
+      if (!exists) {
+        toast({
+          title: "No account found",
+          description: "There is no account for this number.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const ok = await loginSuccess(phoneDigits, r);
+      if (ok) {
+        toast({ title: "Signed in", description: "Welcome back to TrustKeyper." });
+        setLocation(dashboardRouteFor(r));
+        return;
+      }
       toast({
         title: "No account found",
         description: "There is no account for this number.",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setLoggingIn(false);
     }
-    const ok = loginSuccess(phoneDigits, r);
-    if (ok) {
-      toast({ title: "Signed in", description: "Welcome back to TrustKeyper." });
-      setLocation(dashboardRouteFor(r));
-      return;
-    }
-    toast({
-      title: "No account found",
-      description: "There is no account for this number.",
-      variant: "destructive",
-    });
   };
 
   const headingRoleFromSession = ((): Role | null => {
@@ -263,8 +284,8 @@ export default function Login() {
             <div className="hidden sm:block">
               <Button
                 size="lg"
-                disabled={!isOtpComplete}
-                onClick={finishLogin}
+                disabled={!isOtpComplete || loggingIn}
+                onClick={() => void finishLogin()}
                 className={`w-full sm:w-52 ${loginCtaClass}`}
               >
                 Continue &rarr;
@@ -273,8 +294,8 @@ export default function Login() {
             <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] safe-area-bottom">
               <Button
                 size="lg"
-                disabled={!isOtpComplete}
-                onClick={finishLogin}
+                disabled={!isOtpComplete || loggingIn}
+                onClick={() => void finishLogin()}
                 className={`w-full ${loginCtaClass}`}
               >
                 Continue &rarr;

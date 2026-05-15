@@ -60,6 +60,9 @@ export function initAppStorage(): void {
     const role = sessionStorage.getItem("tk_active_role") as Role | null;
     if (phone && role && VALID_ROLES.includes(role)) {
       migrateLegacyStorage(phone, role);
+      void import("./cloudSync").then(({ pullAccountFromCloud }) =>
+        pullAccountFromCloud(phone, role),
+      );
     }
   } catch {
     /* ignore */

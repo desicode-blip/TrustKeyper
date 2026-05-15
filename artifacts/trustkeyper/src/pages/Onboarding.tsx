@@ -6,7 +6,7 @@ import {
   ALL_ROLES,
   type Role,
   dashboardRouteFor,
-  profileExists,
+  profileExistsAsync,
   signUpSuccess,
 } from "@/lib/auth";
 import { setSessionItem } from "@/lib/storageKeys";
@@ -130,18 +130,18 @@ export default function Onboarding() {
           {step === 4 && role === "owner" && (
             <OwnerStep4OTP
               details={ownerDetails}
-              onNext={() => {
+              onNext={async () => {
                 const phoneDigits = ownerDetails.phone.replace(/\D/g, "").slice(0, 10);
                 const pending = sessionStorage.getItem("tk_pending_role") || "owner";
                 const r = (ALL_ROLES.includes(pending as Role) ? pending : "owner") as Role;
-                if (profileExists(phoneDigits, r)) {
+                if (await profileExistsAsync(phoneDigits, r)) {
                   toast({
                     title: "An account already exists for this number.",
                     variant: "destructive",
                   });
                   return;
                 }
-                signUpSuccess(phoneDigits, r, {
+                await signUpSuccess(phoneDigits, r, {
                   name: ownerDetails.name,
                   phone: phoneDigits,
                   email: "",
@@ -174,19 +174,19 @@ export default function Onboarding() {
           {step === 3 && role !== "broker" && role !== "owner" && (
             <Step3OTP
               details={details}
-              onNext={() => {
+              onNext={async () => {
                 const phoneDigits = details.phone.replace(/\D/g, "").slice(0, 10);
                 const pending = sessionStorage.getItem("tk_pending_role") || role;
                 const r = (ALL_ROLES.includes(pending as Role) ? pending : role) as Role;
                 if (!ALL_ROLES.includes(r)) return;
-                if (profileExists(phoneDigits, r)) {
+                if (await profileExistsAsync(phoneDigits, r)) {
                   toast({
                     title: "An account already exists for this number.",
                     variant: "destructive",
                   });
                   return;
                 }
-                signUpSuccess(phoneDigits, r, {
+                await signUpSuccess(phoneDigits, r, {
                   name: details.name,
                   phone: phoneDigits,
                   email: "",

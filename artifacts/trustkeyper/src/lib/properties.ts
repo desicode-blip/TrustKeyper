@@ -1,3 +1,4 @@
+import { queueCloudSync } from "./cloudSync";
 import { getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
 
 export type PropertyStatus = "Active" | "Draft" | "Rented";
@@ -59,6 +60,7 @@ const saveProperties = (list: Property[]) => {
     const payload = JSON.stringify(list);
     setItem("properties", payload);
     setSessionItem("properties", payload);
+    queueCloudSync("properties", payload);
   } catch {
     // ignore write errors
   }

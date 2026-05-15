@@ -1,3 +1,4 @@
+import { queueCloudSync } from "./cloudSync";
 import { getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
 
 export type TenantWho = "Family" | "Bachelor";
@@ -42,6 +43,7 @@ function persistTenantList(list: Tenant[]): void {
     const payload = JSON.stringify(list);
     setSessionItem("tenants", payload);
     setItem("tenants", payload);
+    queueCloudSync("tenants", payload);
   } catch {
     /* ignore */
   }

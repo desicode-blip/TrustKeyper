@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { toast } from "@/hooks/use-toast";
 import {
-  profileExists,
+  profileExistsAsync,
   signUpSuccess,
   dashboardRouteFor,
   ALL_ROLES,
@@ -31,8 +31,21 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   const phoneDigits = phone.replace(/\D/g, "").slice(0, 10);
   const pendingRole = sessionStorage.getItem("tk_pending_role") || "broker";
   const signupRole = (ALL_ROLES.includes(pendingRole as Role) ? pendingRole : "broker") as Role;
-  const duplicateSignupPhone =
-    phoneDigits.length === 10 && profileExists(phoneDigits, signupRole);
+  const [duplicateSignupPhone, setDuplicateSignupPhone] = useState(false);
+
+  useEffect(() => {
+    if (phoneDigits.length !== 10) {
+      setDuplicateSignupPhone(false);
+      return;
+    }
+    let cancelled = false;
+    void profileExistsAsync(phoneDigits, signupRole).then((exists) => {
+      if (!cancelled) setDuplicateSignupPhone(exists);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [phoneDigits, signupRole]);
 
   const formValid =
     fullName.trim().length > 0 &&
@@ -48,7 +61,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
 
   const handleSendOtp = () => {
     if (!formValid) return;
-    if (profileExists(phoneDigits, signupRole)) return;
+    if (duplicateSignupPhone) return;
     setOtpStage(true);
     setCountdown(12);
   };
@@ -56,11 +69,11 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
 
   const isOtpComplete = otp.every((d) => d !== "");
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!isOtpComplete) return;
     const pending = sessionStorage.getItem("tk_pending_role") || "broker";
     const role = (ALL_ROLES.includes(pending as Role) ? pending : "broker") as Role;
-    if (profileExists(phoneDigits, role)) {
+    if (await profileExistsAsync(phoneDigits, role)) {
       toast({
         title: "An account already exists for this number.",
         variant: "destructive",
@@ -68,7 +81,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
       setOtp(createEmptyOtp());
       return;
     }
-    signUpSuccess(phoneDigits, role, {
+    await signUpSuccess(phoneDigits, role, {
       name: fullName,
       firm,
       phone: phoneDigits,
