@@ -10,6 +10,24 @@ import {
 
 const router: IRouter = Router();
 
+/** Wipe all cloud accounts. Requires TRUSTKEYPER_RESET_SECRET header in production. */
+router.delete("/sync/accounts", async (req, res) => {
+  try {
+    const secret = process.env.TRUSTKEYPER_RESET_SECRET;
+    const token = req.header("x-reset-token");
+    const isDev = process.env.NODE_ENV !== "production";
+    if (!isDev && (!secret || token !== secret)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    const { clearAllAccountData } = await import("../lib/accountStore");
+    const result = await clearAllAccountData();
+    res.json({ ok: true, cleared: result.store });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to reset accounts", detail: String(err) });
+  }
+});
+
 router.get("/sync/accounts/:phone/roles", async (req, res) => {
   try {
     const phone = normalizePhone(String(req.params.phone ?? ""));
