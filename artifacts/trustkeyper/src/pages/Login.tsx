@@ -14,6 +14,7 @@ import {
   loginSuccess,
   profileExists,
 } from "@/lib/auth";
+import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 
 type Phase = "role" | "phone" | "otp";
 
@@ -50,7 +51,7 @@ export default function Login() {
   const [role, setRole] = useState(() => readPendingRoleForLogin().role);
   const [phone, setPhone] = useState("");
   const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState(["", "", "", ""]);
+  const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(10);
 
   // Keep login aligned with signup flow: role was already chosen when tk_pending_role is set.
@@ -87,7 +88,7 @@ export default function Login() {
     const next = [...otp];
     next[index] = v;
     setOtp(next);
-    if (v && index < 3) {
+    if (v && index < OTP_LAST_INDEX) {
       document.getElementById(`login-otp-${index + 1}`)?.focus();
     }
   };
@@ -185,7 +186,7 @@ export default function Login() {
                   if (!canRequest) return;
                   setOtpSent(true);
                   setCountdown(10);
-                  setOtp(["", "", "", ""]);
+                  setOtp(createEmptyOtp());
                   setPhase("otp");
                 }}
                 className={`w-full sm:w-52 ${loginCtaClass}`}
@@ -201,7 +202,7 @@ export default function Login() {
                   if (!canRequest) return;
                   setOtpSent(true);
                   setCountdown(10);
-                  setOtp(["", "", "", ""]);
+                  setOtp(createEmptyOtp());
                   setPhase("otp");
                 }}
                 className={`w-full ${loginCtaClass}`}

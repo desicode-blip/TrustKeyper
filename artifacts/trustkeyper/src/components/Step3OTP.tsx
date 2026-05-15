@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 
 interface Step3OTPProps {
   details: { name: string; phone: string };
@@ -9,7 +10,7 @@ interface Step3OTPProps {
 }
 
 export default function Step3OTP({ details, onNext }: Step3OTPProps) {
-  const [otp, setOtp] = useState(["", "", "", ""]);
+  const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(10);
 
   useEffect(() => {
@@ -21,11 +22,11 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
   const handleChange = (index: number, value: string) => {
     if (value.length > 1) return;
     const newOtp = [...otp];
-    newOtp[index] = value;
+    newOtp[index] = value.replace(/\D/g, "").slice(0, 1);
     setOtp(newOtp);
 
     // Auto-focus next input
-    if (value && index < 3) {
+    if (value && index < OTP_LAST_INDEX) {
       const nextInput = document.getElementById(`otp-${index + 1}`);
       nextInput?.focus();
     }
@@ -71,6 +72,7 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
               id={`otp-${i}`}
               type="text"
               inputMode="numeric"
+              maxLength={1}
               value={digit}
               onChange={(e) => handleChange(i, e.target.value)}
               className={`w-14 h-14 text-center text-xl font-medium rounded-lg border outline-none transition-colors

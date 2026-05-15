@@ -8,6 +8,7 @@ import {
   ALL_ROLES,
   type Role,
 } from "@/lib/auth";
+import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +24,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   const [phone, setPhone] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [otpStage, setOtpStage] = useState(false);
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(12);
   const [, setLocation] = useLocation();
 
@@ -53,12 +54,12 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   };
 
   const handleOtpChange = (index: number, value: string) => {
-    if (value.length > 1) return;
+    const digit = value.replace(/\D/g, "").slice(0, 1);
     const next = [...otp];
-    next[index] = value.replace(/\D/g, "");
+    next[index] = digit;
     setOtp(next);
 
-    if (value && index < 5) {
+    if (digit && index < OTP_LAST_INDEX) {
       const el = document.getElementById(`broker-otp-${index + 1}`);
       el?.focus();
     }
@@ -71,7 +72,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
           title: "An account already exists for this number.",
           variant: "destructive",
         });
-        setOtp(["", "", "", "", "", ""]);
+        setOtp(createEmptyOtp());
         return;
       }
       signUpSuccess(phoneDigits, role, {
@@ -211,7 +212,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
         <div className="rounded-xl border border-gray-200 bg-white p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-1">Enter OTP</h3>
           <p className="text-sm text-gray-500 mb-6">
-            We've sent a 6-digit code to{" "}
+            We&apos;ve sent a 4-digit code to{" "}
             <span className="text-gray-900 font-medium">+91 {phone}</span>
           </p>
 
@@ -222,6 +223,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
                 id={`broker-otp-${i}`}
                 type="text"
                 inputMode="numeric"
+                maxLength={1}
                 value={d}
                 onChange={(e) => handleOtpChange(i, e.target.value)}
                 className={`w-12 h-12 text-center text-lg font-medium rounded-lg border outline-none transition-colors

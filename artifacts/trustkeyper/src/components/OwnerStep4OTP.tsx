@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 
 interface OwnerStep4OTPProps {
   details: { name: string; phone: string };
@@ -9,7 +10,7 @@ interface OwnerStep4OTPProps {
 }
 
 export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
-  const [otp, setOtp] = useState(["", "", "", ""]);
+  const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(10);
 
   useEffect(() => {
@@ -24,7 +25,7 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
     newOtp[index] = value.replace(/\D/g, "");
     setOtp(newOtp);
 
-    if (value && index < 3) {
+    if (value && index < OTP_LAST_INDEX) {
       const nextInput = document.getElementById(`owner-otp-${index + 1}`);
       nextInput?.focus();
     }
@@ -68,6 +69,7 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
               id={`owner-otp-${i}`}
               type="text"
               inputMode="numeric"
+              maxLength={1}
               value={digit}
               onChange={(e) => handleChange(i, e.target.value)}
               className={`w-14 h-14 text-center text-xl font-medium rounded-lg border outline-none transition-colors
