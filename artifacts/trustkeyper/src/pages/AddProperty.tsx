@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import BrokerLayout from "@/components/BrokerLayout";
 import { addProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
+import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
 import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -300,6 +301,7 @@ export default function AddProperty() {
     setAvailableFrom("");
     setImageUrls([]);
     setShowSuccess(false);
+    broadcastBrokerPendingFlowsUpdated();
   };
 
   const openDatePicker = () => {
@@ -412,6 +414,7 @@ export default function AddProperty() {
 
     try {
       setSessionItem("add_property_data", JSON.stringify(data));
+      broadcastBrokerPendingFlowsUpdated();
     } catch {
       // ignore storage errors
     }
@@ -529,6 +532,7 @@ export default function AddProperty() {
     } catch {
       // ignore
     }
+    broadcastBrokerPendingFlowsUpdated();
     setShowSuccess(true);
     setTimeout(() => {
       setShowSuccess(false);
@@ -1044,13 +1048,22 @@ export default function AddProperty() {
 
   return (
     <BrokerLayout>
-      {/* Back link */}
-      <button
-        onClick={handleBack}
-        className="flex items-center gap-1.5 text-sm text-primary font-medium mb-4 hover:underline"
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
+        >
+          <ArrowLeft size={16} /> Back
+        </button>
+        <button
+          type="button"
+          onClick={clearDraft}
+          className="text-xs font-semibold text-primary border-0 bg-transparent shadow-none px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors shrink-0"
+        >
+          Clear
+        </button>
+      </div>
 
       {/* Progress bar */}
       <ProgressBar subStep={subStep} />

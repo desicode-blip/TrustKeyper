@@ -81,7 +81,7 @@ export function getPendingFlowItems(): PendingFlowItem[] {
       items.push({
         kind: "add_property",
         title: "Property listing is pending — continue adding the property.",
-        continueHref: "/broker/properties/add2",
+        continueHref: "/broker/properties/add",
       });
     }
   } catch {
