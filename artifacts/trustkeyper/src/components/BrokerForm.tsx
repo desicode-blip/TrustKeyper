@@ -53,6 +53,37 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
     setCountdown(12);
   };
 
+
+  const isOtpComplete = otp.every((d) => d !== "");
+
+  const handleContinue = () => {
+    if (!isOtpComplete) return;
+    const pending = sessionStorage.getItem("tk_pending_role") || "broker";
+    const role = (ALL_ROLES.includes(pending as Role) ? pending : "broker") as Role;
+    if (profileExists(phoneDigits, role)) {
+      toast({
+        title: "An account already exists for this number.",
+        variant: "destructive",
+      });
+      setOtp(createEmptyOtp());
+      return;
+    }
+    signUpSuccess(phoneDigits, role, {
+      name: fullName,
+      firm,
+      phone: phoneDigits,
+      email: "",
+      bankHolderName: "",
+      bankName: "",
+      bankAccountNumber: "",
+      bankIFSC: "",
+      upiId: "",
+      upiQrFileName: "",
+    });
+    onComplete?.();
+    setLocation(dashboardRouteFor(role));
+  };
+
   const handleOtpChange = (index: number, value: string) => {
     const digit = value.replace(/\D/g, "").slice(0, 1);
     const next = [...otp];
@@ -60,38 +91,9 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
     setOtp(next);
 
     if (digit && index < OTP_LAST_INDEX) {
-      const el = document.getElementById(`broker-otp-${index + 1}`);
-      el?.focus();
+      document.getElementById(`broker-otp-${index + 1}`)?.focus();
     }
 
-    if (next.every((d) => d !== "")) {
-      const pending = sessionStorage.getItem("tk_pending_role") || "broker";
-      const role = (ALL_ROLES.includes(pending as Role) ? pending : "broker") as Role;
-      if (profileExists(phoneDigits, role)) {
-        toast({
-          title: "An account already exists for this number.",
-          variant: "destructive",
-        });
-        setOtp(createEmptyOtp());
-        return;
-      }
-      signUpSuccess(phoneDigits, role, {
-        name: fullName,
-        firm,
-        phone: phoneDigits,
-        email: "",
-        bankHolderName: "",
-        bankName: "",
-        bankAccountNumber: "",
-        bankIFSC: "",
-        upiId: "",
-        upiQrFileName: "",
-      });
-      setTimeout(() => {
-        onComplete?.();
-        setLocation(dashboardRouteFor(role));
-      }, 300);
-    }
   };
 
   return (
@@ -209,46 +211,78 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
       )}
 
       {otpStage && (
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">Enter OTP</h3>
-          <p className="text-sm text-gray-500 mb-6">
-            We&apos;ve sent a 4-digit code to{" "}
-            <span className="text-gray-900 font-medium">+91 {phone}</span>
-          </p>
+        <>
+          <div className="mb-8">
+            <p className="text-gray-600 mb-4">
+              Enter the OTP that we have sent to{" "}
+              <span className="font-semibold text-gray-900">+91 {phoneDigits}</span>
+            </p>
 
-          <div className="flex justify-center gap-3 mb-4">
-            {otp.map((d, i) => (
-              <input
-                key={i}
-                id={`broker-otp-${i}`}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={d}
-                onChange={(e) => handleOtpChange(i, e.target.value)}
-                className={`w-12 h-12 text-center text-lg font-medium rounded-lg border outline-none transition-colors
-                  ${
-                    d
-                      ? "bg-[#E8F5EE] border-accent border-b-4"
-                      : "bg-white border-gray-300 focus:border-primary"
-                  }`}
-              />
-            ))}
+            <div className="flex gap-4 mb-6">
+              {otp.map((d, i) => (
+                <input
+                  key={i}
+                  id={`broker-otp-${i}`}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={d}
+                  onChange={(e) => handleOtpChange(i, e.target.value)}
+                  className={`w-14 h-14 text-center text-xl font-medium rounded-lg border outline-none transition-colors
+                    ${
+                      d
+                        ? "bg-[#E8F5EE] border-accent border-b-4"
+                        : "bg-white border-gray-300 focus:border-primary"
+                    }`}
+                />
+              ))}
+            </div>
+
+            <p className="text-sm text-gray-600">
+              Didn&apos;t receive the verification OTP?{" "}
+              {countdown > 0 ? (
+                <span className="font-medium text-[#2563EB]">Resend otp in {countdown}s</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setCountdown(10)}
+                  className="font-medium text-[#2563EB] hover:underline"
+                >
+                  Resend otp
+                </button>
+              )}
+            </p>
           </div>
 
-          <p className="text-center text-sm text-gray-500">
-            {countdown > 0 ? (
-              <>Resend in {countdown}s</>
-            ) : (
-              <button
-                onClick={() => setCountdown(12)}
-                className="font-medium underline text-gray-900 hover:text-primary"
-              >
-                Resend OTP
-              </button>
-            )}
-          </p>
-        </div>
+          <div className="hidden sm:block">
+            <Button
+              size="lg"
+              onClick={handleContinue}
+              disabled={!isOtpComplete}
+              className="w-48 bg-primary hover:bg-primary/90 mb-6"
+            >
+              Continue &rarr;
+            </Button>
+
+            <p className="text-sm text-gray-500">
+              By continuing, you agree to TrustKeyper{" "}
+              <a href="#" className="text-accent hover:underline">
+                Terms and Conditions
+              </a>
+            </p>
+          </div>
+
+          <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] safe-area-bottom">
+            <Button
+              size="lg"
+              onClick={handleContinue}
+              disabled={!isOtpComplete}
+              className="w-full bg-primary hover:bg-primary/90"
+            >
+              Continue &rarr;
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );

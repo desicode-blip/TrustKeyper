@@ -20,13 +20,12 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
   }, [countdown]);
 
   const handleChange = (index: number, value: string) => {
-    if (value.length > 1) return;
+    const digit = value.replace(/\D/g, "").slice(0, 1);
     const newOtp = [...otp];
-    newOtp[index] = value.replace(/\D/g, "").slice(0, 1);
+    newOtp[index] = digit;
     setOtp(newOtp);
 
-    // Auto-focus next input
-    if (value && index < OTP_LAST_INDEX) {
+    if (digit && index < OTP_LAST_INDEX) {
       const nextInput = document.getElementById(`otp-${index + 1}`);
       nextInput?.focus();
     }
@@ -103,7 +102,7 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
           disabled={!isComplete}
           className="w-48 bg-primary hover:bg-primary/90 mb-6"
         >
-          Continue
+          Continue &rarr;
         </Button>
 
         <p className="text-sm text-gray-500">
@@ -118,7 +117,7 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
           disabled={!isComplete}
           className="w-full bg-primary hover:bg-primary/90"
         >
-          Continue
+          Continue &rarr;
         </Button>
       </div>
     </div>
