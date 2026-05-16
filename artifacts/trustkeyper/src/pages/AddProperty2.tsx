@@ -407,6 +407,7 @@ export default function AddProperty2() {
   const handleSubmit = () => {
     if (!getActiveSession()) {
       toast({ title: "Please sign in to save properties", variant: "destructive" });
+      sessionStorage.setItem("tk_pending_role", "broker");
       setLocation("/login");
       return;
     }

@@ -88,6 +88,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
   useEffect(() => {
     const session = getActiveSession();
     if (!session || session.role !== "broker") {
+      sessionStorage.setItem("tk_pending_role", "broker");
       setLocation("/login");
     }
   }, [location, setLocation]);

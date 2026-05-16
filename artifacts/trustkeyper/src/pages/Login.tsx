@@ -1,9 +1,8 @@
-import React, { useEffect, useLayoutEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
 import { authPrimaryButtonClass } from "@/components/auth/authStyles";
-import Step1Role from "@/components/Step1Role";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +19,7 @@ import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 
 const Box = ("di" + "v") as "div";
 
-type Phase = "role" | "phone" | "otp";
+type Phase = "phone" | "otp";
 
 function roleTitle(r: Role): string {
   switch (r) {
@@ -37,19 +36,16 @@ function roleTitle(r: Role): string {
   }
 }
 
-function readPendingRoleForLogin(): { phase: Phase; role: string } {
-  if (typeof window === "undefined") return { phase: "role", role: "" };
+function readPendingRole(): Role | null {
+  if (typeof window === "undefined") return null;
   const pending = sessionStorage.getItem("tk_pending_role");
-  if (pending && ALL_ROLES.includes(pending as Role)) {
-    return { phase: "phone", role: pending };
-  }
-  return { phase: "role", role: "" };
+  return pending && ALL_ROLES.includes(pending as Role) ? (pending as Role) : null;
 }
 
 export default function Login() {
-  const [loc, setLocation] = useLocation();
-  const [phase, setPhase] = useState<Phase>(() => readPendingRoleForLogin().phase);
-  const [role, setRole] = useState(() => readPendingRoleForLogin().role);
+  const [, setLocation] = useLocation();
+  const [pendingRole] = useState<Role | null>(readPendingRole);
+  const [phase, setPhase] = useState<Phase>("phone");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(10);
@@ -58,15 +54,10 @@ export default function Login() {
 
   useEffect(() => {
     resetSessionForAuthEntry();
-  }, []);
-
-  useLayoutEffect(() => {
-    const pending = sessionStorage.getItem("tk_pending_role");
-    if (pending && ALL_ROLES.includes(pending as Role)) {
-      setRole(pending);
-      setPhase((p) => (p === "role" ? "phone" : p));
+    if (!readPendingRole()) {
+      setLocation("/");
     }
-  }, [loc]);
+  }, [setLocation]);
 
   useEffect(() => {
     if (phase !== "otp" || countdown <= 0) return;
@@ -75,32 +66,28 @@ export default function Login() {
   }, [countdown, phase]);
 
   const phoneDigits = phone.replace(/\D/g, "").slice(0, 10);
-  const activeRole = ((): Role | null => {
-    const p = sessionStorage.getItem("tk_pending_role");
-    if (p && ALL_ROLES.includes(p as Role)) return p as Role;
-    if (role && ALL_ROLES.includes(role as Role)) return role as Role;
-    return null;
-  })();
 
   useEffect(() => {
-    if (!activeRole || phoneDigits.length !== 10) {
+    if (!pendingRole || phoneDigits.length !== 10) {
       setAccountKnown(null);
       return;
     }
     let cancelled = false;
-    void profileExistsAsync(phoneDigits, activeRole).then((exists) => {
+    void profileExistsAsync(phoneDigits, pendingRole).then((exists) => {
       if (!cancelled) setAccountKnown(exists);
     });
     return () => {
       cancelled = true;
     };
-  }, [phoneDigits, activeRole]);
+  }, [phoneDigits, pendingRole]);
 
-  const accountExistsForLogin = activeRole !== null && phoneDigits.length === 10 && accountKnown === true;
-  const showNoAccountHint =
-    activeRole !== null && phoneDigits.length === 10 && accountKnown === false;
+  if (!pendingRole) {
+    return null;
+  }
+
+  const accountExistsForLogin = phoneDigits.length === 10 && accountKnown === true;
+  const showNoAccountHint = phoneDigits.length === 10 && accountKnown === false;
   const isOtpComplete = otp.every((d) => d !== "");
-  const persistRole = role || sessionStorage.getItem("tk_pending_role") || undefined;
 
   const handleOtpChange = (index: number, value: string) => {
     const v = value.replace(/\D/g, "").slice(0, 1);
@@ -113,14 +100,9 @@ export default function Login() {
   };
 
   const finishLogin = async () => {
-    const r = (sessionStorage.getItem("tk_pending_role") || role) as Role;
-    if (!ALL_ROLES.includes(r)) {
-      toast({ title: "Select a role", variant: "destructive" });
-      return;
-    }
     setLoggingIn(true);
     try {
-      const exists = await profileExistsAsync(phoneDigits, r);
+      const exists = await profileExistsAsync(phoneDigits, pendingRole);
       if (!exists) {
         toast({
           title: "No account found",
@@ -129,10 +111,10 @@ export default function Login() {
         });
         return;
       }
-      const ok = await loginSuccess(phoneDigits, r);
+      const ok = await loginSuccess(phoneDigits, pendingRole);
       if (ok) {
         toast({ title: "Signed in", description: "Welcome back to TrustKeyper." });
-        setLocation(dashboardRouteFor(r));
+        setLocation(dashboardRouteFor(pendingRole));
         return;
       }
       toast({
@@ -145,14 +127,7 @@ export default function Login() {
     }
   };
 
-  const headingRoleFromSession = ((): Role | null => {
-    const p = sessionStorage.getItem("tk_pending_role");
-    return p && ALL_ROLES.includes(p as Role) ? (p as Role) : null;
-  })();
-  const loginHeading =
-    headingRoleFromSession || (phase !== "role" && activeRole)
-      ? `Login to TrustKeyper as ${roleTitle((headingRoleFromSession ?? activeRole) as Role)}`
-      : "Login to TrustKeyper";
+  const loginHeading = `Login to TrustKeyper as ${roleTitle(pendingRole)}`;
 
   const requestOtpCta = (
     <Button
@@ -188,20 +163,6 @@ export default function Login() {
           <h1 className="text-3xl font-semibold text-gray-900">{loginHeading}</h1>
         </Box>
 
-        {phase === "role" && (
-          <Step1Role
-            role={role}
-            setRole={setRole}
-            footerLinkType="signup"
-            onNext={() => {
-              if (!role) return;
-              sessionStorage.setItem("tk_pending_role", role);
-              setPhone("");
-              setPhase("phone");
-            }}
-          />
-        )}
-
         {phase === "phone" && (
           <>
             <Box className="space-y-2 mb-8">
@@ -232,7 +193,7 @@ export default function Login() {
               cta={requestOtpCta}
               showTerms={false}
               linkType="signup"
-              persistRole={persistRole}
+              persistRole={pendingRole}
             />
           </>
         )}
@@ -286,7 +247,7 @@ export default function Login() {
               cta={continueLoginCta}
               showTerms={false}
               linkType="signup"
-              persistRole={persistRole}
+              persistRole={pendingRole}
             />
           </>
         )}
