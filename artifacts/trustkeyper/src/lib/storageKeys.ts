@@ -1,5 +1,8 @@
-// Returns the active phone + role from session
+import { restoreActiveSessionFromBackup } from "./initAppStorage";
+
+// Returns the active phone + role from session (restores from local backup if needed)
 export function getActiveSession(): { phone: string; role: string } | null {
+  restoreActiveSessionFromBackup();
   const phone = sessionStorage.getItem("tk_active_phone");
   const role = sessionStorage.getItem("tk_active_role");
   if (!phone || !role) return null;

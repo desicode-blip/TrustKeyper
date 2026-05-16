@@ -90,6 +90,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
     if (!session || session.role !== "broker") {
       sessionStorage.setItem("tk_pending_role", "broker");
       setLocation("/login");
+      return;
     }
   }, [location, setLocation]);
 
