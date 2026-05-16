@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
-import { authPrimaryButtonClass } from "@/components/auth/authStyles";
+import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
 
 const Box = ("di" + "v") as "div";
 
@@ -43,7 +43,7 @@ export default function OwnerStep2Intent({
   );
 
   return (
-    <Box className="flex flex-col h-full max-w-4xl pb-40 sm:pb-0">
+    <Box className={`flex flex-col h-full max-w-4xl ${authMobileScrollPadClass}`}>
       <Box className="mb-8 border-b pb-6">
         <h1 className="text-3xl font-semibold text-gray-900">What do you want to do with this property?</h1>
       </Box>

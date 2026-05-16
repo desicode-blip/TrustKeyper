@@ -1,6 +1,5 @@
 import React from "react";
 import { AuthSignupBelowCta } from "@/components/auth/AuthSignupBelowCta";
-import { authMobileStickyBarClass } from "@/components/auth/authStyles";
 
 type FooterLink = "login" | "signup" | "none";
 
@@ -12,8 +11,8 @@ interface AuthSignupScreenFooterProps {
 }
 
 /**
- * Signup/login action area: desktop = CTA then divider/footer;
- * mobile = footer in scroll, CTA alone in sticky bar.
+ * Auth action footer: desktop = CTA then divider/footer in document flow.
+ * Mobile = fixed bottom panel: CTA, divider, centered footer text (matches signup reference).
  */
 export function AuthSignupScreenFooter({
   cta,
@@ -36,12 +35,11 @@ export function AuthSignupScreenFooter({
         {below}
       </div>
 
-      <div className="mt-10 sm:hidden max-w-md w-full pb-4">
-        {below}
-      </div>
-
-      <div className={authMobileStickyBarClass}>
-        <div className="max-w-md mx-auto w-full">{cta}</div>
+      <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] safe-area-bottom">
+        <div className="max-w-md mx-auto w-full px-4 pt-4 pb-4 flex flex-col">
+          {cta}
+          {below}
+        </div>
       </div>
     </>
   );

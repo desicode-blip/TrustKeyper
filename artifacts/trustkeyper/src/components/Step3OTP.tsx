@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
-import { authPrimaryButtonClass } from "@/components/auth/authStyles";
+import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 
 const Box = ("di" + "v") as "div";
@@ -44,7 +44,7 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
   );
 
   return (
-    <Box className="flex flex-col h-full max-w-md pb-40 sm:pb-0">
+    <Box className={`flex flex-col h-full max-w-md ${authMobileScrollPadClass}`}>
       <Box className="mb-8">
         <h1 className="text-3xl font-semibold text-gray-900">Let&apos;s know you better</h1>
       </Box>

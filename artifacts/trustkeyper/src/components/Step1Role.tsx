@@ -2,7 +2,7 @@ import React from "react";
 import { User, Home, Briefcase, IndianRupee } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
-import { authPrimaryButtonClass } from "@/components/auth/authStyles";
+import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
 
 const Box = "div" as const;
 
@@ -33,7 +33,7 @@ export default function Step1Role({
   );
 
   return (
-    <Box className="flex flex-col h-full pb-40 sm:pb-0">
+    <Box className={`flex flex-col h-full ${authMobileScrollPadClass}`}>
       <Box className="mb-8">
         <h1 className="text-3xl font-semibold text-gray-900 mb-2">I am a</h1>
       </Box>

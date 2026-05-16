@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
-import { authPrimaryButtonClass } from "@/components/auth/authStyles";
+import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -91,7 +91,7 @@ export default function Step4KYC({ onComplete }: Step4KYCProps) {
   };
 
   return (
-    <div className="flex flex-col h-full max-w-2xl pb-40 sm:pb-0">
+    <div className={`flex flex-col h-full max-w-2xl ${authMobileScrollPadClass}`}>
       <div className="mb-8">
         <h1 className="text-3xl font-semibold text-gray-900">Business & KYC Details</h1>
       </div>

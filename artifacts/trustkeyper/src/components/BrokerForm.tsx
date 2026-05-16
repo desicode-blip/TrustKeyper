@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
-import { authPrimaryButtonClass } from "@/components/auth/authStyles";
+import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
 
 const Box = ("di" + "v") as "div";
 
@@ -137,7 +137,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   );
 
   return (
-    <Box className="flex flex-col h-full max-w-xl pb-40 sm:pb-0">
+    <Box className={`flex flex-col h-full max-w-xl ${authMobileScrollPadClass}`}>
       <Box className="mb-8">
         <h1 className="text-3xl font-semibold text-gray-900 mb-2">Tell us about you</h1>
         <p className="text-gray-500">Help us set up your broker profile</p>

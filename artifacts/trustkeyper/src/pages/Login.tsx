@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
+import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
-import { authPrimaryButtonClass } from "@/components/auth/authStyles";
+import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import {
   ALL_ROLES,
@@ -16,8 +15,6 @@ import {
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
-
-const Box = ("di" + "v") as "div";
 
 type Phase = "phone" | "otp";
 
@@ -89,6 +86,15 @@ export default function Login() {
   const showNoAccountHint = phoneDigits.length === 10 && accountKnown === false;
   const isOtpComplete = otp.every((d) => d !== "");
 
+  const handleBack = () => {
+    if (phase === "otp") {
+      setPhase("phone");
+      setOtp(createEmptyOtp());
+      return;
+    }
+    setLocation("/");
+  };
+
   const handleOtpChange = (index: number, value: string) => {
     const v = value.replace(/\D/g, "").slice(0, 1);
     const next = [...otp];
@@ -127,8 +133,6 @@ export default function Login() {
     }
   };
 
-  const loginHeading = `Login to TrustKeyper as ${roleTitle(pendingRole)}`;
-
   const requestOtpCta = (
     <Button
       size="lg"
@@ -157,38 +161,25 @@ export default function Login() {
   );
 
   return (
-    <AuthFlowLayout onBack={() => setLocation("/")} backDisabled={false}>
-      <Box className="max-w-md flex flex-col flex-1 pb-40 sm:pb-0">
-        <Box className="mb-8 border-b border-gray-200 pb-4">
-          <h1 className="text-3xl font-semibold text-gray-900">{loginHeading}</h1>
-        </Box>
+    <AuthFlowLayout onBack={handleBack} backDisabled={false}>
+      <div className={`flex flex-col flex-1 min-h-0 max-w-md w-full ${authMobileScrollPadClass}`}>
+        <div className="mb-8 border-b border-gray-200 pb-4 shrink-0">
+          <h1 className="text-3xl font-semibold text-gray-900">
+            Login to TrustKeyper as {roleTitle(pendingRole)}
+          </h1>
+        </div>
 
         {phase === "phone" && (
           <>
-            <Box className="space-y-2 mb-8">
-              <Label htmlFor="login-phone" className="text-gray-600 text-sm">
-                Phone Number
-              </Label>
-              <Box className="flex gap-2">
-                <Box className="w-14 flex items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-700 text-sm shrink-0">
-                  +91
-                </Box>
-                <Input
-                  id="login-phone"
-                  type="tel"
-                  inputMode="numeric"
-                  maxLength={10}
-                  placeholder="10-digit number"
-                  value={phoneDigits}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                  className="bg-white border-gray-200"
-                />
-              </Box>
-              {showNoAccountHint ? (
-                <p className="text-sm text-destructive">There is no account for this number.</p>
-              ) : null}
-            </Box>
-
+            <div className="max-w-md mb-6">
+              <AuthPhoneField
+                id="login-phone"
+                value={phoneDigits}
+                onChange={setPhone}
+                helperText={showNoAccountHint ? undefined : "Enter the number you used to sign up"}
+                errorText={showNoAccountHint ? "There is no account for this number." : null}
+              />
+            </div>
             <AuthSignupScreenFooter
               cta={requestOtpCta}
               showTerms={false}
@@ -200,19 +191,16 @@ export default function Login() {
 
         {phase === "otp" && (
           <>
-            <Box className="space-y-6 mb-6 max-w-md opacity-80">
-              <Box className="space-y-2">
-                <Label className="text-gray-600 text-sm">Phone Number</Label>
-                <Input readOnly value={`+91 ${phoneDigits}`} className="bg-gray-50 border-gray-200" />
-              </Box>
-            </Box>
+            <div className="space-y-6 mb-6 max-w-md opacity-80 pointer-events-none">
+              <AuthPhoneField id="login-otp-phone-readonly" value={phoneDigits} onChange={() => {}} disabled helperText="" />
+            </div>
 
-            <p className="text-gray-600 text-sm mb-4">
+            <p className="text-gray-600 text-sm mb-4 max-w-md">
               Enter the OTP that we have sent to{" "}
               <span className="font-semibold text-gray-900">+91 {phoneDigits}</span>
             </p>
 
-            <Box className="flex gap-4 mb-6">
+            <div className="flex gap-3 sm:gap-4 mb-6 max-w-md">
               {otp.map((digit, i) => (
                 <input
                   key={i}
@@ -222,13 +210,13 @@ export default function Login() {
                   maxLength={1}
                   value={digit}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
-                  className={`w-14 h-14 text-center text-xl font-medium rounded-lg border outline-none transition-colors
+                  className={`w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-medium rounded-lg border outline-none transition-colors
                     ${digit ? "bg-[#E8F5EE] border-accent border-b-4" : "bg-white border-gray-300 focus:border-primary"}`}
                 />
               ))}
-            </Box>
+            </div>
 
-            <p className="text-sm text-gray-600 mb-8">
+            <p className="text-sm text-gray-600 mb-6 max-w-md">
               Didn&apos;t receive the verification OTP?{" "}
               {countdown > 0 ? (
                 <span className="font-medium text-[#2563EB]">Resend otp in {countdown}s</span>
@@ -251,7 +239,7 @@ export default function Login() {
             />
           </>
         )}
-      </Box>
+      </div>
     </AuthFlowLayout>
   );
 }
