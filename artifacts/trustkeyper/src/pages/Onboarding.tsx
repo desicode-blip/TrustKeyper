@@ -12,7 +12,6 @@ import {
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { setSessionItem } from "@/lib/storageKeys";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
-import { AuthGoToLoginLink } from "@/components/AuthFlowFooterLinks";
 import Step1Role from "@/components/Step1Role";
 import Step2Details from "@/components/Step2Details";
 import Step3OTP from "@/components/Step3OTP";
@@ -113,7 +112,6 @@ export default function Onboarding() {
                   goNext();
                 }}
               />
-              {role ? <AuthGoToLoginLink persistRole={role} /> : null}
             </>
           )}
 
@@ -226,8 +224,6 @@ export default function Onboarding() {
             <Step4KYC onComplete={() => setIsSuccessOpen(true)} />
           )}
         </div>
-
-        {step > 1 ? <AuthGoToLoginLink persistRole={role} /> : null}
 
         <Dialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
         <DialogContent className="sm:max-w-md text-center p-10 flex flex-col items-center">

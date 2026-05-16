@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { AuthTextField } from "@/components/auth/AuthTextField";
-import { AuthSignupActionBlock, AuthSignupStickyFooter } from "@/components/auth/AuthSignupActionBlock";
+import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
 import { authPrimaryButtonClass } from "@/components/auth/authStyles";
 import { profileExistsAsync } from "@/lib/auth";
 
@@ -39,7 +39,7 @@ export default function OwnerStep3Details({ details, setDetails, onNext }: Owner
   );
 
   return (
-    <div className="flex flex-col h-full max-w-2xl pb-36 sm:pb-0">
+    <div className="flex flex-col h-full max-w-2xl pb-40 sm:pb-0">
       <div className="mb-8">
         <h1 className="text-3xl font-semibold text-gray-900">Let&apos;s know you better</h1>
       </div>
@@ -60,10 +60,7 @@ export default function OwnerStep3Details({ details, setDetails, onNext }: Owner
         />
       </div>
 
-      <div className="hidden sm:block mt-10 max-w-md">
-        <AuthSignupActionBlock>{cta}</AuthSignupActionBlock>
-      </div>
-      <AuthSignupStickyFooter>{cta}</AuthSignupStickyFooter>
+      <AuthSignupScreenFooter cta={cta} persistRole="owner" />
     </div>
   );
 }

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { AuthTextField } from "@/components/auth/AuthTextField";
-import { AuthSignupActionBlock, AuthSignupStickyFooter } from "@/components/auth/AuthSignupActionBlock";
+import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
 import { authPrimaryButtonClass } from "@/components/auth/authStyles";
+import { ALL_ROLES, type Role } from "@/lib/auth";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 
 interface Step3OTPProps {
@@ -15,6 +16,8 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(10);
   const phoneDigits = details.phone.replace(/\D/g, "").slice(0, 10);
+  const pending = sessionStorage.getItem("tk_pending_role");
+  const signupRole = (pending && ALL_ROLES.includes(pending as Role) ? pending : "") as string;
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -27,7 +30,6 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
     const newOtp = [...otp];
     newOtp[index] = digit;
     setOtp(newOtp);
-
     if (digit && index < OTP_LAST_INDEX) {
       document.getElementById(`otp-${index + 1}`)?.focus();
     }
@@ -36,39 +38,27 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
   const isComplete = otp.every((digit) => digit !== "");
 
   const cta = (
-    <Button
-      size="lg"
-      onClick={onNext}
-      disabled={!isComplete}
-      className={authPrimaryButtonClass}
-    >
+    <Button size="lg" onClick={onNext} disabled={!isComplete} className={authPrimaryButtonClass}>
       Continue &rarr;
     </Button>
   );
 
   return (
-    <div className="flex flex-col h-full max-w-md pb-36 sm:pb-0">
+    <div className="flex flex-col h-full max-w-md pb-40 sm:pb-0">
       <div className="mb-8">
         <h1 className="text-3xl font-semibold text-gray-900">Let&apos;s know you better</h1>
       </div>
 
       <div className="space-y-6 mb-6 opacity-70 pointer-events-none">
         <AuthTextField id="otp-name" label="Your Name" value={details.name} onChange={() => {}} disabled />
-        <AuthPhoneField
-          id="otp-phone"
-          value={phoneDigits}
-          onChange={() => {}}
-          disabled
-          helperText=""
-        />
+        <AuthPhoneField id="otp-phone" value={phoneDigits} onChange={() => {}} disabled helperText="" />
       </div>
 
-      <div className="mb-8">
-        <p className="text-gray-600 mb-4">
+      <div className="mb-4">
+        <p className="text-gray-600 mb-4 text-sm">
           Enter the OTP that we have sent to{" "}
           <span className="font-semibold text-gray-900">+91 {phoneDigits}</span>
         </p>
-
         <div className="flex gap-4 mb-6">
           {otp.map((digit, i) => (
             <input
@@ -84,27 +74,19 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
             />
           ))}
         </div>
-
         <p className="text-sm text-gray-600">
           Didn&apos;t receive the verification OTP?{" "}
           {countdown > 0 ? (
             <span className="font-medium text-primary">Resend otp in {countdown}s</span>
           ) : (
-            <button
-              type="button"
-              onClick={() => setCountdown(10)}
-              className="font-medium text-primary hover:underline"
-            >
+            <button type="button" onClick={() => setCountdown(10)} className="font-medium text-primary hover:underline">
               Resend otp
             </button>
           )}
         </p>
       </div>
 
-      <div className="hidden sm:block mt-10">
-        <AuthSignupActionBlock showTerms={false}>{cta}</AuthSignupActionBlock>
-      </div>
-      <AuthSignupStickyFooter showTerms={false}>{cta}</AuthSignupStickyFooter>
+      <AuthSignupScreenFooter cta={cta} showTerms={false} persistRole={signupRole} />
     </div>
   );
 }

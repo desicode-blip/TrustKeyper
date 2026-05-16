@@ -12,7 +12,7 @@ import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 import { Button } from "@/components/ui/button";
 import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { AuthTextField } from "@/components/auth/AuthTextField";
-import { AuthSignupActionBlock, AuthSignupStickyFooter } from "@/components/auth/AuthSignupActionBlock";
+import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
 import { authPrimaryButtonClass } from "@/components/auth/authStyles";
 
 interface BrokerFormProps {
@@ -58,8 +58,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   }, [countdown, otpStage]);
 
   const handleSendOtp = () => {
-    if (!formValid) return;
-    if (duplicateSignupPhone) return;
+    if (!formValid || duplicateSignupPhone) return;
     setOtpStage(true);
     setCountdown(12);
   };
@@ -68,8 +67,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
 
   const handleContinue = async () => {
     if (!isOtpComplete || submitting) return;
-    const pending = sessionStorage.getItem("tk_pending_role") || "broker";
-    const role = (ALL_ROLES.includes(pending as Role) ? pending : "broker") as Role;
+    const role = signupRole;
     setSubmitting(true);
     try {
       if (await profileExistsAsync(phoneDigits, role)) {
@@ -110,7 +108,6 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
     const next = [...otp];
     next[index] = digit;
     setOtp(next);
-
     if (digit && index < OTP_LAST_INDEX) {
       document.getElementById(`broker-otp-${index + 1}`)?.focus();
     }
@@ -139,7 +136,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   );
 
   return (
-    <div className="flex flex-col h-full max-w-xl pb-36 sm:pb-0">
+    <div className="flex flex-col h-full max-w-xl pb-40 sm:pb-0">
       <div className="mb-8">
         <h1 className="text-3xl font-semibold text-gray-900 mb-2">Tell us about you</h1>
         <p className="text-gray-500">Help us set up your broker profile</p>
@@ -156,7 +153,6 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
           required
           helperText="As per government ID"
         />
-
         <AuthTextField
           id="firm"
           label="Brokerage Firm (Optional)"
@@ -166,7 +162,6 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
           disabled={otpStage}
           helperText="Leave blank if you're an independent broker"
         />
-
         <AuthPhoneField
           id="phone"
           value={phoneDigits}
@@ -182,23 +177,15 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
         />
       </div>
 
-      {!otpStage && (
-        <>
-          <div className="hidden sm:block mt-10">
-            <AuthSignupActionBlock>{sendOtpButton}</AuthSignupActionBlock>
-          </div>
-          <AuthSignupStickyFooter>{sendOtpButton}</AuthSignupStickyFooter>
-        </>
-      )}
-
-      {otpStage && (
+      {!otpStage ? (
+        <AuthSignupScreenFooter cta={sendOtpButton} persistRole={signupRole} />
+      ) : (
         <>
           <div className="mb-8 mt-8">
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 mb-4 text-sm">
               Enter the OTP that we have sent to{" "}
               <span className="font-semibold text-gray-900">+91 {phoneDigits}</span>
             </p>
-
             <div className="flex gap-4 mb-6">
               {otp.map((d, i) => (
                 <input
@@ -218,7 +205,6 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
                 />
               ))}
             </div>
-
             <p className="text-sm text-gray-600">
               Didn&apos;t receive the verification OTP?{" "}
               {countdown > 0 ? (
@@ -234,11 +220,11 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
               )}
             </p>
           </div>
-
-          <div className="hidden sm:block mt-10">
-            <AuthSignupActionBlock showTerms={false}>{continueButton}</AuthSignupActionBlock>
-          </div>
-          <AuthSignupStickyFooter showTerms={false}>{continueButton}</AuthSignupStickyFooter>
+          <AuthSignupScreenFooter
+            cta={continueButton}
+            showTerms={false}
+            persistRole={signupRole}
+          />
         </>
       )}
     </div>

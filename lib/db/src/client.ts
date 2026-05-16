@@ -7,10 +7,20 @@ const { Pool } = pg;
 let pool: pg.Pool | null = null;
 let dbInstance: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
+function resolveDatabaseUrl(): string | undefined {
+  return (
+    process.env.DATABASE_URL ??
+    process.env.POSTGRES_URL ??
+    process.env.POSTGRES_PRISMA_URL ??
+    process.env.VERCEL_POSTGRES_URL
+  );
+}
+
 export function getDb() {
-  if (!process.env.DATABASE_URL) return null;
+  const connectionString = resolveDatabaseUrl();
+  if (!connectionString) return null;
   if (!dbInstance) {
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    pool = new Pool({ connectionString });
     dbInstance = drizzle(pool, { schema });
   }
   return dbInstance;

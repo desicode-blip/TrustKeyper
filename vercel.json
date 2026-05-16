@@ -1,11 +1,15 @@
 {
   "framework": "vite",
-  "buildCommand": "pnpm --filter @workspace/trustkeyper run build",
+  "buildCommand": "pnpm run build:deploy",
   "outputDirectory": "artifacts/trustkeyper/dist/public",
   "installCommand": "pnpm install",
   "rewrites": [
     {
-      "source": "/((?!api).*)",
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]

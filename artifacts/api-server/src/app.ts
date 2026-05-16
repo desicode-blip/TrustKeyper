@@ -1,10 +1,14 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const staticRoot = path.resolve(moduleDir, "../../trustkeyper/dist/public");
 
 app.use(
   pinoHttp({
@@ -30,5 +34,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+app.use(express.static(staticRoot, { index: false }));
+
+app.get(/^(?!\/api\/).*/, (_req, res) => {
+  res.sendFile(path.join(staticRoot, "index.html"));
+});
 
 export default app;

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { AuthTextField } from "@/components/auth/AuthTextField";
-import { AuthSignupActionBlock, AuthSignupStickyFooter } from "@/components/auth/AuthSignupActionBlock";
+import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
 import { authPrimaryButtonClass } from "@/components/auth/authStyles";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 
@@ -26,7 +26,6 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
     const newOtp = [...otp];
     newOtp[index] = value.replace(/\D/g, "");
     setOtp(newOtp);
-
     if (value && index < OTP_LAST_INDEX) {
       document.getElementById(`owner-otp-${index + 1}`)?.focus();
     }
@@ -42,7 +41,7 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
   );
 
   return (
-    <div className="flex flex-col h-full max-w-2xl pb-36 sm:pb-0">
+    <div className="flex flex-col h-full max-w-2xl pb-40 sm:pb-0">
       <div className="mb-8">
         <h1 className="text-3xl font-semibold text-gray-900">Let&apos;s know you better</h1>
       </div>
@@ -52,12 +51,11 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
         <AuthPhoneField id="owner-otp-phone" value={displayPhone} onChange={() => {}} disabled helperText="" />
       </div>
 
-      <div className="mb-8 max-w-md">
+      <div className="mb-4 max-w-md">
         <p className="text-gray-500 text-sm mb-4">
           Enter the OTP that we have sent to{" "}
           <span className="font-semibold text-gray-900">+91 {displayPhone}</span>
         </p>
-
         <div className="flex gap-4 mb-4">
           {otp.map((digit, i) => (
             <input
@@ -77,27 +75,19 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
             />
           ))}
         </div>
-
         <p className="text-sm text-gray-500">
           Didn&apos;t receive the verification OTP?{" "}
           {countdown > 0 ? (
             <span className="font-medium text-primary">Resend otp in {countdown}s</span>
           ) : (
-            <button
-              type="button"
-              onClick={() => setCountdown(10)}
-              className="font-medium text-primary hover:underline"
-            >
+            <button type="button" onClick={() => setCountdown(10)} className="font-medium text-primary hover:underline">
               Resend otp
             </button>
           )}
         </p>
       </div>
 
-      <div className="hidden sm:block mt-4 max-w-md">
-        <AuthSignupActionBlock showTerms={false}>{cta}</AuthSignupActionBlock>
-      </div>
-      <AuthSignupStickyFooter showTerms={false}>{cta}</AuthSignupStickyFooter>
+      <AuthSignupScreenFooter cta={cta} showTerms={false} persistRole="owner" />
     </div>
   );
 }
