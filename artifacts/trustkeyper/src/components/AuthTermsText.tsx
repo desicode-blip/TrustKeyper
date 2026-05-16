@@ -3,9 +3,9 @@ import React from "react";
 /** 16px below primary CTA — matches owner/tenant signup copy style. */
 export function AuthTermsText({ className = "" }: { className?: string }) {
   return (
-    <p className={`text-sm text-gray-500 mt-4 ${className}`}>
+    <p className={`text-sm text-gray-500 ${className}`}>
       By continuing, you agree to TrustKeyper{" "}
-      <a href="#" className="text-accent hover:underline">
+      <a href="#" className="text-primary font-medium hover:underline">
         Terms and Conditions
       </a>
     </p>

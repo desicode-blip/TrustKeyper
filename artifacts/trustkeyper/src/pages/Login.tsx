@@ -6,6 +6,8 @@ import Step1Role from "@/components/Step1Role";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
+import { authPrimaryButtonClass } from "@/components/auth/authStyles";
 import { toast } from "@/hooks/use-toast";
 import {
   ALL_ROLES,
@@ -43,8 +45,7 @@ function readPendingRoleForLogin(): { phase: Phase; role: string } {
   return { phase: "role", role: "" };
 }
 
-const loginCtaClass =
-  "rounded-lg bg-[#2563EB] hover:bg-[#1d4ed8] text-white border-0 shadow-none disabled:opacity-50";
+const loginCtaClass = authPrimaryButtonClass;
 
 export default function Login() {
   const [loc, setLocation] = useLocation();
@@ -180,28 +181,14 @@ export default function Login() {
 
         {phase === "phone" && (
           <>
-            <div className="space-y-2 mb-8">
-              <Label htmlFor="login-phone" className="text-gray-600 text-sm">
-                Phone Number
-              </Label>
-              <div className="flex gap-2">
-                <div className="w-14 flex items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-700 text-sm shrink-0">
-                  +91
-                </div>
-                <Input
-                  id="login-phone"
-                  type="tel"
-                  inputMode="numeric"
-                  maxLength={10}
-                  placeholder="Placeholder"
-                  value={phoneDigits}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                  className="bg-white border-gray-200"
-                />
-              </div>
-              {showNoAccountHint ? (
-                <p className="text-sm text-destructive">There is no account for this number.</p>
-              ) : null}
+            <div className="mb-8 max-w-md">
+              <AuthPhoneField
+                id="login-phone"
+                value={phoneDigits}
+                onChange={setPhone}
+                errorText={showNoAccountHint ? "There is no account for this number." : null}
+                helperText={showNoAccountHint ? undefined : "We'll send an OTP to verify"}
+              />
             </div>
 
             <div className="hidden sm:block">

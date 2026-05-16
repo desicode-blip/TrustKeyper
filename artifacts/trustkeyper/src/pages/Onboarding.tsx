@@ -143,18 +143,27 @@ export default function Onboarding() {
                   });
                   return;
                 }
-                await signUpSuccess(phoneDigits, r, {
-                  name: ownerDetails.name,
-                  phone: phoneDigits,
-                  email: "",
-                  firm: "",
-                  bankHolderName: "",
-                  bankName: "",
-                  bankAccountNumber: "",
-                  bankIFSC: "",
-                  upiId: "",
-                  upiQrFileName: "",
-                });
+                try {
+                  await signUpSuccess(phoneDigits, r, {
+                    name: ownerDetails.name,
+                    phone: phoneDigits,
+                    email: "",
+                    firm: "",
+                    bankHolderName: "",
+                    bankName: "",
+                    bankAccountNumber: "",
+                    bankIFSC: "",
+                    upiId: "",
+                    upiQrFileName: "",
+                  });
+                } catch (err) {
+                  toast({
+                    title: "Sign up failed",
+                    description: err instanceof Error ? err.message : "Please try again.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
                 setIsSuccessOpen(true);
               }}
             />
@@ -188,18 +197,27 @@ export default function Onboarding() {
                   });
                   return;
                 }
-                await signUpSuccess(phoneDigits, r, {
-                  name: details.name,
-                  phone: phoneDigits,
-                  email: "",
-                  firm: "",
-                  bankHolderName: "",
-                  bankName: "",
-                  bankAccountNumber: "",
-                  bankIFSC: "",
-                  upiId: "",
-                  upiQrFileName: "",
-                });
+                try {
+                  await signUpSuccess(phoneDigits, r, {
+                    name: details.name,
+                    phone: phoneDigits,
+                    email: "",
+                    firm: "",
+                    bankHolderName: "",
+                    bankName: "",
+                    bankAccountNumber: "",
+                    bankIFSC: "",
+                    upiId: "",
+                    upiQrFileName: "",
+                  });
+                } catch (err) {
+                  toast({
+                    title: "Sign up failed",
+                    description: err instanceof Error ? err.message : "Please try again.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
                 goNext();
               }}
             />

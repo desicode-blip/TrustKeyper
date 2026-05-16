@@ -77,8 +77,14 @@ export async function signUpSuccess(
   if (merged.name) setSessionItem("name", merged.name);
   if (merged.firm) setSessionItem("firm", merged.firm);
   if (merged.phone) setSessionItem("phone", merged.phone);
-  await pushAccountKeyToCloud(p, role, "profile", profileJson);
-  await pushLocalKeysToCloud(p, role);
+  const profileOk = await pushAccountKeyToCloud(p, role, "profile", profileJson);
+  const bulkOk = await pushLocalKeysToCloud(p, role);
+  if (!profileOk) {
+    throw new Error("Could not save your account to the server. Check your connection and try again.");
+  }
+  if (!bulkOk) {
+    await pushAccountKeyToCloud(p, role, "profile", profileJson);
+  }
 }
 
 /** Called after OTP success on LOGIN — loads account data from server when on a new device. */

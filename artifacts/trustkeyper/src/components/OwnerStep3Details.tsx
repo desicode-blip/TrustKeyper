@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
+import { AuthTextField } from "@/components/auth/AuthTextField";
+import { AuthSignupActionBlock, AuthSignupStickyFooter } from "@/components/auth/AuthSignupActionBlock";
+import { authPrimaryButtonClass } from "@/components/auth/authStyles";
 import { profileExistsAsync } from "@/lib/auth";
 
 interface OwnerStep3DetailsProps {
@@ -27,86 +29,41 @@ export default function OwnerStep3Details({ details, setDetails, onNext }: Owner
       cancelled = true;
     };
   }, [digits]);
+
   const isComplete = details.name.trim().length > 0 && digits.length === 10 && !duplicateOwnerPhone;
 
+  const cta = (
+    <Button size="lg" onClick={onNext} disabled={!isComplete} className={authPrimaryButtonClass}>
+      Send OTP & Register &rarr;
+    </Button>
+  );
+
   return (
-    <div className="flex flex-col h-full max-w-2xl">
-      <div className="mb-8 border-b pb-6">
+    <div className="flex flex-col h-full max-w-2xl pb-36 sm:pb-0">
+      <div className="mb-8">
         <h1 className="text-3xl font-semibold text-gray-900">Let&apos;s know you better</h1>
       </div>
 
       <div className="space-y-6 max-w-md">
-        <div className="space-y-2">
-          <Label htmlFor="name" className="text-gray-700">
-            Your Name
-          </Label>
-          <Input
-            id="name"
-            placeholder="Type here"
-            value={details.name}
-            onChange={(e) => setDetails({ ...details, name: e.target.value })}
-            className="bg-[#F1F5F9] border-none text-gray-900 h-12"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="phone" className="text-gray-700">
-            Phone Number
-          </Label>
-          <div className="flex gap-2">
-            <div className="w-16 flex items-center justify-center rounded-md border border-transparent bg-[#E2E8F0] text-gray-700 text-sm shrink-0">
-              +91
-            </div>
-            <Input
-              id="phone"
-              type="tel"
-              inputMode="numeric"
-              maxLength={10}
-              placeholder="10-digit number"
-              value={digits}
-              onChange={(e) =>
-                setDetails({
-                  ...details,
-                  phone: e.target.value.replace(/\D/g, "").slice(0, 10),
-                })
-              }
-              className="bg-[#F1F5F9] border-none text-gray-900 h-12 flex-1"
-            />
-          </div>
-          {duplicateOwnerPhone ? (
-            <p className="text-sm text-destructive">An account already exists for this number.</p>
-          ) : null}
-        </div>
+        <AuthTextField
+          id="name"
+          label="Your Name"
+          value={details.name}
+          onChange={(name) => setDetails({ ...details, name })}
+        />
+        <AuthPhoneField
+          id="phone"
+          value={digits}
+          onChange={(phone) => setDetails({ ...details, phone })}
+          errorText={duplicateOwnerPhone ? "An account already exists for this number." : null}
+          helperText={duplicateOwnerPhone ? undefined : "We'll send an OTP to verify"}
+        />
       </div>
 
-      <div className="mt-10 hidden sm:block">
-        <Button
-          size="lg"
-          onClick={onNext}
-          disabled={!isComplete}
-          className="w-48 bg-primary hover:bg-primary/90 mb-6 rounded-sm"
-        >
-          Request OTP &rarr;
-        </Button>
-
-        <p className="text-sm text-gray-400">
-          By continuing, you agree to TrustKeyper{" "}
-          <a href="#" className="text-accent hover:underline">
-            Terms and Conditions
-          </a>
-        </p>
+      <div className="hidden sm:block mt-10 max-w-md">
+        <AuthSignupActionBlock>{cta}</AuthSignupActionBlock>
       </div>
-
-      <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] safe-area-bottom">
-        <Button
-          size="lg"
-          onClick={onNext}
-          disabled={!isComplete}
-          className="w-full bg-primary hover:bg-primary/90 rounded-sm"
-        >
-          Request OTP &rarr;
-        </Button>
-      </div>
+      <AuthSignupStickyFooter>{cta}</AuthSignupStickyFooter>
     </div>
   );
 }

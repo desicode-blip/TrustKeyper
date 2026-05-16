@@ -17,6 +17,7 @@ export const CLOUD_SYNC_KEYS = [
   "agreements",
   "agreement_draft",
   "onboarding_data",
+  "add_property_data",
 ] as const;
 
 export type CloudSyncKey = (typeof CLOUD_SYNC_KEYS)[number];
@@ -87,34 +88,36 @@ export async function pushAccountKeyToCloud(
   role: Role,
   dataKey: string,
   value: string,
-): Promise<void> {
+): Promise<boolean> {
   try {
-    await fetch(accountUrl(phone, role, `/${encodeURIComponent(dataKey)}`), {
+    const res = await fetch(accountUrl(phone, role, `/${encodeURIComponent(dataKey)}`), {
       method: "PUT",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ value }),
     });
+    return res.ok;
   } catch {
-    /* offline */
+    return false;
   }
 }
 
-export async function pushLocalKeysToCloud(phone: string, role: Role): Promise<void> {
+export async function pushLocalKeysToCloud(phone: string, role: Role): Promise<boolean> {
   const p = normalizePhoneDigits(phone);
   const entries: Record<string, string> = {};
   for (const key of CLOUD_SYNC_KEYS) {
     const raw = localStorage.getItem(storageKey(p, role, key));
     if (raw) entries[key] = raw;
   }
-  if (Object.keys(entries).length === 0) return;
+  if (Object.keys(entries).length === 0) return true;
   try {
-    await fetch(accountUrl(phone, role), {
+    const res = await fetch(accountUrl(phone, role), {
       method: "PUT",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ entries }),
     });
+    return res.ok;
   } catch {
-    /* offline */
+    return false;
   }
 }
 

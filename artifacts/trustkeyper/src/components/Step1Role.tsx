@@ -1,6 +1,7 @@
 import React from "react";
 import { User, Home, Briefcase, IndianRupee } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { authPrimaryButtonClass } from "@/components/auth/authStyles";
 
 interface Step1RoleProps {
   role: string;
@@ -17,7 +18,7 @@ export default function Step1Role({ role, setRole, onNext }: Step1RoleProps) {
   ];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full pb-36 sm:pb-0">
       <div className="mb-8">
         <h1 className="text-3xl font-semibold text-gray-900 mb-2">I am a</h1>
       </div>
@@ -52,7 +53,7 @@ export default function Step1Role({ role, setRole, onNext }: Step1RoleProps) {
         <Button size="lg"
           onClick={onNext} 
           disabled={!role}
-          className="w-40 bg-primary hover:bg-primary/90"
+          className={authPrimaryButtonClass}
         >
           Continue
         </Button>
@@ -62,7 +63,7 @@ export default function Step1Role({ role, setRole, onNext }: Step1RoleProps) {
         <Button size="lg"
           onClick={onNext}
           disabled={!role}
-          className="w-full bg-primary hover:bg-primary/90"
+          className={authPrimaryButtonClass}
         >
           Continue
         </Button>

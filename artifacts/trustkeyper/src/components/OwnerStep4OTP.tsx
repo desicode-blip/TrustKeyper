@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
+import { AuthTextField } from "@/components/auth/AuthTextField";
+import { AuthSignupActionBlock, AuthSignupStickyFooter } from "@/components/auth/AuthSignupActionBlock";
+import { authPrimaryButtonClass } from "@/components/auth/authStyles";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 
 interface OwnerStep4OTPProps {
@@ -26,37 +28,31 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
     setOtp(newOtp);
 
     if (value && index < OTP_LAST_INDEX) {
-      const nextInput = document.getElementById(`owner-otp-${index + 1}`);
-      nextInput?.focus();
+      document.getElementById(`owner-otp-${index + 1}`)?.focus();
     }
   };
 
   const isComplete = otp.every((digit) => digit !== "");
   const displayPhone = details.phone.replace(/\D/g, "").slice(0, 10);
 
+  const cta = (
+    <Button size="lg" onClick={onNext} disabled={!isComplete} className={authPrimaryButtonClass}>
+      Continue &rarr;
+    </Button>
+  );
+
   return (
-    <div className="flex flex-col h-full max-w-2xl">
-      <div className="mb-8 border-b pb-6">
+    <div className="flex flex-col h-full max-w-2xl pb-36 sm:pb-0">
+      <div className="mb-8">
         <h1 className="text-3xl font-semibold text-gray-900">Let&apos;s know you better</h1>
       </div>
 
-      <div className="space-y-6 mb-8 max-w-md">
-        <div className="space-y-2">
-          <Label className="text-gray-700">Your Name</Label>
-          <Input value={details.name} readOnly className="bg-[#E2E8F0] border-none text-gray-500 h-12" />
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-gray-700">Phone Number</Label>
-          <Input
-            value={displayPhone ? `+91 ${displayPhone}` : ""}
-            readOnly
-            className="bg-[#E2E8F0] border-none text-gray-500 h-12"
-          />
-        </div>
+      <div className="space-y-6 mb-8 max-w-md opacity-70 pointer-events-none">
+        <AuthTextField id="owner-otp-name" label="Your Name" value={details.name} onChange={() => {}} disabled />
+        <AuthPhoneField id="owner-otp-phone" value={displayPhone} onChange={() => {}} disabled helperText="" />
       </div>
 
-      <div className="mb-8">
+      <div className="mb-8 max-w-md">
         <p className="text-gray-500 text-sm mb-4">
           Enter the OTP that we have sent to{" "}
           <span className="font-semibold text-gray-900">+91 {displayPhone}</span>
@@ -85,43 +81,23 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
         <p className="text-sm text-gray-500">
           Didn&apos;t receive the verification OTP?{" "}
           {countdown > 0 ? (
-            <span className="font-medium text-[#2563EB]">Resend otp in {countdown}s</span>
+            <span className="font-medium text-primary">Resend otp in {countdown}s</span>
           ) : (
-            <button type="button" onClick={() => setCountdown(10)} className="font-medium text-[#2563EB] hover:underline">
+            <button
+              type="button"
+              onClick={() => setCountdown(10)}
+              className="font-medium text-primary hover:underline"
+            >
               Resend otp
             </button>
           )}
         </p>
       </div>
 
-      <div className="mt-4 hidden sm:block">
-        <Button
-          size="lg"
-          onClick={onNext}
-          disabled={!isComplete}
-          className="w-48 bg-primary hover:bg-primary/90 mb-6 rounded-sm"
-        >
-          Continue &rarr;
-        </Button>
-
-        <p className="text-sm text-gray-400">
-          By continuing, you agree to TrustKeyper{" "}
-          <a href="#" className="text-accent hover:underline">
-            Terms and Conditions
-          </a>
-        </p>
+      <div className="hidden sm:block mt-4 max-w-md">
+        <AuthSignupActionBlock showTerms={false}>{cta}</AuthSignupActionBlock>
       </div>
-
-      <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] safe-area-bottom">
-        <Button
-          size="lg"
-          onClick={onNext}
-          disabled={!isComplete}
-          className="w-full bg-primary hover:bg-primary/90 rounded-sm"
-        >
-          Continue &rarr;
-        </Button>
-      </div>
+      <AuthSignupStickyFooter showTerms={false}>{cta}</AuthSignupStickyFooter>
     </div>
   );
 }
