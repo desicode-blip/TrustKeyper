@@ -9,8 +9,6 @@ interface AuthTextFieldProps {
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
-  helperText?: string;
-  required?: boolean;
 }
 
 export function AuthTextField({
@@ -20,14 +18,11 @@ export function AuthTextField({
   onChange,
   placeholder = "Type here",
   disabled = false,
-  helperText,
-  required = false,
 }: AuthTextFieldProps) {
   return (
     <div className="space-y-2">
       <Label htmlFor={id} className="text-gray-700">
         {label}
-        {required ? <span className="text-destructive"> *</span> : null}
       </Label>
       <Input
         id={id}
@@ -35,11 +30,8 @@ export function AuthTextField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className={`h-12 border-none ${
-          disabled ? "bg-[#E8EEF5] text-gray-600" : "bg-[#F1F5F9] text-gray-900"
-        }`}
+        className="bg-white"
       />
-      {helperText ? <p className="text-xs text-gray-500">{helperText}</p> : null}
     </div>
   );
 }

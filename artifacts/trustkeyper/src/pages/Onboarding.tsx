@@ -156,7 +156,7 @@ export default function Onboarding() {
                   });
                 } catch (err) {
                   toast({
-                    title: "Sign up failed",
+                    title: "Could not create account",
                     description: err instanceof Error ? err.message : "Please try again.",
                     variant: "destructive",
                   });
@@ -210,7 +210,7 @@ export default function Onboarding() {
                   });
                 } catch (err) {
                   toast({
-                    title: "Sign up failed",
+                    title: "Could not create account",
                     description: err instanceof Error ? err.message : "Please try again.",
                     variant: "destructive",
                   });

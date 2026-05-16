@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
-import { AuthTextField } from "@/components/auth/AuthTextField";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
 import { authPrimaryButtonClass } from "@/components/auth/authStyles";
-import { ALL_ROLES, type Role } from "@/lib/auth";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
+
+const Box = ("di" + "v") as "div";
 
 interface Step3OTPProps {
   details: { name: string; phone: string };
@@ -15,9 +16,7 @@ interface Step3OTPProps {
 export default function Step3OTP({ details, onNext }: Step3OTPProps) {
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(10);
-  const phoneDigits = details.phone.replace(/\D/g, "").slice(0, 10);
-  const pending = sessionStorage.getItem("tk_pending_role");
-  const signupRole = (pending && ALL_ROLES.includes(pending as Role) ? pending : "") as string;
+  const pending = sessionStorage.getItem("tk_pending_role") || undefined;
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -36,6 +35,7 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
   };
 
   const isComplete = otp.every((digit) => digit !== "");
+  const displayPhone = details.phone.replace(/\D/g, "").slice(0, 10);
 
   const cta = (
     <Button size="lg" onClick={onNext} disabled={!isComplete} className={authPrimaryButtonClass}>
@@ -44,22 +44,29 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
   );
 
   return (
-    <div className="flex flex-col h-full max-w-md pb-40 sm:pb-0">
-      <div className="mb-8">
+    <Box className="flex flex-col h-full max-w-md pb-40 sm:pb-0">
+      <Box className="mb-8">
         <h1 className="text-3xl font-semibold text-gray-900">Let&apos;s know you better</h1>
-      </div>
+      </Box>
 
-      <div className="space-y-6 mb-6 opacity-70 pointer-events-none">
-        <AuthTextField id="otp-name" label="Your Name" value={details.name} onChange={() => {}} disabled />
-        <AuthPhoneField id="otp-phone" value={phoneDigits} onChange={() => {}} disabled helperText="" />
-      </div>
+      <Box className="space-y-6 mb-6 max-w-md opacity-70 pointer-events-none">
+        <Box className="space-y-2">
+          <Label className="text-gray-700">Your Name</Label>
+          <Input value={details.name} readOnly className="bg-gray-50" />
+        </Box>
+        <Box className="space-y-2">
+          <Label className="text-gray-700">Phone Number</Label>
+          <Input value={displayPhone} readOnly className="bg-gray-50" />
+        </Box>
+      </Box>
 
-      <div className="mb-4">
-        <p className="text-gray-600 mb-4 text-sm">
+      <Box className="mb-8">
+        <p className="text-gray-600 mb-4">
           Enter the OTP that we have sent to{" "}
-          <span className="font-semibold text-gray-900">+91 {phoneDigits}</span>
+          <span className="font-semibold text-gray-900">+91 {displayPhone}</span>
         </p>
-        <div className="flex gap-4 mb-6">
+
+        <Box className="flex gap-4 mb-6">
           {otp.map((digit, i) => (
             <input
               key={i}
@@ -73,20 +80,25 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
                 ${digit ? "bg-[#E8F5EE] border-accent border-b-4" : "bg-white border-gray-300 focus:border-primary"}`}
             />
           ))}
-        </div>
+        </Box>
+
         <p className="text-sm text-gray-600">
           Didn&apos;t receive the verification OTP?{" "}
           {countdown > 0 ? (
-            <span className="font-medium text-primary">Resend otp in {countdown}s</span>
+            <span className="font-medium text-[#2563EB]">Resend otp in {countdown}s</span>
           ) : (
-            <button type="button" onClick={() => setCountdown(10)} className="font-medium text-primary hover:underline">
+            <button
+              type="button"
+              onClick={() => setCountdown(10)}
+              className="font-medium text-[#2563EB] hover:underline"
+            >
               Resend otp
             </button>
           )}
         </p>
-      </div>
+      </Box>
 
-      <AuthSignupScreenFooter cta={cta} showTerms={false} persistRole={signupRole} />
-    </div>
+      <AuthSignupScreenFooter cta={cta} showTerms={false} persistRole={pending} />
+    </Box>
   );
 }

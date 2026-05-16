@@ -13,7 +13,7 @@ export function AuthGoToLoginLink({
 }) {
   const [, setLocation] = useLocation();
   return (
-    <p className={className ?? "text-sm text-gray-500 mt-4 pb-28 sm:pb-0"}>
+    <p className={className ?? "text-sm text-gray-500 mt-4 text-center pb-28 sm:pb-0"}>
       Already have an account?{" "}
       <button
         type="button"
@@ -38,7 +38,7 @@ export function AuthGoToSignupLink({
 }) {
   const [, setLocation] = useLocation();
   return (
-    <p className={className ?? "text-sm text-gray-500 mt-4 pb-28 sm:pb-0"}>
+    <p className={className ?? "text-sm text-gray-500 mt-4 text-center pb-28 sm:pb-0"}>
       Don&apos;t have an account?{" "}
       <button
         type="button"

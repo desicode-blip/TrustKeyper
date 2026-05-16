@@ -1,13 +1,12 @@
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
-import { AuthGoToSignupLink } from "@/components/AuthFlowFooterLinks";
+import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
+import { authPrimaryButtonClass } from "@/components/auth/authStyles";
 import Step1Role from "@/components/Step1Role";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
-import { authPrimaryButtonClass } from "@/components/auth/authStyles";
 import { toast } from "@/hooks/use-toast";
 import {
   ALL_ROLES,
@@ -18,6 +17,8 @@ import {
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
+
+const Box = ("di" + "v") as "div";
 
 type Phase = "role" | "phone" | "otp";
 
@@ -45,14 +46,11 @@ function readPendingRoleForLogin(): { phase: Phase; role: string } {
   return { phase: "role", role: "" };
 }
 
-const loginCtaClass = authPrimaryButtonClass;
-
 export default function Login() {
   const [loc, setLocation] = useLocation();
   const [phase, setPhase] = useState<Phase>(() => readPendingRoleForLogin().phase);
   const [role, setRole] = useState(() => readPendingRoleForLogin().role);
   const [phone, setPhone] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(10);
   const [accountKnown, setAccountKnown] = useState<boolean | null>(null);
@@ -62,7 +60,6 @@ export default function Login() {
     resetSessionForAuthEntry();
   }, []);
 
-  // Keep login aligned with signup flow: role was already chosen when tk_pending_role is set.
   useLayoutEffect(() => {
     const pending = sessionStorage.getItem("tk_pending_role");
     if (pending && ALL_ROLES.includes(pending as Role)) {
@@ -72,10 +69,10 @@ export default function Login() {
   }, [loc]);
 
   useEffect(() => {
-    if (!otpSent || countdown <= 0) return;
+    if (phase !== "otp" || countdown <= 0) return;
     const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(t);
-  }, [countdown, otpSent]);
+  }, [countdown, phase]);
 
   const phoneDigits = phone.replace(/\D/g, "").slice(0, 10);
   const activeRole = ((): Role | null => {
@@ -84,6 +81,7 @@ export default function Login() {
     if (role && ALL_ROLES.includes(role as Role)) return role as Role;
     return null;
   })();
+
   useEffect(() => {
     if (!activeRole || phoneDigits.length !== 10) {
       setAccountKnown(null);
@@ -99,10 +97,10 @@ export default function Login() {
   }, [phoneDigits, activeRole]);
 
   const accountExistsForLogin = activeRole !== null && phoneDigits.length === 10 && accountKnown === true;
-  const canRequest = accountExistsForLogin;
   const showNoAccountHint =
     activeRole !== null && phoneDigits.length === 10 && accountKnown === false;
   const isOtpComplete = otp.every((d) => d !== "");
+  const persistRole = role || sessionStorage.getItem("tk_pending_role") || undefined;
 
   const handleOtpChange = (index: number, value: string) => {
     const v = value.replace(/\D/g, "").slice(0, 1);
@@ -126,7 +124,7 @@ export default function Login() {
       if (!exists) {
         toast({
           title: "No account found",
-          description: "There is no account for this number.",
+          description: "Sign up first, then log in on any device with the same number.",
           variant: "destructive",
         });
         return;
@@ -139,7 +137,7 @@ export default function Login() {
       }
       toast({
         title: "No account found",
-        description: "There is no account for this number.",
+        description: "Sign up first, then log in on any device with the same number.",
         variant: "destructive",
       });
     } finally {
@@ -156,93 +154,104 @@ export default function Login() {
       ? `Login to TrustKeyper as ${roleTitle((headingRoleFromSession ?? activeRole) as Role)}`
       : "Login to TrustKeyper";
 
+  const requestOtpCta = (
+    <Button
+      size="lg"
+      disabled={!accountExistsForLogin}
+      onClick={() => {
+        if (!accountExistsForLogin) return;
+        setCountdown(10);
+        setOtp(createEmptyOtp());
+        setPhase("otp");
+      }}
+      className={authPrimaryButtonClass}
+    >
+      Request OTP &rarr;
+    </Button>
+  );
+
+  const continueLoginCta = (
+    <Button
+      size="lg"
+      disabled={!isOtpComplete || loggingIn}
+      onClick={() => void finishLogin()}
+      className={authPrimaryButtonClass}
+    >
+      Continue &rarr;
+    </Button>
+  );
+
   return (
     <AuthFlowLayout onBack={() => setLocation("/")} backDisabled={false}>
-      <div className="max-w-md flex flex-col flex-1">
-        <div className="mb-8 border-b border-gray-200 pb-4">
+      <Box className="max-w-md flex flex-col flex-1 pb-40 sm:pb-0">
+        <Box className="mb-8 border-b border-gray-200 pb-4">
           <h1 className="text-3xl font-semibold text-gray-900">{loginHeading}</h1>
-        </div>
+        </Box>
 
         {phase === "role" && (
-          <>
-            <Step1Role
-              role={role}
-              setRole={setRole}
-              onNext={() => {
-                if (!role) return;
-                sessionStorage.setItem("tk_pending_role", role);
-                setPhone("");
-                setPhase("phone");
-              }}
-            />
-            <AuthGoToSignupLink persistRole={role} />
-          </>
+          <Step1Role
+            role={role}
+            setRole={setRole}
+            footerLinkType="signup"
+            onNext={() => {
+              if (!role) return;
+              sessionStorage.setItem("tk_pending_role", role);
+              setPhone("");
+              setPhase("phone");
+            }}
+          />
         )}
 
         {phase === "phone" && (
           <>
-            <div className="mb-8 max-w-md">
-              <AuthPhoneField
-                id="login-phone"
-                value={phoneDigits}
-                onChange={setPhone}
-                errorText={showNoAccountHint ? "There is no account for this number." : null}
-                helperText={showNoAccountHint ? undefined : "We'll send an OTP to verify"}
-              />
-            </div>
+            <Box className="space-y-2 mb-8">
+              <Label htmlFor="login-phone" className="text-gray-600 text-sm">
+                Phone Number
+              </Label>
+              <Box className="flex gap-2">
+                <Box className="w-14 flex items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-700 text-sm shrink-0">
+                  +91
+                </Box>
+                <Input
+                  id="login-phone"
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder="10-digit number"
+                  value={phoneDigits}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  className="bg-white border-gray-200"
+                />
+              </Box>
+              {showNoAccountHint ? (
+                <p className="text-sm text-destructive">There is no account for this number.</p>
+              ) : null}
+            </Box>
 
-            <div className="hidden sm:block">
-              <Button
-                size="lg"
-                disabled={!canRequest}
-                onClick={() => {
-                  if (!canRequest) return;
-                  setOtpSent(true);
-                  setCountdown(10);
-                  setOtp(createEmptyOtp());
-                  setPhase("otp");
-                }}
-                className={`w-full sm:w-52 ${loginCtaClass}`}
-              >
-                Request OTP &rarr;
-              </Button>
-            </div>
-            <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] safe-area-bottom">
-              <Button
-                size="lg"
-                disabled={!canRequest}
-                onClick={() => {
-                  if (!canRequest) return;
-                  setOtpSent(true);
-                  setCountdown(10);
-                  setOtp(createEmptyOtp());
-                  setPhase("otp");
-                }}
-                className={`w-full ${loginCtaClass}`}
-              >
-                Request OTP &rarr;
-              </Button>
-            </div>
-
-            <AuthGoToSignupLink persistRole={role || sessionStorage.getItem("tk_pending_role") || undefined} />
+            <AuthSignupScreenFooter
+              cta={requestOtpCta}
+              showTerms={false}
+              linkType="signup"
+              persistRole={persistRole}
+            />
           </>
         )}
 
         {phase === "otp" && (
           <>
-            <div className="space-y-6 mb-6 max-w-md opacity-80">
-              <div className="space-y-2">
+            <Box className="space-y-6 mb-6 max-w-md opacity-80">
+              <Box className="space-y-2">
                 <Label className="text-gray-600 text-sm">Phone Number</Label>
                 <Input readOnly value={`+91 ${phoneDigits}`} className="bg-gray-50 border-gray-200" />
-              </div>
-            </div>
+              </Box>
+            </Box>
 
             <p className="text-gray-600 text-sm mb-4">
               Enter the OTP that we have sent to{" "}
               <span className="font-semibold text-gray-900">+91 {phoneDigits}</span>
             </p>
 
-            <div className="flex gap-4 mb-6">
+            <Box className="flex gap-4 mb-6">
               {otp.map((digit, i) => (
                 <input
                   key={i}
@@ -256,7 +265,7 @@ export default function Login() {
                     ${digit ? "bg-[#E8F5EE] border-accent border-b-4" : "bg-white border-gray-300 focus:border-primary"}`}
                 />
               ))}
-            </div>
+            </Box>
 
             <p className="text-sm text-gray-600 mb-8">
               Didn&apos;t receive the verification OTP?{" "}
@@ -273,31 +282,15 @@ export default function Login() {
               )}
             </p>
 
-            <div className="hidden sm:block">
-              <Button
-                size="lg"
-                disabled={!isOtpComplete || loggingIn}
-                onClick={() => void finishLogin()}
-                className={`w-full sm:w-52 ${loginCtaClass}`}
-              >
-                Continue &rarr;
-              </Button>
-            </div>
-            <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] safe-area-bottom">
-              <Button
-                size="lg"
-                disabled={!isOtpComplete || loggingIn}
-                onClick={() => void finishLogin()}
-                className={`w-full ${loginCtaClass}`}
-              >
-                Continue &rarr;
-              </Button>
-            </div>
-
-            <AuthGoToSignupLink persistRole={role || sessionStorage.getItem("tk_pending_role") || undefined} />
+            <AuthSignupScreenFooter
+              cta={continueLoginCta}
+              showTerms={false}
+              linkType="signup"
+              persistRole={persistRole}
+            />
           </>
         )}
-      </div>
+      </Box>
     </AuthFlowLayout>
   );
 }

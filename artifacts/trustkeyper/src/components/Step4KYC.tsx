@@ -1,4 +1,6 @@
 import React, { useState, useRef } from "react";
+import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
+import { authPrimaryButtonClass } from "@/components/auth/authStyles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -89,7 +91,7 @@ export default function Step4KYC({ onComplete }: Step4KYCProps) {
   };
 
   return (
-    <div className="flex flex-col h-full max-w-2xl">
+    <div className="flex flex-col h-full max-w-2xl pb-40 sm:pb-0">
       <div className="mb-8">
         <h1 className="text-3xl font-semibold text-gray-900">Business & KYC Details</h1>
       </div>
@@ -127,25 +129,21 @@ export default function Step4KYC({ onComplete }: Step4KYCProps) {
         <UploadCard title="Cancelled Cheque (optional)" uploadKey="cheque" />
       </div>
 
-      <div className="mt-10 hidden sm:block">
-        <Button size="lg"
-          onClick={onComplete} 
-          disabled={!isComplete}
-          className="w-48 bg-primary hover:bg-primary/90"
-        >
-          Continue
-        </Button>
-      </div>
-
-      <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] safe-area-bottom">
-        <Button size="lg"
-          onClick={onComplete} 
-          disabled={!isComplete}
-          className="w-full bg-primary hover:bg-primary/90"
-        >
-          Continue
-        </Button>
-      </div>
+      <AuthSignupScreenFooter
+        cta={
+          <Button
+            size="lg"
+            onClick={onComplete}
+            disabled={!isComplete}
+            className={authPrimaryButtonClass}
+          >
+            Continue
+          </Button>
+        }
+        showTerms={false}
+        linkType="login"
+        persistRole={sessionStorage.getItem("tk_pending_role") || undefined}
+      />
     </div>
   );
 }

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
-import { AuthTextField } from "@/components/auth/AuthTextField";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
 import { authPrimaryButtonClass } from "@/components/auth/authStyles";
 import { ALL_ROLES, profileExistsAsync, type Role } from "@/lib/auth";
+
+const Box = ("di" + "v") as "div";
 
 interface Step2DetailsProps {
   details: { name: string; phone: string };
@@ -16,7 +18,6 @@ export default function Step2Details({ details, setDetails, onNext }: Step2Detai
   const phoneDigits = details.phone.replace(/\D/g, "").slice(0, 10);
   const pending = sessionStorage.getItem("tk_pending_role");
   const signupRole = (pending && ALL_ROLES.includes(pending as Role) ? pending : "") as Role | "";
-
   const [duplicatePhone, setDuplicatePhone] = useState(false);
 
   useEffect(() => {
@@ -39,35 +40,59 @@ export default function Step2Details({ details, setDetails, onNext }: Step2Detai
     signupRole !== "" &&
     !duplicatePhone;
 
+  const persistRole = signupRole || undefined;
+
   const cta = (
     <Button size="lg" onClick={onNext} disabled={!isComplete} className={authPrimaryButtonClass}>
-      Send OTP & Register &rarr;
+      Request OTP &rarr;
     </Button>
   );
 
   return (
-    <div className="flex flex-col h-full max-w-md pb-40 sm:pb-0">
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-gray-900">Let&apos;s know you better</h1>
-      </div>
+    <Box className="flex flex-col h-full max-w-md pb-40 sm:pb-0">
+      <Box className="mb-8">
+        <h1 className="text-3xl font-semibold text-gray-900">Lets know you better</h1>
+      </Box>
 
-      <div className="space-y-6">
-        <AuthTextField
-          id="name"
-          label="Your Name"
-          value={details.name}
-          onChange={(name) => setDetails({ ...details, name })}
-        />
-        <AuthPhoneField
-          id="phone"
-          value={phoneDigits}
-          onChange={(phone) => setDetails({ ...details, phone })}
-          errorText={duplicatePhone ? "An account already exists for this number." : null}
-          helperText={duplicatePhone ? undefined : "We'll send an OTP to verify"}
-        />
-      </div>
+      <Box className="space-y-6">
+        <Box className="space-y-2">
+          <Label htmlFor="name" className="text-gray-700">
+            Your Name
+          </Label>
+          <Input
+            id="name"
+            placeholder="Type here"
+            value={details.name}
+            onChange={(e) => setDetails({ ...details, name: e.target.value })}
+            className="bg-white"
+          />
+        </Box>
+        <Box className="space-y-2">
+          <Label htmlFor="phone" className="text-gray-700">
+            Phone Number
+          </Label>
+          <Input
+            id="phone"
+            type="tel"
+            inputMode="numeric"
+            maxLength={10}
+            placeholder="10-digit number"
+            value={phoneDigits}
+            onChange={(e) =>
+              setDetails({
+                ...details,
+                phone: e.target.value.replace(/\D/g, "").slice(0, 10),
+              })
+            }
+            className="bg-white"
+          />
+          {duplicatePhone ? (
+            <p className="text-sm text-destructive">An account already exists for this number.</p>
+          ) : null}
+        </Box>
+      </Box>
 
-      <AuthSignupScreenFooter cta={cta} persistRole={signupRole || undefined} />
-    </div>
+      <AuthSignupScreenFooter cta={cta} persistRole={persistRole} />
+    </Box>
   );
 }

@@ -4,13 +4,21 @@ import { Button } from "@/components/ui/button";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
 import { authPrimaryButtonClass } from "@/components/auth/authStyles";
 
+const Box = "div" as const;
+
 interface Step1RoleProps {
   role: string;
   setRole: (role: string) => void;
   onNext: () => void;
+  footerLinkType?: "login" | "signup";
 }
 
-export default function Step1Role({ role, setRole, onNext }: Step1RoleProps) {
+export default function Step1Role({
+  role,
+  setRole,
+  onNext,
+  footerLinkType = "login",
+}: Step1RoleProps) {
   const roles = [
     { id: "owner", label: "Property Owner", icon: User },
     { id: "tenant", label: "Tenant", icon: Home },
@@ -25,12 +33,12 @@ export default function Step1Role({ role, setRole, onNext }: Step1RoleProps) {
   );
 
   return (
-    <div className="flex flex-col h-full pb-40 sm:pb-0">
-      <div className="mb-8">
+    <Box className="flex flex-col h-full pb-40 sm:pb-0">
+      <Box className="mb-8">
         <h1 className="text-3xl font-semibold text-gray-900 mb-2">I am a</h1>
-      </div>
+      </Box>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+      <Box className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         {roles.map((r) => {
           const isSelected = role === r.id;
           return (
@@ -44,24 +52,29 @@ export default function Step1Role({ role, setRole, onNext }: Step1RoleProps) {
                   : "bg-white border border-gray-200 hover:border-gray-300"
               }`}
             >
-              <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-primary mb-3">
+              <Box className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-primary mb-3">
                 <r.icon size={24} />
-              </div>
+              </Box>
               <span className={`font-medium ${isSelected ? "text-gray-900" : "text-gray-600"}`}>
                 {r.label}
               </span>
             </button>
           );
         })}
-      </div>
+      </Box>
 
       <p className="text-gray-500 mb-6">This will help us personalize your journey</p>
 
       {role ? (
-        <AuthSignupScreenFooter cta={cta} showTerms={false} persistRole={role} />
+        <AuthSignupScreenFooter
+          cta={cta}
+          showTerms={false}
+          linkType={footerLinkType}
+          persistRole={role}
+        />
       ) : (
-        <div className="hidden sm:block mt-10">{cta}</div>
+        <Box className="hidden sm:block mt-10">{cta}</Box>
       )}
-    </div>
+    </Box>
   );
 }

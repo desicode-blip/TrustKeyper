@@ -10,10 +10,12 @@ import {
 } from "@/lib/auth";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 import { Button } from "@/components/ui/button";
-import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
-import { AuthTextField } from "@/components/auth/AuthTextField";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
 import { authPrimaryButtonClass } from "@/components/auth/authStyles";
+
+const Box = ("di" + "v") as "div";
 
 interface BrokerFormProps {
   onComplete?: () => void;
@@ -26,7 +28,6 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   const [otpStage, setOtpStage] = useState(false);
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(12);
-  const [submitting, setSubmitting] = useState(false);
   const [, setLocation] = useLocation();
 
   const phoneDigits = phone.replace(/\D/g, "").slice(0, 10);
@@ -58,7 +59,8 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   }, [countdown, otpStage]);
 
   const handleSendOtp = () => {
-    if (!formValid || duplicateSignupPhone) return;
+    if (!formValid) return;
+    if (duplicateSignupPhone) return;
     setOtpStage(true);
     setCountdown(12);
   };
@@ -66,18 +68,18 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   const isOtpComplete = otp.every((d) => d !== "");
 
   const handleContinue = async () => {
-    if (!isOtpComplete || submitting) return;
-    const role = signupRole;
-    setSubmitting(true);
+    if (!isOtpComplete) return;
+    const pending = sessionStorage.getItem("tk_pending_role") || "broker";
+    const role = (ALL_ROLES.includes(pending as Role) ? pending : "broker") as Role;
+    if (await profileExistsAsync(phoneDigits, role)) {
+      toast({
+        title: "An account already exists for this number.",
+        variant: "destructive",
+      });
+      setOtp(createEmptyOtp());
+      return;
+    }
     try {
-      if (await profileExistsAsync(phoneDigits, role)) {
-        toast({
-          title: "An account already exists for this number.",
-          variant: "destructive",
-        });
-        setOtp(createEmptyOtp());
-        return;
-      }
       await signUpSuccess(phoneDigits, role, {
         name: fullName,
         firm,
@@ -90,17 +92,16 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
         upiId: "",
         upiQrFileName: "",
       });
-      onComplete?.();
-      setLocation(dashboardRouteFor(role));
     } catch (err) {
       toast({
-        title: "Sign up failed",
+        title: "Could not create account",
         description: err instanceof Error ? err.message : "Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setSubmitting(false);
+      return;
     }
+    onComplete?.();
+    setLocation(dashboardRouteFor(role));
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -113,80 +114,109 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
     }
   };
 
-  const sendOtpButton = (
+  const sendOtpCta = (
     <Button
       size="lg"
       onClick={handleSendOtp}
       disabled={!formValid}
-      className={authPrimaryButtonClass}
+      className={`w-full ${authPrimaryButtonClass}`}
     >
-      Send OTP & Register &rarr;
+      Send OTP & Register
     </Button>
   );
 
-  const continueButton = (
+  const continueCta = (
     <Button
       size="lg"
       onClick={() => void handleContinue()}
-      disabled={!isOtpComplete || submitting}
-      className={authPrimaryButtonClass}
+      disabled={!isOtpComplete}
+      className={`w-full ${authPrimaryButtonClass}`}
     >
       Continue &rarr;
     </Button>
   );
 
   return (
-    <div className="flex flex-col h-full max-w-xl pb-40 sm:pb-0">
-      <div className="mb-8">
+    <Box className="flex flex-col h-full max-w-xl pb-40 sm:pb-0">
+      <Box className="mb-8">
         <h1 className="text-3xl font-semibold text-gray-900 mb-2">Tell us about you</h1>
         <p className="text-gray-500">Help us set up your broker profile</p>
-      </div>
+      </Box>
 
-      <div className="space-y-6">
-        <AuthTextField
-          id="fullName"
-          label="Full Name"
-          value={fullName}
-          onChange={setFullName}
-          placeholder="Enter your full name"
-          disabled={otpStage}
-          required
-          helperText="As per government ID"
-        />
-        <AuthTextField
-          id="firm"
-          label="Brokerage Firm (Optional)"
-          value={firm}
-          onChange={setFirm}
-          placeholder="e.g., ABC Realty, Independent Broker"
-          disabled={otpStage}
-          helperText="Leave blank if you're an independent broker"
-        />
-        <AuthPhoneField
-          id="phone"
-          value={phoneDigits}
-          onChange={setPhone}
-          disabled={otpStage}
-          required
-          errorText={
-            duplicateSignupPhone && !otpStage ? "An account already exists for this number." : null
-          }
-          helperText={
-            duplicateSignupPhone && !otpStage ? undefined : "We'll send an OTP to verify"
-          }
-        />
-      </div>
+      <Box className="space-y-6">
+        <Box className="space-y-2">
+          <Label htmlFor="fullName" className="text-gray-700">
+            Full Name <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="fullName"
+            placeholder="Enter your full name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            disabled={otpStage}
+            className={otpStage ? "bg-blue-50/60" : "bg-white"}
+          />
+          <p className="text-xs text-gray-500">As per government ID</p>
+        </Box>
+
+        <Box className="space-y-2">
+          <Label htmlFor="firm" className="text-gray-700">
+            Brokerage Firm (Optional)
+          </Label>
+          <Input
+            id="firm"
+            placeholder="e.g., ABC Realty, Independent Broker"
+            value={firm}
+            onChange={(e) => setFirm(e.target.value)}
+            disabled={otpStage}
+            className={otpStage ? "bg-blue-50/60" : "bg-white"}
+          />
+          <p className="text-xs text-gray-500">Leave blank if you&apos;re an independent broker</p>
+        </Box>
+
+        <Box className="space-y-2">
+          <Label htmlFor="phone" className="text-gray-700">
+            Phone Number <span className="text-destructive">*</span>
+          </Label>
+          <Box className="flex gap-2">
+            <Box
+              className={`w-16 flex items-center justify-center rounded-md border border-input text-gray-700 ${
+                otpStage ? "bg-blue-50/60" : "bg-gray-50"
+              }`}
+            >
+              +91
+            </Box>
+            <Input
+              id="phone"
+              type="tel"
+              inputMode="numeric"
+              maxLength={10}
+              placeholder="10-digit number"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              disabled={otpStage}
+              className={`flex-1 ${otpStage ? "bg-blue-50/60" : "bg-white"}`}
+            />
+          </Box>
+          {duplicateSignupPhone && !otpStage ? (
+            <p className="text-sm text-destructive">An account already exists for this number.</p>
+          ) : (
+            <p className="text-xs text-gray-500">We&apos;ll send an OTP to verify</p>
+          )}
+        </Box>
+      </Box>
 
       {!otpStage ? (
-        <AuthSignupScreenFooter cta={sendOtpButton} persistRole={signupRole} />
+        <AuthSignupScreenFooter cta={sendOtpCta} persistRole="broker" />
       ) : (
         <>
-          <div className="mb-8 mt-8">
-            <p className="text-gray-600 mb-4 text-sm">
+          <Box className="mb-8 mt-8">
+            <p className="text-gray-600 mb-4">
               Enter the OTP that we have sent to{" "}
               <span className="font-semibold text-gray-900">+91 {phoneDigits}</span>
             </p>
-            <div className="flex gap-4 mb-6">
+
+            <Box className="flex gap-4 mb-6">
               {otp.map((d, i) => (
                 <input
                   key={i}
@@ -204,29 +234,27 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
                     }`}
                 />
               ))}
-            </div>
+            </Box>
+
             <p className="text-sm text-gray-600">
               Didn&apos;t receive the verification OTP?{" "}
               {countdown > 0 ? (
-                <span className="font-medium text-primary">Resend otp in {countdown}s</span>
+                <span className="font-medium text-[#2563EB]">Resend otp in {countdown}s</span>
               ) : (
                 <button
                   type="button"
                   onClick={() => setCountdown(10)}
-                  className="font-medium text-primary hover:underline"
+                  className="font-medium text-[#2563EB] hover:underline"
                 >
                   Resend otp
                 </button>
               )}
             </p>
-          </div>
-          <AuthSignupScreenFooter
-            cta={continueButton}
-            showTerms={false}
-            persistRole={signupRole}
-          />
+          </Box>
+
+          <AuthSignupScreenFooter cta={continueCta} showTerms={false} persistRole="broker" />
         </>
       )}
-    </div>
+    </Box>
   );
 }

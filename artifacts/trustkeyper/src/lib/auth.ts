@@ -84,10 +84,19 @@ export async function signUpSuccess(
   }
   if (!profileOk) {
     throw new Error(
-      "Could not save your account. Redeploy the app with the API server enabled, then try again.",
+      "Could not save your account to the cloud. Check your connection and try again.",
     );
   }
-  void pushLocalKeysToCloud(p, role);
+  const synced = await pushLocalKeysToCloud(p, role);
+  if (!synced) {
+    await pushAccountKeyToCloud(p, role, "profile", profileJson);
+  }
+  const verified = await cloudAccountExists(p, role);
+  if (!verified) {
+    throw new Error(
+      "Account could not be verified on the server. Try again in a moment.",
+    );
+  }
 }
 
 /** Called after OTP success on LOGIN — loads account data from server when on a new device. */
@@ -97,7 +106,11 @@ export async function loginSuccess(phone: string, role: Role): Promise<boolean> 
 
   if (cloudExists) {
     setActiveSession(p, role);
-    await pullAccountFromCloud(p, role);
+    let pulled = await pullAccountFromCloud(p, role);
+    if (!pulled) {
+      await new Promise((r) => setTimeout(r, 400));
+      pulled = await pullAccountFromCloud(p, role);
+    }
     migrateLegacyStorage(p, role);
     applyProfileToSession(p, role);
     return true;
