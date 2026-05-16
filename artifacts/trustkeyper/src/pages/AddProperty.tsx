@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   ArrowLeft,
@@ -14,10 +14,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BrokerLayout from "@/components/BrokerLayout";
+import { AddPropertyProgressBar } from "@/components/AddPropertyProgressBar";
+import { useScrollToTopOnChange } from "@/hooks/useScrollToTopOnChange";
+import { getActiveSession } from "@/lib/auth";
 import { addProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
 import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
+import { toast } from "@/hooks/use-toast";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -49,78 +53,6 @@ const AMENITIES_RIGHT = [
   "Pooja Room", "Study Room", "Servant Room", "Garden", "Pets Allowed",
   "Air Conditioning", "Basketball Court", "Spa", "Uncovered Car Parking Space",
 ];
-
-// ─── Progress Bar ─────────────────────────────────────────────────────────────
-
-function ProgressBar({ subStep }: { subStep: number }) {
-  const steps = [
-    { label: "Property Details", Icon: Home },
-    { label: "Rental Details", Icon: Wallet },
-    { label: "Upload Image", Icon: ImageIcon },
-  ];
-
-  // majorStep: 0 = sub-steps 0–3, 1 = sub-step 4, 2 = sub-step 5
-  const majorStep = subStep <= 3 ? 0 : subStep === 4 ? 1 : 2;
-
-  // Percentage fill for the connecting line between step i and i+1
-  const lineFill = (i: number): number => {
-    if (i === 0) {
-      // Line between Property Details and Rental Details
-      // Sub-steps 0–3 fill 0→25→50→75%, sub-step 4+ = 100%
-      if (subStep >= 4) return 100;
-      return (subStep / 4) * 100;
-    }
-    if (i === 1) {
-      // Line between Rental Details and Upload Image
-      return subStep >= 5 ? 100 : 0;
-    }
-    return 0;
-  };
-
-  return (
-    <div className="flex items-start justify-center gap-0 mb-6">
-      {steps.map((s, i) => {
-        const done = majorStep > i;
-        const active = majorStep === i;
-        const Icon = s.Icon;
-        return (
-          <React.Fragment key={i}>
-            <div className="flex flex-col items-center w-32">
-              <Icon
-                size={22}
-                className={active || done ? "text-primary mb-1" : "text-gray-400 mb-1"}
-              />
-              <span
-                className={`text-[11px] font-medium mb-2 text-center leading-tight ${
-                  active || done ? "text-primary" : "text-gray-400"
-                }`}
-              >
-                {s.label}
-              </span>
-              <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
-                  done || active
-                    ? "bg-primary text-white"
-                    : "bg-white border-2 border-gray-300 text-gray-400"
-                }`}
-              >
-                {done ? <Check size={14} /> : i + 1}
-              </div>
-            </div>
-            {i < steps.length - 1 && (
-              <div className="flex-1 mt-12 mx-1 bg-gray-200 h-0.5 relative overflow-hidden rounded-full">
-                <div
-                  className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-in-out"
-                  style={{ width: `${lineFill(i)}%` }}
-                />
-              </div>
-            )}
-          </React.Fragment>
-        );
-      })}
-    </div>
-  );
-}
 
 // ─── Reusable UI Pieces ────────────────────────────────────────────────────────
 
@@ -215,6 +147,7 @@ export default function AddProperty() {
   };
   const savedData = loadSavedData();
   const [subStep, setSubStep] = useState(savedData?.subStep ?? 0);
+  useScrollToTopOnChange(subStep);
 
   // Sub-step 0 – Property Details
   const [nickname, setNickname] = useState(savedData?.nickname ?? "");
@@ -488,6 +421,11 @@ export default function AddProperty() {
   // ── Submit ────────────────────────────────────────────────────────────────────
 
   const handleSubmit = () => {
+    if (!getActiveSession()) {
+      toast({ title: "Please sign in to save properties", variant: "destructive" });
+      setLocation("/login");
+      return;
+    }
     const finalAmenities = [...amenities];
     if (amenityOtherChecked && amenityOtherText.trim()) {
       finalAmenities.push(amenityOtherText.trim());
@@ -653,7 +591,7 @@ export default function AddProperty() {
   const renderStep1 = () => (
     <div>
       <h2 className="text-xl font-semibold text-gray-900 text-center mb-6 pb-4 border-b border-gray-100">
-        Tell us more about your property
+        Tell us more about the property
       </h2>
       <div className="space-y-6">
         <div>
@@ -728,7 +666,7 @@ export default function AddProperty() {
   const renderStep2 = () => (
     <div>
       <h2 className="text-xl font-semibold text-gray-900 text-center mb-6 pb-4 border-b border-gray-100">
-        Tell us more about your property
+        Tell us more about the property
       </h2>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -782,7 +720,7 @@ export default function AddProperty() {
             />
           </div>
           <div>
-            <FieldLabel required>Direction of main door</FieldLabel>
+            <FieldLabel required>Facing</FieldLabel>
             <SelectField value={mainDoorDirection} onChange={setMainDoorDirection} options={DIRECTION_OPTIONS} placeholder="Select" />
           </div>
         </div>
@@ -793,7 +731,7 @@ export default function AddProperty() {
   const renderStep3 = () => (
     <div>
       <h2 className="text-xl font-semibold text-gray-900 text-center mb-6 pb-4 border-b border-gray-100">
-        Tell us more about your property
+        Tell us more about the property
       </h2>
       <div className="grid grid-cols-2 gap-y-4 gap-x-12">
         <div className="space-y-4">
@@ -1066,7 +1004,7 @@ export default function AddProperty() {
       </div>
 
       {/* Progress bar */}
-      <ProgressBar subStep={subStep} />
+      <AddPropertyProgressBar subStep={subStep} />
 
       {/* Card */}
       <div className="max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-8 pb-32 sm:pb-8">

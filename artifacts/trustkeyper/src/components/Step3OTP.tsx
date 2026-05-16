@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { AuthTermsText } from "@/components/AuthTermsText";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,15 +101,11 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
         <Button size="lg"
           onClick={onNext} 
           disabled={!isComplete}
-          className="w-48 bg-primary hover:bg-primary/90 mb-6"
+          className="w-48 bg-primary hover:bg-primary/90"
         >
           Continue &rarr;
         </Button>
-
-        <p className="text-sm text-gray-500">
-          By continuing, you agree to TrustKeyper{" "}
-          <a href="#" className="text-accent hover:underline">Terms and Conditions</a>
-        </p>
+        <AuthTermsText />
       </div>
 
       <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] safe-area-bottom">
@@ -119,6 +116,7 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
         >
           Continue &rarr;
         </Button>
+        <AuthTermsText className="mt-4 text-center" />
       </div>
     </div>
   );

@@ -7,7 +7,7 @@ import { Phone, Mail } from "lucide-react";
 import { hasBankDetails, getBrokerProfile } from "@/lib/brokerProfile";
 import { BROKER_PENDING_FLOWS_EVENT, getPendingFlowItems } from "@/lib/brokerPendingFlows";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
-import { logout } from "@/lib/auth";
+import { getActiveSession, logout } from "@/lib/auth";
 import {
   LayoutDashboard,
   Building2,
@@ -47,9 +47,9 @@ function TrustKeyperLogo() {
 }
 
 export function getBrokerName(): string {
-  if (typeof window === "undefined") return "Rahul Sharma";
-  const n = getBrokerProfile().name;
-  return n || "Rahul Sharma";
+  if (typeof window === "undefined") return "";
+  const n = getBrokerProfile().name?.trim();
+  return n || "Broker";
 }
 
 function getInitials(name: string): string {
@@ -84,6 +84,13 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
       window.removeEventListener("storage", sync);
     };
   }, []);
+
+  useEffect(() => {
+    const session = getActiveSession();
+    if (!session || session.role !== "broker") {
+      setLocation("/login");
+    }
+  }, [location, setLocation]);
 
   return (
     <div className="min-h-screen w-full bg-[#F5F7FA] flex flex-col">

@@ -77,7 +77,7 @@ function WelcomeDashboard({
             <p className="text-gray-500 mb-8 leading-relaxed flex-grow">Generate rental agreements, collect documents, and complete digital signing, all in one place with TrustKeyper.</p>
             <button
               onClick={onGenerateAgreement}
-              className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95 mt-auto w-fit"
+              className="inline-flex items-center gap-2 text-primary font-semibold hover:gap-3 transition-all mt-auto w-fit"
             >
               <FilePlus2 size={16} /> Generate Agreement
             </button>

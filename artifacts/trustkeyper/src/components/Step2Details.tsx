@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AuthTermsText } from "@/components/AuthTermsText";
 import { ALL_ROLES, profileExistsAsync, type Role } from "@/lib/auth";
 
 interface Step2DetailsProps {
@@ -80,15 +81,11 @@ export default function Step2Details({ details, setDetails, onNext }: Step2Detai
         <Button size="lg"
           onClick={onNext} 
           disabled={!isComplete}
-          className="w-48 bg-primary hover:bg-primary/90 mb-6"
+          className="w-48 bg-primary hover:bg-primary/90"
         >
           Request OTP &rarr;
         </Button>
-
-        <p className="text-sm text-gray-500">
-          By continuing, you agree to TrustKeyper{" "}
-          <a href="#" className="text-accent hover:underline">Terms and Conditions</a>
-        </p>
+        <AuthTermsText />
       </div>
 
       <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] safe-area-bottom">
@@ -99,6 +96,7 @@ export default function Step2Details({ details, setDetails, onNext }: Step2Detai
         >
           Request OTP &rarr;
         </Button>
+        <AuthTermsText className="mt-4 text-center" />
       </div>
     </div>
   );

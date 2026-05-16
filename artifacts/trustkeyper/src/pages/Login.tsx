@@ -14,6 +14,7 @@ import {
   loginSuccess,
   profileExistsAsync,
 } from "@/lib/auth";
+import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 
 type Phase = "role" | "phone" | "otp";
@@ -55,6 +56,10 @@ export default function Login() {
   const [countdown, setCountdown] = useState(10);
   const [accountKnown, setAccountKnown] = useState<boolean | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
+
+  useEffect(() => {
+    resetSessionForAuthEntry();
+  }, []);
 
   // Keep login aligned with signup flow: role was already chosen when tk_pending_role is set.
   useLayoutEffect(() => {

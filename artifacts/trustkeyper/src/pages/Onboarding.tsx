@@ -9,6 +9,7 @@ import {
   profileExistsAsync,
   signUpSuccess,
 } from "@/lib/auth";
+import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { setSessionItem } from "@/lib/storageKeys";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
 import { AuthGoToLoginLink } from "@/components/AuthFlowFooterLinks";
@@ -45,6 +46,7 @@ export default function Onboarding() {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
+    resetSessionForAuthEntry();
     const pending = sessionStorage.getItem("tk_pending_role");
     if (pending && ALL_ROLES.includes(pending as Role)) {
       setRole(pending);
@@ -111,7 +113,7 @@ export default function Onboarding() {
                   goNext();
                 }}
               />
-              {role ? <AuthGoToLoginLink persistRole={role} className="text-sm text-gray-500 mt-6 pb-28 sm:pb-0" /> : null}
+              {role ? <AuthGoToLoginLink persistRole={role} /> : null}
             </>
           )}
 

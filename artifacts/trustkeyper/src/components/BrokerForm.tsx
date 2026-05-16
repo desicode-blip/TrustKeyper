@@ -12,7 +12,7 @@ import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { AuthTermsText } from "@/components/AuthTermsText";
 
 interface BrokerFormProps {
   onComplete?: () => void;
@@ -22,7 +22,6 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   const [fullName, setFullName] = useState("");
   const [firm, setFirm] = useState("");
   const [phone, setPhone] = useState("");
-  const [agreed, setAgreed] = useState(false);
   const [otpStage, setOtpStage] = useState(false);
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(12);
@@ -50,7 +49,6 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   const formValid =
     fullName.trim().length > 0 &&
     phoneDigits.length === 10 &&
-    agreed &&
     !duplicateSignupPhone;
 
   useEffect(() => {
@@ -65,7 +63,6 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
     setOtpStage(true);
     setCountdown(12);
   };
-
 
   const isOtpComplete = otp.every((d) => d !== "");
 
@@ -106,7 +103,6 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
     if (digit && index < OTP_LAST_INDEX) {
       document.getElementById(`broker-otp-${index + 1}`)?.focus();
     }
-
   };
 
   return (
@@ -147,7 +143,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
             className={`${otpStage ? "bg-blue-50/60" : "bg-white"}`}
           />
           <p className="text-xs text-gray-500">
-            Leave blank if you're an independent broker
+            Leave blank if you&apos;re an independent broker
           </p>
         </div>
 
@@ -185,47 +181,37 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
         </div>
       </div>
 
-      <div className="border-t border-gray-200 my-8" />
-
-      <div className="flex items-center gap-3 mb-6">
-        <Checkbox
-          id="agree"
-          checked={agreed}
-          onCheckedChange={(v) => setAgreed(v === true)}
-          disabled={otpStage}
-        />
-        <Label htmlFor="agree" className="text-gray-700 cursor-pointer">
-          I agree to TrustKeyper Terms & Conditions
-        </Label>
-      </div>
-
       {!otpStage && (
         <>
-          <div className="hidden sm:block">
-            <Button size="lg"
+          <div className="hidden sm:block mt-10">
+            <Button
+              size="lg"
               onClick={handleSendOtp}
               disabled={!formValid}
               className="w-full bg-primary hover:bg-primary/90"
             >
               Send OTP & Register
             </Button>
+            <AuthTermsText />
           </div>
 
           <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] safe-area-bottom">
-            <Button size="lg"
+            <Button
+              size="lg"
               onClick={handleSendOtp}
               disabled={!formValid}
               className="w-full bg-primary hover:bg-primary/90"
             >
               Send OTP & Register
             </Button>
+            <AuthTermsText className="mt-4 text-center" />
           </div>
         </>
       )}
 
       {otpStage && (
         <>
-          <div className="mb-8">
+          <div className="mb-8 mt-8">
             <p className="text-gray-600 mb-4">
               Enter the OTP that we have sent to{" "}
               <span className="font-semibold text-gray-900">+91 {phoneDigits}</span>
@@ -272,17 +258,11 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
               size="lg"
               onClick={handleContinue}
               disabled={!isOtpComplete}
-              className="w-48 bg-primary hover:bg-primary/90 mb-6"
+              className="w-48 bg-primary hover:bg-primary/90"
             >
               Continue &rarr;
             </Button>
-
-            <p className="text-sm text-gray-500">
-              By continuing, you agree to TrustKeyper{" "}
-              <a href="#" className="text-accent hover:underline">
-                Terms and Conditions
-              </a>
-            </p>
+            <AuthTermsText />
           </div>
 
           <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 p-4 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] safe-area-bottom">
@@ -294,6 +274,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
             >
               Continue &rarr;
             </Button>
+            <AuthTermsText className="mt-4 text-center" />
           </div>
         </>
       )}
