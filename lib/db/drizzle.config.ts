@@ -1,14 +1,24 @@
 import { defineConfig } from "drizzle-kit";
 import path from "path";
+import { fileURLToPath } from "node:url";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL, ensure the database is provisioned");
+const configDir = path.dirname(fileURLToPath(import.meta.url));
+const embeddedPath = path.resolve(configDir, "../../.data/pglite");
+const dockerPostgres =
+  "postgresql://trustkeyper:trustkeyper@localhost:5432/trustkeyper_dev";
+
+function resolveDbUrl(): string {
+  const raw = process.env.DATABASE_URL;
+  if (!raw || raw === "local" || raw === "pglite") {
+    return process.env.PGLITE_DATA_DIR ?? embeddedPath;
+  }
+  return raw;
 }
 
 export default defineConfig({
-  schema: path.join(__dirname, "./src/schema/index.ts"),
+  schema: [path.join(configDir, "./src/schema/userData.ts")],
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL,
+    url: resolveDbUrl(),
   },
 });

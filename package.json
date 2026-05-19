@@ -6,6 +6,15 @@
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "build:deploy": "pnpm run typecheck:deploy && pnpm --filter @workspace/trustkeyper run build && pnpm --filter @workspace/api-server run build",
     "check:drizzle-singleton": "node scripts/check-drizzle-singleton.mjs",
+    "db:down": "docker compose down",
+    "db:push": "pnpm --filter @workspace/db run init:local",
+    "db:push:drizzle": "dotenv -e .env -- pnpm --filter @workspace/db run push:local",
+    "db:up": "docker compose up -d --wait",
+    "dev:api": "dotenv -e .env -- pnpm --filter @workspace/api-server run dev",
+    "dev:file": "concurrently -k -n api,web \"cross-env PORT=8080 NODE_ENV=development pnpm --filter @workspace/api-server run dev\" \"pnpm --filter @workspace/trustkeyper run dev\"",
+    "dev:local": "node scripts/ensure-env.mjs && pnpm run db:push && concurrently -k -n api,web \"pnpm run dev:api\" \"pnpm --filter @workspace/trustkeyper run dev\"",
+    "dev:local:docker": "node scripts/ensure-env.mjs && pnpm run db:up && dotenv -e .env -- cross-env DATABASE_URL=postgresql://trustkeyper:trustkeyper@localhost:5432/trustkeyper_dev pnpm run db:push && concurrently -k -n api,web \"pnpm run dev:api\" \"pnpm --filter @workspace/trustkeyper run dev\"",
+    "dev:web": "pnpm --filter @workspace/trustkeyper run dev",
     "start:deploy": "node artifacts/api-server/dist/index.mjs",
     "typecheck:api": "tsc -p tsconfig.api.json",
     "typecheck:deploy": "pnpm run check:drizzle-singleton && pnpm run typecheck:libs && pnpm run typecheck:api && pnpm -r --filter \"./artifacts/**\" --if-present run typecheck",
@@ -22,6 +31,9 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@tailwindcss/oxide-win32-x64-msvc": "4.2.4",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "dotenv-cli": "^8.0.0",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2"
   }

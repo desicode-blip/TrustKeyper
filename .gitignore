@@ -50,3 +50,6 @@ Thumbs.db
 
 # API file-store fallback (dev / no DATABASE_URL)
 .data/
+
+# Local env (secrets)
+.env
