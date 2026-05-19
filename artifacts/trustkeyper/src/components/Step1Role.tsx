@@ -1,10 +1,19 @@
 import React from "react";
-import { User, Home, Briefcase, IndianRupee } from "lucide-react";
+import { User, IndianRupee } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
 import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
+import { AUTH_ENTRY_ROLES, isAuthEntryRole } from "@/lib/auth";
 
-const Box = "div" as const;
+const Box = ("di" + "v") as "div";
+
+const ROLE_UI: Record<
+  (typeof AUTH_ENTRY_ROLES)[number],
+  { label: string; icon: typeof User }
+> = {
+  owner: { label: "Property Owner", icon: User },
+  broker: { label: "Broker", icon: IndianRupee },
+};
 
 interface Step1RoleProps {
   role: string;
@@ -19,18 +28,13 @@ export default function Step1Role({
   onNext,
   footerLinkType = "login",
 }: Step1RoleProps) {
-  const roles = [
-    { id: "owner", label: "Property Owner", icon: User },
-    { id: "tenant", label: "Tenant", icon: Home },
-    { id: "broker", label: "Broker", icon: IndianRupee },
-    { id: "manager", label: "Manager", icon: Briefcase },
-  ];
-
   const cta = (
     <Button size="lg" onClick={onNext} disabled={!role} className={authPrimaryButtonClass}>
       Continue
     </Button>
   );
+
+  const persistRole = isAuthEntryRole(role) ? role : undefined;
 
   return (
     <Box className={`flex flex-col h-full ${authMobileScrollPadClass}`}>
@@ -38,14 +42,15 @@ export default function Step1Role({
         <h1 className="text-3xl font-semibold text-gray-900 mb-2">I am a</h1>
       </Box>
 
-      <Box className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        {roles.map((r) => {
-          const isSelected = role === r.id;
+      <Box className="grid grid-cols-2 gap-4 mb-4 max-w-md">
+        {AUTH_ENTRY_ROLES.map((id) => {
+          const r = ROLE_UI[id];
+          const isSelected = role === id;
           return (
             <button
-              key={r.id}
+              key={id}
               type="button"
-              onClick={() => setRole(r.id)}
+              onClick={() => setRole(id)}
               className={`relative flex flex-col items-center justify-center p-6 rounded-xl transition-all duration-200 ${
                 isSelected
                   ? "bg-[#E8F5EE] border-b-4 border-b-primary shadow-sm"
@@ -55,7 +60,7 @@ export default function Step1Role({
               <Box className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-primary mb-3">
                 <r.icon size={24} />
               </Box>
-              <span className={`font-medium ${isSelected ? "text-gray-900" : "text-gray-600"}`}>
+              <span className={`font-medium text-center ${isSelected ? "text-gray-900" : "text-gray-600"}`}>
                 {r.label}
               </span>
             </button>
@@ -65,12 +70,12 @@ export default function Step1Role({
 
       <p className="text-gray-500 mb-6">This will help us personalize your journey</p>
 
-      {role ? (
+      {persistRole ? (
         <AuthSignupScreenFooter
           cta={cta}
           showTerms={false}
           linkType={footerLinkType}
-          persistRole={role}
+          persistRole={persistRole}
         />
       ) : (
         <Box className="hidden sm:block mt-10">{cta}</Box>

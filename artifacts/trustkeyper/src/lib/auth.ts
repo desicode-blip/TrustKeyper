@@ -21,6 +21,31 @@ export type Role = "broker" | "owner" | "tenant" | "manager";
 
 export const ALL_ROLES: Role[] = ["broker", "owner", "tenant", "manager"];
 
+/** Roles offered on signup / login (tenant & manager hidden for now). */
+export const AUTH_ENTRY_ROLES: Role[] = ["broker", "owner"];
+
+export function isAuthEntryRole(role: string): role is Role {
+  return AUTH_ENTRY_ROLES.includes(role as Role);
+}
+
+export function readAuthPendingRole(): Role | null {
+  if (typeof window === "undefined") return null;
+  const pending = sessionStorage.getItem("tk_pending_role");
+  return pending && isAuthEntryRole(pending) ? pending : null;
+}
+
+export function setAuthPendingRole(role: Role): void {
+  if (!isAuthEntryRole(role)) return;
+  sessionStorage.setItem("tk_pending_role", role);
+}
+
+export function clearInvalidAuthPendingRole(): void {
+  const pending = sessionStorage.getItem("tk_pending_role");
+  if (pending && !isAuthEntryRole(pending)) {
+    sessionStorage.removeItem("tk_pending_role");
+  }
+}
+
 const emptyProfileRecord = (): Record<string, string> => ({
   name: "",
   firm: "",

@@ -5,7 +5,7 @@ import {
   profileExistsAsync,
   signUpSuccess,
   dashboardRouteFor,
-  ALL_ROLES,
+  isAuthEntryRole,
   type Role,
 } from "@/lib/auth";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
@@ -70,7 +70,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   const handleContinue = async () => {
     if (!isOtpComplete) return;
     const pending = sessionStorage.getItem("tk_pending_role") || "broker";
-    const role = (ALL_ROLES.includes(pending as Role) ? pending : "broker") as Role;
+    const role: Role = isAuthEntryRole(pending) ? pending : "broker";
     if (await profileExistsAsync(phoneDigits, role)) {
       toast({
         title: "An account already exists for this number.",

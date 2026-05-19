@@ -3,19 +3,18 @@ import { useLocation } from "wouter";
 import { Check } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
-  ALL_ROLES,
   type Role,
-  dashboardRouteFor,
+  clearInvalidAuthPendingRole,
+  isAuthEntryRole,
   profileExistsAsync,
+  readAuthPendingRole,
+  setAuthPendingRole,
   signUpSuccess,
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { setSessionItem } from "@/lib/storageKeys";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
 import Step1Role from "@/components/Step1Role";
-import Step2Details from "@/components/Step2Details";
-import Step3OTP from "@/components/Step3OTP";
-import Step4KYC from "@/components/Step4KYC";
 import BrokerForm from "@/components/BrokerForm";
 import OwnerStep1Properties from "@/components/OwnerStep1Properties";
 import OwnerStep2Intent from "@/components/OwnerStep2Intent";
@@ -34,8 +33,6 @@ import { Button } from "@/components/ui/button";
 export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [role, setRole] = useState("");
-  const [details, setDetails] = useState({ name: "", phone: "" });
-
   const [propertiesCount, setPropertiesCount] = useState("");
   const [propertyIntent, setPropertyIntent] = useState<string[]>([]);
   const [ownerDetails, setOwnerDetails] = useState({ name: "", phone: "" });
@@ -46,19 +43,18 @@ export default function Onboarding() {
 
   useEffect(() => {
     resetSessionForAuthEntry();
-    const pending = sessionStorage.getItem("tk_pending_role");
-    if (pending && ALL_ROLES.includes(pending as Role)) {
-      setRole(pending);
-    }
+    clearInvalidAuthPendingRole();
+    const pending = readAuthPendingRole();
+    if (pending) setRole(pending);
   }, []);
 
   const isBrokerFlow = role === "broker" && step >= 2;
   const isOwnerFlow = role === "owner" && step >= 2;
 
-  const totalDots = isBrokerFlow ? 2 : isOwnerFlow ? 6 : 4;
+  const totalDots = isBrokerFlow ? 2 : isOwnerFlow ? 6 : 2;
 
   const goNext = () => {
-    const maxSteps = isOwnerFlow ? 6 : 4;
+    const maxSteps = role === "owner" ? 6 : role === "broker" ? 2 : 1;
     setStep((s) => Math.min(maxSteps, s + 1));
   };
   const goBack = () => setStep((s) => Math.max(1, s - 1));
@@ -108,8 +104,10 @@ export default function Onboarding() {
                 role={role}
                 setRole={setRole}
                 onNext={() => {
-                  if (role) sessionStorage.setItem("tk_pending_role", role);
-                  goNext();
+                  if (isAuthEntryRole(role)) {
+                    setAuthPendingRole(role);
+                    goNext();
+                  }
                 }}
               />
             </>
@@ -132,8 +130,7 @@ export default function Onboarding() {
               details={ownerDetails}
               onNext={async () => {
                 const phoneDigits = ownerDetails.phone.replace(/\D/g, "").slice(0, 10);
-                const pending = sessionStorage.getItem("tk_pending_role") || "owner";
-                const r = (ALL_ROLES.includes(pending as Role) ? pending : "owner") as Role;
+                const r = readAuthPendingRole() ?? ("owner" as Role);
                 if (await profileExistsAsync(phoneDigits, r)) {
                   toast({
                     title: "An account already exists for this number.",
@@ -177,52 +174,6 @@ export default function Onboarding() {
             <OwnerStep5Plan onSelectPlan={handlePlanSelect} />
           )}
 
-          {step === 2 && role !== "broker" && role !== "owner" && (
-            <Step2Details details={details} setDetails={setDetails} onNext={goNext} />
-          )}
-          {step === 3 && role !== "broker" && role !== "owner" && (
-            <Step3OTP
-              details={details}
-              onNext={async () => {
-                const phoneDigits = details.phone.replace(/\D/g, "").slice(0, 10);
-                const pending = sessionStorage.getItem("tk_pending_role") || role;
-                const r = (ALL_ROLES.includes(pending as Role) ? pending : role) as Role;
-                if (!ALL_ROLES.includes(r)) return;
-                if (await profileExistsAsync(phoneDigits, r)) {
-                  toast({
-                    title: "An account already exists for this number.",
-                    variant: "destructive",
-                  });
-                  return;
-                }
-                try {
-                  await signUpSuccess(phoneDigits, r, {
-                    name: details.name,
-                    phone: phoneDigits,
-                    email: "",
-                    firm: "",
-                    bankHolderName: "",
-                    bankName: "",
-                    bankAccountNumber: "",
-                    bankIFSC: "",
-                    upiId: "",
-                    upiQrFileName: "",
-                  });
-                } catch (err) {
-                  toast({
-                    title: "Could not create account",
-                    description: err instanceof Error ? err.message : "Please try again.",
-                    variant: "destructive",
-                  });
-                  return;
-                }
-                goNext();
-              }}
-            />
-          )}
-          {step === 4 && role !== "broker" && role !== "owner" && (
-            <Step4KYC onComplete={() => setIsSuccessOpen(true)} />
-          )}
         </div>
 
         <Dialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
@@ -245,19 +196,6 @@ export default function Onboarding() {
                 onClick={handleOwnerSuccessNext}
               >
                 Add Property
-              </Button>
-            </div>
-          )}
-          {role !== "owner" && role !== "broker" && (
-            <div className="mt-6 w-full">
-              <Button
-                className="w-full bg-primary hover:bg-primary/90 text-white rounded-sm"
-                onClick={() => {
-                  setIsSuccessOpen(false);
-                  setLocation(dashboardRouteFor(role as Role));
-                }}
-              >
-                Go to dashboard
               </Button>
             </div>
           )}

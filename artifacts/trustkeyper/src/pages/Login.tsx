@@ -7,41 +7,22 @@ import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/a
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import {
-  ALL_ROLES,
   type Role,
+  clearInvalidAuthPendingRole,
   dashboardRouteFor,
   loginSuccess,
   profileExistsAsync,
+  readAuthPendingRole,
+  roleDisplayLabel,
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 
 type Phase = "phone" | "otp";
 
-function roleTitle(r: Role): string {
-  switch (r) {
-    case "owner":
-      return "Owner";
-    case "broker":
-      return "Broker";
-    case "tenant":
-      return "Tenant";
-    case "manager":
-      return "Manager";
-    default:
-      return r;
-  }
-}
-
-function readPendingRole(): Role | null {
-  if (typeof window === "undefined") return null;
-  const pending = sessionStorage.getItem("tk_pending_role");
-  return pending && ALL_ROLES.includes(pending as Role) ? (pending as Role) : null;
-}
-
 export default function Login() {
   const [, setLocation] = useLocation();
-  const [pendingRole] = useState<Role | null>(readPendingRole);
+  const [pendingRole] = useState<Role | null>(readAuthPendingRole);
   const [phase, setPhase] = useState<Phase>("phone");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState(createEmptyOtp);
@@ -51,7 +32,8 @@ export default function Login() {
 
   useEffect(() => {
     resetSessionForAuthEntry();
-    if (!readPendingRole()) {
+    clearInvalidAuthPendingRole();
+    if (!readAuthPendingRole()) {
       setLocation("/");
     }
   }, [setLocation]);
@@ -165,7 +147,7 @@ export default function Login() {
       <div className={`flex flex-col flex-1 min-h-0 max-w-md w-full ${authMobileScrollPadClass}`}>
         <div className="mb-8 border-b border-gray-200 pb-4 shrink-0">
           <h1 className="text-3xl font-semibold text-gray-900">
-            Login to TrustKeyper as {roleTitle(pendingRole)}
+            Login to TrustKeyper as {roleDisplayLabel(pendingRole)}
           </h1>
         </div>
 

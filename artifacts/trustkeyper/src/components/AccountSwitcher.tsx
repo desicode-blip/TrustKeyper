@@ -12,6 +12,7 @@ import {
   getAccountsForPhoneAsync,
   getActiveSession,
   getProfileDisplayName,
+  isAuthEntryRole,
   roleDisplayLabel,
   switchRoleAsync,
   type Role,
@@ -56,7 +57,9 @@ export function AccountSwitcher({ onAfterSwitch, className }: AccountSwitcherPro
       setAccounts([]);
       return;
     }
-    void getAccountsForPhoneAsync(session.phone).then(setAccounts);
+    void getAccountsForPhoneAsync(session.phone).then((roles) =>
+      setAccounts(roles.filter((r) => isAuthEntryRole(r))),
+    );
   }, [session?.phone, session?.role]);
 
   if (!session || accounts.length <= 1) return null;
