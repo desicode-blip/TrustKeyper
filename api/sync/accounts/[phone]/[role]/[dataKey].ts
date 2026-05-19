@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { normalizePhone, setAccountDataKey } from "@workspace/sync-store";
-import { json, readJsonBody } from "../../../../../_lib/http";
+import { json, readJsonBody } from "../../../../_lib/http";
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== "PUT") {

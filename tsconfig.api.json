@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "moduleResolution": "bundler",
+    "customConditions": ["workspace"]
+  },
+  "include": ["api/**/*.ts"],
+  "references": [
+    { "path": "./lib/db" },
+    { "path": "./lib/sync-store" }
+  ]
+}

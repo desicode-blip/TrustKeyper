@@ -4,21 +4,23 @@
   "license": "MIT",
   "scripts": {
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "build:deploy": "pnpm --filter @workspace/trustkeyper run build && pnpm --filter @workspace/api-server run build",
+    "build:deploy": "pnpm run typecheck:deploy && pnpm --filter @workspace/trustkeyper run build && pnpm --filter @workspace/api-server run build",
+    "check:drizzle-singleton": "node scripts/check-drizzle-singleton.mjs",
     "start:deploy": "node artifacts/api-server/dist/index.mjs",
+    "typecheck:api": "tsc -p tsconfig.api.json",
+    "typecheck:deploy": "pnpm run check:drizzle-singleton && pnpm run typecheck:libs && pnpm run typecheck:api && pnpm -r --filter \"./artifacts/**\" --if-present run typecheck",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:deploy && pnpm --filter \"./scripts\" --if-present run typecheck"
   },
   "private": true,
   "dependencies": {
     "@vercel/blob": "^0.27.3",
     "@vercel/node": "^5.3.0",
     "@workspace/db": "workspace:*",
-    "@workspace/sync-store": "workspace:*",
-    "drizzle-orm": "catalog:",
-    "pg": "^8.20.0"
+    "@workspace/sync-store": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "catalog:",
     "@tailwindcss/oxide-win32-x64-msvc": "4.2.4",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2"
