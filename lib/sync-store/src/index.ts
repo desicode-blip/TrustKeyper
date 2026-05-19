@@ -1,9 +1,12 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { head, put } from "@vercel/blob";
-import { and, eq } from "drizzle-orm";
+import {
+  queryAccountData,
+  queryRolesWithProfileForPhone,
+  upsertAccountDataKey,
+} from "@workspace/db";
 import { getDb } from "@workspace/db/client";
-import { userDataTable } from "@workspace/db/schema/userData";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const FILE_PATH = path.join(DATA_DIR, "user_data.json");
@@ -26,7 +29,7 @@ async function readBlobStore(): Promise<FileStore | null> {
   try {
     const meta = await head(BLOB_PATHNAME, { token });
     const res = await fetch(meta.url);
-    if (!res.ok) return {};
+    if (res.status < 200 || res.status >= 300) return {};
     return (await res.json()) as FileStore;
   } catch {
     return {};
@@ -37,10 +40,9 @@ async function writeBlobStore(store: FileStore): Promise<void> {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) return;
   await put(BLOB_PATHNAME, JSON.stringify(store), {
-    access: "private",
+    access: "public",
     token,
     addRandomSuffix: false,
-    allowOverwrite: true,
   });
 }
 
@@ -70,15 +72,8 @@ export async function getAccountData(
   role: string,
 ): Promise<Record<string, string>> {
   const p = normalizePhone(phone);
-  const db = getDb();
-  if (db) {
-    const rows = await db
-      .select()
-      .from(userDataTable)
-      .where(and(eq(userDataTable.phone, p), eq(userDataTable.role, role)));
-    const out: Record<string, string> = {};
-    for (const row of rows) out[row.dataKey] = row.value;
-    return out;
+  if (getDb()) {
+    return queryAccountData(p, role);
   }
 
   const store = await readFileStore();
@@ -97,15 +92,8 @@ export async function setAccountDataKey(
   value: string,
 ): Promise<void> {
   const p = normalizePhone(phone);
-  const db = getDb();
-  if (db) {
-    await db
-      .insert(userDataTable)
-      .values({ phone: p, role, dataKey, value, updatedAt: new Date() })
-      .onConflictDoUpdate({
-        target: [userDataTable.phone, userDataTable.role, userDataTable.dataKey],
-        set: { value, updatedAt: new Date() },
-      });
+  if (getDb()) {
+    await upsertAccountDataKey(p, role, dataKey, value);
     return;
   }
 
@@ -128,13 +116,8 @@ export async function setAccountDataBulk(
 
 export async function getRolesForPhone(phone: string): Promise<string[]> {
   const p = normalizePhone(phone);
-  const db = getDb();
-  if (db) {
-    const rows = await db
-      .select({ role: userDataTable.role, dataKey: userDataTable.dataKey })
-      .from(userDataTable)
-      .where(and(eq(userDataTable.phone, p), eq(userDataTable.dataKey, "profile")));
-    return [...new Set(rows.map((r: { role: string }) => r.role))];
+  if (getDb()) {
+    return queryRolesWithProfileForPhone(p);
   }
 
   const store = await readFileStore();

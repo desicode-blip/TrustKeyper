@@ -8,7 +8,7 @@ import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/a
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import {
-  type Role,
+  type AuthEntryRole,
   clearInvalidAuthPendingRole,
   dashboardRouteFor,
   loginSuccess,
@@ -24,7 +24,7 @@ type Phase = "role" | "phone" | "otp";
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const [loginRole, setLoginRole] = useState<Role | null>(() => readAuthPendingRole());
+  const [loginRole, setLoginRole] = useState<AuthEntryRole | null>(() => readAuthPendingRole());
   const [phase, setPhase] = useState<Phase>(() => (readAuthPendingRole() ? "phone" : "role"));
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState(createEmptyOtp);

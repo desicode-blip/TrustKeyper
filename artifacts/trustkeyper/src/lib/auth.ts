@@ -22,20 +22,20 @@ export type Role = "broker" | "owner" | "tenant" | "manager";
 export const ALL_ROLES: Role[] = ["broker", "owner", "tenant", "manager"];
 
 /** Roles offered on signup / login (tenant & manager hidden for now). */
-export const AUTH_ENTRY_ROLES: Role[] = ["owner", "broker"];
+export const AUTH_ENTRY_ROLES = ["owner", "broker"] as const;
+export type AuthEntryRole = (typeof AUTH_ENTRY_ROLES)[number];
 
-export function isAuthEntryRole(role: string): role is Role {
-  return AUTH_ENTRY_ROLES.includes(role as Role);
+export function isAuthEntryRole(role: string): role is AuthEntryRole {
+  return (AUTH_ENTRY_ROLES as readonly string[]).includes(role);
 }
 
-export function readAuthPendingRole(): Role | null {
+export function readAuthPendingRole(): AuthEntryRole | null {
   if (typeof window === "undefined") return null;
   const pending = sessionStorage.getItem("tk_pending_role");
   return pending && isAuthEntryRole(pending) ? pending : null;
 }
 
-export function setAuthPendingRole(role: Role): void {
-  if (!isAuthEntryRole(role)) return;
+export function setAuthPendingRole(role: AuthEntryRole): void {
   sessionStorage.setItem("tk_pending_role", role);
 }
 

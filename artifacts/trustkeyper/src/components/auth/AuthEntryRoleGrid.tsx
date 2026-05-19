@@ -1,9 +1,9 @@
 import React from "react";
 import { User, IndianRupee } from "lucide-react";
-import { AUTH_ENTRY_ROLES, isAuthEntryRole, type Role } from "@/lib/auth";
+import { AUTH_ENTRY_ROLES, isAuthEntryRole, type AuthEntryRole } from "@/lib/auth";
 
 const ROLE_UI: Record<
-  (typeof AUTH_ENTRY_ROLES)[number],
+  AuthEntryRole,
   { shortLabel: string; icon: typeof User }
 > = {
   owner: { shortLabel: "Property Owner", icon: User },
@@ -12,7 +12,7 @@ const ROLE_UI: Record<
 
 interface AuthEntryRoleGridProps {
   value: string;
-  onChange: (role: Role) => void;
+  onChange: (role: AuthEntryRole) => void;
 }
 
 /** Signup/login role cards — owner and broker only (tenant & manager suppressed). */
@@ -51,6 +51,6 @@ export function AuthEntryRoleGrid({ value, onChange }: AuthEntryRoleGridProps) {
   );
 }
 
-export function roleFromGridValue(value: string): Role | null {
+export function roleFromGridValue(value: string): AuthEntryRole | null {
   return isAuthEntryRole(value) ? value : null;
 }

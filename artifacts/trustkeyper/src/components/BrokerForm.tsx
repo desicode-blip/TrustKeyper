@@ -32,7 +32,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
 
   const phoneDigits = phone.replace(/\D/g, "").slice(0, 10);
   const pendingRole = sessionStorage.getItem("tk_pending_role") || "broker";
-  const signupRole = (ALL_ROLES.includes(pendingRole as Role) ? pendingRole : "broker") as Role;
+  const signupRole: Role = isAuthEntryRole(pendingRole) ? pendingRole : "broker";
   const [duplicateSignupPhone, setDuplicateSignupPhone] = useState(false);
 
   useEffect(() => {
