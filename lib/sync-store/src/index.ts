@@ -1,12 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { head, put } from "@vercel/blob";
-import {
-  queryAccountData,
-  queryRolesWithProfileForPhone,
-  upsertAccountDataKey,
-} from "@workspace/db";
-import { getDb } from "@workspace/db/client";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const FILE_PATH = path.join(DATA_DIR, "user_data.json");
@@ -23,11 +16,44 @@ function accountId(phone: string, role: string): string {
   return `${normalizePhone(phone)}:${role}`;
 }
 
+// Lazy-load potentially server-only modules to avoid bundlers pulling them
+// into browser builds. Returns an object with any exported helpers we need.
+let dbHelpersCache: any = null;
+async function loadDbHelpers() {
+  if (dbHelpersCache !== null) return dbHelpersCache;
+  try {
+    let dbMod: any = {};
+    let clientMod: any = {};
+    try {
+      dbMod = await import("@workspace/db");
+    } catch {
+      dbMod = {};
+    }
+    try {
+      clientMod = await import("@workspace/db/client");
+    } catch {
+      clientMod = {};
+    }
+
+    dbHelpersCache = {
+      queryAccountData: dbMod.queryAccountData,
+      queryRolesWithProfileForPhone: dbMod.queryRolesWithProfileForPhone,
+      upsertAccountDataKey: dbMod.upsertAccountDataKey,
+      getDb: clientMod.getDb,
+    };
+  } catch {
+    dbHelpersCache = {};
+  }
+  return dbHelpersCache;
+}
+
 async function readBlobStore(): Promise<FileStore | null> {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) return null;
   try {
-    const meta = await head(BLOB_PATHNAME, { token });
+    const blobMod = await import("@vercel/blob").catch(() => null);
+    if (!blobMod) return {};
+    const meta = await blobMod.head(BLOB_PATHNAME, { token });
     const res = await fetch(meta.url);
     if (res.status < 200 || res.status >= 300) return {};
     return (await res.json()) as FileStore;
@@ -39,7 +65,9 @@ async function readBlobStore(): Promise<FileStore | null> {
 async function writeBlobStore(store: FileStore): Promise<void> {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) return;
-  await put(BLOB_PATHNAME, JSON.stringify(store), {
+  const blobMod = await import("@vercel/blob").catch(() => null);
+  if (!blobMod) return;
+  await blobMod.put(BLOB_PATHNAME, JSON.stringify(store), {
     access: "public",
     token,
     addRandomSuffix: false,
@@ -72,8 +100,9 @@ export async function getAccountData(
   role: string,
 ): Promise<Record<string, string>> {
   const p = normalizePhone(phone);
-  if (getDb()) {
-    return queryAccountData(p, role);
+  const db = await loadDbHelpers();
+  if (db.getDb && db.getDb()) {
+    return db.queryAccountData ? db.queryAccountData(p, role) : {};
   }
 
   const store = await readFileStore();
@@ -92,8 +121,9 @@ export async function setAccountDataKey(
   value: string,
 ): Promise<void> {
   const p = normalizePhone(phone);
-  if (getDb()) {
-    await upsertAccountDataKey(p, role, dataKey, value);
+  const db = await loadDbHelpers();
+  if (db.getDb && db.getDb()) {
+    if (db.upsertAccountDataKey) await db.upsertAccountDataKey(p, role, dataKey, value);
     return;
   }
 
@@ -116,8 +146,9 @@ export async function setAccountDataBulk(
 
 export async function getRolesForPhone(phone: string): Promise<string[]> {
   const p = normalizePhone(phone);
-  if (getDb()) {
-    return queryRolesWithProfileForPhone(p);
+  const db = await loadDbHelpers();
+  if (db.getDb && db.getDb()) {
+    return db.queryRolesWithProfileForPhone ? db.queryRolesWithProfileForPhone(p) : [];
   }
 
   const store = await readFileStore();
