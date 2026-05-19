@@ -22,7 +22,7 @@ export type Role = "broker" | "owner" | "tenant" | "manager";
 export const ALL_ROLES: Role[] = ["broker", "owner", "tenant", "manager"];
 
 /** Roles offered on signup / login (tenant & manager hidden for now). */
-export const AUTH_ENTRY_ROLES: Role[] = ["broker", "owner"];
+export const AUTH_ENTRY_ROLES: Role[] = ["owner", "broker"];
 
 export function isAuthEntryRole(role: string): role is Role {
   return AUTH_ENTRY_ROLES.includes(role as Role);

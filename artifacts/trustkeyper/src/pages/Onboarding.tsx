@@ -48,6 +48,13 @@ export default function Onboarding() {
     if (pending) setRole(pending);
   }, []);
 
+  useEffect(() => {
+    if (role && !isAuthEntryRole(role)) {
+      setRole("");
+      setStep(1);
+    }
+  }, [role]);
+
   const isBrokerFlow = role === "broker" && step >= 2;
   const isOwnerFlow = role === "owner" && step >= 2;
 

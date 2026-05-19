@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
+import { AuthEntryRoleGrid } from "@/components/auth/AuthEntryRoleGrid";
 import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
 import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
@@ -14,16 +15,17 @@ import {
   profileExistsAsync,
   readAuthPendingRole,
   roleDisplayLabel,
+  setAuthPendingRole,
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 
-type Phase = "phone" | "otp";
+type Phase = "role" | "phone" | "otp";
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const [pendingRole] = useState<Role | null>(readAuthPendingRole);
-  const [phase, setPhase] = useState<Phase>("phone");
+  const [loginRole, setLoginRole] = useState<Role | null>(() => readAuthPendingRole());
+  const [phase, setPhase] = useState<Phase>(() => (readAuthPendingRole() ? "phone" : "role"));
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(10);
@@ -33,10 +35,12 @@ export default function Login() {
   useEffect(() => {
     resetSessionForAuthEntry();
     clearInvalidAuthPendingRole();
-    if (!readAuthPendingRole()) {
-      setLocation("/");
+    const pending = readAuthPendingRole();
+    if (pending) {
+      setLoginRole(pending);
+      setPhase((p) => (p === "role" ? "phone" : p));
     }
-  }, [setLocation]);
+  }, []);
 
   useEffect(() => {
     if (phase !== "otp" || countdown <= 0) return;
@@ -47,31 +51,29 @@ export default function Login() {
   const phoneDigits = phone.replace(/\D/g, "").slice(0, 10);
 
   useEffect(() => {
-    if (!pendingRole || phoneDigits.length !== 10) {
+    if (!loginRole || phoneDigits.length !== 10) {
       setAccountKnown(null);
       return;
     }
     let cancelled = false;
-    void profileExistsAsync(phoneDigits, pendingRole).then((exists) => {
+    void profileExistsAsync(phoneDigits, loginRole).then((exists) => {
       if (!cancelled) setAccountKnown(exists);
     });
     return () => {
       cancelled = true;
     };
-  }, [phoneDigits, pendingRole]);
-
-  if (!pendingRole) {
-    return null;
-  }
-
-  const accountExistsForLogin = phoneDigits.length === 10 && accountKnown === true;
-  const showNoAccountHint = phoneDigits.length === 10 && accountKnown === false;
-  const isOtpComplete = otp.every((d) => d !== "");
+  }, [phoneDigits, loginRole]);
 
   const handleBack = () => {
     if (phase === "otp") {
       setPhase("phone");
       setOtp(createEmptyOtp());
+      return;
+    }
+    if (phase === "phone") {
+      setPhase("role");
+      setPhone("");
+      setAccountKnown(null);
       return;
     }
     setLocation("/");
@@ -88,9 +90,10 @@ export default function Login() {
   };
 
   const finishLogin = async () => {
+    if (!loginRole) return;
     setLoggingIn(true);
     try {
-      const exists = await profileExistsAsync(phoneDigits, pendingRole);
+      const exists = await profileExistsAsync(phoneDigits, loginRole);
       if (!exists) {
         toast({
           title: "No account found",
@@ -99,10 +102,10 @@ export default function Login() {
         });
         return;
       }
-      const ok = await loginSuccess(phoneDigits, pendingRole);
+      const ok = await loginSuccess(phoneDigits, loginRole);
       if (ok) {
         toast({ title: "Signed in", description: "Welcome back to TrustKeyper." });
-        setLocation(dashboardRouteFor(pendingRole));
+        setLocation(dashboardRouteFor(loginRole));
         return;
       }
       toast({
@@ -114,6 +117,27 @@ export default function Login() {
       setLoggingIn(false);
     }
   };
+
+  const goToPhoneStep = () => {
+    if (!loginRole) return;
+    setAuthPendingRole(loginRole);
+    setPhase("phone");
+  };
+
+  const accountExistsForLogin = phoneDigits.length === 10 && accountKnown === true;
+  const showNoAccountHint = phoneDigits.length === 10 && accountKnown === false;
+  const isOtpComplete = otp.every((d) => d !== "");
+
+  const rolePickCta = (
+    <Button
+      size="lg"
+      disabled={!loginRole}
+      onClick={goToPhoneStep}
+      className={authPrimaryButtonClass}
+    >
+      Continue
+    </Button>
+  );
 
   const requestOtpCta = (
     <Button
@@ -145,13 +169,41 @@ export default function Login() {
   return (
     <AuthFlowLayout onBack={handleBack} backDisabled={false}>
       <div className={`flex flex-col flex-1 min-h-0 max-w-md w-full ${authMobileScrollPadClass}`}>
-        <div className="mb-8 border-b border-gray-200 pb-4 shrink-0">
-          <h1 className="text-3xl font-semibold text-gray-900">
-            Login to TrustKeyper as {roleDisplayLabel(pendingRole)}
-          </h1>
-        </div>
+        {phase === "role" && (
+          <>
+            <div className="mb-8 border-b border-gray-200 pb-4 shrink-0">
+              <h1 className="text-3xl font-semibold text-gray-900">Login to TrustKeyper</h1>
+              <p className="mt-2 text-sm text-gray-500">Select your account type to continue</p>
+            </div>
 
-        {phase === "phone" && (
+            <AuthEntryRoleGrid
+              value={loginRole ?? ""}
+              onChange={(r) => {
+                setLoginRole(r);
+                setAuthPendingRole(r);
+              }}
+            />
+
+            <p className="text-gray-500 mb-6 mt-4 text-sm">Use the same role you chose when you signed up</p>
+
+            <AuthSignupScreenFooter
+              cta={rolePickCta}
+              showTerms={false}
+              linkType="signup"
+              persistRole={loginRole ?? undefined}
+            />
+          </>
+        )}
+
+        {phase !== "role" && loginRole && (
+          <div className="mb-8 border-b border-gray-200 pb-4 shrink-0">
+            <h1 className="text-3xl font-semibold text-gray-900">
+              Login to TrustKeyper as {roleDisplayLabel(loginRole)}
+            </h1>
+          </div>
+        )}
+
+        {phase === "phone" && loginRole && (
           <>
             <div className="max-w-md mb-6">
               <AuthPhoneField
@@ -166,15 +218,21 @@ export default function Login() {
               cta={requestOtpCta}
               showTerms={false}
               linkType="signup"
-              persistRole={pendingRole}
+              persistRole={loginRole}
             />
           </>
         )}
 
-        {phase === "otp" && (
+        {phase === "otp" && loginRole && (
           <>
             <div className="space-y-6 mb-6 max-w-md opacity-80 pointer-events-none">
-              <AuthPhoneField id="login-otp-phone-readonly" value={phoneDigits} onChange={() => {}} disabled helperText="" />
+              <AuthPhoneField
+                id="login-otp-phone-readonly"
+                value={phoneDigits}
+                onChange={() => {}}
+                disabled
+                helperText=""
+              />
             </div>
 
             <p className="text-gray-600 text-sm mb-4 max-w-md">
@@ -217,7 +275,7 @@ export default function Login() {
               cta={continueLoginCta}
               showTerms={false}
               linkType="signup"
-              persistRole={pendingRole}
+              persistRole={loginRole}
             />
           </>
         )}
