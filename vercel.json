@@ -1,6 +1,6 @@
 {
   "framework": "vite",
-  "buildCommand": "pnpm run build:deploy",
+  "buildCommand": "pnpm -w run build:deploy",
   "outputDirectory": "artifacts/trustkeyper/dist/public",
   "installCommand": "pnpm install",
   "rewrites": [
