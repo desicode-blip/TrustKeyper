@@ -40,7 +40,7 @@ export default function OwnerStep3Details({ details, setDetails, onNext }: Owner
 
   return (
     <div className={`flex flex-col h-full max-w-2xl ${authMobileScrollPadClass}`}>
-      <div className="mb-8">
+      <div className="mb-8 border-b border-gray-200 pb-4">
         <h1 className="text-3xl font-semibold text-gray-900">Let&apos;s know you better</h1>
       </div>
 

@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Onboarding from "@/pages/Onboarding";
 import Login from "@/pages/Login";
+import LoginDirect from "@/pages/LoginDirect";
 import BrokerDashboard from "@/pages/BrokerDashboard";
 import BrokerProperties from "@/pages/BrokerProperties";
 import BrokerTenants from "@/pages/BrokerTenants";
@@ -34,6 +35,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      {/* Role-card login — not linked in UI; enable navigation when needed */}
+      <Route path="/Logindirect" component={LoginDirect} />
       <Route path="/" component={Onboarding} />
       <Route path="/owner/properties/add" component={OwnerAddProperty} />
       <Route path="/owner/dashboard" component={OwnerDashboard} />

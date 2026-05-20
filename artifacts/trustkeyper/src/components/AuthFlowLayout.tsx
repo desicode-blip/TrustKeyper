@@ -1,22 +1,19 @@
 import React from "react";
 import { ChevronLeft } from "lucide-react";
-import brandLogo from "@assets/Trustkeyper_Logo_1777989635996.png";
 import sidebarImage from "@assets/Frame_3466237_1777382669479.png";
 import { AuthCornerDecor } from "@/components/AuthCornerDecor";
+import { AuthMobileBrandBanner } from "@/components/auth/AuthMobileBrandBanner";
 
 interface AuthFlowLayoutProps {
   children: React.ReactNode;
   onBack: () => void;
   backDisabled?: boolean;
-  /** Optional row under the nav (e.g. onboarding progress dots). */
-  headerFooter?: React.ReactNode;
 }
 
 export function AuthFlowLayout({
   children,
   onBack,
   backDisabled = false,
-  headerFooter,
 }: AuthFlowLayoutProps) {
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F5F7FA]">
@@ -24,12 +21,14 @@ export function AuthFlowLayout({
         <img src={sidebarImage} alt="" className="h-full w-auto block" />
       </div>
 
-      <div className="w-full flex-1 flex flex-col pt-[60px] pb-[180px] px-6 lg:px-[140px] relative min-h-screen">
-        <AuthCornerDecor className="absolute bottom-4 right-2 lg:right-8 z-0" />
+      <div className="w-full flex-1 flex flex-col min-h-screen lg:min-h-0">
+        <AuthMobileBrandBanner />
 
-        <div className="relative z-10 flex-1 flex flex-col min-h-0">
-          <div className="mb-10 shrink-0">
-            <div className="relative flex items-center justify-between">
+        <div className="flex-1 flex flex-col pt-6 pb-[5.5rem] px-6 lg:pt-[60px] lg:pb-[180px] lg:px-[140px] relative bg-[#F5F7FA]">
+          <AuthCornerDecor className="hidden lg:block absolute bottom-4 right-8 z-0" />
+
+          <div className="relative z-10 flex-1 flex flex-col min-h-0 max-w-full">
+            <div className="mb-8 shrink-0">
               <button
                 type="button"
                 onClick={onBack}
@@ -38,18 +37,10 @@ export function AuthFlowLayout({
               >
                 <ChevronLeft size={20} />
               </button>
-
-              <div className="absolute left-1/2 top-0 -translate-x-1/2 sm:hidden">
-                <img src={brandLogo} alt="TrustKeyper" className="h-10 w-auto" />
-              </div>
-
-              <div className="w-10" />
             </div>
 
-            {headerFooter ? <div className="mt-4">{headerFooter}</div> : null}
+            <div className="flex-1 flex flex-col min-h-0">{children}</div>
           </div>
-
-          <div className="flex-1 flex flex-col min-h-0">{children}</div>
         </div>
       </div>
     </div>

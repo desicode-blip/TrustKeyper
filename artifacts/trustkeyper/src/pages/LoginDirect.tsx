@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
+import { AuthEntryRoleGrid } from "@/components/auth/AuthEntryRoleGrid";
 import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
-import { AuthGoToSignupLink } from "@/components/AuthFlowFooterLinks";
 import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -11,22 +11,22 @@ import {
   type AuthEntryRole,
   clearInvalidAuthPendingRole,
   dashboardRouteFor,
-  isAuthEntryRole,
   loginSuccess,
   profileExistsAsync,
   readAuthPendingRole,
   roleDisplayLabel,
+  setAuthPendingRole,
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 
-type Phase = "phone" | "otp";
+type Phase = "role" | "phone" | "otp";
 
-/** Phone + OTP login (role from signup / session — no "I am a" cards). */
-export default function Login() {
+/** Login with "I am a" role cards — not linked in app until enabled. */
+export default function LoginDirect() {
   const [, setLocation] = useLocation();
   const [loginRole, setLoginRole] = useState<AuthEntryRole | null>(() => readAuthPendingRole());
-  const [phase, setPhase] = useState<Phase>("phone");
+  const [phase, setPhase] = useState<Phase>(() => (readAuthPendingRole() ? "phone" : "role"));
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(10);
@@ -37,7 +37,10 @@ export default function Login() {
     resetSessionForAuthEntry();
     clearInvalidAuthPendingRole();
     const pending = readAuthPendingRole();
-    if (pending) setLoginRole(pending);
+    if (pending) {
+      setLoginRole(pending);
+      setPhase((p) => (p === "role" ? "phone" : p));
+    }
   }, []);
 
   useEffect(() => {
@@ -68,6 +71,12 @@ export default function Login() {
       setOtp(createEmptyOtp());
       return;
     }
+    if (phase === "phone") {
+      setPhase("role");
+      setPhone("");
+      setAccountKnown(null);
+      return;
+    }
     setLocation("/");
   };
 
@@ -77,7 +86,7 @@ export default function Login() {
     next[index] = v;
     setOtp(next);
     if (v && index < OTP_LAST_INDEX) {
-      document.getElementById(`login-otp-${index + 1}`)?.focus();
+      document.getElementById(`logindirect-otp-${index + 1}`)?.focus();
     }
   };
 
@@ -110,9 +119,26 @@ export default function Login() {
     }
   };
 
+  const goToPhoneStep = () => {
+    if (!loginRole) return;
+    setAuthPendingRole(loginRole);
+    setPhase("phone");
+  };
+
   const accountExistsForLogin = phoneDigits.length === 10 && accountKnown === true;
   const showNoAccountHint = phoneDigits.length === 10 && accountKnown === false;
   const isOtpComplete = otp.every((d) => d !== "");
+
+  const rolePickCta = (
+    <Button
+      size="lg"
+      disabled={!loginRole}
+      onClick={goToPhoneStep}
+      className={authPrimaryButtonClass}
+    >
+      Continue
+    </Button>
+  );
 
   const requestOtpCta = (
     <Button
@@ -141,36 +167,48 @@ export default function Login() {
     </Button>
   );
 
-  if (!loginRole || !isAuthEntryRole(loginRole)) {
-    return (
-      <AuthFlowLayout onBack={() => setLocation("/")} backDisabled={false}>
-        <div className={`flex flex-col flex-1 max-w-md w-full ${authMobileScrollPadClass}`}>
-          <div className="mb-8 border-b border-gray-200 pb-4">
-            <h1 className="text-3xl font-semibold text-gray-900">Login to TrustKeyper</h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Choose Property Owner or Broker on signup first, then return here to log in.
-            </p>
-          </div>
-          <AuthGoToSignupLink className="text-center" />
-        </div>
-      </AuthFlowLayout>
-    );
-  }
-
   return (
     <AuthFlowLayout onBack={handleBack} backDisabled={false}>
       <div className={`flex flex-col flex-1 min-h-0 max-w-md w-full ${authMobileScrollPadClass}`}>
-        <div className="mb-8 border-b border-gray-200 pb-4 shrink-0">
-          <h1 className="text-3xl font-semibold text-gray-900">
-            Login to TrustKeyper as {roleDisplayLabel(loginRole)}
-          </h1>
-        </div>
+        {phase === "role" && (
+          <>
+            <div className="mb-8 border-b border-gray-200 pb-4 shrink-0">
+              <h1 className="text-3xl font-semibold text-gray-900">Login to TrustKeyper</h1>
+              <p className="mt-2 text-sm text-gray-500">Select your account type to continue</p>
+            </div>
 
-        {phase === "phone" && (
+            <AuthEntryRoleGrid
+              value={loginRole ?? ""}
+              onChange={(r) => {
+                setLoginRole(r);
+                setAuthPendingRole(r);
+              }}
+            />
+
+            <p className="text-gray-500 mb-2 mt-4 text-sm">Use the same role you chose when you signed up</p>
+
+            <AuthSignupScreenFooter
+              cta={rolePickCta}
+              showTerms={false}
+              linkType="signup"
+              persistRole={loginRole ?? undefined}
+            />
+          </>
+        )}
+
+        {phase !== "role" && loginRole && (
+          <div className="mb-8 border-b border-gray-200 pb-4 shrink-0">
+            <h1 className="text-3xl font-semibold text-gray-900">
+              Login to TrustKeyper as {roleDisplayLabel(loginRole)}
+            </h1>
+          </div>
+        )}
+
+        {phase === "phone" && loginRole && (
           <>
             <div className="max-w-md mb-6">
               <AuthPhoneField
-                id="login-phone"
+                id="logindirect-phone"
                 value={phoneDigits}
                 onChange={setPhone}
                 helperText={showNoAccountHint ? undefined : "Enter the number you used to sign up"}
@@ -186,11 +224,11 @@ export default function Login() {
           </>
         )}
 
-        {phase === "otp" && (
+        {phase === "otp" && loginRole && (
           <>
             <div className="space-y-6 mb-6 max-w-md opacity-80 pointer-events-none">
               <AuthPhoneField
-                id="login-otp-phone-readonly"
+                id="logindirect-otp-phone-readonly"
                 value={phoneDigits}
                 onChange={() => {}}
                 disabled
@@ -207,7 +245,7 @@ export default function Login() {
               {otp.map((digit, i) => (
                 <input
                   key={i}
-                  id={`login-otp-${i}`}
+                  id={`logindirect-otp-${i}`}
                   type="text"
                   inputMode="numeric"
                   maxLength={1}

@@ -138,7 +138,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
 
   return (
     <Box className={`flex flex-col h-full max-w-xl ${authMobileScrollPadClass}`}>
-      <Box className="mb-8">
+      <Box className="mb-8 border-b border-gray-200 pb-4">
         <h1 className="text-3xl font-semibold text-gray-900 mb-2">Tell us about you</h1>
         <p className="text-gray-500">Help us set up your broker profile</p>
       </Box>

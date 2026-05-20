@@ -13,17 +13,21 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
+        with:
+          version: 11
 
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: pnpm
 
-      - name: Install
+      - name: Validate pnpm lockfile is up-to-date
         run: pnpm install --frozen-lockfile
 
       - name: Typecheck (libs, Vercel /api routes, artifacts)
@@ -31,3 +35,9 @@ jobs:
 
       - name: Production build (same as Vercel buildCommand)
         run: pnpm run build:deploy
+
+      - name: Assert build artifacts exist
+        run: |
+          test -f artifacts/trustkeyper/dist/public/index.html || (echo "SPA index.html missing" && exit 1)
+          test -f artifacts/api-server/dist/index.mjs          || (echo "API server bundle missing" && exit 1)
+          echo "Build artifacts verified."

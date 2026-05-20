@@ -6,6 +6,7 @@ import {
   Clock, FileCheck2, ArrowUpRight,
 } from "lucide-react";
 import BrokerLayout, { getBrokerName } from "@/components/BrokerLayout";
+import { BrokerDashboardHeaderActions, WelcomeEducationCarousel } from "@/components/broker";
 import BrokerPendingFlowBanners from "@/components/BrokerPendingFlowBanners";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import { getTenants, timeAgo } from "@/lib/tenants";
@@ -41,27 +42,26 @@ function WelcomeDashboard({
   return (
     <div className="max-w-7xl mx-auto space-y-10">
       <BrokerPendingFlowBanners className="mb-2" />
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">
             Welcome, {brokerName} <span className="inline-block animate-wave">👋</span>
           </h1>
-          <p className="text-gray-500 mt-2 text-base">Get started by generating an agreement or adding a property.</p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={onAddTenant} className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-white border border-gray-200 text-gray-700 text-sm font-semibold hover:border-primary/30 hover:bg-primary/5 transition-all active:scale-95">
-            <UserPlus size={16} /> Add Tenant
-          </button>
-          <button onClick={onAddProperty} className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-white border border-gray-200 text-gray-700 text-sm font-semibold hover:border-primary/30 hover:bg-primary/5 transition-all active:scale-95">
-            <Plus size={16} /> Add Property
-          </button>
-          <button onClick={onGenerateAgreement} className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95">
-            <Plus size={16} /> Generate Rent Agreement
-          </button>
-        </div>
+        <BrokerDashboardHeaderActions
+          onGenerateAgreement={onGenerateAgreement}
+          onAddProperty={onAddProperty}
+          onAddTenant={onAddTenant}
+        />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <WelcomeEducationCarousel
+        onGenerateAgreement={onGenerateAgreement}
+        onAddProperty={onAddProperty}
+        onAddTenant={onAddTenant}
+      />
+
+      <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="rounded-2xl border border-gray-200 bg-white p-8 relative overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
           <img
             src="/agreement-bg.png"
@@ -333,23 +333,17 @@ function ActiveDashboard({
       <BrokerPendingFlowBanners className="mb-2" />
       {/* ── Header ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">
             {getGreeting()}, {brokerName} 👋
           </h1>
           <p className="text-gray-500 mt-2 text-base">{subtitle}</p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={onAddTenant} className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-white border border-gray-200 text-gray-700 text-sm font-semibold hover:border-primary/30 hover:bg-primary/5 transition-all active:scale-95">
-            <UserPlus size={16} /> Add Tenant
-          </button>
-          <button onClick={onAddProperty} className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-white border border-gray-200 text-gray-700 text-sm font-semibold hover:border-primary/30 hover:bg-primary/5 transition-all active:scale-95">
-            <Plus size={16} /> Add Property
-          </button>
-          <button onClick={onGenerateAgreement} className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95">
-            <Plus size={16} /> Generate Rent Agreement
-          </button>
-        </div>
+        <BrokerDashboardHeaderActions
+          onGenerateAgreement={onGenerateAgreement}
+          onAddProperty={onAddProperty}
+          onAddTenant={onAddTenant}
+        />
       </div>
 
       {/* ── Stats ── */}

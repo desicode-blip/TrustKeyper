@@ -55,11 +55,6 @@ export default function Onboarding() {
     }
   }, [role]);
 
-  const isBrokerFlow = role === "broker" && step >= 2;
-  const isOwnerFlow = role === "owner" && step >= 2;
-
-  const totalDots = isBrokerFlow ? 2 : isOwnerFlow ? 6 : 2;
-
   const goNext = () => {
     const maxSteps = role === "owner" ? 6 : role === "broker" ? 2 : 1;
     setStep((s) => Math.min(maxSteps, s + 1));
@@ -86,23 +81,8 @@ export default function Onboarding() {
     }
   };
 
-  const progressDots = (
-    <div className="flex items-center justify-center gap-2">
-      {Array.from({ length: totalDots }).map((_, idx) => {
-        const i = idx + 1;
-        const activeIndex = isBrokerFlow ? step - 1 : isOwnerFlow ? step - 1 : step;
-        return (
-          <div
-            key={i}
-            className={`w-2 h-2 rounded-full ${i <= activeIndex ? "bg-primary" : "bg-gray-300"}`}
-          />
-        );
-      })}
-    </div>
-  );
-
   return (
-    <AuthFlowLayout onBack={goBack} backDisabled={step === 1} headerFooter={progressDots}>
+    <AuthFlowLayout onBack={goBack} backDisabled={step === 1}>
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex-1 min-h-0">
           {step === 1 && (
