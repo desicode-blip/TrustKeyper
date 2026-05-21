@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import brandLogo from "@assets/Trustkeyper_Logo_1777989635996.png";
-import footerLogo from "@assets/Frame_3466296_1777451511864.png";
-import footerWave from "@assets/Vector_20_1777451511865.png";
-import { Phone, Mail } from "lucide-react";
+import { TrustKeyperLogo } from "@/components/brand";
+import { TrustKeyperFooter } from "@/components/TrustKeyperFooter";
 import { hasBankDetails, getBrokerProfile } from "@/lib/brokerProfile";
 import { BROKER_PENDING_FLOWS_EVENT, getPendingFlowItems } from "@/lib/brokerPendingFlows";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
@@ -35,13 +33,11 @@ const helpItems = [
   { id: "logout", label: "Logout", icon: LogOut, href: "/" },
 ];
 
-function TrustKeyperLogo() {
+function HeaderLogo() {
   return (
-    <img
-      src={brandLogo}
-      alt="TrustKeyper"
-      className="h-8 sm:h-10 w-auto select-none"
-      draggable={false}
+    <TrustKeyperLogo
+      variant="brand"
+      className="h-9 sm:h-10 w-[9.5rem] sm:w-[10.5rem] select-none"
     />
   );
 }
@@ -108,7 +104,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
             <Menu size={20} />
           </button>
           <Link href="/broker/dashboard" className="block">
-            <TrustKeyperLogo />
+            <HeaderLogo />
           </Link>
         </div>
 
@@ -262,47 +258,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
         })}
       </nav>
 
-      {/* ── Footer ──────────────────────────────────────────────────────────── */}
-      <footer className="w-full bg-[#0D1A48] text-white relative overflow-hidden hidden md:block">
-        <img
-          src={footerWave}
-          alt=""
-          aria-hidden
-          className="absolute left-0 bottom-0 w-[55%] max-w-[720px] opacity-30 pointer-events-none select-none"
-        />
-        <div className="relative px-6 sm:px-12 py-8 sm:py-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-6 sm:gap-8">
-          <div className="md:col-span-3 flex md:items-end">
-            <img src={footerLogo} alt="TrustKeyper" className="h-10 sm:h-14 w-auto" />
-          </div>
-          <div className="md:col-span-3 space-y-3 text-sm text-white/70">
-            <a href="#" className="block hover:text-white">Terms & Conditions</a>
-            <a href="#" className="block hover:text-white">About Us</a>
-            <a href="#" className="block hover:text-white">FAQs</a>
-            <a href="#" className="block hover:text-white">Privacy Policy</a>
-          </div>
-          <div className="md:col-span-3 text-sm text-white/70 space-y-5">
-            <div>
-              <p className="font-semibold text-white mb-2">Noida</p>
-              <p className="leading-relaxed">Office 8, 1st Floor, Block-Mart, Mahagun Moderne, Plot GH-02, Sector 78, Noida, UP, India, 201301</p>
-            </div>
-            <div>
-              <p className="font-semibold text-white mb-2">Bengaluru</p>
-              <p className="leading-relaxed">HD-198, Embassy TechVillage, Outer Ring Road, Bellandur, Bengaluru, Karnataka, India, 560103</p>
-            </div>
-          </div>
-          <div className="md:col-span-3 text-sm text-white/70 space-y-5">
-            <div>
-              <p className="font-semibold text-white mb-3">Contact :</p>
-              <p className="flex items-center gap-2 mb-2"><Phone size={14} /> <span>+91 8088516875</span></p>
-              <p className="flex items-center gap-2"><Mail size={14} /> <a href="mailto:info@trustkeyper.com" className="underline hover:text-white">info@trustkeyper.com</a></p>
-            </div>
-            <div>
-              <p className="font-semibold text-white mb-2">Head office :</p>
-              <p className="leading-relaxed">HD-198, Embassy TechVillage, Outer Ring Road, Bellandur, Bengaluru, Karnataka, India, 560103</p>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <TrustKeyperFooter className="hidden md:block" />
     </div>
   );
 }

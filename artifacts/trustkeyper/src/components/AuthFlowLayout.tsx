@@ -3,6 +3,7 @@ import { ChevronLeft } from "lucide-react";
 import sidebarImage from "@assets/Frame_3466237_1777382669479.png";
 import { AuthCornerDecor } from "@/components/AuthCornerDecor";
 import { AuthMobileBrandBanner } from "@/components/auth/AuthMobileBrandBanner";
+import { TrustKeyperFooter } from "@/components/TrustKeyperFooter";
 
 interface AuthFlowLayoutProps {
   children: React.ReactNode;
@@ -42,6 +43,8 @@ export function AuthFlowLayout({
             <div className="flex-1 flex flex-col min-h-0">{children}</div>
           </div>
         </div>
+
+        <TrustKeyperFooter className="hidden lg:block mt-auto" />
       </div>
     </div>
   );

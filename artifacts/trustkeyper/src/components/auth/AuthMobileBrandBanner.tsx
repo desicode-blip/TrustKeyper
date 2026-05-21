@@ -1,5 +1,5 @@
 import React from "react";
-import { TrustKeyperLogo } from "@/components/brand";
+import { TrustKeyperLogo } from "@/components/brand/TrustKeyperLogo";
 import bannerPattern from "@assets/auth_mobile_banner_bg.png";
 
 /**
