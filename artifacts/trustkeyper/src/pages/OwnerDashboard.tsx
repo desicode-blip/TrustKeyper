@@ -3,7 +3,6 @@ import {
   Plus,
   MapPin,
   ArrowRight,
-  Eye,
   Check,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
@@ -49,7 +48,7 @@ export default function OwnerDashboard() {
           <Button
             size="lg"
             onClick={() => setLocation("/owner/properties/add")}
-            className="rounded-xl font-semibold shadow-lg shadow-primary/25 h-11 px-6"
+            className="rounded-xl border-0 font-semibold shadow-lg shadow-primary/25 h-11 px-6"
           >
             Add Property <Plus size={18} strokeWidth={2.5} />
           </Button>
@@ -124,10 +123,6 @@ export default function OwnerDashboard() {
                           ₹{Number(property.monthlyRent || 0).toLocaleString("en-IN")}
                           <span className="text-[13px] text-gray-500 font-medium">/mo</span>
                         </p>
-                        <p className="mt-3 flex items-center gap-1.5 text-[12px] text-gray-400 font-medium">
-                          <Eye size={14} className="text-gray-400" />
-                          0 tenants have viewed the property
-                        </p>
                       </div>
                     </button>
                   </article>
@@ -176,15 +171,6 @@ export default function OwnerDashboard() {
               </div>
             )}
 
-            <div className="py-4 text-center bg-gray-50/40">
-              <button
-                type="button"
-                onClick={() => setLocation("/owner/dashboard1")}
-                className="text-[13px] font-semibold text-primary hover:underline"
-              >
-                View All Activity
-              </button>
-            </div>
           </div>
         </section>
       </div>

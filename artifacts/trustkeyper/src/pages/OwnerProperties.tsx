@@ -45,7 +45,7 @@ export default function OwnerProperties() {
           </button>
           <Button
             onClick={() => setLocation("/owner/properties/add")}
-            className="rounded-xl font-semibold shadow-lg shadow-primary/25 h-10 px-6 w-fit"
+            className="rounded-xl border-0 font-semibold shadow-lg shadow-primary/25 h-10 px-6 w-fit"
           >
             Add Property <Plus size={18} />
           </Button>
@@ -116,9 +116,6 @@ export default function OwnerProperties() {
                         ₹{Number(property.monthlyRent || 0).toLocaleString("en-IN")}<span className="text-xs text-gray-500 font-normal">/mo</span>
                       </p>
                     </div>
-                  </div>
-                  <div className="mt-2 flex items-center gap-1.5 text-xs sm:text-[11px] text-gray-400">
-                    <span>10 tenants have viewed the property</span>
                   </div>
                 </div>
               </div>

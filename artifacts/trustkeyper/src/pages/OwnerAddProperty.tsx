@@ -341,6 +341,41 @@ export default function OwnerAddProperty() {
     setImageUrls((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  const parseAddressDetails = (value: string) => {
+    const pincodeMatch = value.match(/\b\d{6}\b/);
+    if (pincodeMatch) {
+      setPincode((current) => current || pincodeMatch[0]);
+    }
+
+    const foundCity = CITIES.find((c) => value.toLowerCase().includes(c.toLowerCase()));
+    if (foundCity) setCity(foundCity);
+
+    setArea((current) => {
+      if (current.trim()) return current;
+      const segments = value.split(",").map((part) => part.trim()).filter(Boolean);
+      return segments.length > 0 ? segments[0] : current;
+    });
+  };
+
+  const handleAddressChange = (value: string) => {
+    setAddress(value);
+    if (value.length > 10) parseAddressDetails(value);
+  };
+
+  const handleAddressPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pastedText = event.clipboardData.getData("text");
+    if (pastedText) {
+      parseAddressDetails(pastedText);
+    }
+  };
+
+  const handlePincodeChange = (value: string) => {
+    setPincode(value.replace(/\D/g, "").slice(0, 6));
+  };
+
+  const pincodeTouched = pincode.length > 0;
+  const pincodeError = pincodeTouched && !/^\d{6}$/.test(pincode);
+
   const isValidPhone = (v: string): boolean => {
     const digits = v.replace(/\D/g, "");
     return digits.length >= 10 && digits.length <= 12;
@@ -351,7 +386,15 @@ export default function OwnerAddProperty() {
 
   const canContinue = (): boolean => {
     if (subStep === 0) {
-      return !!(address && area && city && pincode && country && isValidPhone(ownerContact));
+      return !!(
+        address &&
+        area &&
+        city &&
+        pincode &&
+        !pincodeError &&
+        country &&
+        isValidPhone(ownerContact)
+      );
     }
     if (subStep === 1) {
       const typeOk = propertyType !== "" && (propertyType !== "Other" || propertyTypeOther.trim() !== "");
@@ -435,7 +478,13 @@ export default function OwnerAddProperty() {
         </div>
         <div>
           <FieldLabel required>Address</FieldLabel>
-          <Input placeholder="Type here" value={address} onChange={(e) => setAddress(e.target.value)} className="h-10 rounded-sm border-gray-200 focus:border-primary/50" />
+          <textarea
+            value={address}
+            onChange={(e) => handleAddressChange(e.target.value)}
+            onPaste={handleAddressPaste}
+            placeholder="e.g. 201, Orchid Residency, Sector 76, Noida, 201301"
+            className="w-full min-h-[5rem] rounded-sm border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 resize-none"
+          />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
           <div>
@@ -450,7 +499,17 @@ export default function OwnerAddProperty() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
           <div>
             <FieldLabel required>Pincode</FieldLabel>
-            <Input placeholder="Type here" value={pincode} onChange={(e) => setPincode(e.target.value)} maxLength={6} className="h-10 rounded-sm border-gray-200 focus:border-primary/50" />
+            <Input
+              placeholder="6-digit pincode"
+              value={pincode}
+              onChange={(e) => handlePincodeChange(e.target.value)}
+              inputMode="numeric"
+              maxLength={6}
+              className="h-10 rounded-sm border-gray-200 focus:border-primary/50"
+            />
+            {pincodeError && (
+              <p className="text-xs text-red-500 mt-1">Enter a valid 6-digit pincode.</p>
+            )}
           </div>
           <div>
             <FieldLabel required>Country</FieldLabel>
