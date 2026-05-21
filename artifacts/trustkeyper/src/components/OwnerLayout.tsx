@@ -107,7 +107,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
             <PopoverContent align="end" className="w-[360px] p-0 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-gray-100 z-50 overflow-hidden">
               <div className="flex items-center justify-between p-5 bg-[#F8FAFC] border-b border-gray-100">
                 <h3 className="font-semibold text-gray-900 text-lg">Notifications</h3>
-                <button className="text-xs text-[#3B82F6] font-semibold hover:underline">Mark all as read</button>
+                <button className="text-xs text-primary font-semibold hover:underline">Mark all as read</button>
               </div>
               <div className="max-h-[400px] overflow-y-auto">
                 <div className="p-5 border-b border-gray-50 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer group">
@@ -115,7 +115,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
                     <Check size={18} strokeWidth={3} />
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900 text-[14px] mb-0.5 group-hover:text-[#3B82F6] transition-colors">Rent Received</p>
+                    <p className="font-semibold text-gray-900 text-[14px] mb-0.5 group-hover:text-primary transition-colors">Rent Received</p>
                     <p className="text-[12px] text-gray-500 leading-relaxed font-medium">Rent for Prestige Lakeside Unit 1204 has been received successfully.</p>
                     <p className="text-[10px] text-gray-400 mt-2 font-semibold flex items-center gap-1.5"><Clock size={10} /> 2 hours ago</p>
                   </div>
@@ -125,25 +125,25 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
                     <Ticket size={18} />
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900 text-[14px] mb-0.5 group-hover:text-[#3B82F6] transition-colors">New Ticket Created</p>
+                    <p className="font-semibold text-gray-900 text-[14px] mb-0.5 group-hover:text-primary transition-colors">New Ticket Created</p>
                     <p className="text-[12px] text-gray-500 leading-relaxed font-medium">Tenant reported an issue with the plumbing in Unit 305.</p>
                     <p className="text-[10px] text-gray-400 mt-2 font-semibold flex items-center gap-1.5"><Clock size={10} /> 4 hours ago</p>
                   </div>
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#3B82F6] mt-1.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-primary mt-1.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
                 </div>
                 <div className="p-5 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer group">
                   <div className="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center shrink-0 border border-yellow-100 text-[#F2994A]">
                     <AlertTriangle size={18} />
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900 text-[14px] mb-0.5 group-hover:text-[#3B82F6] transition-colors">Inspection Alert</p>
+                    <p className="font-semibold text-gray-900 text-[14px] mb-0.5 group-hover:text-primary transition-colors">Inspection Alert</p>
                     <p className="text-[12px] text-gray-500 leading-relaxed font-medium">Minor leak detected in Prestige Heights Unit 1107.</p>
                     <p className="text-[10px] text-gray-400 mt-2 font-semibold flex items-center gap-1.5"><Clock size={10} /> 5 hours ago</p>
                   </div>
                 </div>
               </div>
               <div className="p-4 border-t border-gray-100 text-center bg-white">
-                <button className="text-[13px] font-semibold text-[#3B82F6] hover:underline">View All Notifications</button>
+                <button className="text-[13px] font-semibold text-primary hover:underline">View All Notifications</button>
               </div>
             </PopoverContent>
           </Popover>

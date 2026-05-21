@@ -21,6 +21,7 @@ import BrokerSettings from "@/pages/BrokerProfile";
 import BrokerActivity from "@/pages/BrokerActivity";
 import OwnerAddProperty from "@/pages/OwnerAddProperty";
 import OwnerDashboard from "@/pages/OwnerDashboard";
+import OwnerDashboard1 from "@/pages/OwnerDashboard1";
 import OwnerProperties from "@/pages/OwnerProperties";
 import OwnerPropertyDetails from "@/pages/OwnerPropertyDetails";
 import OwnerTenants from "@/pages/OwnerTenants";
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/" component={Onboarding} />
       <Route path="/owner/properties/add" component={OwnerAddProperty} />
       <Route path="/owner/dashboard" component={OwnerDashboard} />
+      <Route path="/owner/dashboard1" component={OwnerDashboard1} />
       <Route path="/owner/properties" component={OwnerProperties} />
       <Route path="/owner/properties/:id" component={OwnerPropertyDetails} />
       <Route path="/owner/tenants" component={OwnerTenants} />

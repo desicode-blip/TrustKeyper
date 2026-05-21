@@ -129,7 +129,7 @@ export default function OwnerPropertyDetails() {
                 ))}
                 <div className="pt-4 flex flex-wrap gap-2">
                   {property.amenities?.map((a, i) => (
-                    <span key={i} className="px-3 py-1 bg-blue-50 text-[#3B82F6] text-[11px] font-semibold rounded-full border border-blue-100">
+                    <span key={i} className="px-3 py-1 bg-primary/10 text-primary text-[11px] font-semibold rounded-full border border-primary/15">
                       {a}
                     </span>
                   ))}

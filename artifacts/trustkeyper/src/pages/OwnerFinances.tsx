@@ -131,7 +131,7 @@ export default function OwnerFinances() {
                     <Button variant="outline" className="h-10 gap-2 border-gray-200 text-gray-700 font-semibold px-4 rounded-xl hover:bg-gray-50">
                       <Send size={16} /> Remind
                     </Button>
-                    <Button className="h-10 bg-[#2F65FF] hover:bg-[#1E50FF] text-white font-semibold px-5 rounded-xl shadow-[0_4px_10px_-4px_rgba(47,101,255,0.5)]">
+                    <Button className="h-10 font-semibold px-5 rounded-xl shadow-md shadow-primary/25">
                       Mark Paid
                     </Button>
                   </div>

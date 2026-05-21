@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Plus, Eye, MapPin, Building2, ChevronLeft } from "lucide-react";
+import { Plus, MapPin, Building2, ChevronLeft } from "lucide-react";
 import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
+import { Button } from "@/components/ui/button";
 import { getProperties, type Property } from "@/lib/properties";
 
 const TABS = [
@@ -42,12 +43,12 @@ export default function OwnerProperties() {
           <button onClick={() => window.history.back()} className="flex items-center gap-2 text-primary font-semibold text-lg hover:underline w-fit">
             <ChevronLeft size={20} /> Back
           </button>
-          <button
+          <Button
             onClick={() => setLocation("/owner/properties/add")}
-            className="bg-[#3B82F6] hover:bg-[#2563EB] text-white px-6 h-10 rounded-xl font-semibold flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all w-fit"
+            className="rounded-xl font-semibold shadow-lg shadow-primary/25 h-10 px-6 w-fit"
           >
             Add Property <Plus size={18} />
-          </button>
+          </Button>
         </div>
         <div className="flex items-center gap-3 mb-8">
           {TABS.map((t) => {

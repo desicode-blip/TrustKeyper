@@ -1,209 +1,192 @@
 import React, { useEffect, useState } from "react";
-import { Plus, MapPin, Building2, Wallet, Clock, AlertTriangle, ArrowRight, Wrench, PenTool, Check, Search, Bell, User } from "lucide-react";
+import {
+  Plus,
+  MapPin,
+  ArrowRight,
+  Eye,
+  Check,
+} from "lucide-react";
 import { Link, useLocation } from "wouter";
 import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
-import { getProperties, type Property } from "@/lib/properties";
 import { Button } from "@/components/ui/button";
+import { getProperties, getPropertyTitle, type Property } from "@/lib/properties";
+
+function filterOwnerProperties(all: Property[], ownerName: string): Property[] {
+  const name = ownerName.replace("!", "").trim();
+  return all.filter((p) => p.uploadedBy === "owner" || p.ownerName === name);
+}
+
+function formatLocation(p: Property): string {
+  const line = [p.area, p.city].filter(Boolean).join(", ");
+  if (line.length <= 36) return line;
+  return `${line.slice(0, 34)}....`;
+}
+
+function formatActivityTime(createdAt: number): string {
+  const d = new Date(createdAt);
+  return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
 
 export default function OwnerDashboard() {
   const [, setLocation] = useLocation();
-  const ownerName = getOwnerName();
+  const ownerName = getOwnerName().replace("!", "").trim();
+  const displayName = ownerName || "there";
   const [properties, setProperties] = useState<Property[]>([]);
 
   useEffect(() => {
-    const all = getProperties();
-    const ownerProps = all.filter(p => p.uploadedBy === "owner" || p.ownerName === ownerName);
-    setProperties(ownerProps);
+    setProperties(filterOwnerProperties(getProperties(), ownerName));
   }, [ownerName]);
+
+  const latestProperty = properties[0];
 
   return (
     <OwnerLayout>
       <div className="p-6 sm:p-10 max-w-[1200px] mx-auto">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-10">
-          <h1 className="text-[28px] font-semibold text-[#2D3748]">
-            Welcome back, {ownerName.replace("!", "")}!
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
+          <h1 className="text-[28px] font-semibold text-primary tracking-tight">
+            Welcome, {displayName}!
           </h1>
           <Button
+            size="lg"
             onClick={() => setLocation("/owner/properties/add")}
-            className="bg-[#3B82F6] hover:bg-[#2563EB] text-white px-6 h-11 rounded-xl font-semibold flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all"
+            className="rounded-xl font-semibold shadow-lg shadow-primary/25 h-11 px-6"
           >
-            Add Property <Plus size={18} />
+            Add Property <Plus size={18} strokeWidth={2.5} />
           </Button>
         </div>
 
-        <div className="mb-10">
-          <h2 className="text-[18px] font-semibold text-[#1A202C] mb-5">Overview</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Total Properties Card */}
-            <div className="bg-white rounded-[24px] border border-gray-100 p-6 shadow-sm flex flex-col relative overflow-hidden transition-all hover:shadow-md">
-              <div className="flex justify-between items-start mb-6">
-                <p className="text-[14px] font-semibold text-gray-500">Total Properties</p>
-                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-[#3B82F6]">
-                  <Building2 size={20} />
-                </div>
-              </div>
-              <div className="mb-6">
-                <h3 className="text-[34px] font-semibold text-[#1A202C] mb-1">50</h3>
-                <p className="text-[13px] font-semibold text-gray-500">47 Occupied <span className="mx-1 text-gray-300">|</span> <span className="text-gray-400 font-medium">3 Vacant</span></p>
-              </div>
-              <div className="mt-auto">
-                <div className="w-full bg-[#E2E8F0] rounded-full h-2.5 mb-2">
-                  <div className="bg-[#2ECC71] h-2.5 rounded-full" style={{ width: "94%" }}></div>
-                </div>
-                <p className="text-[11px] font-semibold text-gray-400">94% occupied</p>
-              </div>
-            </div>
-
-            {/* Monthly Revenue Card */}
-            <div className="bg-white rounded-[24px] border border-gray-100 p-6 shadow-sm flex flex-col transition-all hover:shadow-md">
-              <div className="flex justify-between items-start mb-6">
-                <p className="text-[14px] font-semibold text-gray-500">Monthly Revenue</p>
-                <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-[#2ECC71]">
-                  <Wallet size={20} />
-                </div>
-              </div>
-              <div className="mb-6">
-                <h3 className="text-[34px] font-semibold text-[#1A202C] mb-1">₹14,28,000</h3>
-                <p className="text-[13px] font-semibold">
-                  <span className="text-[#2ECC71]">40 Paid</span> <span className="mx-1 text-gray-300">|</span> <span className="text-[#E74C3C]">7 Overdue</span>
-                </p>
-              </div>
-              <div className="mt-auto">
-                <Link href="/owner/finances" className="inline-flex items-center justify-center text-[12px] font-semibold text-[#3B82F6] bg-white border-2 border-[#3B82F6]/10 px-6 py-2 rounded-xl hover:bg-blue-50 transition-colors w-fit">
-                  View Details
-                </Link>
-              </div>
-            </div>
-
-            {/* Open Tickets Card */}
-            <div className="bg-[#FFF5F0] rounded-[24px] border border-[#FFE7DB] p-6 shadow-sm flex flex-col transition-all hover:shadow-md">
-              <div className="flex justify-between items-start mb-6">
-                <p className="text-[14px] font-semibold text-gray-500">Open Tickets</p>
-                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-[#E67E22]">
-                  <AlertTriangle size={20} />
-                </div>
-              </div>
-              <div className="flex gap-6 mb-6">
-                <h3 className="text-[44px] font-semibold text-[#E67E22] leading-none">4</h3>
-                <div className="flex flex-col gap-3 flex-1 justify-center">
-                  <div className="flex items-center justify-between text-[11px] font-semibold">
-                    <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#E74C3C]"></span> Urgent</span>
-                    <span className="text-[#1A202C]">2</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] font-semibold">
-                    <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#3B82F6]"></span> Work in Progress</span>
-                    <span className="text-[#1A202C]">2</span>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-auto">
-                <Link href="/owner/tickets" className="inline-flex items-center justify-center text-[12px] font-semibold text-[#3B82F6] bg-white border-2 border-[#3B82F6]/10 px-6 py-2 rounded-xl hover:bg-blue-50 transition-colors w-fit">
-                  View Details
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Your Properties Section */}
-        <div className="mb-12">
+        <section className="mb-12">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-[18px] font-semibold text-[#1A202C]">Your Properties</h2>
-            <Link href="/owner/properties" className="text-[13px] font-semibold text-[#3B82F6] flex items-center gap-1 hover:underline">
+            <h2 className="text-[18px] font-semibold text-gray-900">Your Properties</h2>
+            <Link
+              href="/owner/properties"
+              className="text-[13px] font-semibold text-primary flex items-center gap-1 hover:underline"
+            >
               View all <ArrowRight size={14} />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-sm flex flex-col relative transition-all hover:shadow-lg hover:-translate-y-1">
-              <div className="relative h-52 group">
-                <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Property" className="w-full h-full object-cover" />
-                <div className="absolute top-4 left-4 bg-[#2ECC71] text-white text-[10px] font-semibold px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-lg uppercase tracking-wider">
-                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" /> Occupied
-                </div>
-              </div>
-              <div className="p-6 flex flex-col flex-1">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <h3 className="font-semibold text-[#1A202C] text-lg leading-tight">Prestige Unit 1806</h3>
-                  <button className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-100 text-gray-400 hover:bg-gray-50 transition-colors">
-                    <ArrowRight size={14} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+            {properties.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => setLocation("/owner/properties/add")}
+                className="min-h-[320px] rounded-2xl border-2 border-dashed border-primary/25 bg-primary/[0.04] flex flex-col items-center justify-center gap-3 text-primary hover:bg-primary/[0.08] transition-colors"
+              >
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                  <Plus size={28} strokeWidth={2} />
+                </span>
+                <span className="text-sm font-semibold">Add your first property</span>
+              </button>
+            ) : (
+              <>
+                {properties.slice(0, 2).map((property) => (
+                  <article
+                    key={property.id}
+                    className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex flex-col transition-all hover:shadow-md hover:-translate-y-0.5"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setLocation(`/owner/properties/${property.id}`)}
+                      className="text-left flex flex-col flex-1"
+                    >
+                      <div className="relative h-52 bg-gray-100">
+                        {property.images?.[0] ? (
+                          <img
+                            src={property.images[0]}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                            No image
+                          </div>
+                        )}
+                        <div className="absolute top-4 left-4 bg-primary text-primary-foreground text-[11px] font-semibold px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-sm">
+                          <span className="w-2 h-2 rounded-full bg-white" />
+                          Live
+                        </div>
+                      </div>
+                      <div className="p-5 sm:p-6 flex flex-col flex-1">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <h3 className="font-semibold text-gray-900 text-lg leading-snug">
+                            {property.nickname || getPropertyTitle(property)}
+                          </h3>
+                          <span className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 shrink-0">
+                            <ArrowRight size={14} />
+                          </span>
+                        </div>
+                        <p className="text-[13px] text-gray-500 font-medium flex items-center gap-1.5 mb-4">
+                          <MapPin size={14} className="text-primary shrink-0" />
+                          {formatLocation(property)}
+                        </p>
+                        <p className="font-semibold text-gray-900 text-xl mt-auto">
+                          ₹{Number(property.monthlyRent || 0).toLocaleString("en-IN")}
+                          <span className="text-[13px] text-gray-500 font-medium">/mo</span>
+                        </p>
+                        <p className="mt-3 flex items-center gap-1.5 text-[12px] text-gray-400 font-medium">
+                          <Eye size={14} className="text-gray-400" />
+                          0 tenants have viewed the property
+                        </p>
+                      </div>
+                    </button>
+                  </article>
+                ))}
+
+                {properties.length < 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setLocation("/owner/properties/add")}
+                    className="min-h-[320px] rounded-2xl border-2 border-dashed border-primary/25 bg-[#F0F4FF] flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
+                    aria-label="Add property"
+                  >
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm border border-primary/15">
+                      <Plus size={26} strokeWidth={2.5} />
+                    </span>
                   </button>
-                </div>
-                <p className="text-[12px] text-gray-500 font-medium flex items-center gap-1.5 mb-5">
-                  <MapPin size={14} className="text-[#3B82F6]" /> Plot - 160 , nanakaram guda....
-                </p>
+                )}
+              </>
+            )}
+          </div>
+        </section>
 
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="flex items-center gap-1.5 text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
-                    <Building2 size={14} className="text-[#3B82F6]" />
-                    <span className="text-[11px] font-semibold">3 BHK</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
-                    <Clock size={14} className="text-[#3B82F6]" />
-                    <span className="text-[11px] font-semibold">1200 sq.ft</span>
-                  </div>
+        <section>
+          <h2 className="text-[18px] font-semibold text-gray-900 mb-6">Recent Activity</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {latestProperty ? (
+              <div className="px-6 sm:px-8 py-5 flex items-center gap-5 sm:gap-6 border-b border-gray-50">
+                <span className="text-[13px] font-semibold text-gray-400 w-12 shrink-0 tabular-nums">
+                  {formatActivityTime(latestProperty.createdAt)}
+                </span>
+                <div className="w-10 h-10 rounded-full bg-accent/15 text-accent flex items-center justify-center shrink-0">
+                  <Check size={18} strokeWidth={2.5} />
                 </div>
-
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 text-[#3B82F6] text-[11px] font-semibold flex items-center justify-center">
-                    AR
-                  </div>
-                  <span className="text-[13px] text-[#2D3748] font-semibold">Arjun Reddy</span>
-                </div>
-                
-                <div className="mt-auto border-t border-gray-50 pt-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-[#1A202C] text-[20px]">
-                      ₹32,583<span className="text-[12px] text-gray-400 font-semibold">/mo</span>
-                    </p>
-                    <p className="text-[10px] font-semibold text-[#2ECC71] mt-0.5 flex items-center gap-1">
-                      <Check size={12} /> Rent received 7 days ago
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <span className="text-[14px] font-semibold text-[#E67E22]">79/100</span>
-                    <span className="text-[10px] text-gray-400 font-semibold">Trust Score</span>
-                  </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-[15px]">
+                    Your property is verified
+                  </p>
+                  <p className="text-[13px] text-gray-500 font-medium mt-0.5 truncate">
+                    {latestProperty.nickname || getPropertyTitle(latestProperty)}
+                  </p>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
+            ) : (
+              <div className="px-6 py-10 text-center text-sm text-gray-500">
+                Activity will appear here after you add a property.
+              </div>
+            )}
 
-        {/* Recent Activity Section */}
-        <div>
-          <h2 className="text-[18px] font-semibold text-[#1A202C] mb-6">Recent Activity</h2>
-          <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden mb-10">
-            <div className="divide-y divide-gray-50">
-              {/* Activity Items */}
-              {[
-                { time: "2h ago", icon: Wallet, color: "bg-green-50 text-[#2ECC71]", title: "Rent received", subtitle: "Prestige Lakeside Unit 1204", amount: "+₹28,000" },
-                { time: "4h ago", icon: Wrench, color: "bg-blue-50 text-[#3B82F6]", title: "Repair ticket closed (AC Fixed)", subtitle: "Prestige Sunrise Unit 305" },
-                { time: "5h ago", icon: AlertTriangle, color: "bg-orange-50 text-[#E67E22]", title: "Inspection alert: Minor leak detected", subtitle: "Prestige Heights Unit 1107" },
-                { time: "1d ago", icon: PenTool, color: "bg-purple-50 text-[#9B59B6]", title: "New tenant moved in: Priya Sharma", subtitle: "Prestige Royale Unit 204" },
-                { time: "1d ago", icon: Check, color: "bg-green-50 text-[#2ECC71]", title: "Rent received", subtitle: "Lodha Belleza Unit 401", amount: "+₹32,000" }
-              ].map((activity, idx) => (
-                <div key={idx} className="p-5 sm:px-8 flex items-center gap-6 hover:bg-gray-50/50 transition-colors cursor-pointer group">
-                  <span className="text-[12px] font-semibold text-gray-400 w-14 text-right shrink-0">{activity.time}</span>
-                  <div className={`w-10 h-10 rounded-xl ${activity.color} flex items-center justify-center shrink-0 border border-current opacity-80 group-hover:opacity-100 transition-opacity`}>
-                    <activity.icon size={18} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-[#1A202C] text-[15px]">{activity.title}</p>
-                    <p className="text-[12px] font-semibold text-gray-500">{activity.subtitle}</p>
-                  </div>
-                  {activity.amount && (
-                    <div className="text-[16px] font-semibold text-[#2ECC71] shrink-0">{activity.amount}</div>
-                  )}
-                </div>
-              ))}
-            </div>
-            
-            <div className="border-t border-gray-50 p-4 text-center bg-gray-50/20">
-              <button className="text-[13px] font-semibold text-[#3B82F6] hover:underline">View All Activity</button>
+            <div className="py-4 text-center bg-gray-50/40">
+              <button
+                type="button"
+                onClick={() => setLocation("/owner/dashboard1")}
+                className="text-[13px] font-semibold text-primary hover:underline"
+              >
+                View All Activity
+              </button>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </OwnerLayout>
   );
