@@ -34,12 +34,7 @@ const helpItems = [
 ];
 
 function HeaderLogo() {
-  return (
-    <TrustKeyperLogo
-      variant="brand"
-      className="h-9 sm:h-10 w-[9.5rem] sm:w-[10.5rem] select-none"
-    />
-  );
+  return <TrustKeyperLogo variant="brand" size="header" />;
 }
 
 export function getBrokerName(): string {

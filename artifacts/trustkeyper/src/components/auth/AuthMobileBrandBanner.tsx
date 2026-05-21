@@ -16,10 +16,7 @@ export function AuthMobileBrandBanner() {
         aria-hidden
       />
       <div className="relative flex items-center justify-center py-6 px-6">
-        <TrustKeyperLogo
-          variant="inverse"
-          className="h-12 w-[10.75rem] max-w-[min(100%,220px)]"
-        />
+        <TrustKeyperLogo variant="inverse" size="authMobile" />
       </div>
     </div>
   );
