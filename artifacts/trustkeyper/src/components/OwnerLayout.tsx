@@ -29,7 +29,7 @@ const navItems = [
   { id: "dashboards", label: "Dashboards", icon: LayoutDashboard, href: "/owner/dashboard" },
   { id: "properties", label: "Properties", icon: Building2, href: "/owner/properties" },
   { id: "tenants", label: "Tenants", icon: Users, href: "/owner/tenants" },
-  { id: "finances", label: "Finances & Expenses", icon: CreditCard, href: "/owner/finances" },
+  { id: "finances", label: "Rent Management", icon: CreditCard, href: "/owner/finances" },
   { id: "tickets", label: "Tickets", icon: Ticket, href: "/owner/tickets" },
   { id: "agreement", label: "Agreement", icon: FileSignature, href: "/owner/agreements" },
 ];
@@ -41,12 +41,7 @@ const helpItems = [
 ];
 
 function HeaderLogo() {
-  return (
-    <TrustKeyperLogo
-      variant="brand"
-      className="h-9 sm:h-10 w-[9.5rem] sm:w-[10.5rem] select-none"
-    />
-  );
+  return <TrustKeyperLogo variant="brand" size="header" />;
 }
 
 export function getOwnerName(): string {
