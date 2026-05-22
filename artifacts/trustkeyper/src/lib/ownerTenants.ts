@@ -13,6 +13,8 @@ export interface OwnerTenantInquiry {
   propertyLabel: string;
   who?: TenantWho;
   food?: Food;
+  /** LinkedIn profile URL — only set when a logged-in tenant submits an inquiry. */
+  linkedinUrl?: string;
   status: InquiryStatus;
   createdAt: number;
 }
@@ -32,6 +34,7 @@ export interface OwnerTenantInvite {
   startDate: string;
   status: "pending_confirmation";
   inquiryId?: string;
+  linkedinUrl?: string;
   createdAt: number;
 }
 
@@ -82,44 +85,13 @@ export function getPropertyInviteLabel(p: Property): string {
   return loc ? `${title}, ${loc}` : title;
 }
 
-const SEED_INQUIRIES: Omit<OwnerTenantInquiry, "id" | "propertyId" | "status" | "createdAt">[] = [
-  {
-    name: "Geetha Sharma",
-    phone: "+91 9876543210",
-    propertyLabel: "Prestige Lakeside unit 1204",
-    who: "Family",
-    food: "Non-Veg",
-  },
-  {
-    name: "Abdul",
-    phone: "+91 7845362693",
-    propertyLabel: "Prestige Lakeside unit 1204",
-    who: "Family",
-    food: "Non-Veg",
-  },
-  {
-    name: "Sana Raju",
-    phone: "+91 9123456789",
-    propertyLabel: "Prestige Lakeside unit 1204",
-    who: "Bachelor",
-    food: "Veg",
-  },
-];
-
-/** Seed demo inquiries once per account when list is empty. */
-export function initOwnerTenantData(defaultPropertyId: string, defaultLabel: string): void {
-  const existing = readJson<OwnerTenantInquiry>(INQUIRIES_KEY);
-  if (existing.length > 0) return;
-
-  const seeded: OwnerTenantInquiry[] = SEED_INQUIRIES.map((row, i) => ({
-    ...row,
-    id: `inq_seed_${i + 1}`,
-    propertyId: defaultPropertyId,
-    propertyLabel: defaultLabel || row.propertyLabel,
-    status: "open",
-    createdAt: Date.now() - (i + 1) * 86400000,
-  }));
-  persist(INQUIRIES_KEY, seeded);
+/** Remove legacy demo inquiry rows from earlier builds. */
+export function removeLegacySeedInquiries(): void {
+  const list = readJson<OwnerTenantInquiry>(INQUIRIES_KEY);
+  const cleaned = list.filter((i) => !i.id.startsWith("inq_seed_"));
+  if (cleaned.length !== list.length) {
+    persist(INQUIRIES_KEY, cleaned);
+  }
 }
 
 export function getOwnerInquiries(): OwnerTenantInquiry[] {
@@ -162,7 +134,11 @@ export function sendOwnerTenantInvites(payload: SendTenantInvitePayload): OwnerT
 
     if (member.inquiryId) {
       const idx = inquiries.findIndex((i) => i.id === member.inquiryId);
-      if (idx !== -1) inquiries[idx] = { ...inquiries[idx], status: "invited" };
+      if (idx !== -1) {
+        const inq = inquiries[idx];
+        invite.linkedinUrl = inq.linkedinUrl;
+        inquiries[idx] = { ...inq, status: "invited" };
+      }
     }
   }
 
@@ -178,4 +154,14 @@ export function formatMemberContact(phone: string): string {
     return `+91 ${last10}`;
   }
   return phone;
+}
+
+export function whatsAppHref(phone: string): string {
+  const digits = phone.replace(/\D/g, "").slice(-10);
+  if (digits.length !== 10) return "https://wa.me/";
+  return `https://wa.me/91${digits}`;
+}
+
+export function isInviteFromInquiry(invite: OwnerTenantInvite): boolean {
+  return !!invite.inquiryId;
 }

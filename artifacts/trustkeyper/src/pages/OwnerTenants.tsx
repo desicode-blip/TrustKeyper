@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, MessageCircle, Send, Users } from "lucide-react";
-import { Link, useLocation } from "wouter";
+import { ChevronLeft, Send, Users, Utensils } from "lucide-react";
+import { FaLinkedin, FaWhatsapp } from "react-icons/fa";
+import { Link } from "wouter";
 import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
 import { InviteTenantsModal } from "@/components/owner/InviteTenantsModal";
 import { OwnerPageEmpty } from "@/components/owner/OwnerPageEmpty";
@@ -10,8 +11,9 @@ import {
   formatMemberContact,
   getOwnerInquiries,
   getOwnerInvites,
-  getPropertyInviteLabel,
-  initOwnerTenantData,
+  isInviteFromInquiry,
+  removeLegacySeedInquiries,
+  whatsAppHref,
   type OwnerTenantInquiry,
   type OwnerTenantInvite,
 } from "@/lib/ownerTenants";
@@ -23,6 +25,8 @@ const TABS = [
 ] as const;
 
 type TenantTab = (typeof TABS)[number]["id"];
+
+const INVITE_STATUS_LABEL = "Confirmation sent. Waiting for tenant to accept.";
 
 function filterOwnerProperties(all: Property[], ownerName: string): Property[] {
   const name = ownerName.replace("!", "").trim();
@@ -38,13 +42,110 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-function InquiryCard({
-  inquiry,
-  onViewProfile,
+function WhatsAppIconButton({ phone }: { phone: string }) {
+  return (
+    <a
+      href={whatsAppHref(phone)}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Chat on WhatsApp"
+      className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-[#25D366] text-white shadow-sm hover:bg-[#20bd5a] transition-colors shrink-0"
+    >
+      <FaWhatsapp className="w-5 h-5" aria-hidden />
+    </a>
+  );
+}
+
+function InviteStatusBadge() {
+  return (
+    <span className="inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-[#768EA7] text-white text-xs font-medium leading-snug text-center max-w-[240px] sm:max-w-none">
+      {INVITE_STATUS_LABEL}
+    </span>
+  );
+}
+
+function LinkedInProfileLink({ url }: { url: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 text-[11px] font-medium text-primary border border-primary/40 bg-white px-2.5 py-0.5 rounded-full hover:bg-primary/5 transition-colors shrink-0"
+    >
+      <FaLinkedin className="w-3 h-3 shrink-0 text-primary" aria-hidden />
+      View profile
+    </a>
+  );
+}
+
+function InvitedTenantRow({ invite }: { invite: OwnerTenantInvite }) {
+  const fromInquiry = isInviteFromInquiry(invite);
+
+  return (
+    <div className="rounded-lg bg-[#F3FBF6] border border-green-100/80 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-start gap-4 min-w-0 flex-1">
+        <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-base font-semibold shrink-0">
+          {getInitials(invite.name)}
+        </div>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <p className="font-semibold text-gray-900 text-[15px]">{invite.name}</p>
+            {fromInquiry && invite.linkedinUrl ? (
+              <LinkedInProfileLink url={invite.linkedinUrl} />
+            ) : null}
+          </div>
+          {fromInquiry ? (
+            <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+              <span>For {invite.propertyLabel}</span>
+              {invite.who ? (
+                <span className="inline-flex items-center gap-1">
+                  <Users size={12} className="opacity-70 shrink-0" />
+                  {invite.who}
+                </span>
+              ) : null}
+              {invite.food ? (
+                <span className="inline-flex items-center gap-1">
+                  <Utensils size={12} className="opacity-70 shrink-0" />
+                  {invite.food}
+                </span>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600">{formatMemberContact(invite.phone)}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 w-full sm:w-auto sm:justify-end shrink-0">
+        <InviteStatusBadge />
+        <WhatsAppIconButton phone={invite.phone} />
+      </div>
+    </div>
+  );
+}
+
+function PropertyInvitesCard({
+  propertyLabel,
+  invites,
 }: {
-  inquiry: OwnerTenantInquiry;
-  onViewProfile: () => void;
+  propertyLabel: string;
+  invites: OwnerTenantInvite[];
 }) {
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-5">
+      <h3 className="font-semibold text-gray-900 text-[15px] leading-snug mb-3">
+        {propertyLabel}
+      </h3>
+      <div className="flex flex-col gap-3">
+        {invites.map((inv) => (
+          <InvitedTenantRow key={inv.id} invite={inv} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InquiryCard({ inquiry }: { inquiry: OwnerTenantInquiry }) {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
       <div className="flex items-center gap-4 min-w-0">
@@ -54,81 +155,33 @@ function InquiryCard({
         <div className="min-w-0">
           <div className="flex items-center gap-3 mb-1 flex-wrap">
             <h3 className="font-semibold text-gray-900">{inquiry.name}</h3>
-            <button
-              type="button"
-              onClick={onViewProfile}
-              className="flex items-center gap-1 text-[11px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full hover:bg-primary/15 transition-colors"
-            >
-              View profile
-            </button>
+            {inquiry.linkedinUrl ? <LinkedInProfileLink url={inquiry.linkedinUrl} /> : null}
           </div>
-          <div className="flex items-center gap-4 text-xs text-gray-500 flex-wrap">
+          <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
             <span>For {inquiry.propertyLabel}</span>
             {inquiry.who ? (
-              <span className="flex items-center gap-1">
-                <Users size={12} className="opacity-60" /> {inquiry.who}
+              <span className="inline-flex items-center gap-1">
+                <Users size={12} className="opacity-70 shrink-0" />
+                {inquiry.who}
               </span>
             ) : null}
-            {inquiry.food ? <span>{inquiry.food}</span> : null}
+            {inquiry.food ? (
+              <span className="inline-flex items-center gap-1">
+                <Utensils size={12} className="opacity-70 shrink-0" />
+                {inquiry.food}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
-      <button
-        type="button"
-        className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded border border-green-500 text-green-600 text-sm font-medium hover:bg-green-50 transition-colors w-full sm:w-auto shrink-0"
-      >
-        <MessageCircle size={16} />
-        Chat
-      </button>
-    </div>
-  );
-}
-
-function InviteCard({ invite, onViewProfile }: { invite: OwnerTenantInvite; onViewProfile: () => void }) {
-  return (
-    <div className="bg-green-50/80 rounded-lg border border-green-100 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div className="flex items-center gap-4 min-w-0">
-        <div className="w-12 h-12 rounded-full bg-white text-green-700 border border-green-100 flex items-center justify-center text-lg font-semibold shrink-0">
-          {getInitials(invite.name)}
-        </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-3 mb-1 flex-wrap">
-            <h3 className="font-semibold text-gray-900">{invite.name}</h3>
-            <button
-              type="button"
-              onClick={onViewProfile}
-              className="flex items-center gap-1 text-[11px] font-medium text-primary bg-white/80 px-2 py-0.5 rounded-full hover:bg-white transition-colors"
-            >
-              View profile
-            </button>
-          </div>
-          <p className="text-sm text-gray-600">{formatMemberContact(invite.phone)}</p>
-          {(invite.who || invite.food) && (
-            <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-              {invite.who ? <span>{invite.who}</span> : null}
-              {invite.food ? <span>{invite.food}</span> : null}
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="flex flex-col sm:items-end gap-2 w-full sm:w-auto">
-        <span className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-gray-200/80 text-gray-600 text-xs font-medium text-center max-w-xs">
-          Confirmation sent. Waiting for tenant to accept.
-        </span>
-        <button
-          type="button"
-          className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded border border-green-500 text-green-600 text-sm font-medium hover:bg-green-50 transition-colors bg-white"
-        >
-          <MessageCircle size={16} />
-          Chat
-        </button>
+      <div className="flex items-center gap-3 sm:justify-end w-full sm:w-auto">
+        <WhatsAppIconButton phone={inquiry.phone} />
       </div>
     </div>
   );
 }
 
 export default function OwnerTenants() {
-  const [, setLocation] = useLocation();
   const ownerName = getOwnerName();
   const [activeTab, setActiveTab] = useState<TenantTab>("inquiries");
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -140,17 +193,15 @@ export default function OwnerTenants() {
   }, [ownerName]);
 
   const reload = useCallback(() => {
+    removeLegacySeedInquiries();
     setInquiries(getOwnerInquiries());
     setInvites(getOwnerInvites());
   }, []);
 
   useEffect(() => {
-    const first = ownerProperties[0];
-    if (first) {
-      initOwnerTenantData(first.id, getPropertyInviteLabel(first));
-    }
+    removeLegacySeedInquiries();
     reload();
-  }, [ownerProperties, reload]);
+  }, [reload]);
 
   const openInquiries = inquiries.filter((i) => i.status === "open");
   const inquiryCount = openInquiries.length;
@@ -183,7 +234,7 @@ export default function OwnerTenants() {
           </Link>
           <Button
             onClick={() => setInviteOpen(true)}
-            className="rounded-xl border-0 font-semibold shadow-md shadow-green-600/20 gap-2 bg-green-600 hover:bg-green-700 text-white"
+            className="rounded-xl border-0 font-semibold shadow-md shadow-primary/25 gap-2"
           >
             <Send size={16} />
             Invite Tenants
@@ -212,20 +263,9 @@ export default function OwnerTenants() {
             {invites.length > 0 && (
               <section>
                 <h2 className="text-base font-semibold text-gray-900 mb-4">Invites</h2>
-                <div className="space-y-6">
+                <div className="flex flex-col gap-4">
                   {Array.from(invitesByProperty.entries()).map(([label, group]) => (
-                    <div key={label}>
-                      <p className="text-sm text-gray-500 mb-3">{label}</p>
-                      <div className="flex flex-col gap-4">
-                        {group.map((inv) => (
-                          <InviteCard
-                            key={inv.id}
-                            invite={inv}
-                            onViewProfile={() => setLocation(`/owner/tenants/${inv.id}`)}
-                          />
-                        ))}
-                      </div>
-                    </div>
+                    <PropertyInvitesCard key={label} propertyLabel={label} invites={group} />
                   ))}
                 </div>
               </section>
@@ -239,16 +279,12 @@ export default function OwnerTenants() {
                 <OwnerPageEmpty
                   icon={Users}
                   title="No inquiries yet"
-                  description="When tenants show interest in your listings, they will appear here."
+                  description="When a tenant logged into Trustkeyper shows interest in your property, their inquiry will appear here."
                 />
               ) : (
                 <div className="flex flex-col gap-4">
                   {openInquiries.map((inq) => (
-                    <InquiryCard
-                      key={inq.id}
-                      inquiry={inq}
-                      onViewProfile={() => setLocation(`/owner/tenants/${inq.id}`)}
-                    />
+                    <InquiryCard key={inq.id} inquiry={inq} />
                   ))}
                 </div>
               )}
