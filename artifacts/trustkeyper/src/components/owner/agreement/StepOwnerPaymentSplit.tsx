@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { ChevronRight, User } from "lucide-react";
+import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import type { AgreementParty } from "@/components/owner/agreement/StepOwnerParties";
 
 export type RentSplitMode = "percent" | "amount";
@@ -70,9 +71,9 @@ export function StepOwnerPaymentSplit({
         remaining: left,
         remainingLabel: (
           <>
-            <span className="text-green-600 font-bold">{left}%</span>
+            <span className="text-green-600 font-bold text-[24px] leading-none">{left}%</span>
             <span className="text-gray-500"> OF </span>
-            <span className="text-green-600 font-bold">{formatInr(totalRent)}</span>
+            <span className="text-green-600 font-bold text-[24px] leading-none">{formatInr(totalRent)}</span>
             <span className="text-gray-500"> IS REMAINING</span>
           </>
         ),
@@ -85,9 +86,9 @@ export function StepOwnerPaymentSplit({
       remaining: left,
       remainingLabel: (
         <>
-          <span className="text-green-600 font-bold">{formatInr(left)}</span>
+          <span className="text-green-600 font-bold text-[24px] leading-none">{formatInr(left)}</span>
           <span className="text-gray-500"> OF </span>
-          <span className="text-green-600 font-bold">{formatInr(totalRent)}</span>
+          <span className="text-green-600 font-bold text-[24px] leading-none">{formatInr(totalRent)}</span>
           <span className="text-gray-500"> IS REMAINING</span>
         </>
       ),
@@ -102,35 +103,19 @@ export function StepOwnerPaymentSplit({
   return (
     <div className="max-w-3xl w-full mx-auto">
       <div className="text-center mb-8">
-        <h2 className="text-xl font-semibold text-gray-900">Financial details</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Payment split between owners</h2>
         <p className="text-sm text-gray-500 mt-1">Who will receive the rent and how much?</p>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 w-fit">
-          <button
-            type="button"
-            onClick={() => setSplitMode("percent")}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              splitMode === "percent"
-                ? "bg-green-50 text-green-700 border border-green-200"
-                : "text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            Percentage %
-          </button>
-          <button
-            type="button"
-            onClick={() => setSplitMode("amount")}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              splitMode === "amount"
-                ? "bg-green-50 text-green-700 border border-green-200"
-                : "text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            Exact Amount
-          </button>
-        </div>
+        <FlowSegmentTabs
+          value={splitMode}
+          onChange={setSplitMode}
+          options={[
+            { value: "percent", label: "Percentage %" },
+            { value: "amount", label: "Exact Amount" },
+          ]}
+        />
         <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wide text-right">
           {remainingLabel}
         </p>

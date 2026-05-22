@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Plus, Building2, Eye, Heart, Phone, KeyRound } from "lucide-react";
 import { useLocation } from "wouter";
 import BrokerLayout from "@/components/BrokerLayout";
+import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import {
   getProperties,
   updatePropertyStatus,
@@ -207,23 +208,15 @@ export default function BrokerProperties() {
         </button>
       </div>
 
-      <div className="flex items-center gap-2 mb-8 flex-wrap">
-        {TAB_IDS.map((t) => {
-          const count = counts[t.id];
-          const isActive = active === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setActive(t.id)}
-              className={`h-8 px-4 rounded-lg text-xs font-medium transition-colors ${
-                isActive ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              {t.label} ({count})
-            </button>
-          );
-        })}
-      </div>
+      <FlowSegmentTabs
+        value={active}
+        onChange={setActive}
+        className="mb-8"
+        options={TAB_IDS.map((t) => ({
+          value: t.id,
+          label: `${t.label} (${counts[t.id]})`,
+        }))}
+      />
 
       {visible.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-32 text-center">

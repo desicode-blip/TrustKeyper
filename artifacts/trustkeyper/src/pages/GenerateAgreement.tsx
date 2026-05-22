@@ -33,6 +33,7 @@ import {
   AlertTriangle,
   Link2,
   QrCode,
+  Split,
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
 import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
@@ -52,11 +53,16 @@ import { addAgreement, getAgreements, updateAgreement, type Agreement } from "@/
 import { getBrokerProfile, saveBrokerProfile, hasBankDetails } from "@/lib/brokerProfile";
 import {
   getOwnerProfile,
+  hasOwnerBankDetails,
+  hasOwnerUpiDetails,
   removeOwnerProfileDocument,
   saveOwnerProfileBank,
   saveOwnerProfileDocument,
+  saveOwnerProfileUpi,
   type OwnerDocumentKind,
 } from "@/lib/ownerProfile";
+import { isValidUpiId, sanitizeUpiInput } from "@/lib/upi";
+import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,7 +82,7 @@ const OWNER_STEPS: { id: Step; label: string; shortLabel: string; Icon: React.El
   { id: 2, label: "Parties", shortLabel: "Parties", Icon: Users },
   { id: 3, label: "Documents", shortLabel: "Documents", Icon: FolderOpen },
   { id: 4, label: "Details", shortLabel: "Details", Icon: FileText },
-  { id: 5, label: "Financial details", shortLabel: "Financial", Icon: IndianRupee },
+  { id: 5, label: "Split", shortLabel: "Split", Icon: Split },
   { id: 6, label: "Review & Send", shortLabel: "Review\n& Send", Icon: Send },
 ];
 
@@ -96,7 +102,7 @@ function ProgressBar({
   }, [current]);
 
   return (
-    <div className="flex items-center gap-0 mb-6 sm:mb-8 overflow-x-auto overflow-y-hidden pb-2 -mx-1 px-1 scroll-smooth snap-x snap-mandatory sm:snap-none [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300">
+    <div className="flex items-center gap-0 mb-6 sm:mb-8 overflow-x-auto overflow-y-hidden pb-2 scroll-smooth snap-x snap-mandatory sm:snap-none [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300">
       {steps.map((s, i) => {
         const active = s.id === current;
         const done = s.id < current;
@@ -394,31 +400,39 @@ function PartyCard({ name, contact, badge, onRemove }: {
   name: string; contact: string; badge?: string; onRemove?: () => void;
 }) {
   return (
-    <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 bg-white mb-2 min-w-0 overflow-hidden ${badge ? "border-primary/30 bg-primary/5" : "border-gray-200"}`}>
-      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-        <User size={15} className="text-gray-500" />
+    <div
+      className={`flex items-center gap-3 rounded-xl border bg-white p-4 min-h-[88px] min-w-0 overflow-hidden ${
+        badge ? "border-primary/30 bg-primary/5" : "border-gray-200"
+      }`}
+    >
+      <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+        <User size={16} className="text-gray-500" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-sm font-semibold text-gray-900 truncate">{name}</p>
-          {badge && (
+          {badge ? (
             <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/15 text-primary uppercase tracking-wide">
               {badge}
             </span>
-          )}
+          ) : null}
         </div>
-        <p className="text-xs text-gray-500 mt-0.5 break-words">{contact}</p>
+        {contact ? <p className="text-xs text-gray-500 mt-0.5 break-words">{contact}</p> : null}
       </div>
       {badge ? (
         <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center shrink-0">
           <Check size={13} className="text-green-600" />
         </div>
       ) : (
-        onRemove && (
-          <button onClick={onRemove} className="text-xs text-red-500 font-medium hover:text-red-700 shrink-0 ml-1">
+        onRemove ? (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-xs text-red-500 font-medium hover:text-red-700 shrink-0"
+          >
             Remove
           </button>
-        )
+        ) : null
       )}
     </div>
   );
@@ -569,16 +583,17 @@ function Step2Parties({
   const canContinue = selectedTenants.length > 0;
 
   return (
-    <div className="max-w-2xl w-full">
+    <div className="max-w-3xl w-full mx-auto">
       <div className="text-center mb-8">
         <h2 className="text-xl font-semibold text-gray-900">Rental Agreement Between</h2>
         <p className="text-sm text-gray-500 mt-1">Who will be part of this agreement?</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* ── Owner(s) ── */}
         <div>
-          <p className="text-sm font-semibold text-gray-800 mb-3">Owner(s)</p>
+          <p className="text-xs font-medium text-gray-500 mb-2">Owner(s)</p>
+          <div className="space-y-4">
 
           {/* Primary owner card */}
           <PartyCard
@@ -615,11 +630,13 @@ function Step2Parties({
           >
             <Plus size={14} /> Add New Owner
           </button>
+          </div>
         </div>
 
         {/* ── Tenant(s) ── */}
         <div>
-          <p className="text-sm font-semibold text-gray-800 mb-3">Tenant(s)</p>
+          <p className="text-xs font-medium text-gray-500 mb-2">Tenant(s)</p>
+          <div className="space-y-4">
 
           {/* Added tenants */}
           {selectedTenants.map((t, i) => (
@@ -655,6 +672,7 @@ function Step2Parties({
               <Plus size={14} /> Add New Tenant
             </button>
           )}
+          </div>
         </div>
       </div>
 
@@ -715,18 +733,27 @@ function fmtFileSize(b: number) {
 
 // ── Bank Details Modal ────────────────────────────────────────────────────────
 
-function BankModal({ onSave, onClose }: { onSave: (d: BankData) => void; onClose: () => void }) {
-  const [tab, setTab] = useState<"bank" | "upi">("bank");
-  const [holderName, setHolderName] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [ifscCode, setIfscCode] = useState("");
-  const [upiId, setUpiId] = useState("");
-  const qrRef = useRef<HTMLInputElement>(null);
-  const [qrFile, setQrFile] = useState("");
+function BankModal({
+  onSave,
+  onClose,
+  prefillOwnerProfile = false,
+}: {
+  onSave: (d: BankData) => void;
+  onClose: () => void;
+  prefillOwnerProfile?: boolean;
+}) {
+  const saved = prefillOwnerProfile ? getOwnerProfile() : null;
+  const defaultTab: "bank" | "upi" =
+    saved?.upiId && !hasOwnerBankDetails() ? "upi" : "bank";
+  const [tab, setTab] = useState<"bank" | "upi">(defaultTab);
+  const [holderName, setHolderName] = useState(saved?.bankHolderName ?? "");
+  const [bankName, setBankName] = useState(saved?.bankName ?? "");
+  const [accountNumber, setAccountNumber] = useState(saved?.bankAccountNumber ?? "");
+  const [ifscCode, setIfscCode] = useState(saved?.bankIFSC ?? "");
+  const [upiId, setUpiId] = useState(saved?.upiId ?? "");
 
-  const bankValid = holderName && bankName && accountNumber && ifscCode;
-  const upiValid = upiId || qrFile;
+  const bankValid = !!(holderName && bankName && accountNumber && ifscCode);
+  const upiValid = isValidUpiId(upiId);
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -736,20 +763,15 @@ function BankModal({ onSave, onClose }: { onSave: (d: BankData) => void; onClose
         </button>
         <div className="px-6 pt-6 pb-2 border-b border-gray-100">
           <h3 className="text-base font-semibold text-gray-900 text-center mb-5">Add Bank Details</h3>
-          <div className="flex gap-2 mb-1">
-            <button
-              onClick={() => setTab("bank")}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${tab === "bank" ? "bg-accent/15 border-accent/30 text-green-800" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
-            >
-              Bank account
-            </button>
-            <button
-              onClick={() => setTab("upi")}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${tab === "upi" ? "bg-accent/15 border-accent/30 text-green-800" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
-            >
-              UPI
-            </button>
-          </div>
+          <FlowSegmentTabs
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: "bank", label: "Bank account" },
+              { value: "upi", label: "UPI" },
+            ]}
+            className="mx-auto"
+          />
         </div>
 
         <div className="px-6 py-5 space-y-4">
@@ -784,22 +806,21 @@ function BankModal({ onSave, onClose }: { onSave: (d: BankData) => void; onClose
             <>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1 text-center">UPI ID</label>
-                <input value={upiId} onChange={(e) => setUpiId(e.target.value)} placeholder="name@bank" className="w-full h-9 px-3 rounded-lg border border-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-center" />
-              </div>
-              <p className="text-center text-xs text-gray-400 font-medium">OR</p>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">QR Code</label>
-                <button
-                  onClick={() => qrRef.current?.click()}
-                  className="w-full h-24 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5 hover:border-primary/50 hover:bg-gray-50 transition-colors"
-                >
-                  {qrFile ? (
-                    <><Check size={20} className="text-green-500" /><span className="text-xs text-green-600 font-medium">QR uploaded</span></>
-                  ) : (
-                    <><div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center"><Plus size={14} className="text-gray-600" /></div><span className="text-xs text-gray-600 font-medium">Upload QR Code</span><span className="text-[10px] text-gray-400">(pdf, png, jpeg)</span></>
-                  )}
-                </button>
-                <input ref={qrRef} type="file" accept=".pdf,.png,.jpeg,.jpg" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setQrFile(e.target.files[0].name); }} />
+                <input
+                  value={upiId}
+                  onChange={(e) => setUpiId(sanitizeUpiInput(e.target.value))}
+                  placeholder="name@bank"
+                  inputMode="email"
+                  autoComplete="off"
+                  className={`w-full h-9 px-3 rounded-lg border text-sm focus:outline-none focus:ring-2 text-center ${
+                    upiId && !upiValid
+                      ? "border-red-300 focus:ring-red-200"
+                      : "border-primary focus:ring-primary/20"
+                  }`}
+                />
+                {upiId && !upiValid ? (
+                  <p className="text-xs text-red-500 text-center mt-1">Enter a valid UPI ID (e.g. name@bank)</p>
+                ) : null}
               </div>
             </>
           )}
@@ -915,9 +936,10 @@ function DocRow({
 
 function applyOwnerSelfDocPrefill(persons: PersonState[]): PersonState[] {
   const profile = getOwnerProfile();
-  const hasBank = !!(profile.bankAccountNumber && profile.bankIFSC && profile.bankName);
-  return persons.map((p, idx) => {
-    if (idx !== 0 || !p.personLabel.startsWith("OWNER")) return p;
+  const hasBank = hasOwnerBankDetails();
+  const hasUpi = hasOwnerUpiDetails();
+  return persons.map((p) => {
+    if (!isLoggedInOwnerParty(p, true)) return p;
     return {
       ...p,
       docs: p.docs.map((d) => {
@@ -926,6 +948,14 @@ function applyOwnerSelfDocPrefill(persons: PersonState[]): PersonState[] {
             ...d,
             status: "uploaded" as DocStatus,
             fileName: "Bank Account",
+            uploadedAt: Date.now(),
+          };
+        }
+        if (d.id === "bank" && hasUpi && !hasBank) {
+          return {
+            ...d,
+            status: "uploaded" as DocStatus,
+            fileName: "UPI Details",
             uploadedAt: Date.now(),
           };
         }
@@ -953,8 +983,21 @@ function applyOwnerSelfDocPrefill(persons: PersonState[]): PersonState[] {
   });
 }
 
+function isLoggedInOwnerParty(person: PersonState, isOwnerFlow: boolean): boolean {
+  if (!isOwnerFlow || !person.personLabel.startsWith("OWNER")) return false;
+  const profile = getOwnerProfile();
+  const normPhone = (s: string) => s.replace(/\D/g, "").slice(-10);
+  const profilePhone = normPhone(profile.phone);
+  const personPhone = normPhone(person.contact);
+  const profileName = (profile.name || getOwnerName()).replace("!", "").trim().toLowerCase();
+  const personName = person.name.trim().toLowerCase();
+  if (profileName && personName && profileName === personName) return true;
+  if (profilePhone && personPhone && profilePhone === personPhone) return true;
+  return false;
+}
+
 function isOwnerPrimarySelf(pIdx: number, person: PersonState, isOwnerFlow: boolean): boolean {
-  return isOwnerFlow && pIdx === 0 && person.personLabel.startsWith("OWNER");
+  return isLoggedInOwnerParty(person, isOwnerFlow);
 }
 
 // ── Step 3 Main ───────────────────────────────────────────────────────────────
@@ -1040,20 +1083,23 @@ function Step3Documents({
     const pIdx = bankModal.pIdx;
     const person = persons[pIdx];
     updateDoc(pIdx, bankModal.dIdx, { status: "uploaded", fileName: data.mode === "upi" ? "UPI Details" : "Bank Account", uploadedAt: Date.now() });
-    if (
-      isOwnerPrimarySelf(pIdx, person, isOwnerFlow) &&
-      data.mode === "bank" &&
-      data.holderName &&
-      data.bankName &&
-      data.accountNumber &&
-      data.ifscCode
-    ) {
-      saveOwnerProfileBank({
-        holderName: data.holderName,
-        bankName: data.bankName,
-        accountNumber: data.accountNumber,
-        ifscCode: data.ifscCode,
-      });
+    if (isLoggedInOwnerParty(person, isOwnerFlow)) {
+      if (
+        data.mode === "bank" &&
+        data.holderName &&
+        data.bankName &&
+        data.accountNumber &&
+        data.ifscCode
+      ) {
+        saveOwnerProfileBank({
+          holderName: data.holderName,
+          bankName: data.bankName,
+          accountNumber: data.accountNumber,
+          ifscCode: data.ifscCode,
+        });
+      } else if (data.mode === "upi" && isValidUpiId(data.upiId)) {
+        saveOwnerProfileUpi(data.upiId);
+      }
     }
     setBankModal(null);
   };
@@ -1075,7 +1121,13 @@ function Step3Documents({
   return (
     <div className="max-w-xl w-full">
       {/* Bank modal */}
-      {bankModal && <BankModal onSave={handleBankSave} onClose={() => setBankModal(null)} />}
+      {bankModal && (
+        <BankModal
+          prefillOwnerProfile={isOwnerFlow}
+          onSave={handleBankSave}
+          onClose={() => setBankModal(null)}
+        />
+      )}
 
       {/* Toast */}
       {toast && (
@@ -1339,7 +1391,7 @@ function Step5Brokerage({
 
   const bankDetailsFilled = brokerageMode === "Bank Transfer"
     ? (holderName && bankName && accountNumber && ifscCode)
-    : (upiId || qrFile);
+    : isValidUpiId(upiId);
 
   const valid = amountFilled && bankDetailsFilled;
 
@@ -1369,21 +1421,21 @@ function Step5Brokerage({
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
             Who pays the brokerage?
           </p>
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            {(["Owner", "Tenant", "Both"] as const).map((opt) => (
-              <button
-                key={opt}
-                onClick={() => { setBrokeragePaidBy(opt); setBrokerageAmount(""); setBrokerageAmountOwner(""); setBrokerageAmountTenant(""); }}
-                className={`flex-1 h-10 rounded-xl border text-sm font-medium transition-colors ${
-                  brokeragePaidBy === opt
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-gray-200 text-gray-600 hover:border-primary/40"
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
+          <FlowSegmentTabs
+            fullWidth
+            value={brokeragePaidBy}
+            onChange={(opt) => {
+              setBrokeragePaidBy(opt);
+              setBrokerageAmount("");
+              setBrokerageAmountOwner("");
+              setBrokerageAmountTenant("");
+            }}
+            options={[
+              { value: "Owner", label: "Owner" },
+              { value: "Tenant", label: "Tenant" },
+              { value: "Both", label: "Both" },
+            ]}
+          />
         </div>
 
         {/* Amount */}
@@ -1425,21 +1477,16 @@ function Step5Brokerage({
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
             How will the broker receive payment?
           </p>
-          <div className="flex flex-wrap gap-2 sm:gap-3 mb-5">
-            {(["Bank Transfer", "UPI"] as const).map((opt) => (
-              <button
-                key={opt}
-                onClick={() => setBrokerageMode(opt)}
-                className={`flex-1 h-10 rounded-xl border text-sm font-medium transition-colors ${
-                  brokerageMode === opt
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-gray-200 text-gray-600 hover:border-primary/40"
-                }`}
-              >
-                {opt === "Bank Transfer" ? "🏦 Bank Transfer" : "📱 UPI"}
-              </button>
-            ))}
-          </div>
+          <FlowSegmentTabs
+            fullWidth
+            value={brokerageMode}
+            onChange={setBrokerageMode}
+            options={[
+              { value: "Bank Transfer", label: "Bank Transfer" },
+              { value: "UPI", label: "UPI" },
+            ]}
+            className="mb-5"
+          />
 
           {/* Broker Bank Details */}
           {brokerageMode === "Bank Transfer" && (
@@ -1482,7 +1529,14 @@ function Step5Brokerage({
               <p className="text-xs text-gray-500 font-medium">Enter your UPI details</p>
               <div>
                 <FieldLabel>UPI ID</FieldLabel>
-                <TextInput value={upiId} onChange={setUpiId} placeholder="name@bank" />
+                <TextInput
+                  value={upiId}
+                  onChange={(v) => setUpiId(sanitizeUpiInput(v))}
+                  placeholder="name@bank"
+                />
+                {upiId && !isValidUpiId(upiId) ? (
+                  <p className="text-xs text-red-500 mt-1">Enter a valid UPI ID (e.g. name@bank)</p>
+                ) : null}
               </div>
               <p className="text-xs text-gray-400 text-center font-medium">OR</p>
               <div>
@@ -1510,8 +1564,8 @@ function Step5Brokerage({
           const current = getBrokerProfile();
           if (brokerageMode === "Bank Transfer" && holderName && bankName && accountNumber && ifscCode) {
             saveBrokerProfile({ ...current, bankHolderName: holderName, bankName, bankAccountNumber: accountNumber, bankIFSC: ifscCode });
-          } else if (brokerageMode === "UPI" && (upiId || qrFile)) {
-            saveBrokerProfile({ ...current, upiId, upiQrFileName: qrFile });
+          } else if (brokerageMode === "UPI" && isValidUpiId(upiId)) {
+            saveBrokerProfile({ ...current, upiId });
           }
           onContinue();
         }}
@@ -1623,7 +1677,7 @@ function Step6Review({
         {isOwnerFlow ? (
           rentSplitSummary ? (
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <SectionHeader title="Financial details" stepTarget={5} />
+              <SectionHeader title="Payment split between owners" stepTarget={5} />
               <div className="px-5 py-3">
                 <p className="text-sm text-gray-700 whitespace-pre-line">{rentSplitSummary}</p>
               </div>
@@ -2046,7 +2100,7 @@ export default function GenerateAgreement() {
     2: "Add parties to the agreement",
     3: "Upload supporting documents",
     4: "Agreement details",
-    5: isOwnerFlow ? "Financial details" : "Brokerage details",
+    5: isOwnerFlow ? "Payment split between owners" : "Brokerage details",
     6: "Review & Send",
   };
 
@@ -2146,6 +2200,13 @@ export default function GenerateAgreement() {
         />
       )}
 
+      <div
+        className={
+          isOwnerFlow
+            ? "p-4 sm:p-8 max-w-6xl mx-auto w-full min-w-0"
+            : "min-w-0 w-full"
+        }
+      >
       <div className={`min-w-0 w-full max-w-full ${step !== 6 ? "pb-32 sm:pb-6" : "pb-6"}`}>
       <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5">
         <button
@@ -2189,7 +2250,7 @@ export default function GenerateAgreement() {
       <ProgressBar current={step} steps={progressSteps} />
 
       {/* Step label — hidden on step 2 which has its own heading */}
-      {step !== 2 && (
+      {step !== 2 && !(step === 5 && isOwnerFlow && showPaymentSplit) && (
         <p className="text-sm sm:text-base font-semibold text-gray-800 mb-4 sm:mb-5">{stepTitles[step]}</p>
       )}
 
@@ -2327,6 +2388,7 @@ export default function GenerateAgreement() {
           submitting={submitting}
         />
       )}
+      </div>
       </div>
     </Layout>
   );

@@ -87,6 +87,11 @@ export function hasOwnerBankDetails(): boolean {
   return !!(p.bankName && p.bankAccountNumber && p.bankIFSC);
 }
 
+export function hasOwnerUpiDetails(): boolean {
+  const p = getOwnerProfile();
+  return !!p.upiId?.trim();
+}
+
 export function saveOwnerProfileDocument(kind: OwnerDocumentKind, file: File): void {
   const reader = new FileReader();
   reader.onload = () => {
@@ -125,6 +130,14 @@ export function saveOwnerProfileBank(data: {
     bankName: data.bankName,
     bankAccountNumber: data.accountNumber,
     bankIFSC: data.ifscCode,
+  });
+}
+
+export function saveOwnerProfileUpi(upiId: string): void {
+  const current = getOwnerProfile();
+  saveOwnerProfile({
+    ...current,
+    upiId: upiId.trim(),
   });
 }
 

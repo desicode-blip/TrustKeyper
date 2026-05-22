@@ -8,13 +8,12 @@ import {
   Check,
   Plus,
   ChevronDown,
-  ChevronLeft,
-  User,
+  ArrowLeft,
   PhoneCall,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import Footer from "@/components/Footer";
+import OwnerLayout from "@/components/OwnerLayout";
 import { addProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 import { getItem, getSessionItem, removeItem, setItem } from "@/lib/storageKeys";
@@ -761,24 +760,28 @@ export default function OwnerAddProperty() {
     </div>
   );
 
-  return (
-    <div className="min-h-screen flex flex-col bg-[#F5F7FA]">
-      
-      {/* Top Header */}
-      <header className="bg-white px-6 py-4 flex items-center justify-between border-b border-gray-100 z-10 relative">
-        <button onClick={() => subStep > 0 ? setSubStep(s => s - 1) : window.history.back()} className="flex items-center gap-2 text-sm text-gray-700 hover:text-primary transition-colors font-medium">
-          <ChevronLeft size={16} /> Go back
-        </button>
-        <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center">
-          <User size={16} />
-        </div>
-      </header>
+  const handleBack = () => {
+    if (subStep > 0) setSubStep((s) => s - 1);
+    else setLocation("/owner/properties");
+  };
 
-      {/* Main Content */}
-      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 pb-40">
+  return (
+    <OwnerLayout>
+      <div className="p-4 sm:p-8 max-w-5xl mx-auto w-full min-w-0 pb-32 sm:pb-8">
+        <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="flex items-center gap-1.5 text-sm text-gray-600 font-medium hover:text-primary transition-colors"
+          >
+            <ArrowLeft size={15} />
+            {subStep === 0 ? "Back to Properties" : "Back"}
+          </button>
+        </div>
+
         <ProgressBar subStep={subStep} />
 
-        <div className="bg-white rounded-lg shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] p-8 md:p-14 mx-auto max-w-[850px] mb-12">
+        <div className="bg-white rounded-lg shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] p-6 sm:p-8 md:p-14 mx-auto max-w-[850px] mb-12 mt-6">
           {subStep === 0 && renderStep0()}
           {subStep === 1 && renderStep1()}
           {subStep === 2 && renderStep2()}
@@ -809,16 +812,14 @@ export default function OwnerAddProperty() {
             </Button>
           </div>
         </div>
-      </main>
 
-      {/* Sticky Mobile Continue */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 px-4 py-3 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-        <Button size="lg" onClick={handleContinue} disabled={!canContinue()} className="w-full bg-primary hover:bg-primary/90 rounded-sm">
-          {subStep === 5 ? "Submit" : "Continue \u2192"}
-        </Button>
+        {/* Sticky Mobile Continue */}
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-gray-200 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+          <Button size="lg" onClick={handleContinue} disabled={!canContinue()} className="w-full bg-primary hover:bg-primary/90 rounded-sm">
+            {subStep === 5 ? "Submit" : "Continue \u2192"}
+          </Button>
+        </div>
       </div>
-
-      <Footer />
 
       {/* Success Modal */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
@@ -849,6 +850,6 @@ export default function OwnerAddProperty() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </OwnerLayout>
   );
 }

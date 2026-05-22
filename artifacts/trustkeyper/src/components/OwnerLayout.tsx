@@ -163,8 +163,8 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
             w-64 bg-white border-r border-gray-200 px-4 py-6
             flex flex-col shrink-0 overflow-y-auto
             transition-transform duration-200 ease-in-out
-            md:translate-x-0
-            ${sidebarOpen ? "translate-x-0 shadow-xl" : "-translate-x-full"}
+            -translate-x-full md:translate-x-0
+            ${sidebarOpen ? "translate-x-0 shadow-xl md:shadow-none" : ""}
           `}
         >
           {/* Close button — mobile only */}

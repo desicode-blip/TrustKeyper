@@ -5,6 +5,7 @@ import {
   Filter, Search, CheckCheck, Bell,
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
+import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import BrokerPendingFlowBanners from "@/components/BrokerPendingFlowBanners";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import { getTenants, timeAgo } from "@/lib/tenants";
@@ -222,22 +223,14 @@ export default function BrokerActivity() {
       </div>
       {/* ── Filter + Search bar ── */}
       <div className="flex items-center gap-2 sm:gap-3 mb-5 flex-wrap">
-        {/* Type filter tabs */}
-        <div className="flex items-center gap-1 p-0.5 rounded-xl border border-gray-200 bg-white">
-          {FILTER_OPTIONS.map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => setFilter(opt.id)}
-              className={`h-8 px-3.5 rounded-lg text-sm font-medium transition-colors ${
-                filter === opt.id
-                  ? "text-white bg-primary"
-                  : "text-gray-700 bg-white hover:bg-gray-100"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+        <FlowSegmentTabs
+          value={filter}
+          onChange={setFilter}
+          options={FILTER_OPTIONS.map((opt) => ({
+            value: opt.id,
+            label: opt.label,
+          }))}
+        />
 
         {/* Search */}
         <div className="relative flex-1 max-w-xs">

@@ -14,6 +14,7 @@ import {
   Utensils,
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
+import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { getTenants, timeAgo, type Tenant } from "@/lib/tenants";
 
 function getInitial(name: string): string {
@@ -202,24 +203,15 @@ export default function BrokerTenants() {
         </button>
       </div>
 
-      <div className="flex items-center gap-2 mb-8 flex-wrap">
-        {tabs.map((t) => {
-          const isActive = active === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setActive(t.id)}
-              className={`h-8 px-4 rounded-lg text-xs font-medium transition-colors ${
-                isActive
-                  ? "bg-primary text-white"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              {t.label} ({t.count})
-            </button>
-          );
-        })}
-      </div>
+      <FlowSegmentTabs
+        value={active}
+        onChange={setActive}
+        className="mb-8"
+        options={tabs.map((t) => ({
+          value: t.id,
+          label: `${t.label} (${t.count})`,
+        }))}
+      />
 
       {visibleTenants.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-32 text-center">

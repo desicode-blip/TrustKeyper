@@ -31,12 +31,12 @@ function PartyCard({ name, contact, badge, onRemove }: {
 }) {
   return (
     <div
-      className={`flex items-center gap-3 rounded-xl border px-4 py-3 bg-white mb-2 min-w-0 overflow-hidden ${
+      className={`flex items-center gap-3 rounded-xl border bg-white p-4 min-h-[88px] min-w-0 overflow-hidden ${
         badge ? "border-primary/30 bg-primary/5" : "border-gray-200"
       }`}
     >
-      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-        <User size={15} className="text-gray-500" />
+      <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+        <User size={16} className="text-gray-500" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
@@ -215,7 +215,7 @@ function PrimaryOwnerSelectRow({
 }) {
   return (
     <label
-      className={`flex items-center gap-3 rounded-xl border px-4 py-3 mb-2 cursor-pointer transition-colors min-w-0 overflow-hidden ${
+      className={`flex items-center gap-3 rounded-xl border p-4 min-h-[88px] cursor-pointer transition-colors min-w-0 overflow-hidden ${
         selected ? "border-primary/30 bg-primary/5" : "border-gray-200 bg-white hover:border-gray-300"
       }`}
     >
@@ -290,15 +290,16 @@ export function StepOwnerParties({
   const canContinue = primaryOwnerSelected && selectedTenants.length > 0;
 
   return (
-    <div className="max-w-2xl w-full">
+    <div className="max-w-3xl w-full mx-auto">
       <div className="text-center mb-8">
         <h2 className="text-xl font-semibold text-gray-900">Rental Agreement Between</h2>
         <p className="text-sm text-gray-500 mt-1">Who will be part of this agreement?</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <p className="text-sm font-semibold text-gray-800 mb-3">Owner(s)</p>
+          <p className="text-xs font-medium text-gray-500 mb-2">Owner(s)</p>
+          <div className="space-y-4">
 
           <PrimaryOwnerSelectRow
             name={ownerName}
@@ -322,10 +323,12 @@ export function StepOwnerParties({
               <Plus size={14} /> Add New Owner
             </button>
           )}
+          </div>
         </div>
 
         <div>
-          <p className="text-sm font-semibold text-gray-800 mb-3">Tenant(s)</p>
+          <p className="text-xs font-medium text-gray-500 mb-2">Tenant(s)</p>
+          <div className="space-y-4">
 
           {selectedTenants.map((t, i) => (
             <PartyCard key={i} name={t.name} contact={t.contact} onRemove={() => removeTenant(i)} />
@@ -371,6 +374,7 @@ export function StepOwnerParties({
               <Plus size={14} /> Add New Tenant
             </button>
           )}
+          </div>
         </div>
       </div>
 

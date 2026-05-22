@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
-  Plus, LayoutGrid, Table as TableIcon, Search,
+  Plus, Search,
   Eye, Phone, IndianRupee, ChevronRight,
   Building2, Users, Clock, ArrowUpRight,
   Briefcase,
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
+import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import { getTenants, timeAgo } from "@/lib/tenants";
 import { getAgreements } from "@/lib/agreements";
@@ -337,24 +338,14 @@ export default function BrokerDeals() {
           Deals <span className="text-gray-400 font-semibold text-lg sm:text-xl">({totalCount})</span>
         </h1>
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <div className="flex items-center p-0.5 rounded-xl border border-gray-200 bg-white">
-            <button
-              onClick={() => setView("kanban")}
-              className={`inline-flex items-center gap-1.5 h-8 px-2.5 sm:px-3.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                view === "kanban" ? "bg-gray-900 text-white" : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <LayoutGrid size={13} /> Kanban
-            </button>
-            <button
-              onClick={() => setView("table")}
-              className={`inline-flex items-center gap-1.5 h-8 px-2.5 sm:px-3.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                view === "table" ? "bg-gray-900 text-white" : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <TableIcon size={13} /> Table
-            </button>
-          </div>
+          <FlowSegmentTabs
+            value={view}
+            onChange={setView}
+            options={[
+              { value: "kanban", label: "Kanban" },
+              { value: "table", label: "Table" },
+            ]}
+          />
           <button
             onClick={() => setLocation("/broker/agreements/generate")}
             className="inline-flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-lg bg-primary text-white text-xs sm:text-sm font-semibold hover:bg-primary/90 transition-colors"
