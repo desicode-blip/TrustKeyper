@@ -1,0 +1,140 @@
+import { queueCloudSync } from "@/lib/cloudSync";
+import type { BrokerProfile } from "@/lib/brokerProfile";
+import { getItem, getSessionItem, setItem, setSessionItem } from "@/lib/storageKeys";
+
+export type OwnerDocumentKind = "aadhaar" | "pan";
+
+export interface OwnerDocumentMeta {
+  fileName?: string;
+  fileSize?: number;
+  uploadedAt?: number;
+  dataUrl?: string;
+}
+
+export interface OwnerProfile extends BrokerProfile {
+  aadhaar?: OwnerDocumentMeta;
+  pan?: OwnerDocumentMeta;
+}
+
+const defaults: OwnerProfile = {
+  name: "",
+  firm: "",
+  phone: "",
+  email: "",
+  bankHolderName: "",
+  bankName: "",
+  bankAccountNumber: "",
+  bankIFSC: "",
+  upiId: "",
+  upiQrFileName: "",
+};
+
+function normalizePhoneDigits(phone: string): string {
+  return phone.replace(/\D/g, "").slice(-10);
+}
+
+function readStored(): OwnerProfile {
+  if (typeof window === "undefined") return { ...defaults };
+  try {
+    const raw = getItem("profile");
+    const stored = raw ? (JSON.parse(raw) as Partial<OwnerProfile>) : {};
+    const name =
+      stored.name ||
+      getSessionItem("name") ||
+      getSessionItem("owner_name") ||
+      "";
+    const phone =
+      normalizePhoneDigits(
+        stored.phone ||
+          getSessionItem("phone") ||
+          getSessionItem("owner_phone") ||
+          "",
+      );
+    return { ...defaults, ...stored, name, phone };
+  } catch {
+    return {
+      ...defaults,
+      name: getSessionItem("name") || getSessionItem("owner_name") || "",
+      phone: normalizePhoneDigits(
+        getSessionItem("phone") || getSessionItem("owner_phone") || "",
+      ),
+    };
+  }
+}
+
+export function getOwnerProfile(): OwnerProfile {
+  return readStored();
+}
+
+export function saveOwnerProfile(profile: OwnerProfile): void {
+  try {
+    const phone = normalizePhoneDigits(profile.phone);
+    const payload: OwnerProfile = { ...profile, phone };
+    const json = JSON.stringify(payload);
+    setItem("profile", json);
+    setSessionItem("name", payload.name);
+    setSessionItem("phone", phone);
+    setSessionItem("owner_name", payload.name);
+    setSessionItem("owner_phone", phone);
+    queueCloudSync("profile", json);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function hasOwnerBankDetails(): boolean {
+  const p = getOwnerProfile();
+  return !!(p.bankName && p.bankAccountNumber && p.bankIFSC);
+}
+
+export function saveOwnerProfileDocument(kind: OwnerDocumentKind, file: File): void {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const current = getOwnerProfile();
+    const meta: OwnerDocumentMeta = {
+      fileName: file.name,
+      fileSize: file.size,
+      uploadedAt: Date.now(),
+      dataUrl: typeof reader.result === "string" ? reader.result : undefined,
+    };
+    saveOwnerProfile({
+      ...current,
+      [kind]: meta,
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+export function removeOwnerProfileDocument(kind: OwnerDocumentKind): void {
+  const current = getOwnerProfile();
+  const next = { ...current };
+  delete next[kind];
+  saveOwnerProfile(next);
+}
+
+export function saveOwnerProfileBank(data: {
+  holderName: string;
+  bankName: string;
+  accountNumber: string;
+  ifscCode: string;
+}): void {
+  const current = getOwnerProfile();
+  saveOwnerProfile({
+    ...current,
+    bankHolderName: data.holderName,
+    bankName: data.bankName,
+    bankAccountNumber: data.accountNumber,
+    bankIFSC: data.ifscCode,
+  });
+}
+
+export function clearOwnerProfileBank(): void {
+  const current = getOwnerProfile();
+  saveOwnerProfile({
+    ...current,
+    bankHolderName: "",
+    bankName: "",
+    bankAccountNumber: "",
+    bankIFSC: "",
+  });
+}

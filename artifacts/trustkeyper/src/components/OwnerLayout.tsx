@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { TrustKeyperLogo } from "@/components/brand";
 import { TrustKeyperFooter } from "@/components/TrustKeyperFooter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { getBrokerProfile } from "@/lib/brokerProfile";
+import { getOwnerProfile } from "@/lib/ownerProfile";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
 import { logout } from "@/lib/auth";
 import {
@@ -14,8 +14,8 @@ import {
   Ticket,
   FileText,
   FileSignature,
-  Settings,
   LogOut,
+  UserCircle,
   Bell,
   Clock,
   Menu,
@@ -35,8 +35,7 @@ const navItems = [
 ];
 
 const helpItems = [
-  { id: "settings", label: "Settings", icon: Settings, href: "/owner/settings" },
-  { id: "profile", label: "My Profile", icon: Users, href: "/owner/profile" },
+  { id: "profile", label: "My Profile", icon: UserCircle, href: "/owner/profile" },
   { id: "logout", label: "Logout", icon: LogOut, href: "/" },
 ];
 
@@ -46,7 +45,7 @@ function HeaderLogo() {
 
 export function getOwnerName(): string {
   if (typeof window === "undefined") return "Meena!";
-  const n = getBrokerProfile().name;
+  const n = getOwnerProfile().name;
   return n || "Meena!";
 }
 
@@ -230,14 +229,17 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
                   </button>
                 );
               }
+              const active = location.startsWith(item.href);
               return (
                 <Link
                   key={item.id}
                   href={item.href}
                   onClick={closeSidebar}
-                  className="flex items-center gap-3 h-10 px-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"
+                  className={`flex items-center gap-3 h-10 px-3 rounded-lg text-sm font-medium transition-colors ${
+                    active ? "bg-blue-50 text-primary" : "text-gray-600 hover:bg-gray-50"
+                  }`}
                 >
-                  <Icon size={18} className="text-gray-500" />
+                  <Icon size={18} className={active ? "text-primary" : "text-gray-500"} />
                   {item.label}
                 </Link>
               );

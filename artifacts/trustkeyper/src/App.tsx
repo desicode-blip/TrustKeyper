@@ -28,6 +28,7 @@ import OwnerTenantProfile from "@/pages/OwnerTenantProfile";
 import OwnerTickets from "@/pages/OwnerTickets";
 import OwnerAgreements from "@/pages/OwnerAgreements";
 import OwnerFinances from "@/pages/OwnerFinances";
+import OwnerProfile from "@/pages/OwnerProfile";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/owner/agreements" component={OwnerAgreements} />
       <Route path="/owner/agreements/generate" component={GenerateAgreement} />
       <Route path="/owner/finances" component={OwnerFinances} />
+      <Route path="/owner/profile" component={OwnerProfile} />
       <Route path="/broker/dashboard" component={BrokerDashboard} />
       <Route path="/broker/properties" component={BrokerProperties} />
       <Route path="/broker/properties/add" component={AddProperty} />

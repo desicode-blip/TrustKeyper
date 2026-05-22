@@ -50,6 +50,13 @@ import { getProperties, getPropertyTitle, updateProperty, type Property } from "
 import { ensureTenantFromAgreement, getTenants, type Tenant } from "@/lib/tenants";
 import { addAgreement, getAgreements, updateAgreement, type Agreement } from "@/lib/agreements";
 import { getBrokerProfile, saveBrokerProfile, hasBankDetails } from "@/lib/brokerProfile";
+import {
+  getOwnerProfile,
+  removeOwnerProfileDocument,
+  saveOwnerProfileBank,
+  saveOwnerProfileDocument,
+  type OwnerDocumentKind,
+} from "@/lib/ownerProfile";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -907,7 +914,7 @@ function DocRow({
 }
 
 function applyOwnerSelfDocPrefill(persons: PersonState[]): PersonState[] {
-  const profile = getBrokerProfile();
+  const profile = getOwnerProfile();
   const hasBank = !!(profile.bankAccountNumber && profile.bankIFSC && profile.bankName);
   return persons.map((p, idx) => {
     if (idx !== 0 || !p.personLabel.startsWith("OWNER")) return p;
@@ -922,10 +929,32 @@ function applyOwnerSelfDocPrefill(persons: PersonState[]): PersonState[] {
             uploadedAt: Date.now(),
           };
         }
+        if (d.id === "aadhaar" && profile.aadhaar?.fileName) {
+          return {
+            ...d,
+            status: "uploaded" as DocStatus,
+            fileName: profile.aadhaar.fileName,
+            fileSize: profile.aadhaar.fileSize,
+            uploadedAt: profile.aadhaar.uploadedAt ?? Date.now(),
+          };
+        }
+        if (d.id === "pan" && profile.pan?.fileName) {
+          return {
+            ...d,
+            status: "uploaded" as DocStatus,
+            fileName: profile.pan.fileName,
+            fileSize: profile.pan.fileSize,
+            uploadedAt: profile.pan.uploadedAt ?? Date.now(),
+          };
+        }
         return d;
       }),
     };
   });
+}
+
+function isOwnerPrimarySelf(pIdx: number, person: PersonState, isOwnerFlow: boolean): boolean {
+  return isOwnerFlow && pIdx === 0 && person.personLabel.startsWith("OWNER");
 }
 
 // ── Step 3 Main ───────────────────────────────────────────────────────────────
@@ -976,6 +1005,11 @@ function Step3Documents({
 
   const handleUpload = (pIdx: number, dIdx: number, file: File) => {
     updateDoc(pIdx, dIdx, { status: "uploaded", fileName: file.name, fileSize: file.size, uploadedAt: Date.now() });
+    const person = persons[pIdx];
+    const docId = person?.docs[dIdx]?.id;
+    if (isOwnerPrimarySelf(pIdx, person, isOwnerFlow) && (docId === "aadhaar" || docId === "pan")) {
+      saveOwnerProfileDocument(docId as OwnerDocumentKind, file);
+    }
   };
 
   const handleSendLink = (pIdx: number, dIdx: number) => {
@@ -983,7 +1017,12 @@ function Step3Documents({
   };
 
   const handleResetDoc = (pIdx: number, dIdx: number) => {
+    const person = persons[pIdx];
+    const docId = person?.docs[dIdx]?.id;
     updateDoc(pIdx, dIdx, { status: "pending", fileName: undefined, fileSize: undefined });
+    if (isOwnerPrimarySelf(pIdx, person, isOwnerFlow) && (docId === "aadhaar" || docId === "pan")) {
+      removeOwnerProfileDocument(docId as OwnerDocumentKind);
+    }
   };
 
   const handleSendAllPending = (pIdx: number) => {
@@ -998,7 +1037,24 @@ function Step3Documents({
 
   const handleBankSave = (data: BankData) => {
     if (!bankModal) return;
-    updateDoc(bankModal.pIdx, bankModal.dIdx, { status: "uploaded", fileName: data.mode === "upi" ? "UPI Details" : "Bank Account", uploadedAt: Date.now() });
+    const pIdx = bankModal.pIdx;
+    const person = persons[pIdx];
+    updateDoc(pIdx, bankModal.dIdx, { status: "uploaded", fileName: data.mode === "upi" ? "UPI Details" : "Bank Account", uploadedAt: Date.now() });
+    if (
+      isOwnerPrimarySelf(pIdx, person, isOwnerFlow) &&
+      data.mode === "bank" &&
+      data.holderName &&
+      data.bankName &&
+      data.accountNumber &&
+      data.ifscCode
+    ) {
+      saveOwnerProfileBank({
+        holderName: data.holderName,
+        bankName: data.bankName,
+        accountNumber: data.accountNumber,
+        ifscCode: data.ifscCode,
+      });
+    }
     setBankModal(null);
   };
 
