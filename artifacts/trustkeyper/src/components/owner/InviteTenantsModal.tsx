@@ -133,7 +133,7 @@ export function InviteTenantsModal({
 
   const canContinueMembers = slots.every((slot) => {
     if (slot.mode === "manual") {
-      return slot.name.trim().length > 0 && slot.contact.trim().length > 0;
+      return slot.name.trim().length > 0 && slot.contact.replace(/\D/g, "").length === 10;
     }
     return !!slot.inquiryId;
   });
@@ -143,7 +143,7 @@ export function InviteTenantsModal({
     parseRent(monthlyRent).length > 0 &&
     parseRent(securityDeposit).length > 0 &&
     !!startDate &&
-    (!maintenanceIncluded || parseRent(monthlyMaintenance).length > 0);
+    (maintenanceIncluded || parseRent(monthlyMaintenance).length > 0);
 
   const modalTitle =
     step === "count"
@@ -183,12 +183,10 @@ export function InviteTenantsModal({
           inquiryId: slot.inquiryId,
         };
       }
-      const contact = slot.contact.includes("@")
-        ? slot.contact.trim()
-        : formatMemberContact(slot.contact);
+      const digits = slot.contact.replace(/\D/g, "").slice(-10);
       return {
         name: slot.name.trim(),
-        phone: contact,
+        phone: formatMemberContact(digits),
       };
     });
 
@@ -307,7 +305,11 @@ export function InviteTenantsModal({
               <Checkbox
                 id="maint-included"
                 checked={maintenanceIncluded}
-                onCheckedChange={(v) => setMaintenanceIncluded(v === true)}
+                onCheckedChange={(checked) => {
+                  const on = checked === true;
+                  setMaintenanceIncluded(on);
+                  if (on) setMonthlyMaintenance("");
+                }}
               />
               <label htmlFor="maint-included" className="text-sm text-gray-700 cursor-pointer">
                 Maintenance included
@@ -315,13 +317,14 @@ export function InviteTenantsModal({
             </div>
             <div>
               <Label className="text-xs text-gray-500 mb-1.5 block">
-                Monthly Maintenance Amount<span className="text-red-500">*</span>
+                Monthly Maintenance Amount
+                {!maintenanceIncluded ? <span className="text-red-500">*</span> : null}
               </Label>
               <Input
                 value={monthlyMaintenance}
                 onChange={(e) => setMonthlyMaintenance(formatRentInput(e.target.value))}
-                className="h-10"
-                disabled={!maintenanceIncluded}
+                className={`h-10 ${maintenanceIncluded ? "opacity-40 bg-gray-50" : ""}`}
+                disabled={maintenanceIncluded}
               />
             </div>
             <div>
@@ -489,19 +492,33 @@ function TenantMemberBlock({
               value={slot.name}
               onChange={(e) => onChange({ ...slot, name: e.target.value })}
               className="h-10 bg-white"
-              placeholder=""
+              placeholder="Full name"
             />
           </div>
           <div>
             <Label className="text-xs text-gray-500 mb-1.5 block">
-              Email/Phone Number<span className="text-red-500">*</span>
+              Phone Number<span className="text-red-500">*</span>
             </Label>
-            <Input
-              value={slot.contact}
-              onChange={(e) => onChange({ ...slot, contact: e.target.value })}
-              className="h-10 bg-white"
-              placeholder=""
-            />
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 shrink-0">+91</span>
+              <Input
+                type="tel"
+                inputMode="numeric"
+                value={slot.contact}
+                onChange={(e) =>
+                  onChange({
+                    ...slot,
+                    contact: e.target.value.replace(/\D/g, "").slice(0, 10),
+                  })
+                }
+                className="h-10 bg-white flex-1"
+                placeholder="10-digit number"
+                maxLength={10}
+              />
+            </div>
+            {slot.contact.length > 0 && slot.contact.length < 10 ? (
+              <p className="text-xs text-red-500 mt-1">Enter a valid 10-digit mobile number.</p>
+            ) : null}
           </div>
         </div>
       )}

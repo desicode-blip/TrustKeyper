@@ -57,11 +57,10 @@ export default function OwnerDashboard() {
             Welcome, {displayName}!
           </h1>
           <Button
-            size="lg"
             onClick={() => setLocation("/owner/properties/add")}
-            className="rounded-xl border-0 font-semibold shadow-lg shadow-primary/25 h-11 px-6"
+            className="rounded-xl border-0 font-semibold shadow-lg shadow-primary/25 h-10 px-6 w-fit"
           >
-            Add Property <Plus size={18} strokeWidth={2.5} />
+            Add Property <Plus size={18} />
           </Button>
         </div>
 

@@ -35,6 +35,14 @@ import {
   QrCode,
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
+import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
+import { StepOwnerParties } from "@/components/owner/agreement/StepOwnerParties";
+import {
+  StepOwnerPaymentSplit,
+  buildOwnerRentSplits,
+  type OwnerRentSplit,
+  type RentSplitMode,
+} from "@/components/owner/agreement/StepOwnerPaymentSplit";
 import { broadcastBrokerPendingFlowsUpdated, clearAgreementDraftStorage } from "@/lib/brokerPendingFlows";
 import { queueCloudSync } from "@/lib/cloudSync";
 import { getItem, getSessionItem, removeSessionItem, setItem, setSessionItem } from "@/lib/storageKeys";
@@ -56,9 +64,24 @@ const STEPS: { id: Step; label: string; shortLabel: string; Icon: React.ElementT
   { id: 6, label: "Review & Send", shortLabel: "Review\n& Send", Icon: Send },
 ];
 
+const OWNER_STEPS: { id: Step; label: string; shortLabel: string; Icon: React.ElementType }[] = [
+  { id: 1, label: "Property", shortLabel: "Property", Icon: Home },
+  { id: 2, label: "Parties", shortLabel: "Parties", Icon: Users },
+  { id: 3, label: "Documents", shortLabel: "Documents", Icon: FolderOpen },
+  { id: 4, label: "Details", shortLabel: "Details", Icon: FileText },
+  { id: 5, label: "Financial details", shortLabel: "Financial", Icon: IndianRupee },
+  { id: 6, label: "Review & Send", shortLabel: "Review\n& Send", Icon: Send },
+];
+
 // ─── Progress Bar ─────────────────────────────────────────────────────────────
 
-function ProgressBar({ current }: { current: Step }) {
+function ProgressBar({
+  current,
+  steps = STEPS,
+}: {
+  current: Step;
+  steps?: typeof STEPS;
+}) {
   const activeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -67,7 +90,7 @@ function ProgressBar({ current }: { current: Step }) {
 
   return (
     <div className="flex items-center gap-0 mb-6 sm:mb-8 overflow-x-auto overflow-y-hidden pb-2 -mx-1 px-1 scroll-smooth snap-x snap-mandatory sm:snap-none [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300">
-      {STEPS.map((s, i) => {
+      {steps.map((s, i) => {
         const active = s.id === current;
         const done = s.id < current;
         const Icon = s.Icon;
@@ -86,7 +109,7 @@ function ProgressBar({ current }: { current: Step }) {
               {done ? <Check size={13} /> : <Icon size={13} />}
               <span>{s.label === "Review & Send" ? "Review & Send" : s.label}</span>
             </div>
-            {i < STEPS.length - 1 && (
+            {i < steps.length - 1 && (
               <ChevronRight size={14} className="text-gray-300 shrink-0 mx-0.5 self-center snap-none" />
             )}
           </React.Fragment>
@@ -186,11 +209,17 @@ function formatRentShort(v: string) {
 }
 
 function Step1Property({
-  selected, onSelect, onContinue,
+  selected,
+  onSelect,
+  onContinue,
+  isOwnerFlow = false,
+  ownerFilterName = "",
 }: {
   selected: Property | null;
   onSelect: (p: Property | null) => void;
   onContinue: () => void;
+  isOwnerFlow?: boolean;
+  ownerFilterName?: string;
 }) {
   const [properties, setProperties] = useState<Property[]>([]);
   const [query, setQuery] = useState("");
@@ -199,7 +228,11 @@ function Step1Property({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const props = getProperties();
+    let props = getProperties();
+    if (isOwnerFlow) {
+      const name = ownerFilterName.replace("!", "").trim();
+      props = props.filter((p) => p.uploadedBy === "owner" || p.ownerName === name);
+    }
     setProperties(props);
     try {
       const pendingId = getSessionItem("agreement_pending_property");
@@ -209,7 +242,7 @@ function Step1Property({
         removeSessionItem("agreement_pending_property");
       }
     } catch {}
-  }, []);
+  }, [isOwnerFlow, ownerFilterName]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -333,7 +366,9 @@ function Step1Property({
       )}
 
       <button
-        onClick={() => setLocation("/broker/properties/add2")}
+        onClick={() =>
+          setLocation(isOwnerFlow ? "/owner/properties/add" : "/broker/properties/add2")
+        }
         className="flex items-center justify-center gap-2 w-full h-11 rounded-xl border border-dashed border-gray-300 text-sm text-gray-600 hover:border-primary hover:text-primary transition-colors mb-0"
       >
         <Plus size={15} /> Add New Property
@@ -777,13 +812,22 @@ function BankModal({ onSave, onClose }: { onSave: (d: BankData) => void; onClose
 
 // ── Document Row ──────────────────────────────────────────────────────────────
 
-function DocRow({ doc, personName, onUpload, onSendLink, onRemove, onAddDetails }: {
+function DocRow({
+  doc,
+  personName,
+  onUpload,
+  onSendLink,
+  onRemove,
+  onAddDetails,
+  hideSendLink = false,
+}: {
   doc: DocState;
   personName: string;
   onUpload: (file: File) => void;
   onSendLink: () => void;
   onRemove: () => void;
   onAddDetails: () => void;
+  hideSendLink?: boolean;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -828,9 +872,11 @@ function DocRow({ doc, personName, onUpload, onSendLink, onRemove, onAddDetails 
         )}
         {doc.status === "link_sent" && (
           <>
-            <button onClick={onSendLink} className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors">
-              <RefreshCw size={11} /> Resend
-            </button>
+            {!hideSendLink ? (
+              <button onClick={onSendLink} className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors">
+                <RefreshCw size={11} /> Resend
+              </button>
+            ) : null}
             <button onClick={onRemove} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>
           </>
         )}
@@ -848,9 +894,11 @@ function DocRow({ doc, personName, onUpload, onSendLink, onRemove, onAddDetails 
                 <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={(e) => { if (e.target.files?.[0]) onUpload(e.target.files[0]); }} />
               </>
             )}
-            <button onClick={onSendLink} className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors">
-              <Send size={11} /> Send Link
-            </button>
+            {!hideSendLink ? (
+              <button onClick={onSendLink} className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors">
+                <Send size={11} /> Send Link
+              </button>
+            ) : null}
           </>
         )}
       </div>
@@ -858,20 +906,46 @@ function DocRow({ doc, personName, onUpload, onSendLink, onRemove, onAddDetails 
   );
 }
 
+function applyOwnerSelfDocPrefill(persons: PersonState[]): PersonState[] {
+  const profile = getBrokerProfile();
+  const hasBank = !!(profile.bankAccountNumber && profile.bankIFSC && profile.bankName);
+  return persons.map((p, idx) => {
+    if (idx !== 0 || !p.personLabel.startsWith("OWNER")) return p;
+    return {
+      ...p,
+      docs: p.docs.map((d) => {
+        if (d.id === "bank" && hasBank) {
+          return {
+            ...d,
+            status: "uploaded" as DocStatus,
+            fileName: "Bank Account",
+            uploadedAt: Date.now(),
+          };
+        }
+        return d;
+      }),
+    };
+  });
+}
+
 // ── Step 3 Main ───────────────────────────────────────────────────────────────
 
 function Step3Documents({
-  allParties, ownerCount, onContinue,
+  allParties,
+  ownerCount,
+  onContinue,
+  isOwnerFlow = false,
 }: {
   allParties: Party[];
   ownerCount: number;
   onContinue: (result: { documentsComplete: boolean }) => void;
+  isOwnerFlow?: boolean;
 }) {
   const [persons, setPersons] = useState<PersonState[]>(() => {
     if (!allParties || allParties.length === 0) return [initPersonDocs("Owner", "", "OWNER 1")];
     let ownerIdx = 0;
     let tenantIdx = 0;
-    return allParties.map((p, i) => {
+    const built = allParties.map((p, i) => {
       let label: string;
       if (i < ownerCount) {
         ownerIdx++;
@@ -882,6 +956,7 @@ function Step3Documents({
       }
       return initPersonDocs(p.name, p.contact, label);
     });
+    return isOwnerFlow ? applyOwnerSelfDocPrefill(built) : built;
   });
 
   const [personIdx, setPersonIdx] = useState(0);
@@ -1002,13 +1077,15 @@ function Step3Documents({
               </span>
             )}
           </div>
-          <button
-            onClick={() => handleSendAllPending(personIdx)}
-            disabled={allDoneForPerson}
-            className={`mt-3 flex items-center justify-center gap-1.5 w-full h-8 rounded-lg border text-xs font-medium transition-colors ${allDoneForPerson ? "border-gray-100 text-gray-300 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary hover:bg-primary/5"}`}
-          >
-            <Send size={12} /> Send All Pending Links
-          </button>
+          {!(isOwnerFlow && personIdx === 0 && person.personLabel.startsWith("OWNER")) ? (
+            <button
+              onClick={() => handleSendAllPending(personIdx)}
+              disabled={allDoneForPerson}
+              className={`mt-3 flex items-center justify-center gap-1.5 w-full h-8 rounded-lg border text-xs font-medium transition-colors ${allDoneForPerson ? "border-gray-100 text-gray-300 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary hover:bg-primary/5"}`}
+            >
+              <Send size={12} /> Send All Pending Links
+            </button>
+          ) : null}
         </div>
 
         {/* Doc rows */}
@@ -1022,6 +1099,7 @@ function Step3Documents({
               onSendLink={() => handleSendLink(personIdx, dIdx)}
               onRemove={() => handleResetDoc(personIdx, dIdx)}
               onAddDetails={() => setBankModal({ pIdx: personIdx, dIdx })}
+              hideSendLink={isOwnerFlow && personIdx === 0 && person.personLabel.startsWith("OWNER")}
             />
           ))}
         </div>
@@ -1408,6 +1486,8 @@ function Step6Review({
   lockInPeriod, noticePeriod, rentDueDay, maintenanceCharges,
   brokerageAmount, brokerageAmountOwner, brokerageAmountTenant, brokeragePaidBy, brokerageMode,
   documentsComplete,
+  isOwnerFlow = false,
+  rentSplitSummary = "",
   onGoToStep, onSubmit, submitting,
 }: {
   property: Property | null;
@@ -1419,6 +1499,8 @@ function Step6Review({
   brokerageAmount: string; brokerageAmountOwner: string; brokerageAmountTenant: string;
   brokeragePaidBy: string; brokerageMode: string;
   documentsComplete: boolean;
+  isOwnerFlow?: boolean;
+  rentSplitSummary?: string;
   onGoToStep: (s: Step) => void;
   onSubmit: () => void;
   submitting: boolean;
@@ -1482,24 +1564,35 @@ function Step6Review({
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <SectionHeader title="Brokerage" stepTarget={5} />
-          <div className="px-5 py-1">
-            <ReviewRow
-              icon={IndianRupee}
-              label="Brokerage Amount"
-              value={
-                brokeragePaidBy === "Both"
-                  ? `Owner: ₹${Number(brokerageAmountOwner || 0).toLocaleString("en-IN")} + Tenant: ₹${Number(brokerageAmountTenant || 0).toLocaleString("en-IN")}`
-                  : brokerageAmount
-                    ? `₹${Number(brokerageAmount).toLocaleString("en-IN")}`
-                    : "₹0"
-              }
-            />
-            <ReviewRow icon={Users} label="Paid By" value={brokeragePaidBy} />
-            <ReviewRow icon={Wallet} label="Payment Mode" value={brokerageMode} />
+        {isOwnerFlow ? (
+          rentSplitSummary ? (
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <SectionHeader title="Financial details" stepTarget={5} />
+              <div className="px-5 py-3">
+                <p className="text-sm text-gray-700 whitespace-pre-line">{rentSplitSummary}</p>
+              </div>
+            </div>
+          ) : null
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <SectionHeader title="Brokerage" stepTarget={5} />
+            <div className="px-5 py-1">
+              <ReviewRow
+                icon={IndianRupee}
+                label="Brokerage Amount"
+                value={
+                  brokeragePaidBy === "Both"
+                    ? `Owner: ₹${Number(brokerageAmountOwner || 0).toLocaleString("en-IN")} + Tenant: ₹${Number(brokerageAmountTenant || 0).toLocaleString("en-IN")}`
+                    : brokerageAmount
+                      ? `₹${Number(brokerageAmount).toLocaleString("en-IN")}`
+                      : "₹0"
+                }
+              />
+              <ReviewRow icon={Users} label="Paid By" value={brokeragePaidBy} />
+              <ReviewRow icon={Wallet} label="Payment Mode" value={brokerageMode} />
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <SectionHeader title="Documents" stepTarget={3} />
@@ -1591,7 +1684,9 @@ function SuccessOverlay({ onDone }: { onDone: () => void }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function GenerateAgreement() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const isOwnerFlow = location.startsWith("/owner");
+  const ownerDisplayName = getOwnerName().replace("!", "").trim();
   const [step, setStep] = useState<Step>(1);
   const [showSuccess, setShowSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -1606,8 +1701,11 @@ export default function GenerateAgreement() {
   // Step 2
   const [ownerName, setOwnerName] = useState("");
   const [ownerContact, setOwnerContact] = useState("");
+  const [primaryOwnerSelected, setPrimaryOwnerSelected] = useState(true);
   const [additionalOwners, setAdditionalOwners] = useState<Party[]>([]);
   const [selectedTenants, setSelectedTenants] = useState<Party[]>([]);
+  const [rentSplitMode, setRentSplitMode] = useState<RentSplitMode>("percent");
+  const [rentSplits, setRentSplits] = useState<OwnerRentSplit[]>([]);
   const tenantAadhaar = "";
   const tenantPan = "";
 
@@ -1754,6 +1852,17 @@ export default function GenerateAgreement() {
     if (step === 3) setDocumentsComplete(false);
   }, [step]);
 
+  useEffect(() => {
+    if (!isOwnerFlow) return;
+    const profile = getBrokerProfile();
+    if (profile.name && !ownerName) setOwnerName(profile.name);
+    const phone = profile.phone || getSessionItem("owner_phone") || getSessionItem("phone") || "";
+    if (phone && !ownerContact) {
+      const digits = phone.replace(/\D/g, "").slice(-10);
+      if (digits.length === 10) setOwnerContact(`+91 ${digits}`);
+    }
+  }, [isOwnerFlow]);
+
   // Auto-fill owner from selected property (skip once after resuming a saved draft)
   useEffect(() => {
     if (skipOwnerAutofillNext.current) {
@@ -1761,10 +1870,14 @@ export default function GenerateAgreement() {
       return;
     }
     if (selectedProperty) {
-      setOwnerName(selectedProperty.ownerName || "");
-      setOwnerContact(selectedProperty.ownerContact || "");
+      if (!isOwnerFlow || !getBrokerProfile().name) {
+        setOwnerName(selectedProperty.ownerName || "");
+      }
+      if (!isOwnerFlow || !getBrokerProfile().phone) {
+        setOwnerContact(selectedProperty.ownerContact || "");
+      }
     }
-  }, [selectedProperty]);
+  }, [selectedProperty, isOwnerFlow]);
 
   // Autosave draft for resume + pending banner
   useEffect(() => {
@@ -1840,8 +1953,11 @@ export default function GenerateAgreement() {
     setSelectedProperty(null);
     setOwnerName("");
     setOwnerContact("");
+    setPrimaryOwnerSelected(true);
     setAdditionalOwners([]);
     setSelectedTenants([]);
+    setRentSplits([]);
+    setRentSplitMode("percent");
     setStartDate("");
     setMonthlyRent("");
     setSecurityDeposit("");
@@ -1859,14 +1975,54 @@ export default function GenerateAgreement() {
 
   // Step 3 — managed internally by Step3Documents
 
+  const ownerCount =
+    (primaryOwnerSelected ? 1 : 0) + additionalOwners.length;
+  const showPaymentSplit = isOwnerFlow && ownerCount >= 2;
+
+  const progressSteps = isOwnerFlow
+    ? showPaymentSplit
+      ? OWNER_STEPS
+      : OWNER_STEPS.filter((s) => s.id !== 5)
+    : STEPS;
+
   const stepTitles: Record<Step, string> = {
     1: "Select a property for the agreement",
     2: "Add parties to the agreement",
     3: "Upload supporting documents",
     4: "Agreement details",
-    5: "Brokerage details",
+    5: isOwnerFlow ? "Financial details" : "Brokerage details",
     6: "Review & Send",
   };
+
+  const goToNextAfterDetails = () => {
+    if (showPaymentSplit) {
+      const primary =
+        primaryOwnerSelected && ownerName
+          ? { name: ownerName, contact: ownerContact }
+          : null;
+      setRentSplits(buildOwnerRentSplits(primary, additionalOwners, rentSplits));
+      setStep(5);
+    } else {
+      setStep(6);
+    }
+  };
+
+  const formatRentSplitSummary = (): string => {
+    if (!showPaymentSplit) return "";
+    const active = rentSplits.filter((s) => s.selected);
+    return active
+      .map((s) => {
+        if (rentSplitMode === "percent") {
+          const pct = Number(s.value || 0);
+          const amt = Math.round((Number(monthlyRent || 0) * pct) / 100);
+          return `${s.name}: ${pct}% (₹${amt.toLocaleString("en-IN")}/mo)`;
+        }
+        return `${s.name}: ₹${Number(s.value || 0).toLocaleString("en-IN")}/mo`;
+      })
+      .join("\n");
+  };
+
+  const Layout = isOwnerFlow ? OwnerLayout : BrokerLayout;
 
   const handleSubmit = () => {
     if (!selectedProperty) return;
@@ -1893,9 +2049,12 @@ export default function GenerateAgreement() {
         noticePeriod,
         rentDueDay,
         maintenanceCharges,
-        brokerageAmount,
-        brokeragePaidBy,
-        brokerageMode: mode,
+        brokerageAmount: isOwnerFlow ? "0" : brokerageAmount,
+        brokeragePaidBy: isOwnerFlow ? "Owner" : brokeragePaidBy,
+        brokerageMode: isOwnerFlow ? "Bank Transfer" : mode,
+        customText: isOwnerFlow && showPaymentSplit
+          ? JSON.stringify({ rentSplitMode, rentSplits })
+          : undefined,
       };
 
       if (editingAgreementId) {
@@ -1921,20 +2080,39 @@ export default function GenerateAgreement() {
   };
 
   return (
-    <BrokerLayout>
+    <Layout>
       {showSuccess && (
-        <SuccessOverlay onDone={() => { setShowSuccess(false); setLocation("/broker/documents"); }} />
+        <SuccessOverlay
+          onDone={() => {
+            setShowSuccess(false);
+            setLocation(isOwnerFlow ? "/owner/agreements" : "/broker/documents");
+          }}
+        />
       )}
 
       <div className={`min-w-0 w-full max-w-full ${step !== 6 ? "pb-32 sm:pb-6" : "pb-6"}`}>
       <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5">
         <button
           type="button"
-          onClick={() => step === 1 ? setLocation("/broker/dashboard") : setStep((s) => (s - 1) as Step)}
+          onClick={() => {
+            if (step === 1) {
+              setLocation(isOwnerFlow ? "/owner/agreements" : "/broker/dashboard");
+              return;
+            }
+            if (step === 6 && isOwnerFlow && !showPaymentSplit) {
+              setStep(4);
+              return;
+            }
+            setStep((s) => (s - 1) as Step);
+          }}
           className="flex items-center gap-1.5 text-sm text-gray-600 font-medium hover:text-primary transition-colors"
         >
           <ArrowLeft size={15} />
-          {step === 1 ? "Back to Dashboard" : "Back"}
+          {step === 1
+            ? isOwnerFlow
+              ? "Back to Agreements"
+              : "Back to Dashboard"
+            : "Back"}
         </button>
         <button
           type="button"
@@ -1952,7 +2130,7 @@ export default function GenerateAgreement() {
       </div>
 
       {/* Progress */}
-      <ProgressBar current={step} />
+      <ProgressBar current={step} steps={progressSteps} />
 
       {/* Step label — hidden on step 2 which has its own heading */}
       {step !== 2 && (
@@ -1965,14 +2143,39 @@ export default function GenerateAgreement() {
           selected={selectedProperty}
           onSelect={setSelectedProperty}
           onContinue={() => setStep(2)}
+          isOwnerFlow={isOwnerFlow}
+          ownerFilterName={ownerDisplayName}
         />
       )}
-      {step === 2 && (
+      {step === 2 && isOwnerFlow && (
+        <StepOwnerParties
+          property={selectedProperty}
+          ownerName={ownerName}
+          ownerContact={ownerContact}
+          primaryOwnerSelected={primaryOwnerSelected}
+          onPrimaryOwnerSelectedChange={setPrimaryOwnerSelected}
+          additionalOwners={additionalOwners}
+          setAdditionalOwners={setAdditionalOwners}
+          selectedTenants={selectedTenants}
+          setSelectedTenants={setSelectedTenants}
+          onManualTenantAdd={(name, contact) => ensureTenantFromAgreement(name, contact)}
+          onContinue={() => {
+            if (primaryOwnerSelected) {
+              syncPartiesToSelectedProperty(ownerName, ownerContact, additionalOwners);
+            }
+            setStep(3);
+          }}
+        />
+      )}
+      {step === 2 && !isOwnerFlow && (
         <Step2Parties
           property={selectedProperty}
-          ownerName={ownerName} ownerContact={ownerContact}
-          additionalOwners={additionalOwners} setAdditionalOwners={setAdditionalOwners}
-          selectedTenants={selectedTenants} setSelectedTenants={setSelectedTenants}
+          ownerName={ownerName}
+          ownerContact={ownerContact}
+          additionalOwners={additionalOwners}
+          setAdditionalOwners={setAdditionalOwners}
+          selectedTenants={selectedTenants}
+          setSelectedTenants={setSelectedTenants}
           onManualTenantAdd={(name, contact) => ensureTenantFromAgreement(name, contact)}
           onContinue={() => {
             syncPartiesToSelectedProperty(ownerName, ownerContact, additionalOwners);
@@ -1983,11 +2186,12 @@ export default function GenerateAgreement() {
       {step === 3 && (
         <Step3Documents
           allParties={[
-            { name: ownerName, contact: ownerContact },
+            ...(primaryOwnerSelected ? [{ name: ownerName, contact: ownerContact }] : []),
             ...additionalOwners,
             ...selectedTenants,
           ]}
-          ownerCount={1 + additionalOwners.length}
+          ownerCount={ownerCount}
+          isOwnerFlow={isOwnerFlow}
           onContinue={(result) => {
             setDocumentsComplete(result.documentsComplete);
             setStep(4);
@@ -1997,45 +2201,77 @@ export default function GenerateAgreement() {
       {step === 4 && (
         <Step4Details
           property={selectedProperty}
-          startDate={startDate} setStartDate={setStartDate}
-          monthlyRent={monthlyRent} setMonthlyRent={setMonthlyRent}
-          securityDeposit={securityDeposit} setSecurityDeposit={setSecurityDeposit}
-          lockInPeriod={lockInPeriod} setLockInPeriod={setLockInPeriod}
-          noticePeriod={noticePeriod} setNoticePeriod={setNoticePeriod}
-          rentDueDay={rentDueDay} setRentDueDay={setRentDueDay}
-          maintenanceCharges={maintenanceCharges} setMaintenanceCharges={setMaintenanceCharges}
-          onContinue={() => setStep(5)}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          monthlyRent={monthlyRent}
+          setMonthlyRent={setMonthlyRent}
+          securityDeposit={securityDeposit}
+          setSecurityDeposit={setSecurityDeposit}
+          lockInPeriod={lockInPeriod}
+          setLockInPeriod={setLockInPeriod}
+          noticePeriod={noticePeriod}
+          setNoticePeriod={setNoticePeriod}
+          rentDueDay={rentDueDay}
+          setRentDueDay={setRentDueDay}
+          maintenanceCharges={maintenanceCharges}
+          setMaintenanceCharges={setMaintenanceCharges}
+          onContinue={goToNextAfterDetails}
         />
       )}
-      {step === 5 && (
+      {step === 5 && isOwnerFlow && showPaymentSplit && (
+        <StepOwnerPaymentSplit
+          monthlyRent={monthlyRent}
+          splitMode={rentSplitMode}
+          setSplitMode={setRentSplitMode}
+          splits={rentSplits}
+          setSplits={setRentSplits}
+          onContinue={() => setStep(6)}
+        />
+      )}
+      {step === 5 && !isOwnerFlow && (
         <Step5Brokerage
           monthlyRent={monthlyRent}
-          brokerageAmount={brokerageAmount} setBrokerageAmount={setBrokerageAmount}
-          brokerageAmountOwner={brokerageAmountOwner} setBrokerageAmountOwner={setBrokerageAmountOwner}
-          brokerageAmountTenant={brokerageAmountTenant} setBrokerageAmountTenant={setBrokerageAmountTenant}
-          brokeragePaidBy={brokeragePaidBy} setBrokeragePaidBy={setBrokeragePaidBy}
-          brokerageMode={brokerageMode} setBrokerageMode={setBrokerageMode}
+          brokerageAmount={brokerageAmount}
+          setBrokerageAmount={setBrokerageAmount}
+          brokerageAmountOwner={brokerageAmountOwner}
+          setBrokerageAmountOwner={setBrokerageAmountOwner}
+          brokerageAmountTenant={brokerageAmountTenant}
+          setBrokerageAmountTenant={setBrokerageAmountTenant}
+          brokeragePaidBy={brokeragePaidBy}
+          setBrokeragePaidBy={setBrokeragePaidBy}
+          brokerageMode={brokerageMode}
+          setBrokerageMode={setBrokerageMode}
           onContinue={() => setStep(6)}
         />
       )}
       {step === 6 && (
         <Step6Review
           property={selectedProperty}
-          ownerName={ownerName} ownerContact={ownerContact}
-          additionalOwners={additionalOwners} selectedTenants={selectedTenants}
+          ownerName={ownerName}
+          ownerContact={ownerContact}
+          additionalOwners={additionalOwners}
+          selectedTenants={selectedTenants}
           startDate={startDate}
-          monthlyRent={monthlyRent} securityDeposit={securityDeposit}
-          lockInPeriod={lockInPeriod} noticePeriod={noticePeriod}
-          rentDueDay={rentDueDay} maintenanceCharges={maintenanceCharges}
-          brokerageAmount={brokerageAmount} brokerageAmountOwner={brokerageAmountOwner} brokerageAmountTenant={brokerageAmountTenant}
-          brokeragePaidBy={brokeragePaidBy} brokerageMode={brokerageMode}
+          monthlyRent={monthlyRent}
+          securityDeposit={securityDeposit}
+          lockInPeriod={lockInPeriod}
+          noticePeriod={noticePeriod}
+          rentDueDay={rentDueDay}
+          maintenanceCharges={maintenanceCharges}
+          brokerageAmount={brokerageAmount}
+          brokerageAmountOwner={brokerageAmountOwner}
+          brokerageAmountTenant={brokerageAmountTenant}
+          brokeragePaidBy={brokeragePaidBy}
+          brokerageMode={brokerageMode}
           documentsComplete={documentsComplete}
+          isOwnerFlow={isOwnerFlow}
+          rentSplitSummary={formatRentSplitSummary()}
           onGoToStep={setStep}
           onSubmit={handleSubmit}
           submitting={submitting}
         />
       )}
       </div>
-    </BrokerLayout>
+    </Layout>
   );
 }
