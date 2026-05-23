@@ -1,78 +1,23 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
-import {
-  MapPin,
-  ChevronLeft,
-  Edit,
-  Share2,
-  Upload,
-  Eye,
-  FileText,
-  Plus,
-} from "lucide-react";
+import { MapPin, ChevronLeft, PhoneCall, Edit, Plus, Eye, Check } from "lucide-react";
 import OwnerLayout from "@/components/OwnerLayout";
-import { PropertyImageGallery } from "@/components/owner/PropertyImageGallery";
-import { MaintenanceTicketCard } from "@/components/owner/MaintenanceTicketCard";
-import { RaiseMaintenanceModal } from "@/components/owner/RaiseMaintenanceModal";
 import { getProperties, type Property } from "@/lib/properties";
-import {
-  addUploadedDocument,
-  formatDocSize,
-  listPropertyDocuments,
-  removeUploadedDocument,
-  type PropertyDocumentListItem,
-} from "@/lib/ownerPropertyDocuments";
-import {
-  addMaintenanceTicket,
-  getMaintenanceTicketsForProperty,
-  type PropertyMaintenanceTicket,
-} from "@/lib/ownerPropertyMaintenance";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/hooks/use-toast";
-
-const TABS = [
-  { id: "overview", label: "Overview" },
-  { id: "documents", label: "Documents" },
-  { id: "maintenance", label: "Maintenance History" },
-] as const;
-
-type TabId = (typeof TABS)[number]["id"];
 
 export default function OwnerPropertyDetails() {
   const [, setLocation] = useLocation();
   const [, params] = useRoute("/owner/properties/:id");
   const [property, setProperty] = useState<Property | null>(null);
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [documents, setDocuments] = useState<PropertyDocumentListItem[]>([]);
-  const [tickets, setTickets] = useState<PropertyMaintenanceTicket[]>([]);
-  const [raiseOpen, setRaiseOpen] = useState(false);
-  const uploadRef = useRef<HTMLInputElement>(null);
-  const detailsRef = useRef<HTMLDivElement>(null);
-
-  const propertyId = params?.id ?? "";
-
-  const reloadProperty = useCallback(() => {
-    if (!propertyId) return;
-    const p = getProperties().find((x) => x.id === propertyId);
-    if (p) setProperty(p);
-  }, [propertyId]);
-
-  const reloadDocuments = useCallback(() => {
-    if (!propertyId) return;
-    setDocuments(listPropertyDocuments(propertyId));
-  }, [propertyId]);
-
-  const reloadTickets = useCallback(() => {
-    if (!propertyId) return;
-    setTickets(getMaintenanceTicketsForProperty(propertyId));
-  }, [propertyId]);
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
-    reloadProperty();
-    reloadDocuments();
-    reloadTickets();
-  }, [reloadProperty, reloadDocuments, reloadTickets]);
+    if (params?.id) {
+      const all = getProperties();
+      const p = all.find(x => x.id === params.id);
+      if (p) setProperty(p);
+    }
+  }, [params?.id]);
 
   if (!property) {
     return (
@@ -82,359 +27,193 @@ export default function OwnerPropertyDetails() {
     );
   }
 
-  const rent = property.monthlyRent
-    ? `₹${Number(property.monthlyRent).toLocaleString("en-IN")}`
-    : "N/A";
-  const title = property.nickname || property.address;
-  const thumbForTickets = property.images?.[0];
-
-  const handleShare = async () => {
-    const url = `${window.location.origin}/owner/properties/${property.id}`;
-    const shareTitle = title;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: shareTitle, text: `View ${shareTitle} on TrustKeyper`, url });
-      } else {
-        await navigator.clipboard.writeText(url);
-        toast({ title: "Link copied", description: "Property link copied to clipboard." });
-      }
-    } catch {
-      /* user cancelled share */
-    }
-  };
-
-  const handleEditDetails = () => {
-    setActiveTab("overview");
-    setTimeout(() => detailsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
-  };
-
-  const handleUploadDocument = (file: File) => {
-    addUploadedDocument(property.id, file, () => {
-      reloadDocuments();
-      toast({ title: "Document uploaded", description: file.name });
-    });
-  };
-
-  const openDocument = (doc: PropertyDocumentListItem) => {
-    if (doc.dataUrl) {
-      window.open(doc.dataUrl, "_blank", "noopener,noreferrer");
-      return;
-    }
-    if (doc.kind === "agreement") {
-      setLocation("/owner/agreements");
-      return;
-    }
-    toast({ title: "Preview unavailable", description: "No file preview for this document." });
-  };
+  const rent = property.monthlyRent ? `₹${Number(property.monthlyRent).toLocaleString("en-IN")}` : "N/A";
 
   return (
     <OwnerLayout>
-      <div className="mx-auto max-w-6xl p-4 sm:p-8">
-        <button
-          type="button"
-          onClick={() => window.history.back()}
-          className="mb-6 flex w-fit items-center gap-2 text-lg font-semibold text-primary hover:underline"
-        >
+      <div className="p-4 sm:p-8 max-w-6xl mx-auto">
+        <button onClick={() => window.history.back()} className="flex items-center gap-2 text-primary font-semibold text-lg mb-6 hover:underline w-fit">
           <ChevronLeft size={20} /> Back
         </button>
 
-        <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="p-4 sm:p-6">
-            <PropertyImageGallery
-              images={property.images ?? []}
-              selectedIndex={selectedImage}
-              onSelect={setSelectedImage}
-            />
-          </div>
-
-          <div className="border-t border-gray-100 px-4 pb-4 sm:px-6 sm:pb-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="min-w-0">
-                <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
-                <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
-                  <MapPin size={14} className="shrink-0" />
-                  {property.area}, {property.city}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6">
+          <div className="p-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900 mb-1">{property.nickname || property.address}</h1>
+                <p className="text-sm text-gray-500 flex items-center gap-1">
+                  <MapPin size={14} /> {property.area}, {property.city}
                 </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-white shadow-sm">
-                    {property.status !== "Rented" && (
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-                    )}
+                <div className="flex items-center gap-3 mt-4">
+                  <div className="bg-primary text-white text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+                    {property.status !== "Rented" && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />} 
                     {property.status === "Rented" ? "Occupied" : "Live"}
-                  </span>
-                  <span className="rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700">
+                  </div>
+                  <div className="border border-gray-200 text-gray-700 text-xs font-medium px-3 py-1 rounded-full">
                     {property.bedrooms} Bed • {property.bathrooms} Bath • {property.propertyType}
-                  </span>
+                  </div>
                 </div>
               </div>
               <div className="md:text-right">
-                <p className="text-sm font-semibold text-gray-500">Expected Rent</p>
-                <p className="text-3xl font-semibold text-green-600">
-                  {rent}
-                  <span className="text-lg font-semibold">/mo</span>
-                </p>
+                <p className="text-sm text-gray-500 font-semibold mb-0.5">Expected Rent</p>
+                <p className="text-3xl font-semibold text-green-600">{rent}<span className="text-lg font-semibold text-green-600">/mo</span></p>
               </div>
             </div>
-
-            <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Button
-                type="button"
-                className="h-11 flex-1 gap-2 rounded-xl font-semibold shadow-md shadow-primary/20 sm:flex-none sm:px-8"
-                onClick={() => void handleShare()}
-              >
-                <Share2 size={16} /> Share Property
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11 flex-1 gap-2 rounded-xl border-gray-300 font-semibold sm:flex-none sm:px-8"
-                onClick={handleEditDetails}
-              >
-                <Edit size={16} /> Edit Details
-              </Button>
-            </div>
           </div>
-
-          <div className="flex items-center gap-6 border-t border-gray-100 px-4 sm:px-6">
-            {TABS.map((tab) => (
+          
+          <div className="border-t border-gray-100 px-6 flex items-center gap-6">
+            {["overview", "documents", "history"].map((tab) => (
               <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`border-b-2 py-4 text-sm font-medium transition-colors ${
-                  activeTab === tab.id
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`py-4 text-sm font-medium border-b-2 transition-colors capitalize ${
+                  activeTab === tab
                     ? "border-green-500 text-green-600"
-                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                {tab.label}
+                {tab}
               </button>
             ))}
           </div>
         </div>
 
         {activeTab === "overview" && (
-          <div ref={detailsRef} className="animate-in fade-in rounded-xl border border-gray-200 bg-white p-6 shadow-sm duration-300">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Property Details</h2>
-              <button
-                type="button"
-                onClick={() => setLocation(`/owner/properties/add`)}
-                className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-              >
-                Edit Details <Edit size={14} />
-              </button>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-300">
+            {/* Images block */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm p-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {property.images && property.images.length > 0 ? (
+                  <>
+                    <div className="col-span-2 sm:col-span-3 h-48 md:h-64 rounded-xl bg-gray-100 overflow-hidden relative">
+                      <img src={property.images[0]} alt="Main" className="w-full h-full object-cover" />
+                    </div>
+                    {property.images.slice(1).map((img, i) => (
+                      <div key={i} className="aspect-video sm:aspect-square rounded-xl bg-gray-100 overflow-hidden relative">
+                        <img src={img} alt={`Thumb ${i+1}`} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <div className="col-span-full h-64 flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                    <p className="text-sm font-semibold">No photos uploaded</p>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="space-y-5">
-              {[
-                { label: "Property Type", value: property.propertyType },
-                { label: "BHK / Size", value: `${property.bedrooms} Bed, ${property.bathrooms} Bath` },
-                { label: "Built-up Area", value: `${property.builtUpArea} ${property.builtUpUnits}` },
-                { label: "Furnishing", value: property.furnishing },
-                { label: "Expected Rent", value: `${rent}/mo` },
-                {
-                  label: "Security Deposit",
-                  value: `₹${Number(property.securityDeposit || 0).toLocaleString("en-IN")}`,
-                },
-                { label: "Floor Level", value: property.floorLevel },
-                { label: "Direction", value: property.mainDoorDirection },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="flex items-center justify-between border-b border-gray-50 py-2.5 last:border-none"
-                >
-                  <span className="text-sm font-medium text-gray-500">{item.label}</span>
-                  <span className="text-sm font-semibold text-gray-900">{item.value || "—"}</span>
-                </div>
-              ))}
-              {property.amenities && property.amenities.length > 0 && (
-                <div className="flex flex-wrap gap-2 pt-2">
-                  {property.amenities.map((a) => (
-                    <span
-                      key={a}
-                      className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary"
-                    >
+
+            {/* Details block */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-lg font-semibold text-gray-900">Property Details</h2>
+                <button className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
+                  Edit Details <Edit size={14} />
+                </button>
+              </div>
+
+              <div className="space-y-5">
+                {[
+                  { label: "Property Type", value: property.propertyType },
+                  { label: "BHK / Size", value: `${property.bedrooms} Bed, ${property.bathrooms} Bath` },
+                  { label: "Built-up Area", value: `${property.builtUpArea} ${property.builtUpUnits}` },
+                  { label: "Furnishing", value: property.furnishing },
+                  { label: "Expected Rent", value: `${rent}/mo` },
+                  { label: "Security Deposit", value: `₹${Number(property.securityDeposit || 0).toLocaleString("en-IN")}` },
+                  { label: "Floor Level", value: property.floorLevel },
+                  { label: "Direction", value: property.mainDoorDirection },
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-none">
+                    <span className="text-sm text-gray-500 font-medium">{item.label}</span>
+                    <span className="text-sm font-semibold text-gray-900">{item.value}</span>
+                  </div>
+                ))}
+                <div className="pt-4 flex flex-wrap gap-2">
+                  {property.amenities?.map((a, i) => (
+                    <span key={i} className="px-3 py-1 bg-primary/10 text-primary text-[11px] font-semibold rounded-full border border-primary/15">
                       {a}
                     </span>
                   ))}
                 </div>
-              )}
+              </div>
             </div>
           </div>
         )}
 
         {activeTab === "documents" && (
-          <div className="animate-in fade-in rounded-xl border border-gray-200 bg-white p-6 shadow-sm duration-300 sm:p-8">
-            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">Property Documents</h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  Your uploads and rental agreements for this property only.
-                </p>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                className="gap-2 rounded-xl font-semibold"
-                onClick={() => uploadRef.current?.click()}
-              >
-                <Upload size={16} /> Upload documents
-              </Button>
-              <input
-                ref={uploadRef}
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleUploadDocument(f);
-                  e.target.value = "";
-                }}
-              />
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8 animate-in fade-in duration-300">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-xl font-semibold text-gray-900">Property Documents</h2>
+              <Button size="sm" className="bg-primary text-white gap-2 rounded-sm"><Plus size={16} /> Upload New</Button>
             </div>
-
-            {documents.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-16 text-center">
-                <FileText size={32} className="mb-3 text-gray-300" />
-                <p className="text-sm font-medium text-gray-600">No documents yet</p>
-                <p className="mt-1 max-w-sm text-xs text-gray-400">
-                  Upload property papers here. Agreements generated for this property will appear automatically.
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="mt-4 gap-2"
-                  onClick={() => uploadRef.current?.click()}
-                >
-                  <Plus size={16} /> Upload documents
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {documents.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="group flex items-center gap-4 rounded-xl border border-gray-100 p-4 transition-colors hover:bg-gray-50"
-                  >
-                    <div
-                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border ${
-                        doc.kind === "agreement"
-                          ? "border-blue-100 bg-blue-50 text-blue-600"
-                          : "border-red-100 bg-red-50 text-red-500"
-                      }`}
-                    >
-                      <span className="text-[10px] font-semibold uppercase">
-                        {doc.kind === "agreement" ? "AGR" : "PDF"}
-                      </span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-gray-900 group-hover:text-primary">
-                        {doc.fileName}
-                      </p>
-                      <p className="text-[11px] font-medium text-gray-500">
-                        {doc.kind === "agreement" ? "From agreement" : "Owner upload"}
-                        {doc.kind === "upload" && doc.fileSize
-                          ? ` • ${formatDocSize(doc.fileSize)}`
-                          : ""}
-                        {" • "}
-                        {new Date(doc.uploadedAt).toLocaleDateString("en-IN", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => openDocument(doc)}
-                        className="rounded-lg p-2 text-gray-400 hover:bg-white hover:text-primary"
-                        aria-label="View"
-                      >
-                        <Eye size={18} />
-                      </button>
-                      {doc.kind === "upload" && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            removeUploadedDocument(doc.id);
-                            reloadDocuments();
-                            toast({ title: "Document removed" });
-                          }}
-                          className="rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { name: "Property Tax Receipt 2023-24.pdf", size: "1.2 MB", date: "Oct 12, 2023" },
+                { name: "Sale Deed Copy.pdf", size: "4.5 MB", date: "Aug 05, 2023" },
+                { name: "Electricity Bill - May.pdf", size: "0.8 MB", date: "May 20, 2024" },
+                { name: "Gas Pipeline Agreement.pdf", size: "2.1 MB", date: "Jan 15, 2024" }
+              ].map((doc, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer group">
+                  <div className="w-12 h-12 rounded-lg bg-red-50 text-red-500 flex items-center justify-center shrink-0 border border-red-100">
+                    <span className="text-[10px] font-semibold uppercase">PDF</span>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === "maintenance" && (
-          <div className="animate-in fade-in duration-300">
-            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">Maintenance History</h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  All maintenance complaints raised for this property.
-                </p>
-              </div>
-              <Button
-                type="button"
-                className="h-10 gap-2 rounded-xl font-semibold"
-                onClick={() => setRaiseOpen(true)}
-              >
-                <Plus size={16} /> Raise complaint
-              </Button>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900 group-hover:text-primary transition-colors">{doc.name}</p>
+                    <p className="text-[11px] text-gray-500 font-medium">{doc.size} • Uploaded on {doc.date}</p>
+                  </div>
+                  <button className="text-gray-400 hover:text-primary"><Eye size={18} /></button>
+                </div>
+              ))}
             </div>
-
-            {tickets.length === 0 ? (
-              <div className="rounded-xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-                <p className="text-sm font-medium text-gray-600">No maintenance complaints yet</p>
-                <p className="mt-1 text-xs text-gray-400">Raise a complaint to track issues for this property.</p>
-                <Button
-                  type="button"
-                  className="mt-4 gap-2"
-                  onClick={() => setRaiseOpen(true)}
-                >
-                  <Plus size={16} /> Raise complaint
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {tickets.map((ticket) => (
-                  <MaintenanceTicketCard
-                    key={ticket.id}
-                    ticket={ticket}
-                    thumbnailUrl={ticket.imageUrl ?? thumbForTickets}
-                  />
-                ))}
-              </div>
-            )}
           </div>
         )}
-      </div>
 
-      <RaiseMaintenanceModal
-        open={raiseOpen}
-        onClose={() => setRaiseOpen(false)}
-        onSubmit={(data) => {
-          addMaintenanceTicket({
-            propertyId: property.id,
-            category: data.category,
-            title: data.title,
-            description: data.description,
-            priority: data.priority,
-            imageUrl: data.imageUrl,
-          });
-          reloadTickets();
-          toast({ title: "Complaint raised", description: "Added to maintenance history." });
-        }}
-      />
+        {activeTab === "history" && (
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8 animate-in fade-in duration-300">
+            <h2 className="text-xl font-semibold text-gray-900 mb-8">Maintenance & Repair History</h2>
+            <div className="relative space-y-8 before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-100 before:to-transparent">
+              {[
+                { type: "Plumbing", desc: "Kitchen tap leakage fixed", date: "Apr 15, 2024", cost: "₹1,200", status: "Completed" },
+                { type: "Electrical", desc: "AC Servicing & Gas refill", date: "Mar 10, 2024", cost: "₹2,500", status: "Completed" },
+                { type: "Painting", desc: "Living room wall touch-up", date: "Jan 22, 2024", cost: "₹4,000", status: "Completed" },
+                { type: "Cleaning", desc: "Deep cleaning before new tenant", date: "Dec 05, 2023", cost: "₹3,500", status: "Completed" }
+              ].map((item, i) => (
+                <div key={i} className="relative flex items-center justify-between pl-12 group">
+                  <div className="absolute left-0 top-1 w-10 h-10 rounded-full bg-white border-2 border-primary flex items-center justify-center z-10 shadow-sm group-hover:scale-110 transition-transform">
+                    <Check size={16} className="text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className="text-xs font-semibold text-primary px-2 py-0.5 bg-blue-50 rounded uppercase tracking-wider">{item.type}</span>
+                      <span className="text-xs text-gray-400 font-semibold">{item.date}</span>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900">{item.desc}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-gray-900">{item.cost}</p>
+                    <p className="text-[11px] text-[#2ECC71] font-semibold">{item.status}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-12 bg-white rounded-xl border border-gray-200 p-6 sm:px-10 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm">
+          <div className="flex items-center gap-5 text-center sm:text-left">
+            <div className="w-14 h-14 rounded-full bg-blue-50 text-primary flex items-center justify-center shrink-0 border border-blue-100 shadow-sm">
+              <PhoneCall size={24} />
+            </div>
+            <div>
+              <p className="text-[15px] font-semibold text-gray-800">Need help with maintaining your property?</p>
+              <p className="text-[12px] text-gray-500">Our expert team is available 24/7 for all maintenance requests</p>
+            </div>
+          </div>
+          <Button variant="outline" className="border-primary text-primary hover:bg-blue-50 text-sm px-8 h-11 rounded-sm font-semibold shadow-sm transition-all">
+            Contact Support
+          </Button>
+        </div>
+
+      </div>
     </OwnerLayout>
   );
 }

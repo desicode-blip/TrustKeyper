@@ -5,8 +5,7 @@ export type FlowSegmentOption<T extends string> = { value: T; label: string };
 type FlowSegmentTabsProps<T extends string> = {
   value: T;
   onChange: (value: T) => void;
-  /** NoInfer keeps T from `value` / `onChange`, not widened by `.map()` on options */
-  options: FlowSegmentOption<NoInfer<T>>[];
+  options: FlowSegmentOption<T>[];
   className?: string;
   /** Stretch tabs to fill the container width (e.g. 3-way brokerage payer). */
   fullWidth?: boolean;

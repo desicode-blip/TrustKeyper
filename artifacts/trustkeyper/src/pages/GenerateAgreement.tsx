@@ -765,7 +765,7 @@ function BankModal({
           <h3 className="text-base font-semibold text-gray-900 text-center mb-5">Add Bank Details</h3>
           <FlowSegmentTabs
             value={tab}
-            onChange={(v) => setTab(v)}
+            onChange={setTab}
             options={[
               { value: "bank", label: "Bank account" },
               { value: "upi", label: "UPI" },
@@ -1480,7 +1480,7 @@ function Step5Brokerage({
           <FlowSegmentTabs
             fullWidth
             value={brokerageMode}
-            onChange={(v) => setBrokerageMode(v)}
+            onChange={setBrokerageMode}
             options={[
               { value: "Bank Transfer", label: "Bank Transfer" },
               { value: "UPI", label: "UPI" },

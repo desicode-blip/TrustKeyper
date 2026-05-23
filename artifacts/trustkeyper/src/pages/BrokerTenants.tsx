@@ -205,7 +205,7 @@ export default function BrokerTenants() {
 
       <FlowSegmentTabs
         value={active}
-        onChange={(v) => setActive(v)}
+        onChange={setActive}
         className="mb-8"
         options={tabs.map((t) => ({
           value: t.id,

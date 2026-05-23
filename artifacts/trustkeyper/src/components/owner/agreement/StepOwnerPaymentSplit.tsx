@@ -110,7 +110,7 @@ export function StepOwnerPaymentSplit({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <FlowSegmentTabs
           value={splitMode}
-          onChange={(v) => setSplitMode(v)}
+          onChange={setSplitMode}
           options={[
             { value: "percent", label: "Percentage %" },
             { value: "amount", label: "Exact Amount" },

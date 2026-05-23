@@ -225,7 +225,7 @@ export default function BrokerActivity() {
       <div className="flex items-center gap-2 sm:gap-3 mb-5 flex-wrap">
         <FlowSegmentTabs
           value={filter}
-          onChange={(v) => setFilter(v)}
+          onChange={setFilter}
           options={FILTER_OPTIONS.map((opt) => ({
             value: opt.id,
             label: opt.label,
