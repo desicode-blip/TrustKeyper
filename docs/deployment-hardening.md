@@ -11,6 +11,12 @@ Why this prevents future Vercel build failures
 - Dynamic imports prevent static bundlers (Vite/Rollup) from resolving server-only modules into client bundles.
 - The repo already includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs `pnpm run typecheck:deploy` and `pnpm run build:deploy` on PRs and pushes to `main`, preventing regressions from merging.
 
+SPA routing on Vercel (refresh / deep links)
+
+- TrustKeyper is a client-side SPA (Wouter). Direct visits or refreshes on `/owner/dashboard` must serve `index.html`, then the app router handles the path.
+- `vercel.json` rewrites all non-`/api` paths to `/index.html`. Without this, Vercel returns its platform `404: NOT_FOUND` page.
+- Build output must be `artifacts/trustkeyper/dist/public` (see root `vercel.json`). If the Vercel project **Root Directory** is set to `artifacts/trustkeyper`, set **Output Directory** to `dist/public` in the dashboard and keep `artifacts/trustkeyper/vercel.json` rewrites.
+
 Recommended follow-ups
 
 - When adding new workspace packages, keep server-only code behind dynamic imports or conditional `exports` in `package.json`.
