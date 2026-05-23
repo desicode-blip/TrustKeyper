@@ -340,7 +340,7 @@ export default function BrokerDeals() {
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <FlowSegmentTabs
             value={view}
-            onChange={setView}
+            onChange={(v) => setView(v)}
             options={[
               { value: "kanban", label: "Kanban" },
               { value: "table", label: "Table" },
