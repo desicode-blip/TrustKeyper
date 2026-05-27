@@ -23,7 +23,7 @@ export function AuthSignupBelowCta({
 
   return (
     <div className={`w-full max-w-md ${className}`}>
-      <hr className="mt-4 border-0 border-t border-gray-200" aria-hidden />
+      <hr className="mt-2 border-0 border-t border-gray-200" aria-hidden />
       {showTerms ? <AuthTermsText className="mt-4 text-center" /> : null}
       {linkType === "login" ? (
         <AuthGoToLoginLink className="mt-4 text-center pb-0 sm:pb-0" persistRole={persistRole} />
