@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import OwnerLayout from "@/components/OwnerLayout";
-import { addProperty } from "@/lib/properties";
+import { addProperty, getProperties, updateProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 import { getItem, getSessionItem, removeItem, setItem } from "@/lib/storageKeys";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -161,9 +161,9 @@ function ChipButton({
     <button
       type="button"
       onClick={onClick}
-      className={`px-6 py-2.5 rounded-sm border text-sm transition-colors ${
+      className={`px-6 py-2.5 rounded-lg border text-sm transition-colors ${
         selected
-          ? "bg-[#E8F5EE] border-accent text-gray-800"
+          ? "bg-[#E8F5EE] border-gray-200 border-b-[3px] border-b-[#22C55E] text-gray-800"
           : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
       }`}
     >
@@ -192,8 +192,76 @@ function AmenityCheck({
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────────
+function loadPropertyIntoForm(
+  p: ReturnType<typeof getProperties>[number],
+  setters: {
+    setNickname: (v: string) => void;
+    setAddress: (v: string) => void;
+    setArea: (v: string) => void;
+    setCity: (v: string) => void;
+    setPincode: (v: string) => void;
+    setCountry: (v: string) => void;
+    setOwnerName: (v: string) => void;
+    setOwnerContact: (v: string) => void;
+    setPropertyType: (v: string) => void;
+    setPropertyTypeOther: (v: string) => void;
+    setUnitSize: (v: string) => void;
+    setUnitSizeOther: (v: string) => void;
+    setFurnishing: (v: string) => void;
+    setBuiltUpArea: (v: string) => void;
+    setBuiltUpUnits: (v: string) => void;
+    setTotalFloors: (v: string) => void;
+    setBedrooms: (v: string) => void;
+    setBathrooms: (v: string) => void;
+    setBalconies: (v: string) => void;
+    setFloorLevel: (v: string) => void;
+    setMainDoorDirection: (v: string) => void;
+    setAmenities: (v: string[]) => void;
+    setTenantsPreferred: (v: string[]) => void;
+    setMonthlyRent: (v: string) => void;
+    setRentNegotiable: (v: boolean) => void;
+    setMaintenanceIncluded: (v: boolean) => void;
+    setMonthlyMaintenance: (v: string) => void;
+    setSecurityDeposit: (v: string) => void;
+    setAvailableFrom: (v: string) => void;
+    setImageUrls: (v: string[]) => void;
+  },
+) {
+  setters.setNickname(p.nickname || "");
+  setters.setAddress(p.address || "");
+  setters.setArea(p.area || "");
+  setters.setCity(p.city || "Hyderabad");
+  setters.setPincode(p.pincode || "");
+  setters.setCountry(p.country || "India");
+  setters.setOwnerName(p.ownerName || "");
+  setters.setOwnerContact(p.ownerContact || "");
+  setters.setPropertyType(p.propertyType || "");
+  setters.setPropertyTypeOther(p.propertyTypeOther || "");
+  setters.setUnitSize(p.unitSize || "");
+  setters.setUnitSizeOther(p.unitSizeOther || "");
+  setters.setFurnishing(p.furnishing || "");
+  setters.setBuiltUpArea(p.builtUpArea || "");
+  setters.setBuiltUpUnits(p.builtUpUnits || "sq ft");
+  setters.setTotalFloors(p.totalFloors || "");
+  setters.setBedrooms(p.bedrooms || "");
+  setters.setBathrooms(p.bathrooms || "");
+  setters.setBalconies(p.balconies || "");
+  setters.setFloorLevel(p.floorLevel || "");
+  setters.setMainDoorDirection(p.mainDoorDirection || "");
+  setters.setAmenities(p.amenities || []);
+  setters.setTenantsPreferred(p.tenantsPreferred || []);
+  setters.setMonthlyRent(p.monthlyRent || "");
+  setters.setRentNegotiable(p.rentNegotiable || false);
+  setters.setMaintenanceIncluded(p.maintenanceIncluded || false);
+  setters.setMonthlyMaintenance(p.monthlyMaintenance || "");
+  setters.setSecurityDeposit(p.securityDeposit || "");
+  setters.setAvailableFrom(p.availableFrom || "");
+  setters.setImageUrls(p.images || []);
+}
+
 export default function OwnerAddProperty() {
   const [, setLocation] = useLocation();
+  const [editingPropertyId, setEditingPropertyId] = useState<string | null>(null);
   const [subStep, setSubStep] = useState(0);
 
   // Sub-step 0 – Property Details
@@ -250,6 +318,24 @@ export default function OwnerAddProperty() {
     const storedPhone = getSessionItem("phone") || getSessionItem("contact");
     if (storedName) setOwnerName(storedName);
     if (storedPhone) setOwnerContact(storedPhone);
+
+    const editId = new URLSearchParams(window.location.search).get("edit");
+    if (editId) {
+      const existing = getProperties().find((x) => x.id === editId);
+      if (existing) {
+        setEditingPropertyId(editId);
+        loadPropertyIntoForm(existing, {
+          setNickname, setAddress, setArea, setCity, setPincode, setCountry,
+          setOwnerName, setOwnerContact,
+          setPropertyType, setPropertyTypeOther, setUnitSize, setUnitSizeOther, setFurnishing,
+          setBuiltUpArea, setBuiltUpUnits, setTotalFloors, setBedrooms, setBathrooms, setBalconies,
+          setFloorLevel, setMainDoorDirection, setAmenities, setTenantsPreferred,
+          setMonthlyRent, setRentNegotiable, setMaintenanceIncluded, setMonthlyMaintenance,
+          setSecurityDeposit, setAvailableFrom, setImageUrls,
+        });
+        return;
+      }
+    }
 
     // Load persisted property data
     const savedData = getItem("onboarding_data");
@@ -416,19 +502,33 @@ export default function OwnerAddProperty() {
       finalAmenities.push(amenityOtherText.trim());
     }
 
-    addProperty({
+    const payload = {
       nickname, address, area, city, pincode, country,
       ownerName, ownerContact,
       propertyType, propertyTypeOther, unitSize, unitSizeOther, furnishing,
       builtUpArea, builtUpUnits, totalFloors, bedrooms, bathrooms, balconies, floorLevel, mainDoorDirection,
       amenities: finalAmenities, tenantsPreferred, monthlyRent, rentNegotiable, maintenanceIncluded, monthlyMaintenance, securityDeposit, availableFrom,
-      images: imageUrls, imageCount: imageUrls.length, status: "Active",
+      images: imageUrls, imageCount: imageUrls.length,
+    };
+
+    if (editingPropertyId) {
+      updateProperty(editingPropertyId, payload);
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        setLocation(`/owner/properties/${editingPropertyId}`);
+      }, 1500);
+      return;
+    }
+
+    addProperty({
+      ...payload,
+      status: "Active",
       uploadedBy: "owner",
     });
-    
-    // Clear persistence on success
+
     removeItem("onboarding_data");
-    
+
     setShowSuccess(true);
     setTimeout(() => {
       setShowSuccess(false);

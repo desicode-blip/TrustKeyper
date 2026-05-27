@@ -1,6 +1,8 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
+import { AuthStepHeading } from "@/components/auth/AuthStepHeading";
+import { authMobileScrollPadClass } from "@/components/auth/authStyles";
 
 interface OwnerStep5PlanProps {
   onSelectPlan: (plan: "diy" | "managed") => void;
@@ -8,10 +10,8 @@ interface OwnerStep5PlanProps {
 
 export default function OwnerStep5Plan({ onSelectPlan }: OwnerStep5PlanProps) {
   return (
-    <div className="flex flex-col h-full max-w-4xl">
-      <div className="mb-10 border-b pb-6">
-        <h1 className="text-3xl font-semibold text-gray-900">How Would You Like to Set Up your account</h1>
-      </div>
+    <div className={`flex flex-col h-full max-w-md w-full mx-auto lg:max-w-4xl lg:mx-0 ${authMobileScrollPadClass}`}>
+      <AuthStepHeading title="How would you like to set up your account?" />
 
       <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-0 mt-4 relative pb-10">
         

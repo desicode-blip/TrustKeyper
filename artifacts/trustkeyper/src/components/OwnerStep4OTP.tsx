@@ -3,7 +3,13 @@ import { Button } from "@/components/ui/button";
 import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { AuthTextField } from "@/components/auth/AuthTextField";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
-import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
+import { AuthStepHeading } from "@/components/auth/AuthStepHeading";
+import {
+  authMobileScrollPadClass,
+  authOtpDigitEmptyClass,
+  authOtpDigitFilledClass,
+  authPrimaryButtonClass,
+} from "@/components/auth/authStyles";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 
 interface OwnerStep4OTPProps {
@@ -41,10 +47,8 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
   );
 
   return (
-    <div className={`flex flex-col h-full max-w-2xl ${authMobileScrollPadClass}`}>
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-gray-900">Let&apos;s know you better</h1>
-      </div>
+    <div className={`flex flex-col h-full max-w-md w-full mx-auto lg:max-w-2xl lg:mx-0 ${authMobileScrollPadClass}`}>
+      <AuthStepHeading title="Let's know you better" />
 
       <div className="space-y-6 mb-8 max-w-md opacity-70 pointer-events-none">
         <AuthTextField id="owner-otp-name" label="Your Name" value={details.name} onChange={() => {}} disabled />
@@ -66,12 +70,8 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
               maxLength={1}
               value={digit}
               onChange={(e) => handleChange(i, e.target.value)}
-              className={`w-14 h-14 text-center text-xl font-medium rounded-lg border outline-none transition-colors
-                ${
-                  digit
-                    ? "bg-[#E8F5EE] border-accent border-b-4 text-gray-900"
-                    : "bg-white border-gray-300 focus:border-primary"
-                }`}
+              className={`w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-medium rounded-lg outline-none transition-colors
+                ${digit ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
             />
           ))}
         </div>

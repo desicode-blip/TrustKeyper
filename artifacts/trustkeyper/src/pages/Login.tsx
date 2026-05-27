@@ -4,7 +4,13 @@ import { AuthFlowLayout } from "@/components/AuthFlowLayout";
 import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
 import { AuthGoToSignupLink } from "@/components/AuthFlowFooterLinks";
-import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
+import { AuthStepHeading } from "@/components/auth/AuthStepHeading";
+import {
+  authMobileScrollPadClass,
+  authOtpDigitEmptyClass,
+  authOtpDigitFilledClass,
+  authPrimaryButtonClass,
+} from "@/components/auth/authStyles";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -213,8 +219,8 @@ export default function Login() {
                   maxLength={1}
                   value={digit}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
-                  className={`w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-medium rounded-lg border outline-none transition-colors
-                    ${digit ? "bg-[#E8F5EE] border-accent border-b-4" : "bg-white border-gray-300 focus:border-primary"}`}
+                  className={`w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-medium rounded-lg outline-none transition-colors
+                    ${digit ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
                 />
               ))}
             </div>

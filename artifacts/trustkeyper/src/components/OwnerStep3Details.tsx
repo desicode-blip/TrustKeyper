@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { AuthTextField } from "@/components/auth/AuthTextField";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
+import { AuthStepHeading } from "@/components/auth/AuthStepHeading";
 import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
 import { profileExistsAsync } from "@/lib/auth";
 
@@ -39,10 +40,8 @@ export default function OwnerStep3Details({ details, setDetails, onNext }: Owner
   );
 
   return (
-    <div className={`flex flex-col h-full max-w-2xl ${authMobileScrollPadClass}`}>
-      <div className="mb-8 border-b border-gray-200 pb-4">
-        <h1 className="text-3xl font-semibold text-gray-900">Let&apos;s know you better</h1>
-      </div>
+    <div className={`flex flex-col h-full max-w-md w-full mx-auto lg:max-w-2xl lg:mx-0 ${authMobileScrollPadClass}`}>
+      <AuthStepHeading title="Let's know you better" />
 
       <div className="space-y-6 max-w-md">
         <AuthTextField

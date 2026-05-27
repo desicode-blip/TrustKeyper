@@ -4,7 +4,13 @@ import { AuthFlowLayout } from "@/components/AuthFlowLayout";
 import { AuthEntryRoleGrid } from "@/components/auth/AuthEntryRoleGrid";
 import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
-import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
+import { AuthStepHeading } from "@/components/auth/AuthStepHeading";
+import {
+  authMobileScrollPadClass,
+  authOtpDigitEmptyClass,
+  authOtpDigitFilledClass,
+  authPrimaryButtonClass,
+} from "@/components/auth/authStyles";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -169,13 +175,13 @@ export default function LoginDirect() {
 
   return (
     <AuthFlowLayout onBack={handleBack} backDisabled={false}>
-      <div className={`flex flex-col flex-1 min-h-0 max-w-md w-full ${authMobileScrollPadClass}`}>
+      <div className={`flex flex-col flex-1 min-h-0 max-w-md w-full mx-auto lg:mx-0 ${authMobileScrollPadClass}`}>
         {phase === "role" && (
           <>
-            <div className="mb-8 border-b border-gray-200 pb-4 shrink-0">
-              <h1 className="text-3xl font-semibold text-gray-900">Login to TrustKeyper</h1>
-              <p className="mt-2 text-sm text-gray-500">Select your account type to continue</p>
-            </div>
+            <AuthStepHeading
+              title="Login to TrustKeyper"
+              subtitle="Select your account type to continue"
+            />
 
             <AuthEntryRoleGrid
               value={loginRole ?? ""}
@@ -185,7 +191,9 @@ export default function LoginDirect() {
               }}
             />
 
-            <p className="text-gray-500 mb-2 mt-4 text-sm">Use the same role you chose when you signed up</p>
+            <p className="text-gray-500 mb-2 mt-4 text-sm text-center lg:text-left">
+              Use the same role you chose when you signed up
+            </p>
 
             <AuthSignupScreenFooter
               cta={rolePickCta}
@@ -197,7 +205,7 @@ export default function LoginDirect() {
         )}
 
         {phase !== "role" && loginRole && (
-          <div className="mb-8 border-b border-gray-200 pb-4 shrink-0">
+          <div className="mb-8 border-b border-gray-200 pb-4 shrink-0 text-center lg:text-left">
             <h1 className="text-3xl font-semibold text-gray-900">
               Login to TrustKeyper as {roleDisplayLabel(loginRole)}
             </h1>
@@ -251,8 +259,8 @@ export default function LoginDirect() {
                   maxLength={1}
                   value={digit}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
-                  className={`w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-medium rounded-lg border outline-none transition-colors
-                    ${digit ? "bg-[#E8F5EE] border-accent border-b-4" : "bg-white border-gray-300 focus:border-primary"}`}
+                  className={`w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-medium rounded-lg outline-none transition-colors
+                    ${digit ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
                 />
               ))}
             </div>

@@ -1,6 +1,7 @@
 import React from "react";
 import { User, IndianRupee } from "lucide-react";
 import { AUTH_ENTRY_ROLES, isAuthEntryRole, type AuthEntryRole } from "@/lib/auth";
+import { authRoleCardSelectedClass, authRoleCardUnselectedClass } from "@/components/auth/authStyles";
 
 const ROLE_UI: Record<
   AuthEntryRole,
@@ -15,10 +16,13 @@ interface AuthEntryRoleGridProps {
   onChange: (role: AuthEntryRole) => void;
 }
 
-/** Signup/login role cards — owner and broker only (tenant & manager suppressed). */
+/**
+ * Signup/login role cards — owner and broker only (tenant & manager suppressed).
+ * Mobile: vertical stack. Desktop (lg+): two columns side by side.
+ */
 export function AuthEntryRoleGrid({ value, onChange }: AuthEntryRoleGridProps) {
   return (
-    <div className="grid w-full max-w-md grid-cols-2 gap-3 sm:gap-4">
+    <div className="flex w-full max-w-md flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
       {AUTH_ENTRY_ROLES.map((id) => {
         const meta = ROLE_UI[id];
         const isSelected = value === id;
@@ -28,15 +32,16 @@ export function AuthEntryRoleGrid({ value, onChange }: AuthEntryRoleGridProps) {
             key={id}
             type="button"
             onClick={() => onChange(id)}
-            className={`relative flex min-h-[7.5rem] flex-col items-center justify-center rounded-xl p-4 sm:p-6 transition-all duration-200 ${
-              isSelected
-                ? "bg-[#E8F5EE] border-b-4 border-b-primary shadow-sm"
-                : "bg-white border border-gray-200 hover:border-gray-300"
+            className={`relative flex min-h-[5.25rem] flex-col items-center justify-center rounded-xl px-4 py-5 transition-all duration-200 lg:min-h-[7.5rem] lg:p-6 ${
+              isSelected ? authRoleCardSelectedClass : authRoleCardUnselectedClass
             }`}
           >
-            <div className="mb-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-primary">
-              <Icon size={24} aria-hidden />
-            </div>
+            <Icon
+              size={28}
+              strokeWidth={1.75}
+              className={`mb-2 shrink-0 ${isSelected ? "text-gray-800" : "text-gray-500"}`}
+              aria-hidden
+            />
             <span
               className={`max-w-full px-1 text-center text-sm font-medium leading-snug sm:text-base ${
                 isSelected ? "text-gray-900" : "text-gray-600"

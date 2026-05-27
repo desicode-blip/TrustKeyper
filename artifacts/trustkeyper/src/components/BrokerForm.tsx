@@ -13,7 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
-import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
+import { AuthStepHeading } from "@/components/auth/AuthStepHeading";
+import {
+  authMobileScrollPadClass,
+  authOtpDigitEmptyClass,
+  authOtpDigitFilledClass,
+  authPrimaryButtonClass,
+} from "@/components/auth/authStyles";
 
 const Box = ("di" + "v") as "div";
 
@@ -137,11 +143,8 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   );
 
   return (
-    <Box className={`flex flex-col h-full max-w-xl ${authMobileScrollPadClass}`}>
-      <Box className="mb-8 border-b border-gray-200 pb-4">
-        <h1 className="text-3xl font-semibold text-gray-900 mb-2">Tell us about you</h1>
-        <p className="text-gray-500">Help us set up your broker profile</p>
-      </Box>
+    <Box className={`flex flex-col h-full max-w-md w-full mx-auto lg:max-w-xl lg:mx-0 ${authMobileScrollPadClass}`}>
+      <AuthStepHeading title="Tell us about you" subtitle="Help us set up your broker profile" />
 
       <Box className="space-y-6">
         <Box className="space-y-2">
@@ -226,12 +229,8 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
                   maxLength={1}
                   value={d}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
-                  className={`w-14 h-14 text-center text-xl font-medium rounded-lg border outline-none transition-colors
-                    ${
-                      d
-                        ? "bg-[#E8F5EE] border-accent border-b-4"
-                        : "bg-white border-gray-300 focus:border-primary"
-                    }`}
+                  className={`w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-medium rounded-lg outline-none transition-colors
+                    ${d ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
                 />
               ))}
             </Box>

@@ -1,7 +1,13 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
-import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
+import { AuthStepHeading } from "@/components/auth/AuthStepHeading";
+import {
+  authMobileScrollPadClass,
+  authPrimaryButtonClass,
+  authRoleCardSelectedClass,
+  authRoleCardUnselectedClass,
+} from "@/components/auth/authStyles";
 
 interface OwnerStep1PropertiesProps {
   propertiesCount: string;
@@ -23,12 +29,10 @@ export default function OwnerStep1Properties({
   );
 
   return (
-    <div className={`flex flex-col h-full max-w-2xl ${authMobileScrollPadClass}`}>
-      <div className="mb-8 border-b pb-6">
-        <h1 className="text-3xl font-semibold text-gray-900">How many properties do you own?</h1>
-      </div>
+    <div className={`flex flex-col h-full max-w-md w-full mx-auto lg:max-w-2xl lg:mx-0 ${authMobileScrollPadClass}`}>
+      <AuthStepHeading title="How many properties do you own?" />
 
-      <div className="flex flex-wrap gap-4 mb-10">
+      <div className="flex flex-col gap-3 mb-10 lg:flex-row lg:flex-wrap lg:gap-4">
         {options.map((option) => {
           const isSelected = propertiesCount === option;
           return (
@@ -36,11 +40,9 @@ export default function OwnerStep1Properties({
               key={option}
               type="button"
               onClick={() => setPropertiesCount(option)}
-              className={`flex-1 min-w-[120px] py-4 px-6 text-center rounded-sm transition-all duration-200 border ${
-                isSelected
-                  ? "bg-[#E8F5EE] border-[#22C55E] text-gray-900"
-                  : "bg-white border-gray-300 hover:border-gray-400 text-gray-600"
-              }`}
+              className={`w-full lg:flex-1 lg:min-w-[120px] py-4 px-6 text-center rounded-xl transition-all duration-200 ${
+                isSelected ? authRoleCardSelectedClass : authRoleCardUnselectedClass
+              } ${isSelected ? "text-gray-900" : "text-gray-600"}`}
             >
               {option}
             </button>

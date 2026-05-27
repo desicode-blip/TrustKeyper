@@ -5,4 +5,12 @@ export { AuthSignupActionBlock, AuthSignupStickyFooter } from "./AuthSignupActio
 export { AuthSignupBelowCta } from "./AuthSignupBelowCta";
 export { AuthSignupScreenFooter } from "./AuthSignupScreenFooter";
 export { AuthTextField } from "./AuthTextField";
-export { authMobileScrollPadClass, authPrimaryButtonClass } from "./authStyles";
+export { AuthStepHeading } from "./AuthStepHeading";
+export {
+  authMobileScrollPadClass,
+  authOtpDigitEmptyClass,
+  authOtpDigitFilledClass,
+  authPrimaryButtonClass,
+  authRoleCardSelectedClass,
+  authRoleCardUnselectedClass,
+} from "./authStyles";
