@@ -1,7 +1,14 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  isMockDbEnabled,
+  readMockStore,
+  writeMockStore,
+} from "./mockStore";
 
-const DATA_DIR = path.join(process.cwd(), ".data");
+const DATA_DIR = process.env.VERCEL
+  ? path.join("/tmp", "trustkeyper-data")
+  : path.join(process.cwd(), ".data");
 const FILE_PATH = path.join(DATA_DIR, "user_data.json");
 const BLOB_PATHNAME = "trustkeyper-user-data.json";
 
@@ -100,6 +107,11 @@ export async function getAccountData(
   role: string,
 ): Promise<Record<string, string>> {
   const p = normalizePhone(phone);
+  if (isMockDbEnabled()) {
+    const mock = await readMockStore();
+    return mock[accountId(p, role)] ?? {};
+  }
+
   const db = await loadDbHelpers();
   if (db.getDb && db.getDb()) {
     return db.queryAccountData ? db.queryAccountData(p, role) : {};
@@ -121,6 +133,15 @@ export async function setAccountDataKey(
   value: string,
 ): Promise<void> {
   const p = normalizePhone(phone);
+  if (isMockDbEnabled()) {
+    const mock = await readMockStore();
+    const id = accountId(p, role);
+    if (!mock[id]) mock[id] = {};
+    mock[id][dataKey] = value;
+    await writeMockStore(mock);
+    return;
+  }
+
   const db = await loadDbHelpers();
   if (db.getDb && db.getDb()) {
     if (db.upsertAccountDataKey) await db.upsertAccountDataKey(p, role, dataKey, value);
@@ -146,6 +167,16 @@ export async function setAccountDataBulk(
 
 export async function getRolesForPhone(phone: string): Promise<string[]> {
   const p = normalizePhone(phone);
+  if (isMockDbEnabled()) {
+    const mock = await readMockStore();
+    const roles: string[] = [];
+    for (const [key, data] of Object.entries(mock)) {
+      if (!key.startsWith(`${p}:`)) continue;
+      if (data.profile) roles.push(key.split(":")[1] ?? "");
+    }
+    return roles.filter(Boolean);
+  }
+
   const db = await loadDbHelpers();
   if (db.getDb && db.getDb()) {
     return db.queryRolesWithProfileForPhone ? db.queryRolesWithProfileForPhone(p) : [];
