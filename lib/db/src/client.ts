@@ -54,7 +54,10 @@ async function initEmbeddedDb(): Promise<void> {
 function initPostgresPool(): void {
   const connectionString = resolvePostgresUrl();
   if (!connectionString || dbInstance) return;
-  pool = new Pool({ connectionString });
+  pool = new Pool({
+    connectionString,
+    ssl: { rejectUnauthorized: false },
+  });
   dbInstance = drizzlePg(pool, { schema });
 }
 
