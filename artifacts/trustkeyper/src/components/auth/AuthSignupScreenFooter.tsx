@@ -32,7 +32,7 @@ export function AuthSignupScreenFooter({
     <>
       <div className="mt-3 w-full max-w-md shrink-0 sm:hidden">{below}</div>
 
-      <div className="mt-10 hidden sm:block max-w-md w-full">
+      <div className="mt-5 hidden sm:block max-w-md w-full">
         {cta}
         {below}
       </div>

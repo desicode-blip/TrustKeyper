@@ -32,7 +32,7 @@ export default function OwnerStep1Properties({
     <div className={`flex flex-col h-full max-w-md w-full mx-auto lg:max-w-2xl lg:mx-0 ${authMobileScrollPadClass}`}>
       <AuthStepHeading title="How many properties do you own?" />
 
-      <div className="flex flex-col gap-3 mb-10 lg:flex-row lg:flex-wrap lg:gap-4">
+      <div className="flex flex-col gap-3 mb-6 lg:flex-row lg:flex-wrap lg:gap-4">
         {options.map((option) => {
           const isSelected = propertiesCount === option;
           return (
@@ -50,7 +50,7 @@ export default function OwnerStep1Properties({
         })}
       </div>
 
-      <p className="text-sm text-blue-400 mb-10">This will help us personalize your journey</p>
+      <p className="text-gray-500 text-sm text-center lg:text-left mb-3 mt-1">This will help us personalize your journey</p>
 
       <AuthSignupScreenFooter cta={cta} showTerms={false} persistRole="owner" />
     </div>
