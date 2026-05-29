@@ -7,6 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@supabase/auth-js": "^2.106.2",
     "@supabase/supabase-js": "^2.106.2"
   },
   "devDependencies": {

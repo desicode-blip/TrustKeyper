@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { AuthClient, type GoTrueClient } from "@supabase/auth-js";
 import { getSupabaseAnonKey, getSupabaseUrl, isSyncAuthRequired } from "./env.js";
 import { normalizePhoneDigits } from "./phone.js";
 
@@ -11,9 +11,9 @@ export type SyncAuthResult =
   | { ok: true; user: VerifiedSyncUser }
   | { ok: false; status: 401 | 403; error: string };
 
-let verifierClient: SupabaseClient | null = null;
+let verifierClient: GoTrueClient | null = null;
 
-function getVerifierClient(): SupabaseClient {
+function getVerifierClient(): GoTrueClient {
   if (verifierClient) return verifierClient;
 
   const url = getSupabaseUrl();
@@ -21,8 +21,15 @@ function getVerifierClient(): SupabaseClient {
   if (!url || !key) {
     throw new Error("Supabase env missing (SUPABASE_URL, SUPABASE_ANON_KEY)");
   }
-  verifierClient = createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
+
+  verifierClient = new AuthClient({
+    url: `${url.replace(/\/$/, "")}/auth/v1`,
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+    },
+    persistSession: false,
+    autoRefreshToken: false,
   });
   return verifierClient;
 }
@@ -43,7 +50,7 @@ export async function verifySyncBearerToken(
   const {
     data: { user },
     error,
-  } = await getVerifierClient().auth.getUser(token);
+  } = await getVerifierClient().getUser(token);
 
   if (error || !user?.phone) return null;
 

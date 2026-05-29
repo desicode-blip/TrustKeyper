@@ -674,6 +674,9 @@ importers:
 
   lib/auth-server:
     dependencies:
+      '@supabase/auth-js':
+        specifier: ^2.106.2
+        version: 2.106.2
       '@supabase/supabase-js':
         specifier: ^2.106.2
         version: 2.106.2
