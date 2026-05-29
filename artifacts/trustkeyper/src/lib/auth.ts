@@ -2,6 +2,7 @@ import {
   clearActiveSessionBackup,
   persistActiveSessionBackup,
 } from "./initAppStorage";
+import { supabase } from "./supabaseClient";
 import {
   cloudAccountExists,
   fetchCloudRolesForPhone,
@@ -268,4 +269,5 @@ export function logout(): void {
   sessionStorage.removeItem("tk_active_role");
   sessionStorage.removeItem("tk_pending_role");
   clearActiveSessionBackup();
+  void supabase.auth.signOut();
 }

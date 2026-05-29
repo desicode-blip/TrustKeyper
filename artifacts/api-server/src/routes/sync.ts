@@ -7,6 +7,7 @@ import {
   setAccountDataBulk,
   setAccountDataKey,
 } from "../lib/accountStore";
+import { requireSyncAccountAuth } from "../middlewares/syncAuth";
 
 const router: IRouter = Router();
 
@@ -39,7 +40,7 @@ router.get("/sync/accounts/:phone/:role/exists", async (req, res) => {
   }
 });
 
-router.get("/sync/accounts/:phone/:role", async (req, res) => {
+router.get("/sync/accounts/:phone/:role", requireSyncAccountAuth, async (req, res) => {
   try {
     const phone = normalizePhone(String(req.params.phone ?? ""));
     const role = String(req.params.role ?? "");
@@ -58,7 +59,7 @@ router.get("/sync/accounts/:phone/:role", async (req, res) => {
   }
 });
 
-router.put("/sync/accounts/:phone/:role/:dataKey", async (req, res) => {
+router.put("/sync/accounts/:phone/:role/:dataKey", requireSyncAccountAuth, async (req, res) => {
   try {
     const phone = normalizePhone(String(req.params.phone ?? ""));
     const role = String(req.params.role ?? "");
@@ -75,7 +76,7 @@ router.put("/sync/accounts/:phone/:role/:dataKey", async (req, res) => {
   }
 });
 
-router.put("/sync/accounts/:phone/:role", async (req, res) => {
+router.put("/sync/accounts/:phone/:role", requireSyncAccountAuth, async (req, res) => {
   try {
     const phone = normalizePhone(String(req.params.phone ?? ""));
     const role = String(req.params.role ?? "");

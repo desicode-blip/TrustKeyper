@@ -1,0 +1,15 @@
+{
+  "name": "@workspace/auth-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.106.2"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
+}

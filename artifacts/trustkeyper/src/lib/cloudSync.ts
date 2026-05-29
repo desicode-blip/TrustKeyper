@@ -6,6 +6,7 @@ import {
   storageKey,
   writeLocalForAccount,
 } from "./storageKeys";
+import { syncAuthHeaders } from "./syncSession";
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
@@ -43,9 +44,9 @@ export async function cloudAccountExists(phone: string, role: Role): Promise<boo
 
 export async function pullAccountFromCloud(phone: string, role: Role): Promise<boolean> {
   try {
-    const res = await fetch(accountUrl(phone, role), {
-      headers: { Accept: "application/json" },
-    });
+    const headers = await syncAuthHeaders();
+    if (!headers) return false;
+    const res = await fetch(accountUrl(phone, role), { headers });
     if (res.status === 404) return false;
     if (!res.ok) return false;
     const json = (await res.json()) as { data?: Record<string, string> };
@@ -90,9 +91,11 @@ export async function pushAccountKeyToCloud(
   value: string,
 ): Promise<boolean> {
   try {
+    const headers = await syncAuthHeaders("application/json");
+    if (!headers) return false;
     const res = await fetch(accountUrl(phone, role, `/${encodeURIComponent(dataKey)}`), {
       method: "PUT",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers,
       body: JSON.stringify({ value }),
     });
     return res.ok;
@@ -110,9 +113,11 @@ export async function pushLocalKeysToCloud(phone: string, role: Role): Promise<b
   }
   if (Object.keys(entries).length === 0) return true;
   try {
+    const headers = await syncAuthHeaders("application/json");
+    if (!headers) return false;
     const res = await fetch(accountUrl(phone, role), {
       method: "PUT",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers,
       body: JSON.stringify({ entries }),
     });
     return res.ok;

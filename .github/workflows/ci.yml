@@ -38,6 +38,6 @@ jobs:
 
       - name: Assert build artifacts exist
         run: |
-          test -f artifacts/trustkeyper/dist/public/index.html || (echo "SPA index.html missing" && exit 1)
+          test -f artifacts/trustkeyper/dist/index.html || (echo "SPA index.html missing" && exit 1)
           test -f artifacts/api-server/dist/index.mjs          || (echo "API server bundle missing" && exit 1)
           echo "Build artifacts verified."
