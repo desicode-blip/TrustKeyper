@@ -51,16 +51,22 @@ export default function OwnerProperties() {
             Add Property <Plus size={18} />
           </Button>
         </div>
-        <div className="flex items-center gap-3 mb-8">
+        <div
+          className="flex items-stretch gap-1 mb-8 w-full max-w-full rounded-lg border border-gray-200 bg-white p-1"
+          role="tablist"
+        >
           {TABS.map((t) => {
             const count = counts[t.id as keyof typeof counts];
             const isActive = activeTab === t.id;
             return (
               <button
                 key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
                 onClick={() => setActiveTab(t.id)}
-                className={`h-9 px-4 rounded-md text-sm font-medium transition-colors border ${
-                  isActive ? "bg-green-50 text-green-700 border-green-200" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                className={`min-h-9 flex-1 min-w-0 rounded-md px-1 sm:px-2 py-2 text-xs sm:text-sm font-medium text-center leading-tight transition-colors ${
+                  isActive ? "bg-green-50 text-green-700" : "text-gray-600 hover:bg-gray-50"
                 }`}
               >
                 {t.label} ({count})
