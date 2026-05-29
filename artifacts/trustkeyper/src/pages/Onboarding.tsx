@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { setSessionItem } from "@/lib/storageKeys";
+import { supabase } from "@/lib/supabaseClient";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
 import Step1Role from "@/components/Step1Role";
 import BrokerForm from "@/components/BrokerForm";
@@ -41,6 +42,8 @@ export default function Onboarding() {
   const [isManagedPopupOpen, setIsManagedPopupOpen] = useState(false);
   const [, setLocation] = useLocation();
 
+  const ownerPhoneDigits = ownerDetails.phone.replace(/\D/g, "").slice(0, 10);
+
   useEffect(() => {
     resetSessionForAuthEntry();
     clearInvalidAuthPendingRole();
@@ -54,6 +57,29 @@ export default function Onboarding() {
       setStep(1);
     }
   }, [role]);
+
+  useEffect(() => {
+    if (step !== 4 || role !== "owner" || ownerPhoneDigits.length !== 10) return;
+
+    let cancelled = false;
+    void (async () => {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: "+91" + ownerPhoneDigits,
+      });
+      if (cancelled) return;
+      if (error) {
+        toast({
+          title: "Could not send OTP",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [step, role, ownerPhoneDigits]);
 
   const goNext = () => {
     const maxSteps = role === "owner" ? 6 : role === "broker" ? 2 : 1;
@@ -114,11 +140,11 @@ export default function Onboarding() {
           )}
           {step === 4 && role === "owner" && (
             <OwnerStep4OTP
+              phone={ownerPhoneDigits}
               details={ownerDetails}
               onNext={async () => {
-                const phoneDigits = ownerDetails.phone.replace(/\D/g, "").slice(0, 10);
                 const r = readAuthPendingRole() ?? ("owner" as Role);
-                if (await profileExistsAsync(phoneDigits, r)) {
+                if (await profileExistsAsync(ownerPhoneDigits, r)) {
                   toast({
                     title: "An account already exists for this number.",
                     variant: "destructive",
@@ -126,9 +152,9 @@ export default function Onboarding() {
                   return;
                 }
                 try {
-                  await signUpSuccess(phoneDigits, r, {
+                  await signUpSuccess(ownerPhoneDigits, r, {
                     name: ownerDetails.name,
-                    phone: phoneDigits,
+                    phone: ownerPhoneDigits,
                     email: "",
                     firm: "",
                     bankHolderName: "",

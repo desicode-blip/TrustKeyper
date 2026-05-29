@@ -25,6 +25,7 @@ import {
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
+import { supabase } from "@/lib/supabaseClient";
 
 type Phase = "phone" | "otp";
 
@@ -100,6 +101,18 @@ export default function Login() {
         });
         return;
       }
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        phone: "+91" + phoneDigits,
+        token: otp.join(""),
+        type: "sms",
+      });
+      if (verifyError) {
+        toast({
+          title: "Invalid OTP. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
       const ok = await loginSuccess(phoneDigits, loginRole);
       if (ok) {
         toast({ title: "Signed in", description: "Welcome back to TrustKeyper." });
@@ -125,10 +138,23 @@ export default function Login() {
       size="lg"
       disabled={!accountExistsForLogin}
       onClick={() => {
-        if (!accountExistsForLogin) return;
-        setCountdown(10);
-        setOtp(createEmptyOtp());
-        setPhase("otp");
+        void (async () => {
+          if (!accountExistsForLogin) return;
+          const { error } = await supabase.auth.signInWithOtp({
+            phone: "+91" + phoneDigits,
+          });
+          if (error) {
+            toast({
+              title: "Could not send OTP",
+              description: error.message,
+              variant: "destructive",
+            });
+            return;
+          }
+          setCountdown(10);
+          setOtp(createEmptyOtp());
+          setPhase("otp");
+        })();
       }}
       className={authPrimaryButtonClass}
     >

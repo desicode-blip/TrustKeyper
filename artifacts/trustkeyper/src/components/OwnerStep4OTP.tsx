@@ -10,16 +10,20 @@ import {
   authOtpDigitFilledClass,
   authPrimaryButtonClass,
 } from "@/components/auth/authStyles";
+import { toast } from "@/hooks/use-toast";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
+import { supabase } from "@/lib/supabaseClient";
 
 interface OwnerStep4OTPProps {
+  phone: string;
   details: { name: string; phone: string };
   onNext: () => void;
 }
 
-export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
+export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPProps) {
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(10);
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -38,10 +42,37 @@ export default function OwnerStep4OTP({ details, onNext }: OwnerStep4OTPProps) {
   };
 
   const isComplete = otp.every((digit) => digit !== "");
-  const displayPhone = details.phone.replace(/\D/g, "").slice(0, 10);
+  const displayPhone = phone.replace(/\D/g, "").slice(0, 10);
+
+  const handleContinue = async () => {
+    if (!isComplete || verifying) return;
+    setVerifying(true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        phone: "+91" + displayPhone,
+        token: otp.join(""),
+        type: "sms",
+      });
+      if (error) {
+        toast({
+          title: "Invalid OTP. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      onNext();
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const cta = (
-    <Button size="lg" onClick={onNext} disabled={!isComplete} className={authPrimaryButtonClass}>
+    <Button
+      size="lg"
+      onClick={() => void handleContinue()}
+      disabled={!isComplete || verifying}
+      className={authPrimaryButtonClass}
+    >
       Continue &rarr;
     </Button>
   );
