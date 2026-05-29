@@ -88,6 +88,7 @@ export async function signUpSuccess(
   phone: string,
   role: Role,
   profileData: object,
+  accessToken?: string | null,
 ): Promise<void> {
   const p = normalizePhoneDigits(phone);
   const key = storageKey(p, role, "profile");
@@ -103,19 +104,37 @@ export async function signUpSuccess(
   if (merged.name) setSessionItem("name", merged.name);
   if (merged.firm) setSessionItem("firm", merged.firm);
   if (merged.phone) setSessionItem("phone", merged.phone);
-  let profileOk = await pushAccountKeyToCloud(p, role, "profile", profileJson);
+  let profileOk = await pushAccountKeyToCloud(
+    p,
+    role,
+    "profile",
+    profileJson,
+    accessToken ?? undefined,
+  );
   if (!profileOk) {
     await new Promise((r) => setTimeout(r, 500));
-    profileOk = await pushAccountKeyToCloud(p, role, "profile", profileJson);
+    profileOk = await pushAccountKeyToCloud(
+      p,
+      role,
+      "profile",
+      profileJson,
+      accessToken ?? undefined,
+    );
   }
   if (!profileOk) {
     throw new Error(
       "Could not save your account to the cloud. Check your connection and try again.",
     );
   }
-  const synced = await pushLocalKeysToCloud(p, role);
+  const synced = await pushLocalKeysToCloud(p, role, accessToken ?? undefined);
   if (!synced) {
-    await pushAccountKeyToCloud(p, role, "profile", profileJson);
+    await pushAccountKeyToCloud(
+      p,
+      role,
+      "profile",
+      profileJson,
+      accessToken ?? undefined,
+    );
   }
   const verified = await cloudAccountExists(p, role);
   if (!verified) {

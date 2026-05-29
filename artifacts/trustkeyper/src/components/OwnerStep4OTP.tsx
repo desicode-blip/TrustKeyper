@@ -17,7 +17,7 @@ import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 interface OwnerStep4OTPProps {
   phone: string;
   details: { name: string; phone: string };
-  onNext: () => void;
+  onNext: (accessToken: string) => void;
 }
 
 export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPProps) {
@@ -62,7 +62,10 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
     if (!isComplete || verifying) return;
     setVerifying(true);
     try {
-      const verifyError = await verifyPhoneOtp(displayPhone, otp.join(""));
+      const { error: verifyError, accessToken } = await verifyPhoneOtp(
+        displayPhone,
+        otp.join(""),
+      );
       if (verifyError) {
         toast({
           title: "Invalid OTP. Please try again.",
@@ -70,7 +73,15 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
         });
         return;
       }
-      onNext();
+      if (!accessToken) {
+        toast({
+          title: "Could not sign you in",
+          description: "Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      onNext(accessToken);
     } finally {
       setVerifying(false);
     }

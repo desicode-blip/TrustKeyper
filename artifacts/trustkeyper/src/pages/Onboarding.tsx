@@ -140,7 +140,7 @@ export default function Onboarding() {
             <OwnerStep4OTP
               phone={ownerPhoneDigits}
               details={ownerDetails}
-              onNext={async () => {
+              onNext={async (accessToken) => {
                 const r = readAuthPendingRole() ?? ("owner" as Role);
                 if (await profileExistsAsync(ownerPhoneDigits, r)) {
                   toast({
@@ -150,7 +150,10 @@ export default function Onboarding() {
                   return;
                 }
                 try {
-                  await signUpSuccess(ownerPhoneDigits, r, {
+                  await signUpSuccess(
+                    ownerPhoneDigits,
+                    r,
+                    {
                     name: ownerDetails.name,
                     phone: ownerPhoneDigits,
                     email: "",
@@ -161,7 +164,9 @@ export default function Onboarding() {
                     bankIFSC: "",
                     upiId: "",
                     upiQrFileName: "",
-                  });
+                  },
+                    accessToken,
+                  );
                 } catch (err) {
                   toast({
                     title: "Could not create account",

@@ -89,9 +89,10 @@ export async function pushAccountKeyToCloud(
   role: Role,
   dataKey: string,
   value: string,
+  accessToken?: string,
 ): Promise<boolean> {
   try {
-    const headers = await syncAuthHeaders("application/json");
+    const headers = await syncAuthHeaders("application/json", accessToken);
     if (!headers) return false;
     const res = await fetch(accountUrl(phone, role, `/${encodeURIComponent(dataKey)}`), {
       method: "PUT",
@@ -104,7 +105,11 @@ export async function pushAccountKeyToCloud(
   }
 }
 
-export async function pushLocalKeysToCloud(phone: string, role: Role): Promise<boolean> {
+export async function pushLocalKeysToCloud(
+  phone: string,
+  role: Role,
+  accessToken?: string,
+): Promise<boolean> {
   const p = normalizePhoneDigits(phone);
   const entries: Record<string, string> = {};
   for (const key of CLOUD_SYNC_KEYS) {
@@ -113,7 +118,7 @@ export async function pushLocalKeysToCloud(phone: string, role: Role): Promise<b
   }
   if (Object.keys(entries).length === 0) return true;
   try {
-    const headers = await syncAuthHeaders("application/json");
+    const headers = await syncAuthHeaders("application/json", accessToken);
     if (!headers) return false;
     const res = await fetch(accountUrl(phone, role), {
       method: "PUT",
