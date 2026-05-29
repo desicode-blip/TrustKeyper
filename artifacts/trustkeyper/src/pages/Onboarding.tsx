@@ -13,7 +13,7 @@ import {
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { setSessionItem } from "@/lib/storageKeys";
-import { supabase } from "@/lib/supabaseClient";
+import { sendPhoneOtp } from "@/lib/phoneOtp";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
 import Step1Role from "@/components/Step1Role";
 import BrokerForm from "@/components/BrokerForm";
@@ -63,14 +63,12 @@ export default function Onboarding() {
 
     let cancelled = false;
     void (async () => {
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: "+91" + ownerPhoneDigits,
-      });
+      const err = await sendPhoneOtp(ownerPhoneDigits);
       if (cancelled) return;
-      if (error) {
+      if (err) {
         toast({
           title: "Could not send OTP",
-          description: error.message,
+          description: err,
           variant: "destructive",
         });
       }

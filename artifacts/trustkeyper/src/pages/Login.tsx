@@ -25,7 +25,7 @@ import {
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
-import { supabase } from "@/lib/supabaseClient";
+import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 
 type Phase = "phone" | "otp";
 
@@ -101,11 +101,7 @@ export default function Login() {
         });
         return;
       }
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        phone: "+91" + phoneDigits,
-        token: otp.join(""),
-        type: "sms",
-      });
+      const verifyError = await verifyPhoneOtp(phoneDigits, otp.join(""));
       if (verifyError) {
         toast({
           title: "Invalid OTP. Please try again.",
@@ -133,6 +129,20 @@ export default function Login() {
   const showNoAccountHint = phoneDigits.length === 10 && accountKnown === false;
   const isOtpComplete = otp.every((d) => d !== "");
 
+  const resendLoginOtp = async () => {
+    const err = await sendPhoneOtp(phoneDigits);
+    if (err) {
+      toast({
+        title: "Could not send OTP",
+        description: err,
+        variant: "destructive",
+      });
+      return;
+    }
+    setCountdown(10);
+    setOtp(createEmptyOtp());
+  };
+
   const requestOtpCta = (
     <Button
       size="lg"
@@ -140,13 +150,11 @@ export default function Login() {
       onClick={() => {
         void (async () => {
           if (!accountExistsForLogin) return;
-          const { error } = await supabase.auth.signInWithOtp({
-            phone: "+91" + phoneDigits,
-          });
-          if (error) {
+          const err = await sendPhoneOtp(phoneDigits);
+          if (err) {
             toast({
               title: "Could not send OTP",
-              description: error.message,
+              description: err,
               variant: "destructive",
             });
             return;
@@ -258,7 +266,7 @@ export default function Login() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => setCountdown(10)}
+                  onClick={() => void resendLoginOtp()}
                   className="font-medium text-[#2563EB] hover:underline"
                 >
                   Resend otp

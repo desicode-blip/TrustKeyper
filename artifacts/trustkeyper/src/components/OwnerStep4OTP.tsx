@@ -12,7 +12,7 @@ import {
 } from "@/components/auth/authStyles";
 import { toast } from "@/hooks/use-toast";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
-import { supabase } from "@/lib/supabaseClient";
+import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 
 interface OwnerStep4OTPProps {
   phone: string;
@@ -44,16 +44,26 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
   const isComplete = otp.every((digit) => digit !== "");
   const displayPhone = phone.replace(/\D/g, "").slice(0, 10);
 
+  const resendOwnerOtp = async () => {
+    const err = await sendPhoneOtp(displayPhone);
+    if (err) {
+      toast({
+        title: "Could not send OTP",
+        description: err,
+        variant: "destructive",
+      });
+      return;
+    }
+    setCountdown(10);
+    setOtp(createEmptyOtp());
+  };
+
   const handleContinue = async () => {
     if (!isComplete || verifying) return;
     setVerifying(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        phone: "+91" + displayPhone,
-        token: otp.join(""),
-        type: "sms",
-      });
-      if (error) {
+      const verifyError = await verifyPhoneOtp(displayPhone, otp.join(""));
+      if (verifyError) {
         toast({
           title: "Invalid OTP. Please try again.",
           variant: "destructive",
@@ -111,7 +121,11 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
           {countdown > 0 ? (
             <span className="font-medium text-primary">Resend otp in {countdown}s</span>
           ) : (
-            <button type="button" onClick={() => setCountdown(10)} className="font-medium text-primary hover:underline">
+            <button
+              type="button"
+              onClick={() => void resendOwnerOtp()}
+              className="font-medium text-primary hover:underline"
+            >
               Resend otp
             </button>
           )}

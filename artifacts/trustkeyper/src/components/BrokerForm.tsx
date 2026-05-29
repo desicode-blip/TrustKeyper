@@ -9,6 +9,7 @@ import {
   type Role,
 } from "@/lib/auth";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
+import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,8 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   const [otpStage, setOtpStage] = useState(false);
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(12);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [, setLocation] = useLocation();
 
   const phoneDigits = phone.replace(/\D/g, "").slice(0, 10);
@@ -64,17 +67,59 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
     return () => clearTimeout(timer);
   }, [countdown, otpStage]);
 
-  const handleSendOtp = () => {
-    if (!formValid) return;
-    if (duplicateSignupPhone) return;
-    setOtpStage(true);
+  const handleSendOtp = async () => {
+    if (!formValid || duplicateSignupPhone || sendingOtp) return;
+    setSendingOtp(true);
+    try {
+      const err = await sendPhoneOtp(phoneDigits);
+      if (err) {
+        toast({
+          title: "Could not send OTP",
+          description: err,
+          variant: "destructive",
+        });
+        return;
+      }
+      setOtp(createEmptyOtp());
+      setOtpStage(true);
+      setCountdown(12);
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const resendBrokerOtp = async () => {
+    const err = await sendPhoneOtp(phoneDigits);
+    if (err) {
+      toast({
+        title: "Could not send OTP",
+        description: err,
+        variant: "destructive",
+      });
+      return;
+    }
     setCountdown(12);
+    setOtp(createEmptyOtp());
   };
 
   const isOtpComplete = otp.every((d) => d !== "");
 
   const handleContinue = async () => {
-    if (!isOtpComplete) return;
+    if (!isOtpComplete || verifying) return;
+    setVerifying(true);
+    try {
+      const verifyError = await verifyPhoneOtp(phoneDigits, otp.join(""));
+      if (verifyError) {
+        toast({
+          title: "Invalid OTP. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+    } finally {
+      setVerifying(false);
+    }
+
     const pending = sessionStorage.getItem("tk_pending_role") || "broker";
     const role: Role = isAuthEntryRole(pending) ? pending : "broker";
     if (await profileExistsAsync(phoneDigits, role)) {
@@ -123,8 +168,8 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   const sendOtpCta = (
     <Button
       size="lg"
-      onClick={handleSendOtp}
-      disabled={!formValid}
+      onClick={() => void handleSendOtp()}
+      disabled={!formValid || sendingOtp}
       className={`w-full ${authPrimaryButtonClass}`}
     >
       Send OTP & Register
@@ -135,7 +180,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
     <Button
       size="lg"
       onClick={() => void handleContinue()}
-      disabled={!isOtpComplete}
+      disabled={!isOtpComplete || verifying}
       className={`w-full ${authPrimaryButtonClass}`}
     >
       Continue &rarr;
@@ -242,7 +287,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
               ) : (
                 <button
                   type="button"
-                  onClick={() => setCountdown(10)}
+                  onClick={() => void resendBrokerOtp()}
                   className="font-medium text-[#2563EB] hover:underline"
                 >
                   Resend otp
