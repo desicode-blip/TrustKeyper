@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getRolesForPhone, normalizePhone } from "@workspace/sync-store";
-import { json } from "../../../_lib/http";
+import { json } from "../../../_lib/http.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== "GET") {

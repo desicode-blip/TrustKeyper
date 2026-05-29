@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
-import { getDb } from "./client";
-import { userDataTable } from "./schema/userData";
+import { getDb } from "./client.js";
+import { userDataTable } from "./schema/userData.js";
 
 export async function queryAccountData(
   phone: string,

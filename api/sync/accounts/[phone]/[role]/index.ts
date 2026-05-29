@@ -4,7 +4,7 @@ import {
   normalizePhone,
   setAccountDataBulk,
 } from "@workspace/sync-store";
-import { json, readJsonBody } from "../../../../_lib/http";
+import { json, readJsonBody } from "../../../../_lib/http.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const phone = normalizePhone(String(req.query.phone ?? ""));
