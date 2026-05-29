@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm --filter @workspace/trustkeyper run build && cp -r artifacts/trustkeyper/dist/public dist/public",
-  "outputDirectory": "dist/public",
+  "buildCommand": "pnpm --filter @workspace/trustkeyper run build",
+  "outputDirectory": "artifacts/trustkeyper/dist/public",
   "installCommand": "pnpm install",
   "rewrites": [
     {
