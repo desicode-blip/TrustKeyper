@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { assertSyncAccountAuth } from "@workspace/auth-server";
+import { assertSyncAccountAuth } from "./syncAuth.js";
 import { json, readJsonBody } from "./http.js";
 import * as vercelDb from "./vercelSyncDb.js";
 
@@ -33,6 +33,29 @@ function requestAuthorization(req: VercelRequest): string | undefined {
   const header = req.headers.authorization ?? req.headers.Authorization;
   if (Array.isArray(header)) return header[0];
   return header;
+}
+
+/** TEMP: remove after diagnosing signup cloud-save failures */
+function logSyncAuthDebug(
+  route: string,
+  req: VercelRequest,
+  phone: string,
+  role: string,
+  authHeader: string | undefined,
+  authResult: Awaited<ReturnType<typeof assertSyncAccountAuth>>,
+  responseStatus: number,
+  extra?: Record<string, unknown>,
+): void {
+  console.log("[sync-auth-debug]", {
+    route,
+    method: req.method,
+    phone,
+    role,
+    authorization: authHeader ?? null,
+    authResult,
+    responseStatus,
+    ...extra,
+  });
 }
 
 /**
@@ -89,8 +112,10 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
 
   if (segments.length === 3) {
     if (req.method === "GET") {
-      const auth = await assertSyncAccountAuth(requestAuthorization(req), phone);
+      const authHeader = requestAuthorization(req);
+      const auth = await assertSyncAccountAuth(authHeader, phone);
       if (!auth.ok) {
+        logSyncAuthDebug("GET account", req, phone, role, authHeader, auth, auth.status);
         json(res, auth.status, { error: auth.error });
         return;
       }
@@ -108,8 +133,10 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
     }
 
     if (req.method === "PUT") {
-      const auth = await assertSyncAccountAuth(requestAuthorization(req), phone);
+      const authHeader = requestAuthorization(req);
+      const auth = await assertSyncAccountAuth(authHeader, phone);
       if (!auth.ok) {
+        logSyncAuthDebug("PUT account bulk", req, phone, role, authHeader, auth, auth.status);
         json(res, auth.status, { error: auth.error });
         return;
       }
@@ -121,6 +148,9 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
           return;
         }
         await store.setAccountDataBulk(phone, role, entries);
+        logSyncAuthDebug("PUT account bulk", req, phone, role, authHeader, auth, 200, {
+          entryKeys: Object.keys(entries),
+        });
         json(res, 200, { ok: true });
       } catch (err) {
         json(res, 500, { error: "Failed to save data", detail: String(err) });
@@ -137,24 +167,34 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
       json(res, 405, { error: "Method not allowed" });
       return;
     }
-    const auth = await assertSyncAccountAuth(requestAuthorization(req), phone);
+    const authHeader = requestAuthorization(req);
+    const auth = await assertSyncAccountAuth(authHeader, phone);
+    const dataKey = segments[3] ?? "";
     if (!auth.ok) {
+      logSyncAuthDebug("PUT account key", req, phone, role, authHeader, auth, auth.status, {
+        dataKey,
+      });
       json(res, auth.status, { error: auth.error });
       return;
     }
     try {
-      const dataKey = segments[3] ?? "";
       const body = readJsonBody(req) as { value?: string } | null;
       const value = typeof body?.value === "string" ? body.value : null;
 
       if (!dataKey || value === null) {
+        logSyncAuthDebug("PUT account key", req, phone, role, authHeader, auth, 400, { dataKey });
         json(res, 400, { error: "Invalid request" });
         return;
       }
 
       await store.setAccountDataKey(phone, role, dataKey, value);
+      logSyncAuthDebug("PUT account key", req, phone, role, authHeader, auth, 200, { dataKey });
       json(res, 200, { ok: true });
     } catch (err) {
+      logSyncAuthDebug("PUT account key", req, phone, role, authHeader, auth, 500, {
+        dataKey,
+        detail: String(err),
+      });
       json(res, 500, { error: "Failed to save data", detail: String(err) });
     }
     return;

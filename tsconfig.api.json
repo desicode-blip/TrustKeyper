@@ -7,7 +7,6 @@
   },
   "include": ["api/**/*.ts"],
   "references": [
-    { "path": "./lib/auth-server" },
     { "path": "./lib/db" },
     { "path": "./lib/sync-store" }
   ]
