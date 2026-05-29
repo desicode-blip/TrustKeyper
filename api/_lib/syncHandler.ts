@@ -1,13 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import {
-  accountHasProfile,
-  getAccountData,
-  getRolesForPhone,
-  normalizePhone,
-  setAccountDataBulk,
-  setAccountDataKey,
-} from "@workspace/sync-store";
 import { json, readJsonBody } from "./http.js";
+import * as vercelDb from "./vercelSyncDb.js";
 
 export function syncPathSegments(req: VercelRequest): string[] {
   const raw = req.query.syncPath ?? req.query.path;
@@ -16,16 +9,30 @@ export function syncPathSegments(req: VercelRequest): string[] {
   return [];
 }
 
+type SyncStore = {
+  normalizePhone: (phone: string) => string;
+  accountHasProfile: (phone: string, role: string) => Promise<boolean>;
+  getAccountData: (phone: string, role: string) => Promise<Record<string, string>>;
+  getRolesForPhone: (phone: string) => Promise<string[]>;
+  setAccountDataBulk: (phone: string, role: string, entries: Record<string, string>) => Promise<void>;
+  setAccountDataKey: (
+    phone: string,
+    role: string,
+    dataKey: string,
+    value: string,
+  ) => Promise<void>;
+};
+
+async function loadSyncStore(): Promise<SyncStore> {
+  if (vercelDb.usePostgres()) return vercelDb;
+  return import("@workspace/sync-store");
+}
+
 /**
  * Handles sync routes after vercel.json rewrites /api/sync/* → /api/sync?syncPath=...
- *
- * - GET  /api/sync/accounts/:phone/roles
- * - GET  /api/sync/accounts/:phone/:role/exists
- * - GET  /api/sync/accounts/:phone/:role
- * - PUT  /api/sync/accounts/:phone/:role
- * - PUT  /api/sync/accounts/:phone/:role/:dataKey
  */
 export async function handleSyncRequest(req: VercelRequest, res: VercelResponse): Promise<void> {
+  const store = await loadSyncStore();
   const segments = syncPathSegments(req);
 
   if (segments[0] !== "accounts") {
@@ -33,7 +40,7 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
     return;
   }
 
-  const phone = normalizePhone(segments[1] ?? "");
+  const phone = store.normalizePhone(segments[1] ?? "");
   if (phone.length !== 10) {
     json(res, 400, { error: "Invalid phone" });
     return;
@@ -45,7 +52,7 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
       return;
     }
     try {
-      const roles = await getRolesForPhone(phone);
+      const roles = await store.getRolesForPhone(phone);
       json(res, 200, { phone, roles });
     } catch (err) {
       json(res, 500, { error: "Failed to list roles", detail: String(err) });
@@ -65,7 +72,7 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
       return;
     }
     try {
-      const exists = await accountHasProfile(phone, role);
+      const exists = await store.accountHasProfile(phone, role);
       json(res, 200, { phone, role, exists });
     } catch (err) {
       json(res, 500, { error: "Failed to check account", detail: String(err) });
@@ -76,7 +83,7 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
   if (segments.length === 3) {
     if (req.method === "GET") {
       try {
-        const data = await getAccountData(phone, role);
+        const data = await store.getAccountData(phone, role);
         if (!data.profile) {
           json(res, 404, { error: "Account not found" });
           return;
@@ -96,7 +103,7 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
           json(res, 400, { error: "Invalid request" });
           return;
         }
-        await setAccountDataBulk(phone, role, entries);
+        await store.setAccountDataBulk(phone, role, entries);
         json(res, 200, { ok: true });
       } catch (err) {
         json(res, 500, { error: "Failed to save data", detail: String(err) });
@@ -123,7 +130,7 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
         return;
       }
 
-      await setAccountDataKey(phone, role, dataKey, value);
+      await store.setAccountDataKey(phone, role, dataKey, value);
       json(res, 200, { ok: true });
     } catch (err) {
       json(res, 500, { error: "Failed to save data", detail: String(err) });

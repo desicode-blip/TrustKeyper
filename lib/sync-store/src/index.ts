@@ -47,6 +47,7 @@ async function loadDbHelpers() {
       queryRolesWithProfileForPhone: dbMod.queryRolesWithProfileForPhone,
       upsertAccountDataKey: dbMod.upsertAccountDataKey,
       getDb: clientMod.getDb,
+      ensureDbReady: clientMod.ensureDbReady,
     };
   } catch {
     dbHelpersCache = {};
@@ -117,7 +118,12 @@ export async function getAccountData(
 
   const db = await loadDbHelpers();
   if (db.getDb && db.getDb()) {
-    return db.queryAccountData ? db.queryAccountData(p, role) : {};
+    try {
+      if (db.ensureDbReady) await db.ensureDbReady();
+      return db.queryAccountData ? await db.queryAccountData(p, role) : {};
+    } catch {
+      /* fall through to file / blob store */
+    }
   }
 
   const store = await readFileStore();
@@ -147,8 +153,13 @@ export async function setAccountDataKey(
 
   const db = await loadDbHelpers();
   if (db.getDb && db.getDb()) {
-    if (db.upsertAccountDataKey) await db.upsertAccountDataKey(p, role, dataKey, value);
-    return;
+    try {
+      if (db.ensureDbReady) await db.ensureDbReady();
+      if (db.upsertAccountDataKey) await db.upsertAccountDataKey(p, role, dataKey, value);
+      return;
+    } catch {
+      /* fall through to file / blob store */
+    }
   }
 
   const store = await readFileStore();
@@ -182,7 +193,12 @@ export async function getRolesForPhone(phone: string): Promise<string[]> {
 
   const db = await loadDbHelpers();
   if (db.getDb && db.getDb()) {
-    return db.queryRolesWithProfileForPhone ? db.queryRolesWithProfileForPhone(p) : [];
+    try {
+      if (db.ensureDbReady) await db.ensureDbReady();
+      return db.queryRolesWithProfileForPhone ? await db.queryRolesWithProfileForPhone(p) : [];
+    } catch {
+      /* fall through */
+    }
   }
 
   const store = await readFileStore();

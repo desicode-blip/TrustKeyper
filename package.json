@@ -28,9 +28,11 @@
     "@vercel/blob": "^0.27.3",
     "@vercel/node": "^5.3.0",
     "@workspace/db": "workspace:*",
-    "@workspace/sync-store": "workspace:*"
+    "@workspace/sync-store": "workspace:*",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
+    "@types/pg": "^8.18.0",
     "@types/node": "catalog:",
     "@tailwindcss/oxide-win32-x64-msvc": "4.2.4",
     "concurrently": "^9.2.1",
