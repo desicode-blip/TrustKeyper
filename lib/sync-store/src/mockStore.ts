@@ -1,4 +1,4 @@
-import { PROTOTYPE_SEED } from "./prototypeSeedData";
+import { PROTOTYPE_SEED } from "./prototypeSeedData.js";
 
 type FileStore = Record<string, Record<string, string>>;
 

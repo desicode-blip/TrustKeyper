@@ -4,7 +4,7 @@ import {
   isMockDbEnabled,
   readMockStore,
   writeMockStore,
-} from "./mockStore";
+} from "./mockStore.js";
 
 const DATA_DIR = process.env.VERCEL
   ? path.join("/tmp", "trustkeyper-data")
@@ -61,7 +61,10 @@ async function readBlobStore(): Promise<FileStore | null> {
     const blobMod = await import("@vercel/blob").catch(() => null);
     if (!blobMod) return {};
     const meta = await blobMod.head(BLOB_PATHNAME, { token });
-    const res = await fetch(meta.url);
+    const res = (await fetch(meta.url)) as {
+      status: number;
+      json(): Promise<unknown>;
+    };
     if (res.status < 200 || res.status >= 300) return {};
     return (await res.json()) as FileStore;
   } catch {
@@ -170,7 +173,7 @@ export async function getRolesForPhone(phone: string): Promise<string[]> {
   if (isMockDbEnabled()) {
     const mock = await readMockStore();
     const roles: string[] = [];
-    for (const [key, data] of Object.entries(mock)) {
+    for (const [key, data] of Object.entries(mock) as [string, Record<string, string>][]) {
       if (!key.startsWith(`${p}:`)) continue;
       if (data.profile) roles.push(key.split(":")[1] ?? "");
     }
@@ -184,7 +187,7 @@ export async function getRolesForPhone(phone: string): Promise<string[]> {
 
   const store = await readFileStore();
   const roles: string[] = [];
-  for (const [key, data] of Object.entries(store)) {
+  for (const [key, data] of Object.entries(store) as [string, Record<string, string>][]) {
     if (!key.startsWith(`${p}:`)) continue;
     if (data.profile) roles.push(key.split(":")[1] ?? "");
   }
