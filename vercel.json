@@ -4,6 +4,10 @@
   "installCommand": "pnpm install",
   "rewrites": [
     {
+      "source": "/api/sync/(.*)",
+      "destination": "/api/sync?syncPath=$1"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

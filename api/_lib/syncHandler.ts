@@ -7,17 +7,17 @@ import {
   setAccountDataBulk,
   setAccountDataKey,
 } from "@workspace/sync-store";
-import { json, readJsonBody } from "../_lib/http.js";
+import { json, readJsonBody } from "./http.js";
 
-function pathSegments(req: VercelRequest): string[] {
-  const raw = req.query.path;
+export function syncPathSegments(req: VercelRequest): string[] {
+  const raw = req.query.syncPath ?? req.query.path;
   if (Array.isArray(raw)) return raw.map(String);
   if (typeof raw === "string" && raw.length > 0) return raw.split("/").filter(Boolean);
   return [];
 }
 
 /**
- * Single handler for all /api/sync/* routes (Vercel-friendly vs deeply nested [phone]/[role] files).
+ * Handles sync routes after vercel.json rewrites /api/sync/* → /api/sync?syncPath=...
  *
  * - GET  /api/sync/accounts/:phone/roles
  * - GET  /api/sync/accounts/:phone/:role/exists
@@ -25,8 +25,8 @@ function pathSegments(req: VercelRequest): string[] {
  * - PUT  /api/sync/accounts/:phone/:role
  * - PUT  /api/sync/accounts/:phone/:role/:dataKey
  */
-export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
-  const segments = pathSegments(req);
+export async function handleSyncRequest(req: VercelRequest, res: VercelResponse): Promise<void> {
+  const segments = syncPathSegments(req);
 
   if (segments[0] !== "accounts") {
     json(res, 404, { error: "Not found" });
@@ -39,7 +39,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  // GET /api/sync/accounts/:phone/roles
   if (segments.length === 3 && segments[2] === "roles") {
     if (req.method !== "GET") {
       json(res, 405, { error: "Method not allowed" });
@@ -60,7 +59,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  // GET /api/sync/accounts/:phone/:role/exists
   if (segments.length === 4 && segments[3] === "exists") {
     if (req.method !== "GET") {
       json(res, 405, { error: "Method not allowed" });
@@ -75,7 +73,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  // GET|PUT /api/sync/accounts/:phone/:role
   if (segments.length === 3) {
     if (req.method === "GET") {
       try {
@@ -111,7 +108,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  // PUT /api/sync/accounts/:phone/:role/:dataKey
   if (segments.length === 4) {
     if (req.method !== "PUT") {
       json(res, 405, { error: "Method not allowed" });
