@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd artifacts/trustkeyper && pnpm run build",
+  "buildCommand": "pnpm --filter @workspace/trustkeyper run build",
   "outputDirectory": "artifacts/trustkeyper/dist",
   "installCommand": "pnpm install",
   "rewrites": [
