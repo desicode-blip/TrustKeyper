@@ -210,7 +210,7 @@ export default function BrokerProperties() {
 
       <FlowSegmentTabs
         value={active}
-        onChange={setActive}
+        onChange={(v) => setActive(v)}
         className="mb-8"
         options={TAB_IDS.map((t) => ({
           value: t.id,

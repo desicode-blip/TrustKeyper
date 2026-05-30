@@ -107,11 +107,21 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   const handleContinue = async () => {
     if (!isOtpComplete || verifying) return;
     setVerifying(true);
+    let accessToken: string | null = null;
     try {
-      const verifyError = await verifyPhoneOtp(phoneDigits, otp.join(""));
-      if (verifyError) {
+      const verifyResult = await verifyPhoneOtp(phoneDigits, otp.join(""));
+      if (verifyResult.error) {
         toast({
           title: "Invalid OTP. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      accessToken = verifyResult.accessToken;
+      if (!accessToken) {
+        toast({
+          title: "Could not sign you in",
+          description: "Please try again.",
           variant: "destructive",
         });
         return;
@@ -131,7 +141,10 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
       return;
     }
     try {
-      await signUpSuccess(phoneDigits, role, {
+      await signUpSuccess(
+        phoneDigits,
+        role,
+        {
         name: fullName,
         firm,
         phone: phoneDigits,
@@ -142,7 +155,9 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
         bankIFSC: "",
         upiId: "",
         upiQrFileName: "",
-      });
+      },
+        accessToken,
+      );
     } catch (err) {
       toast({
         title: "Could not create account",

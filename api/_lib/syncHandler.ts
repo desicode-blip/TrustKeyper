@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { assertSyncAccountAuth } from "./syncAuth.js";
 import { json, readJsonBody } from "./http.js";
 import * as vercelDb from "./vercelSyncDb.js";
 
@@ -26,6 +27,12 @@ type SyncStore = {
 async function loadSyncStore(): Promise<SyncStore> {
   if (vercelDb.usePostgres()) return vercelDb;
   return import("@workspace/sync-store");
+}
+
+function requestAuthorization(req: VercelRequest): string | undefined {
+  const header = req.headers.authorization ?? req.headers.Authorization;
+  if (Array.isArray(header)) return header[0];
+  return header;
 }
 
 /**
@@ -82,6 +89,11 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
 
   if (segments.length === 3) {
     if (req.method === "GET") {
+      const auth = await assertSyncAccountAuth(requestAuthorization(req), phone);
+      if (!auth.ok) {
+        json(res, auth.status, { error: auth.error });
+        return;
+      }
       try {
         const data = await store.getAccountData(phone, role);
         if (!data.profile) {
@@ -96,6 +108,11 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
     }
 
     if (req.method === "PUT") {
+      const auth = await assertSyncAccountAuth(requestAuthorization(req), phone);
+      if (!auth.ok) {
+        json(res, auth.status, { error: auth.error });
+        return;
+      }
       try {
         const body = readJsonBody(req) as { entries?: Record<string, string> } | null;
         const entries = body?.entries;
@@ -118,6 +135,11 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
   if (segments.length === 4) {
     if (req.method !== "PUT") {
       json(res, 405, { error: "Method not allowed" });
+      return;
+    }
+    const auth = await assertSyncAccountAuth(requestAuthorization(req), phone);
+    if (!auth.ok) {
+      json(res, auth.status, { error: auth.error });
       return;
     }
     try {

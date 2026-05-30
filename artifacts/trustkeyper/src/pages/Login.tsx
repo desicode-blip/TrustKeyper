@@ -101,7 +101,7 @@ export default function Login() {
         });
         return;
       }
-      const verifyError = await verifyPhoneOtp(phoneDigits, otp.join(""));
+      const { error: verifyError } = await verifyPhoneOtp(phoneDigits, otp.join(""));
       if (verifyError) {
         toast({
           title: "Invalid OTP. Please try again.",

@@ -10,6 +10,12 @@ CREATE TABLE IF NOT EXISTS "user_data" (
 );
 `;
 
+/** Defense in depth when the table is reachable via Supabase Data API or a limited DB role. */
+export const USER_DATA_RLS_DDL = `
+ALTER TABLE "user_data" ENABLE ROW LEVEL SECURITY;
+`;
+
 export async function ensureUserDataTable(exec: (sql: string) => Promise<unknown>): Promise<void> {
   await exec(USER_DATA_DDL);
+  await exec(USER_DATA_RLS_DDL);
 }

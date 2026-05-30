@@ -8,13 +8,19 @@ export async function sendPhoneOtp(phoneDigits: string): Promise<string | null> 
   return error?.message ?? null;
 }
 
-/** Verifies SMS OTP. Returns error message or null on success. */
-export async function verifyPhoneOtp(phoneDigits: string, token: string): Promise<string | null> {
+/** Verifies SMS OTP. Returns error and access token from the verifyOtp session. */
+export async function verifyPhoneOtp(
+  phoneDigits: string,
+  token: string,
+): Promise<{ error: string | null; accessToken: string | null }> {
   const phone = phoneDigits.replace(/\D/g, "").slice(0, 10);
-  const { error } = await supabase.auth.verifyOtp({
+  const { data, error } = await supabase.auth.verifyOtp({
     phone: "+91" + phone,
     token,
     type: "sms",
   });
-  return error?.message ?? null;
+  return {
+    error: error?.message ?? null,
+    accessToken: data.session?.access_token ?? null,
+  };
 }
