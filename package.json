@@ -34,9 +34,11 @@
     "pg": "^8.20.0"
   },
   "devDependencies": {
-    "@types/pg": "^8.18.0",
-    "@types/node": "catalog:",
+    "@esbuild/darwin-arm64": "^0.28.0",
+    "@rollup/rollup-darwin-arm64": "^4.60.4",
     "@tailwindcss/oxide-win32-x64-msvc": "4.2.4",
+    "@types/node": "catalog:",
+    "@types/pg": "^8.18.0",
     "concurrently": "^9.2.1",
     "cross-env": "^7.0.3",
     "dotenv-cli": "^8.0.0",
