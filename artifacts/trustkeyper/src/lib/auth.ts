@@ -18,9 +18,9 @@ import {
   storageKey,
 } from "./storageKeys";
 
-export type Role = "broker" | "owner" | "tenant" | "manager";
+export type Role = "broker" | "owner" | "tenant" | "manager" | "admin";
 
-export const ALL_ROLES: Role[] = ["broker", "owner", "tenant", "manager"];
+export const ALL_ROLES: Role[] = ["broker", "owner", "tenant", "manager", "admin"];
 
 /** Roles offered on signup / login (tenant & manager hidden for now). */
 export const AUTH_ENTRY_ROLES = ["owner", "broker"] as const;
@@ -79,6 +79,7 @@ export function dashboardRouteFor(role: Role): string {
     owner: "/owner/dashboard",
     tenant: "/",
     manager: "/",
+    admin: "/admin/dashboard",
   };
   return routes[role];
 }
@@ -242,6 +243,8 @@ export function roleDisplayLabel(role: Role): string {
       return "Tenant";
     case "manager":
       return "Manager";
+    case "admin":
+      return "Admin";
     default:
       return role;
   }

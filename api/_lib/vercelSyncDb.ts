@@ -98,3 +98,12 @@ export async function setAccountDataBulk(
     if (typeof value === "string") await setAccountDataKey(phone, role, dataKey, value);
   }
 }
+
+/** Run a parameterized SQL query against the shared Postgres pool. */
+export async function queryRows<T extends pg.QueryResultRow>(
+  sql: string,
+  params?: unknown[],
+): Promise<T[]> {
+  const result = await getPool().query<T>(sql, params);
+  return result.rows;
+}
