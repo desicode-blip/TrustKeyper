@@ -49,6 +49,14 @@ export default function Onboarding() {
     clearInvalidAuthPendingRole();
     const pending = readAuthPendingRole();
     if (pending) setRole(pending);
+
+    const resumeStep = sessionStorage.getItem("tk_owner_onboarding_resume_step");
+    if (resumeStep === "plan") {
+      setRole("owner");
+      setAuthPendingRole("owner");
+      setStep(6);
+      sessionStorage.removeItem("tk_owner_onboarding_resume_step");
+    }
   }, []);
 
   useEffect(() => {
@@ -101,6 +109,12 @@ export default function Onboarding() {
     if (plan === "managed") {
       setIsManagedPopupOpen(true);
     } else {
+      try {
+        sessionStorage.removeItem("tk_owner_onboarding_resume_step");
+        sessionStorage.setItem("tk_owner_add_property_entry", "onboarding");
+      } catch {
+        /* ignore */
+      }
       setLocation("/owner/properties/add");
     }
   };
