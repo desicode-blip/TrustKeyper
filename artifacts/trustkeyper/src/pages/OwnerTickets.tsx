@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ChevronLeft, Ticket } from "lucide-react";
 import OwnerLayout from "@/components/OwnerLayout";
+import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { OwnerPageEmpty } from "@/components/owner/OwnerPageEmpty";
 
 const TABS = [
@@ -26,22 +27,12 @@ export default function OwnerTickets() {
 
         <h1 className="text-2xl font-semibold text-gray-900 mb-6">Maintenance Tickets</h1>
 
-        <div className="flex items-center gap-1 mb-8 bg-white border border-gray-200 rounded-md p-1 w-fit overflow-x-auto max-w-full">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setActiveTab(t.id)}
-              className={`h-9 px-4 rounded text-sm font-medium transition-colors whitespace-nowrap ${
-                activeTab === t.id
-                  ? "bg-green-50 text-green-700"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <FlowSegmentTabs
+          value={activeTab}
+          onChange={setActiveTab}
+          className="mb-8"
+          options={TABS.map((t) => ({ value: t.id, label: t.label }))}
+        />
 
         <OwnerPageEmpty
           icon={Ticket}

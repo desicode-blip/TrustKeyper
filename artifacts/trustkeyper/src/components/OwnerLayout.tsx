@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { TrustKeyperLogo } from "@/components/brand";
 import { TrustKeyperFooter } from "@/components/TrustKeyperFooter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getOwnerProfile } from "@/lib/ownerProfile";
+import { getProperties, getPropertyTitle } from "@/lib/properties";
+import { getAgreements } from "@/lib/agreements";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
 import { logout } from "@/lib/auth";
 import {
@@ -11,8 +13,7 @@ import {
   Building2,
   Users,
   CreditCard,
-  Ticket,
-  FileText,
+  Wrench,
   FileSignature,
   LogOut,
   UserCircle,
@@ -20,9 +21,7 @@ import {
   Clock,
   Menu,
   X,
-  History,
-  AlertTriangle,
-  Check,
+  CheckCircle2,
 } from "lucide-react";
 
 const navItems = [
@@ -30,7 +29,7 @@ const navItems = [
   { id: "properties", label: "Properties", icon: Building2, href: "/owner/properties" },
   { id: "tenants", label: "Tenants", icon: Users, href: "/owner/tenants" },
   { id: "finances", label: "Rent Management", icon: CreditCard, href: "/owner/finances" },
-  { id: "tickets", label: "Tickets", icon: Ticket, href: "/owner/tickets" },
+  { id: "maintenance", label: "Maintenance", icon: Wrench, href: "/owner/tickets" },
   { id: "agreement", label: "Agreement", icon: FileSignature, href: "/owner/agreements" },
 ];
 
@@ -62,9 +61,64 @@ interface OwnerLayoutProps {
 
 export default function OwnerLayout({ children }: OwnerLayoutProps) {
   const [location, setLocation] = useLocation();
-  const ownerName = getOwnerName();
-  const initials = getInitials(ownerName);
+  const ownerName = getOwnerName().replace("!", "").trim();
+  const initials = getInitials(ownerName || "Owner");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationEpoch, setNotificationEpoch] = useState(0);
+
+  useEffect(() => {
+    const refresh = () => setNotificationEpoch((v) => v + 1);
+    window.addEventListener("storage", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+
+  const notifications = useMemo(() => {
+    const ownerProfile = getOwnerProfile();
+    const norm = (v: string) => v.replace("!", "").trim().toLowerCase();
+    const ownerNameNorm = norm(ownerName);
+
+    const propertyEvents = getProperties()
+      .filter(
+        (p) =>
+          p.uploadedBy === "owner" ||
+          (p.ownerName && norm(p.ownerName) === ownerNameNorm),
+      )
+      .map((p) => ({
+        id: `property-${p.id}`,
+        title: "Property added",
+        desc: getPropertyTitle(p),
+        time: p.createdAt ?? 0,
+      }));
+
+    const agreementEvents = getAgreements()
+      .filter((a) => a.ownerName && norm(a.ownerName) === ownerNameNorm)
+      .map((a) => ({
+        id: `agreement-${a.id}`,
+        title: "Agreement created",
+        desc: `${a.propertyTitle} • ${a.tenantName}`,
+        time: a.createdAt ?? 0,
+      }));
+
+    const accountEvent =
+      ownerProfile.name && ownerProfile.phone
+        ? [
+            {
+              id: "account-created",
+              title: "Account created",
+              desc: `${ownerProfile.name} • +91 ${ownerProfile.phone}`,
+              time: 0,
+            },
+          ]
+        : [];
+
+    return [...propertyEvents, ...agreementEvents, ...accountEvent]
+      .sort((a, b) => b.time - a.time)
+      .slice(0, 12);
+  }, [ownerName, notificationEpoch]);
 
   const closeSidebar = () => setSidebarOpen(false);
 
@@ -95,49 +149,39 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
             <PopoverTrigger asChild>
               <button className="relative w-10 h-10 rounded-xl border border-gray-100 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50 focus:outline-none transition-all hover:border-gray-200 shadow-sm">
                 <Bell size={18} className="text-gray-500" />
-                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#EB5757] text-[10px] font-semibold text-white flex items-center justify-center border-2 border-white">3</span>
+                {notifications.length > 0 ? (
+                  <span className="absolute -top-1 -right-1 min-w-5 h-5 rounded-full bg-[#EB5757] text-[10px] font-semibold text-white flex items-center justify-center border-2 border-white px-1">
+                    {notifications.length}
+                  </span>
+                ) : null}
               </button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-[360px] p-0 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-gray-100 z-50 overflow-hidden">
               <div className="flex items-center justify-between p-5 bg-[#F8FAFC] border-b border-gray-100">
                 <h3 className="font-semibold text-gray-900 text-lg">Notifications</h3>
-                <button className="text-xs text-primary font-semibold hover:underline">Mark all as read</button>
               </div>
               <div className="max-h-[400px] overflow-y-auto">
-                <div className="p-5 border-b border-gray-50 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer group">
-                  <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center shrink-0 border border-green-100 text-[#27AE60]">
-                    <Check size={18} strokeWidth={3} />
+                {notifications.length === 0 ? (
+                  <div className="p-6 text-sm text-gray-500 text-center">
+                    Real-time updates will appear here when you add properties or agreements.
                   </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 text-[14px] mb-0.5 group-hover:text-primary transition-colors">Rent Received</p>
-                    <p className="text-[12px] text-gray-500 leading-relaxed font-medium">Rent for Prestige Lakeside Unit 1204 has been received successfully.</p>
-                    <p className="text-[10px] text-gray-400 mt-2 font-semibold flex items-center gap-1.5"><Clock size={10} /> 2 hours ago</p>
-                  </div>
-                </div>
-                <div className="p-5 border-b border-gray-50 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer bg-blue-50/20 group relative">
-                  <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center shrink-0 border border-red-100 text-[#EB5757]">
-                    <Ticket size={18} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900 text-[14px] mb-0.5 group-hover:text-primary transition-colors">New Ticket Created</p>
-                    <p className="text-[12px] text-gray-500 leading-relaxed font-medium">Tenant reported an issue with the plumbing in Unit 305.</p>
-                    <p className="text-[10px] text-gray-400 mt-2 font-semibold flex items-center gap-1.5"><Clock size={10} /> 4 hours ago</p>
-                  </div>
-                  <div className="w-2.5 h-2.5 rounded-full bg-primary mt-1.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
-                </div>
-                <div className="p-5 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer group">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center shrink-0 border border-yellow-100 text-[#F2994A]">
-                    <AlertTriangle size={18} />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 text-[14px] mb-0.5 group-hover:text-primary transition-colors">Inspection Alert</p>
-                    <p className="text-[12px] text-gray-500 leading-relaxed font-medium">Minor leak detected in Prestige Heights Unit 1107.</p>
-                    <p className="text-[10px] text-gray-400 mt-2 font-semibold flex items-center gap-1.5"><Clock size={10} /> 5 hours ago</p>
-                  </div>
-                </div>
-              </div>
-              <div className="p-4 border-t border-gray-100 text-center bg-white">
-                <button className="text-[13px] font-semibold text-primary hover:underline">View All Notifications</button>
+                ) : (
+                  notifications.map((item, idx) => (
+                    <div key={item.id} className={`p-5 flex gap-4 hover:bg-gray-50 transition-colors ${idx < notifications.length - 1 ? "border-b border-gray-50" : ""}`}>
+                      <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center shrink-0 border border-green-100 text-[#27AE60]">
+                        <CheckCircle2 size={18} strokeWidth={2.5} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-gray-900 text-[14px] mb-0.5">{item.title}</p>
+                        <p className="text-[12px] text-gray-500 leading-relaxed font-medium truncate">{item.desc}</p>
+                        <p className="text-[10px] text-gray-400 mt-2 font-semibold flex items-center gap-1.5">
+                          <Clock size={10} />
+                          {item.time ? new Date(item.time).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "Recently"}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </PopoverContent>
           </Popover>

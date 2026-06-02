@@ -150,7 +150,7 @@ function OtpVerifyModal({
         <p className="text-sm text-gray-500 mb-5">
           Enter the OTP sent to <span className="font-semibold text-gray-800">+91 {phone}</span>
         </p>
-        <div className="flex gap-3 mb-4 justify-center">
+        <div className="grid grid-cols-6 gap-2 sm:gap-3 mb-4 w-full max-w-md mx-auto">
           {otp.map((digit, i) => (
             <input
               key={i}
@@ -160,7 +160,7 @@ function OtpVerifyModal({
               maxLength={1}
               value={digit}
               onChange={(e) => handleOtpChange(i, e.target.value)}
-              className={`w-12 h-12 text-center text-xl font-medium rounded-lg border outline-none transition-colors
+              className={`w-full h-11 sm:h-12 text-center text-xl font-medium rounded-lg border outline-none transition-colors
                 ${digit ? "bg-[#E8F5EE] border-accent border-b-4" : "bg-white border-gray-300 focus:border-primary"}`}
             />
           ))}

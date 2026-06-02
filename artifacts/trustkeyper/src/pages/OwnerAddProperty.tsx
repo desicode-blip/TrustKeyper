@@ -138,9 +138,11 @@ function SelectField({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full h-10 rounded-sm border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-900 appearance-none focus:outline-none focus:border-primary/50"
+        className={`w-full h-10 rounded-sm border border-gray-200 bg-white px-3 pr-8 text-sm appearance-none focus:outline-none focus:border-primary/50 ${
+          value ? "text-gray-900" : "text-[#6C849D]/40"
+        }`}
       >
-        {placeholder && <option value="" disabled className="text-gray-400">{placeholder}</option>}
+        {placeholder && <option value="" disabled className="text-[#6C849D]/40">{placeholder}</option>}
         {options.map((o) => (
           <option key={o} value={o}>{o}</option>
         ))}
@@ -261,6 +263,7 @@ function loadPropertyIntoForm(
 
 export default function OwnerAddProperty() {
   const [, setLocation] = useLocation();
+  const [entrySource, setEntrySource] = useState<"dashboard" | "onboarding">("dashboard");
   const [editingPropertyId, setEditingPropertyId] = useState<string | null>(null);
   const [subStep, setSubStep] = useState(0);
 
@@ -313,6 +316,9 @@ export default function OwnerAddProperty() {
 
   // Initialization & Persistence
   useEffect(() => {
+    const fromOnboarding = sessionStorage.getItem("tk_owner_add_property_entry") === "onboarding";
+    setEntrySource(fromOnboarding ? "onboarding" : "dashboard");
+
     // Pre-fill owner details from onboarding if available
     const storedName = getSessionItem("name");
     const storedPhone = getSessionItem("phone") || getSessionItem("contact");
@@ -532,6 +538,11 @@ export default function OwnerAddProperty() {
     setShowSuccess(true);
     setTimeout(() => {
       setShowSuccess(false);
+      try {
+        sessionStorage.removeItem("tk_owner_add_property_entry");
+      } catch {
+        /* ignore */
+      }
       setLocation("/owner/dashboard");
     }, 2000);
   };
@@ -582,7 +593,7 @@ export default function OwnerAddProperty() {
             onChange={(e) => handleAddressChange(e.target.value)}
             onPaste={handleAddressPaste}
             placeholder="e.g. 201, Orchid Residency, Sector 76, Noida, 201301"
-            className="w-full min-h-[5rem] rounded-sm border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 resize-none"
+            className="w-full min-h-[5rem] rounded-sm border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-[#6C849D]/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 resize-none"
           />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
@@ -862,7 +873,18 @@ export default function OwnerAddProperty() {
 
   const handleBack = () => {
     if (subStep > 0) setSubStep((s) => s - 1);
-    else setLocation("/owner/properties");
+    else {
+      if (entrySource === "onboarding") {
+        try {
+          sessionStorage.setItem("tk_owner_onboarding_resume_step", "plan");
+        } catch {
+          /* ignore */
+        }
+        setLocation("/");
+      } else {
+        setLocation("/owner/properties");
+      }
+    }
   };
 
   return (
@@ -875,7 +897,11 @@ export default function OwnerAddProperty() {
             className="flex items-center gap-1.5 text-sm text-gray-600 font-medium hover:text-primary transition-colors"
           >
             <ArrowLeft size={15} />
-            {subStep === 0 ? "Back to Properties" : "Back"}
+            {subStep === 0
+              ? entrySource === "onboarding"
+                ? "Back to Choose Plan"
+                : "Back to Properties"
+              : "Back"}
           </button>
         </div>
 

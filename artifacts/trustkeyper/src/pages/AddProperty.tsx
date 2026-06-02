@@ -78,7 +78,9 @@ function SelectField({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full h-9 rounded-md border border-input bg-white px-3 pr-8 text-sm text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+        className={`w-full h-9 rounded-md border border-input bg-white px-3 pr-8 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
+          value ? "text-gray-900" : "text-[#6C849D]/40"
+        }`}
       >
         {placeholder && <option value="">{placeholder}</option>}
         {options.map((o) => (

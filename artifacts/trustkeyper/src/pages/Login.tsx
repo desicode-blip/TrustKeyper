@@ -243,7 +243,7 @@ export default function Login() {
               <span className="font-semibold text-gray-900">+91 {phoneDigits}</span>
             </p>
 
-            <div className="flex gap-3 sm:gap-4 mb-4 max-w-md">
+            <div className="grid grid-cols-6 gap-2 sm:gap-3 mb-4 max-w-md w-full">
               {otp.map((digit, i) => (
                 <input
                   key={i}
@@ -253,7 +253,7 @@ export default function Login() {
                   maxLength={1}
                   value={digit}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
-                  className={`w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-medium rounded-lg outline-none transition-colors
+                  className={`w-full h-11 sm:h-12 text-center text-xl font-medium rounded-lg outline-none transition-colors
                     ${digit ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
                 />
               ))}

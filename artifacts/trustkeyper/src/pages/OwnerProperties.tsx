@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Plus, Building2, ChevronLeft } from "lucide-react";
 import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
 import { OwnerPropertyCard } from "@/components/owner/OwnerPropertyCard";
+import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { Button } from "@/components/ui/button";
 import { getProperties, type Property } from "@/lib/properties";
 
@@ -14,14 +15,25 @@ const TABS = [
 
 export default function OwnerProperties() {
   const [, setLocation] = useLocation();
-  const ownerName = getOwnerName();
+  const ownerName = getOwnerName().replace("!", "").trim();
   const [properties, setProperties] = useState<Property[]>([]);
   const [activeTab, setActiveTab] = useState("all");
 
   useEffect(() => {
-    const all = getProperties();
-    const ownerProps = all.filter(p => p.uploadedBy === "owner" || p.ownerName === ownerName);
-    setProperties(ownerProps);
+    const refresh = () => {
+      const all = getProperties();
+      const ownerProps = all.filter(
+        (p) => p.uploadedBy === "owner" || p.ownerName === ownerName,
+      );
+      setProperties(ownerProps);
+    };
+    refresh();
+    window.addEventListener("storage", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("focus", refresh);
+    };
   }, [ownerName]);
 
   const counts = {
@@ -51,29 +63,16 @@ export default function OwnerProperties() {
             Add Property <Plus size={18} />
           </Button>
         </div>
-        <div
-          className="flex items-stretch gap-1 mb-8 w-full max-w-full rounded-lg border border-gray-200 bg-white p-1"
-          role="tablist"
-        >
-          {TABS.map((t) => {
-            const count = counts[t.id as keyof typeof counts];
-            const isActive = activeTab === t.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => setActiveTab(t.id)}
-                className={`min-h-9 flex-1 min-w-0 rounded-md px-1 sm:px-2 py-2 text-xs sm:text-sm font-medium text-center leading-tight transition-colors ${
-                  isActive ? "bg-green-50 text-green-700" : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                {t.label} ({count})
-              </button>
-            );
-          })}
-        </div>
+        <FlowSegmentTabs
+          fullWidth
+          value={activeTab}
+          onChange={setActiveTab}
+          className="mb-8"
+          options={TABS.map((t) => ({
+            value: t.id,
+            label: `${t.label} (${counts[t.id as keyof typeof counts]})`,
+          }))}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {visible.length === 0 ? (

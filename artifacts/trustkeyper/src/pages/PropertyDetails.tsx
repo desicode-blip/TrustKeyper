@@ -42,6 +42,7 @@ import { getProperties, updateProperty, type Property } from "@/lib/properties";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import BrokerLayout from "@/components/BrokerLayout";
+import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 
 // ─── Neighbourhood data keyed by city ─────────────────────────────────────────
 
@@ -591,11 +592,11 @@ export default function PropertyDetails() {
     ? `${size} ${type} in ${property.nickname || property.area}`
     : `${type} in ${property.nickname || property.area}`;
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "overview", label: "Overview" },
-    { id: "amenities", label: "Amenities" },
-    { id: "neighbourhood", label: "Neighbourhood" },
-    { id: "owner", label: "About Owner" },
+  const tabs: { value: Tab; label: string }[] = [
+    { value: "overview", label: "Overview" },
+    { value: "amenities", label: "Amenities" },
+    { value: "neighbourhood", label: "Neighbourhood" },
+    { value: "owner", label: "About Owner" },
   ];
 
 const whatsappMsg = encodeURIComponent(
@@ -634,22 +635,12 @@ const whatsappMsg = encodeURIComponent(
               onSelect={setSelectedImage}
             />
 
-            {/* Tabs */}
-            <div className="flex items-center gap-1 mt-6 border-b border-gray-200">
-              {tabs.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setActiveTab(t.id)}
-                  className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors ${
-                    activeTab === t.id
-                      ? "bg-gray-900 text-white"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
+            <FlowSegmentTabs
+              value={activeTab}
+              onChange={(value) => setActiveTab(value as Tab)}
+              options={tabs}
+              className="mt-6"
+            />
 
             {/* Tab content */}
             <div className="mt-4">
