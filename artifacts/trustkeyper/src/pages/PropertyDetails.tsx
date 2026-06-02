@@ -42,6 +42,7 @@ import { getProperties, updateProperty, type Property } from "@/lib/properties";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import BrokerLayout from "@/components/BrokerLayout";
+import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 
 // ─── Neighbourhood data keyed by city ─────────────────────────────────────────
 
@@ -634,22 +635,12 @@ const whatsappMsg = encodeURIComponent(
               onSelect={setSelectedImage}
             />
 
-            {/* Tabs */}
-            <div className="flex items-center gap-1 mt-6 border-b border-gray-200">
-              {tabs.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setActiveTab(t.id)}
-                  className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors ${
-                    activeTab === t.id
-                      ? "bg-gray-900 text-white"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
+            <FlowSegmentTabs
+              value={activeTab}
+              onChange={setActiveTab}
+              options={tabs}
+              className="mt-6"
+            />
 
             {/* Tab content */}
             <div className="mt-4">

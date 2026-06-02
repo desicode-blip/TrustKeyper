@@ -66,7 +66,7 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
           <span className="font-semibold text-gray-900">+91 {displayPhone}</span>
         </p>
 
-        <Box className="flex gap-4 mb-6">
+        <Box className="grid grid-cols-6 gap-2 sm:gap-3 mb-6 w-full max-w-md">
           {otp.map((digit, i) => (
             <input
               key={i}
@@ -76,7 +76,7 @@ export default function Step3OTP({ details, onNext }: Step3OTPProps) {
               maxLength={1}
               value={digit}
               onChange={(e) => handleChange(i, e.target.value)}
-              className={`w-14 h-14 text-center text-xl font-medium rounded-lg border outline-none transition-colors
+              className={`w-full h-11 sm:h-12 text-center text-xl font-medium rounded-lg border outline-none transition-colors
                 ${digit ? "bg-[#E8F5EE] border-accent border-b-4" : "bg-white border-gray-300 focus:border-primary"}`}
             />
           ))}

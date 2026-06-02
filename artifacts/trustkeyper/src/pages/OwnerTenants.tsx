@@ -5,6 +5,7 @@ import { Link } from "wouter";
 import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
 import { InviteTenantsModal } from "@/components/owner/InviteTenantsModal";
 import { OwnerPageEmpty } from "@/components/owner/OwnerPageEmpty";
+import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { Button } from "@/components/ui/button";
 import { getProperties, type Property } from "@/lib/properties";
 import {
@@ -241,22 +242,12 @@ export default function OwnerTenants() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-1 mb-8 bg-white border border-gray-200 rounded-md p-1 w-fit max-w-full overflow-x-auto">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setActiveTab(t.id)}
-              className={`h-9 px-4 sm:px-6 rounded text-sm font-medium transition-colors whitespace-nowrap ${
-                activeTab === t.id
-                  ? "bg-green-50 text-green-700"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              {tabLabel(t.id)}
-            </button>
-          ))}
-        </div>
+        <FlowSegmentTabs
+          value={activeTab}
+          onChange={setActiveTab}
+          className="mb-8"
+          options={TABS.map((t) => ({ value: t.id, label: tabLabel(t.id) }))}
+        />
 
         {activeTab === "inquiries" && (
           <div className="space-y-8">

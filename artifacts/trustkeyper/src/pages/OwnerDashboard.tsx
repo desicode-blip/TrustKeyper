@@ -42,7 +42,16 @@ export default function OwnerDashboard() {
   const [properties, setProperties] = useState<Property[]>([]);
 
   useEffect(() => {
-    setProperties(filterOwnerProperties(getProperties(), ownerName));
+    const refresh = () => {
+      setProperties(filterOwnerProperties(getProperties(), ownerName));
+    };
+    refresh();
+    window.addEventListener("storage", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("focus", refresh);
+    };
   }, [ownerName]);
 
   const latestProperty = properties[0];
