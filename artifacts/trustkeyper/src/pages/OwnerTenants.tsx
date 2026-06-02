@@ -10,19 +10,15 @@ import { Button } from "@/components/ui/button";
 import { getProperties, type Property } from "@/lib/properties";
 import {
   formatMemberContact,
-  getOwnerInquiries,
   getOwnerInvites,
   isInviteFromInquiry,
-  removeLegacySeedInquiries,
   whatsAppHref,
-  type OwnerTenantInquiry,
   type OwnerTenantInvite,
 } from "@/lib/ownerTenants";
 
 const TABS = [
-  { id: "inquiries", label: "Inquiries" },
+  { id: "invites", label: "Invites" },
   { id: "active", label: "Active Tenants" },
-  { id: "past", label: "Past Tenants" },
 ] as const;
 
 type TenantTab = (typeof TABS)[number]["id"];
@@ -146,47 +142,10 @@ function PropertyInvitesCard({
   );
 }
 
-function InquiryCard({ inquiry }: { inquiry: OwnerTenantInquiry }) {
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
-      <div className="flex items-center gap-4 min-w-0">
-        <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-lg font-semibold shrink-0">
-          {getInitials(inquiry.name)}
-        </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-3 mb-1 flex-wrap">
-            <h3 className="font-semibold text-gray-900">{inquiry.name}</h3>
-            {inquiry.linkedinUrl ? <LinkedInProfileLink url={inquiry.linkedinUrl} /> : null}
-          </div>
-          <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
-            <span>For {inquiry.propertyLabel}</span>
-            {inquiry.who ? (
-              <span className="inline-flex items-center gap-1">
-                <Users size={12} className="opacity-70 shrink-0" />
-                {inquiry.who}
-              </span>
-            ) : null}
-            {inquiry.food ? (
-              <span className="inline-flex items-center gap-1">
-                <Utensils size={12} className="opacity-70 shrink-0" />
-                {inquiry.food}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center gap-3 sm:justify-end w-full sm:w-auto">
-        <WhatsAppIconButton phone={inquiry.phone} />
-      </div>
-    </div>
-  );
-}
-
 export default function OwnerTenants() {
   const ownerName = getOwnerName();
-  const [activeTab, setActiveTab] = useState<TenantTab>("inquiries");
+  const [activeTab, setActiveTab] = useState<TenantTab>("invites");
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inquiries, setInquiries] = useState<OwnerTenantInquiry[]>([]);
   const [invites, setInvites] = useState<OwnerTenantInvite[]>([]);
 
   const ownerProperties = useMemo(() => {
@@ -194,18 +153,12 @@ export default function OwnerTenants() {
   }, [ownerName]);
 
   const reload = useCallback(() => {
-    removeLegacySeedInquiries();
-    setInquiries(getOwnerInquiries());
     setInvites(getOwnerInvites());
   }, []);
 
   useEffect(() => {
-    removeLegacySeedInquiries();
     reload();
   }, [reload]);
-
-  const openInquiries = inquiries.filter((i) => i.status === "open");
-  const inquiryCount = openInquiries.length;
 
   const invitesByProperty = useMemo(() => {
     const map = new Map<string, OwnerTenantInvite[]>();
@@ -218,9 +171,9 @@ export default function OwnerTenants() {
   }, [invites]);
 
   const tabLabel = (id: TenantTab) => {
-    if (id === "inquiries") return `Inquiries (${inquiryCount})`;
+    if (id === "invites") return `Invites (${invites.length})`;
     if (id === "active") return "Active Tenants (0)";
-    return "Past Tenants";
+    return "Active Tenants (0)";
   };
 
   return (
@@ -235,7 +188,7 @@ export default function OwnerTenants() {
           </Link>
           <Button
             onClick={() => setInviteOpen(true)}
-            className="rounded-xl border-0 font-semibold shadow-md shadow-primary/25 gap-2"
+            className="border-0 font-semibold shadow-md shadow-primary/25 gap-2"
           >
             <Send size={16} />
             Invite Tenants
@@ -245,43 +198,29 @@ export default function OwnerTenants() {
         <FlowSegmentTabs
           value={activeTab}
           onChange={(value) =>
-  setActiveTab(value as "active" | "inquiries" | "past")
+  setActiveTab(value as "active" | "invites")
 }
           className="mb-8"
           options={TABS.map((t) => ({ value: t.id, label: tabLabel(t.id) }))}
         />
 
-        {activeTab === "inquiries" && (
+        {activeTab === "invites" && (
           <div className="space-y-8">
-            {invites.length > 0 && (
+            {invites.length > 0 ? (
               <section>
-                <h2 className="text-base font-semibold text-gray-900 mb-4">Invites</h2>
                 <div className="flex flex-col gap-4">
                   {Array.from(invitesByProperty.entries()).map(([label, group]) => (
                     <PropertyInvitesCard key={label} propertyLabel={label} invites={group} />
                   ))}
                 </div>
               </section>
+            ) : (
+              <OwnerPageEmpty
+                icon={Users}
+                title="No invites yet"
+                description="Invited tenants will appear here once you send an invitation."
+              />
             )}
-
-            <section>
-              {invites.length > 0 && (
-                <h2 className="text-base font-semibold text-gray-900 mb-4">Inquiries</h2>
-              )}
-              {openInquiries.length === 0 ? (
-                <OwnerPageEmpty
-                  icon={Users}
-                  title="No inquiries yet"
-                  description="When a tenant logged into Trustkeyper shows interest in your property, their inquiry will appear here."
-                />
-              ) : (
-                <div className="flex flex-col gap-4">
-                  {openInquiries.map((inq) => (
-                    <InquiryCard key={inq.id} inquiry={inq} />
-                  ))}
-                </div>
-              )}
-            </section>
           </div>
         )}
 
@@ -293,13 +232,6 @@ export default function OwnerTenants() {
           />
         )}
 
-        {activeTab === "past" && (
-          <OwnerPageEmpty
-            icon={Users}
-            title="No past tenants"
-            description="Former tenants will be listed here after a lease ends."
-          />
-        )}
       </div>
 
       <InviteTenantsModal

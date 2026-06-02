@@ -21,7 +21,7 @@ export function FlowSegmentTabs<const T extends string>({
 }: FlowSegmentTabsProps<T>) {
   return (
     <div
-      className={`flex items-center gap-1 bg-white border border-gray-200 rounded-md p-1 overflow-x-auto max-w-full ${
+      className={`flex items-center gap-1 bg-white border border-gray-200 rounded-[4px] p-1 overflow-x-auto max-w-full ${
         fullWidth ? "w-full" : "w-fit"
       } ${className}`}
       role="tablist"
@@ -35,10 +35,10 @@ export function FlowSegmentTabs<const T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(opt.value)}
-            className={`h-9 rounded text-sm font-medium transition-colors whitespace-nowrap ${
+            className={`h-9 rounded-[4px] text-sm font-medium transition-colors whitespace-nowrap ${
               fullWidth ? "flex-1 min-w-0 px-1 sm:px-2 text-center" : "px-4 sm:px-6"
             } ${
-              active ? "bg-green-50 text-green-700" : "text-gray-600 hover:bg-gray-50"
+              active ? "rounded-[8px] bg-green-50 text-green-700" : "text-gray-600 hover:bg-gray-50"
             }`}
           >
             {opt.label}

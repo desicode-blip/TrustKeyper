@@ -292,14 +292,13 @@ export default function OwnerPropertyDetails() {
 
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6 mb-6">
-          <FlowSegmentTabs
-            value={activeTab}
-            onChange={(v) => setActiveTab(v as TabId)}
-            options={TABS}
-            fullWidth
-          />
-        </div>
+        <FlowSegmentTabs
+          value={activeTab}
+          onChange={(v) => setActiveTab(v as TabId)}
+          options={TABS}
+          fullWidth
+          className="mb-6 bg-transparent border-transparent p-0"
+        />
 
         {activeTab === "overview" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-300">
@@ -493,7 +492,7 @@ export default function OwnerPropertyDetails() {
                 className="gap-2 h-10 shrink-0"
                 onClick={() => setComplaintOpen(true)}
               >
-                <Wrench size={16} /> + Log Maintenance
+                <Wrench size={16} /> Log Maintenance
               </Button>
             </div>
 

@@ -1,20 +1,11 @@
 import React, { useState } from "react";
 import { ChevronLeft, Ticket, Wrench } from "lucide-react";
 import OwnerLayout from "@/components/OwnerLayout";
-import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { OwnerPageEmpty } from "@/components/owner/OwnerPageEmpty";
 import { RaiseComplaintModal } from "@/components/owner/RaiseComplaintModal";
 import { Button } from "@/components/ui/button";
 
-const TABS = [
-  { id: "all", label: "All" },
-  { id: "pending", label: "Pending Approval" },
-  { id: "inprogress", label: "In Progress" },
-  { id: "completed", label: "Completed" },
-] as const;
-
 export default function OwnerTickets() {
-  const [activeTab, setActiveTab] = useState("all");
   const [logOpen, setLogOpen] = useState(false);
 
   return (
@@ -31,16 +22,9 @@ export default function OwnerTickets() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h1 className="text-2xl font-semibold text-gray-900">Maintenance Tickets</h1>
           <Button type="button" size="sm" className="gap-2 h-10 w-fit" onClick={() => setLogOpen(true)}>
-            <Wrench size={16} /> + Log Maintenance
+            <Wrench size={16} /> Log Maintenance
           </Button>
         </div>
-
-        <FlowSegmentTabs
-          value={activeTab}
-          onChange={setActiveTab}
-          className="mb-8"
-          options={TABS.map((t) => ({ value: t.id, label: t.label }))}
-        />
 
         <OwnerPageEmpty
           icon={Ticket}
