@@ -1,6 +1,6 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { SpeedInsights } from "@vercel/speed-insights/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
@@ -30,8 +30,13 @@ import OwnerTickets from "@/pages/OwnerTickets";
 import OwnerAgreements from "@/pages/OwnerAgreements";
 import OwnerFinances from "@/pages/OwnerFinances";
 import OwnerProfile from "@/pages/OwnerProfile";
+import AdminLogin from "@/pages/admin/AdminLogin";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminUsers from "@/pages/admin/AdminUsers";
+import AdminProperties from "@/pages/admin/AdminProperties";
+import { createAdminQueryClient } from "@/hooks/useAdminData";
 
-const queryClient = new QueryClient();
+const queryClient = createAdminQueryClient();
 
 function Router() {
   return (
@@ -65,6 +70,10 @@ function Router() {
       <Route path="/broker/settings" component={BrokerSettings} />
       <Route path="/broker/profile" component={BrokerSettings} />
       <Route path="/broker/activity" component={BrokerActivity} />
+      <Route path="/admin/login" component={AdminLogin} />
+      <Route path="/admin/dashboard" component={AdminDashboard} />
+      <Route path="/admin/users" component={AdminUsers} />
+      <Route path="/admin/properties" component={AdminProperties} />
       <Route component={NotFound} />
     </Switch>
   );
