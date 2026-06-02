@@ -48,12 +48,16 @@ export function RaiseComplaintModal({
     [ownerName],
   );
   const hasFixedProperty = Boolean(propertyId);
-  const resolvedPropertyId = hasFixedProperty ? propertyId! : selectedPropertyId;
-  const resolvedPropertyLabel =
-    propertyLabel ||
-    getPropertyTitle(ownerProperties.find((p) => p.id === resolvedPropertyId)) ||
-    "Select property";
+const resolvedPropertyId = hasFixedProperty ? propertyId! : selectedPropertyId;
 
+const resolvedProperty =
+  ownerProperties.find((p) => p.id === resolvedPropertyId);
+
+const resolvedPropertyLabel =
+  propertyLabel ||
+  (resolvedProperty
+    ? getPropertyTitle(resolvedProperty)
+    : "Select property");
   if (!open) return null;
 
   const reset = () => {
