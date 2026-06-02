@@ -244,7 +244,9 @@ export default function OwnerTenants() {
 
         <FlowSegmentTabs
           value={activeTab}
-          onChange={setActiveTab}
+          onChange={(value) =>
+  setActiveTab(value as "active" | "inquiries" | "past")
+}
           className="mb-8"
           options={TABS.map((t) => ({ value: t.id, label: tabLabel(t.id) }))}
         />

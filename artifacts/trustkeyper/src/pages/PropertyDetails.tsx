@@ -592,11 +592,11 @@ export default function PropertyDetails() {
     ? `${size} ${type} in ${property.nickname || property.area}`
     : `${type} in ${property.nickname || property.area}`;
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "overview", label: "Overview" },
-    { id: "amenities", label: "Amenities" },
-    { id: "neighbourhood", label: "Neighbourhood" },
-    { id: "owner", label: "About Owner" },
+  const tabs: { value: Tab; label: string }[] = [
+    { value: "overview", label: "Overview" },
+    { value: "amenities", label: "Amenities" },
+    { value: "neighbourhood", label: "Neighbourhood" },
+    { value: "owner", label: "About Owner" },
   ];
 
 const whatsappMsg = encodeURIComponent(
@@ -637,7 +637,7 @@ const whatsappMsg = encodeURIComponent(
 
             <FlowSegmentTabs
               value={activeTab}
-              onChange={setActiveTab}
+              onChange={(value) => setActiveTab(value as Tab)}
               options={tabs}
               className="mt-6"
             />
