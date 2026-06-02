@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Plus, ArrowRight, Check } from "lucide-react";
+import { Plus, ArrowRight, Check, Building2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
 import { OwnerPropertyCard } from "@/components/owner/OwnerPropertyCard";
 import { Button } from "@/components/ui/button";
 import { getProperties, getPropertyTitle, type Property } from "@/lib/properties";
+import { getItem } from "@/lib/storageKeys";
 
 function filterOwnerProperties(all: Property[], ownerName: string): Property[] {
   const name = ownerName.replace("!", "").trim();
@@ -35,15 +36,39 @@ function OwnerAddPropertySlot({ onClick, label }: { onClick: () => void; label?:
   );
 }
 
+function getOwnerPendingPropertyDraft(): { title: string; href: string } | null {
+  try {
+    const raw = getItem("onboarding_data");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as {
+      subStep?: number;
+      nickname?: string;
+      address?: string;
+      city?: string;
+    };
+    const subStep = typeof parsed.subStep === "number" ? parsed.subStep : 0;
+    if (subStep >= 5) return null;
+    const label = parsed.nickname || parsed.address || parsed.city || "your draft property";
+    return {
+      title: `You have an unfinished property listing for ${label}.`,
+      href: "/owner/properties/add",
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default function OwnerDashboard() {
   const [, setLocation] = useLocation();
   const ownerName = getOwnerName().replace("!", "").trim();
   const displayName = ownerName || "there";
   const [properties, setProperties] = useState<Property[]>([]);
+  const [pendingDraft, setPendingDraft] = useState<ReturnType<typeof getOwnerPendingPropertyDraft>>(null);
 
   useEffect(() => {
     const refresh = () => {
       setProperties(filterOwnerProperties(getProperties(), ownerName));
+      setPendingDraft(getOwnerPendingPropertyDraft());
     };
     refresh();
     window.addEventListener("storage", refresh);
@@ -72,6 +97,28 @@ export default function OwnerDashboard() {
             Add Property <Plus size={18} />
           </Button>
         </div>
+
+        {pendingDraft && (
+          <section className="mb-8">
+            <div className="flex items-center gap-3 sm:gap-4 rounded-[10px] px-4 py-3.5 sm:px-5 shadow-sm bg-[#FEF2E8] border border-[#FAD7C1]">
+              <div className="relative w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm bg-white border border-[#FAD7C1]">
+                <div className="relative w-7 h-7 rounded-full overflow-hidden flex items-center justify-center bg-white/90 ring-1 ring-orange-200/60">
+                  <div className="absolute inset-y-0 left-0 w-1/2 bg-orange-400 opacity-85" aria-hidden />
+                  <Building2 size={13} className="relative z-[1] text-orange-600" strokeWidth={2.25} />
+                </div>
+              </div>
+              <p className="flex-1 min-w-0 text-sm font-medium leading-snug text-orange-950">
+                {pendingDraft.title}
+              </p>
+              <Link
+                href={pendingDraft.href}
+                className="inline-flex items-center justify-center shrink-0 h-9 px-4 rounded-lg bg-white border border-primary text-primary text-sm font-semibold shadow-sm hover:bg-primary/5 transition-colors"
+              >
+                Continue
+              </Link>
+            </div>
+          </section>
+        )}
 
         <section className="mb-12">
           <div className="flex items-center justify-between mb-6">
