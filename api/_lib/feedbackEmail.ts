@@ -7,6 +7,14 @@ import type { FeedbackRecord } from "./feedbackTypes.js";
 /** Default timeout for Resend API calls in milliseconds. */
 const RESEND_TIMEOUT_MS = 8_000;
 
+/** Fetch response shape for Node.js / Vercel runtime compatibility. */
+type FetchResponse = {
+  ok: boolean;
+  status: number;
+  text(): Promise<string>;
+  json(): Promise<unknown>;
+};
+
 /**
  * Sends a feedback notification email via Resend.
  * @param record - Persisted feedback row.
@@ -27,7 +35,7 @@ export async function sendFeedbackNotificationEmail(record: FeedbackRecord): Pro
   }
 
   try {
-    const response = await fetch("https://api.resend.com/emails", {
+    const response = (await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -49,7 +57,7 @@ export async function sendFeedbackNotificationEmail(record: FeedbackRecord): Pro
         `,
       }),
       signal: AbortSignal.timeout(RESEND_TIMEOUT_MS),
-    });
+    })) as FetchResponse;
 
     if (!response.ok) {
       logFeedbackEvent({

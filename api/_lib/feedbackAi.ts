@@ -18,6 +18,14 @@ const GEMINI_GENERATE_URL =
 /** Default timeout for Gemini API calls in milliseconds. */
 const GEMINI_TIMEOUT_MS = 10_000;
 
+/** Fetch response shape for Node.js / Vercel runtime compatibility. */
+type FetchResponse = {
+  ok: boolean;
+  status: number;
+  text(): Promise<string>;
+  json(): Promise<unknown>;
+};
+
 /** Gemini generateContent response shape (partial). */
 interface GeminiGenerateContentResponse {
   candidates?: Array<{
@@ -83,7 +91,7 @@ export async function analyseFeedbackWithGemini(
 
   try {
     const url = `${GEMINI_GENERATE_URL}?key=${encodeURIComponent(apiKey)}`;
-    const response = await fetch(url, {
+    const response = (await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -99,7 +107,7 @@ export async function analyseFeedbackWithGemini(
         },
       }),
       signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
-    });
+    })) as FetchResponse;
 
     if (!response.ok) {
       logFeedbackEvent({
