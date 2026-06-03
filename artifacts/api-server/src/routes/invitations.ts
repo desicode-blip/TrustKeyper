@@ -121,7 +121,11 @@ router.get("/invitations/mine", async (req: Request, res: Response) => {
 
 router.get("/invitations/:token", async (req: Request, res: Response) => {
   try {
-    const record = await getInvitationByToken(req.params.token);
+    const token = Array.isArray(req.params.token)
+  ? req.params.token[0]
+  : req.params.token;
+
+const record = await getInvitationByToken(token);
     if (!record) {
       res.status(404).json({ error: "Invitation not found" });
       return;
@@ -138,7 +142,9 @@ router.get("/invitations/:token", async (req: Request, res: Response) => {
 router.post("/invitations/:token", async (req: Request, res: Response) => {
   try {
     const action = (req.body as { action?: string })?.action;
-    const token = req.params.token;
+    const token = Array.isArray(req.params.token)
+  ? req.params.token[0]
+  : req.params.token;
 
     if (action === "accept") {
       const result = await acceptInvitation(token);

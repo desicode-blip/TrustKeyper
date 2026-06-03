@@ -86,8 +86,7 @@ export default function TenantInvite() {
       setLoadError("This invitation has expired.");
       setView("error");
     } else if (result.error === "already_final") {
-      if (result.invitation.status === "accepted") setView("success");
-      else setView("declined");
+    
     }
   };
 
