@@ -36,6 +36,7 @@ import AdminLogin from "@/pages/admin/AdminLogin";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminProperties from "@/pages/admin/AdminProperties";
+import AdminFeedback from "@/pages/admin/AdminFeedback";
 import { createAdminQueryClient } from "@/hooks/useAdminData";
 
 const queryClient = createAdminQueryClient();
@@ -97,6 +98,7 @@ function Router() {
       <Route path="/admin/dashboard" component={AdminDashboard} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/admin/properties" component={AdminProperties} />
+      <Route path="/admin/feedback" component={AdminFeedback} />
       <Route component={NotFound} />
     </Switch>
     <FeedbackWidget />

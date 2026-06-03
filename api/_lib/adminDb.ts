@@ -181,3 +181,53 @@ export async function fetchAdminProperties(): Promise<AdminPropertyRecord[]> {
 
   return properties;
 }
+
+/** A feedback submission returned by GET /api/admin/feedback. */
+export interface AdminFeedbackRecord {
+  id: string;
+  message: string;
+  rating: number;
+  category: string;
+  userPhone: string | null;
+  userRole: string | null;
+  pageUrl: string | null;
+  createdAt: string;
+}
+
+interface FeedbackRow {
+  id: string;
+  message: string;
+  rating: number;
+  category: string;
+  user_phone: string | null;
+  user_role: string | null;
+  page_url: string | null;
+  created_at: Date;
+}
+
+/**
+ * Loads all feedback submissions ordered by newest first.
+ * @throws When Postgres is not configured.
+ */
+export async function fetchAdminFeedback(): Promise<AdminFeedbackRecord[]> {
+  if (!usePostgres()) {
+    throw new Error("DATABASE_URL is not configured");
+  }
+
+  const rows = await queryRows<FeedbackRow>(
+    `SELECT id, message, rating, category, user_phone, user_role, page_url, created_at
+     FROM feedback
+     ORDER BY created_at DESC`,
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    message: row.message,
+    rating: row.rating,
+    category: row.category,
+    userPhone: row.user_phone,
+    userRole: row.user_role,
+    pageUrl: row.page_url,
+    createdAt: toIsoString(row.created_at),
+  }));
+}

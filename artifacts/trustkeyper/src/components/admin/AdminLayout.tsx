@@ -3,7 +3,7 @@
  */
 import React, { useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Building2, LayoutDashboard, LogOut, Users } from "lucide-react";
+import { Building2, LayoutDashboard, LogOut, MessageSquare, Users } from "lucide-react";
 import { TrustKeyperLogo } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +39,7 @@ const NAV_ITEMS: AdminNavItem[] = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/properties", label: "Properties", icon: Building2 },
+  { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
 ];
 
 /**

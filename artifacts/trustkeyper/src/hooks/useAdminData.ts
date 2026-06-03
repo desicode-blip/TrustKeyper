@@ -3,9 +3,11 @@
  */
 import { QueryClient, useQuery } from "@tanstack/react-query";
 import {
+  fetchAdminFeedback,
   fetchAdminProperties,
   fetchAdminStats,
   fetchAdminUsers,
+  type AdminFeedback,
   type AdminProperty,
   type AdminStats,
   type AdminUser,
@@ -88,6 +90,24 @@ export function useAdminProperties(): AdminQueryResult<AdminProperty[]> {
   const query = useQuery({
     queryKey: ["admin", "properties"],
     queryFn: fetchAdminProperties,
+    ...adminQueryDefaults,
+  });
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
+  };
+}
+
+/**
+ * Loads all user feedback submissions for the admin feedback view.
+ */
+export function useAdminFeedback(): AdminQueryResult<AdminFeedback[]> {
+  const query = useQuery({
+    queryKey: ["admin", "feedback"],
+    queryFn: fetchAdminFeedback,
     ...adminQueryDefaults,
   });
 

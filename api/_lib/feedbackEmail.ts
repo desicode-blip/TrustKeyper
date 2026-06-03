@@ -43,7 +43,7 @@ export async function sendFeedbackNotificationEmail(record: FeedbackRecord): Pro
       },
       body: JSON.stringify({
         from,
-        to: [to],
+        to: to.split(",").map((email) => email.trim()).filter(Boolean),
         subject: `[Feedback] ${record.category} · ${record.rating}/5`,
         html: `
           <h2>New TrustKeyper feedback</h2>
