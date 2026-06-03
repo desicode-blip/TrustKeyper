@@ -7,7 +7,7 @@ import { getOwnerProfile } from "@/lib/ownerProfile";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import { getAgreements } from "@/lib/agreements";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
-import { logout } from "@/lib/auth";
+import { logout, getActiveSession } from "@/lib/auth";
 import {
   LayoutDashboard,
   Building2,
@@ -73,6 +73,15 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
       window.removeEventListener("focus", refresh);
     };
   }, []);
+
+  useEffect(() => {
+    const session = getActiveSession();
+    if (!session || session.role !== "owner") {
+      sessionStorage.setItem("tk_pending_role", "owner");
+      setLocation("/login");
+      return;
+    }
+  }, [location, setLocation]);
 
   const notifications = useMemo(() => {
     const ownerProfile = getOwnerProfile();
