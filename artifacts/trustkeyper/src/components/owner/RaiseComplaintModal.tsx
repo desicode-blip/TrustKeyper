@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 import { addPropertyMaintenanceTicket } from "@/lib/ownerPropertyMaintenance";
 import { toast } from "@/hooks/use-toast";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
@@ -221,13 +222,18 @@ const resolvedPropertyLabel =
               )}
             </div>
           </div>
-          <div className="flex gap-2 mt-6">
-            <Button type="button" variant="outline" className="flex-1 h-11" onClick={onClose}>
+          <div className="flex flex-col sm:flex-row gap-2 mt-6">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 h-10 rounded-[4px] text-sm font-semibold"
+              onClick={onClose}
+            >
               Cancel
             </Button>
-            <Button type="button" className="flex-1 h-11" onClick={submit}>
+            <OwnerFlowButton type="button" className="flex-1 sm:flex-1" onClick={submit}>
               Log Maintenance
-            </Button>
+            </OwnerFlowButton>
           </div>
         </div>
       </div>

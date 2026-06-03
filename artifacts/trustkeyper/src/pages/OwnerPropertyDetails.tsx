@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Edit,
-  Plus,
   Eye,
   Share2,
   FileText,
@@ -31,6 +30,7 @@ import {
   type PropertyDocument,
 } from "@/lib/ownerPropertyDocuments";
 import { getPropertyMaintenanceTickets } from "@/lib/ownerPropertyMaintenance";
+import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 
@@ -268,24 +268,19 @@ export default function OwnerPropertyDetails() {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0 w-full sm:w-auto">
-                <Button
-                  type="button"
-                  className="h-11 px-6 gap-2 font-semibold shadow-sm w-full sm:min-w-[180px]"
-                  onClick={() => setShareOpen(true)}
-                >
+              <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0 w-full sm:w-auto sm:min-w-[180px]">
+                <OwnerFlowButton type="button" onClick={() => setShareOpen(true)}>
                   <Share2 size={16} />
                   Share Property
-                </Button>
-                <Button
+                </OwnerFlowButton>
+                <OwnerFlowButton
                   type="button"
-                  variant="outline"
-                  className="h-11 px-6 gap-2 font-semibold border-gray-300 w-full sm:min-w-[180px]"
+                  flowVariant="outline"
                   onClick={() => setLocation(`/owner/properties/add?edit=${property.id}`)}
                 >
                   <Edit size={16} />
                   Edit Details
-                </Button>
+                </OwnerFlowButton>
               </div>
             </div>
           </div>
@@ -386,14 +381,13 @@ export default function OwnerPropertyDetails() {
                   Rental agreements and files linked to this property.
                 </p>
               </div>
-              <Button
+              <OwnerFlowButton
                 type="button"
-                size="sm"
-                className="gap-2 h-10 shrink-0"
+                className="sm:shrink-0"
                 onClick={() => uploadRef.current?.click()}
               >
-                <Plus size={16} /> Upload document
-              </Button>
+                Upload document
+              </OwnerFlowButton>
               <input
                 ref={uploadRef}
                 type="file"
@@ -486,14 +480,14 @@ export default function OwnerPropertyDetails() {
                     : `${tickets.length} record${tickets.length === 1 ? "" : "s"}`}
                 </p>
               </div>
-              <Button
+              <OwnerFlowButton
                 type="button"
-                size="sm"
-                className="gap-2 h-10 shrink-0"
+                className="sm:shrink-0"
                 onClick={() => setComplaintOpen(true)}
               >
-                <Wrench size={16} /> Log Maintenance
-              </Button>
+                <Wrench size={16} />
+                Log Maintenance
+              </OwnerFlowButton>
             </div>
 
             {tickets.length === 0 ? (

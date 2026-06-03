@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, FileText, FilePlus2 } from "lucide-react";
+import { ChevronLeft, FileText } from "lucide-react";
 import { useLocation } from "wouter";
 import OwnerLayout from "@/components/OwnerLayout";
 import { OwnerPageEmpty } from "@/components/owner/OwnerPageEmpty";
-import { Button } from "@/components/ui/button";
+import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 import { getAgreements, type Agreement } from "@/lib/agreements";
 import { getOwnerName } from "@/components/OwnerLayout";
 
@@ -44,23 +44,18 @@ export default function OwnerAgreements() {
           <ChevronLeft size={20} /> Back to Dashboard
         </button>
 
-        <h1 className="text-2xl font-semibold text-gray-900 mb-6">Agreement</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <h1 className="text-2xl font-semibold text-gray-900">Agreement</h1>
+          <OwnerFlowButton onClick={() => setLocation("/owner/agreements/generate")}>
+            Generate Agreement
+          </OwnerFlowButton>
+        </div>
 
         {recentAgreements.length === 0 ? (
           <OwnerPageEmpty
             icon={FileText}
             title="No agreements yet"
             description="Create a rental agreement for your property to collect documents and e-signatures."
-            action={
-              <Button
-                size="lg"
-                className="rounded-xl border-0 font-semibold shadow-md shadow-primary/25 gap-2"
-                onClick={() => setLocation("/owner/agreements/generate")}
-              >
-                <FilePlus2 size={18} />
-                Generate Agreement
-              </Button>
-            }
           />
         ) : (
           <div className="space-y-4">

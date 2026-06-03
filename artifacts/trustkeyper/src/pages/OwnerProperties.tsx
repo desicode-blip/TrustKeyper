@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Plus, Building2, ChevronLeft } from "lucide-react";
+import { Building2, ChevronLeft } from "lucide-react";
 import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
 import { OwnerPropertyCard } from "@/components/owner/OwnerPropertyCard";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
@@ -56,12 +56,9 @@ export default function OwnerProperties() {
           <button onClick={() => window.history.back()} className="flex items-center gap-2 text-primary font-semibold text-lg hover:underline w-fit">
             <ChevronLeft size={20} /> Back
           </button>
-          <Button
-            onClick={() => setLocation("/owner/properties/add")}
-            className="rounded-xl border-0 font-semibold shadow-lg shadow-primary/25 h-10 px-6 w-fit"
-          >
-            Add Property <Plus size={18} />
-          </Button>
+          <OwnerFlowButton onClick={() => setLocation("/owner/properties/add")}>
+            Add Property
+          </OwnerFlowButton>
         </div>
         <FlowSegmentTabs
           fullWidth

@@ -3,7 +3,7 @@ import { ChevronLeft, Ticket, Wrench } from "lucide-react";
 import OwnerLayout from "@/components/OwnerLayout";
 import { OwnerPageEmpty } from "@/components/owner/OwnerPageEmpty";
 import { RaiseComplaintModal } from "@/components/owner/RaiseComplaintModal";
-import { Button } from "@/components/ui/button";
+import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 
 export default function OwnerTickets() {
   const [logOpen, setLogOpen] = useState(false);
@@ -21,9 +21,10 @@ export default function OwnerTickets() {
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h1 className="text-2xl font-semibold text-gray-900">Maintenance Tickets</h1>
-          <Button type="button" size="sm" className="gap-2 h-10 w-fit" onClick={() => setLogOpen(true)}>
-            <Wrench size={16} /> Log Maintenance
-          </Button>
+          <OwnerFlowButton type="button" onClick={() => setLogOpen(true)}>
+            <Wrench size={16} />
+            Log Maintenance
+          </OwnerFlowButton>
         </div>
 
         <OwnerPageEmpty
