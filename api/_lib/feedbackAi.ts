@@ -13,7 +13,7 @@ export interface FeedbackAiAnalysis {
 
 /** Gemini generateContent endpoint for flash model. */
 const GEMINI_GENERATE_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 /** Default timeout for Gemini API calls in milliseconds. */
 const GEMINI_TIMEOUT_MS = 10_000;
