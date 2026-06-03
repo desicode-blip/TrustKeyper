@@ -6,7 +6,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { getOwnerProfile } from "@/lib/ownerProfile";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import { getAgreements } from "@/lib/agreements";
-import { getOwnerInvites, normalizeInviteStatus, refreshOwnerInvitesFromApi } from "@/lib/ownerTenants";
+import {
+  getOwnerInvites,
+  normalizeInviteStatus,
+  OWNER_INVITES_UPDATED_EVENT,
+} from "@/lib/ownerTenants";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
 import { logout } from "@/lib/auth";
 import {
@@ -64,32 +68,15 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
   const initials = getInitials(ownerName || "Owner");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationEpoch, setNotificationEpoch] = useState(0);
-  const [inviteNotifyEpoch, setInviteNotifyEpoch] = useState(0);
-
   useEffect(() => {
     const refresh = () => setNotificationEpoch((v) => v + 1);
     window.addEventListener("storage", refresh);
     window.addEventListener("focus", refresh);
+    window.addEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
     return () => {
       window.removeEventListener("storage", refresh);
       window.removeEventListener("focus", refresh);
-    };
-  }, []);
-
-  useEffect(() => {
-    const phone = getOwnerProfile().phone.replace(/\D/g, "").slice(-10);
-    if (phone.length !== 10) return;
-    let cancelled = false;
-    const pull = async () => {
-      await refreshOwnerInvitesFromApi(phone);
-      if (!cancelled) setInviteNotifyEpoch((v) => v + 1);
-    };
-    void pull();
-    const onFocus = () => void pull();
-    window.addEventListener("focus", onFocus);
-    return () => {
-      cancelled = true;
-      window.removeEventListener("focus", onFocus);
+      window.removeEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
     };
   }, []);
 
@@ -140,17 +127,17 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
             id: `invite-accepted-${inv.id}`,
             title: "Tenant accepted invite",
             desc: `${inv.name} • ${inv.propertyLabel}`,
-            time: new Date(inv.acceptedAt).getTime(),
+            time: inv.acceptedAt,
           },
         ];
       }
-      if (status === "declined" && inv.declinedAt) {
+      if (status === "rejected" && inv.rejectedAt) {
         return [
           {
-            id: `invite-declined-${inv.id}`,
-            title: "Tenant declined invite",
+            id: `invite-rejected-${inv.id}`,
+            title: "Tenant rejected invite",
             desc: `${inv.name} • ${inv.propertyLabel}`,
-            time: new Date(inv.declinedAt).getTime(),
+            time: inv.rejectedAt,
           },
         ];
       }
@@ -160,7 +147,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
     return [...propertyEvents, ...agreementEvents, ...inviteEvents, ...accountEvent]
       .sort((a, b) => b.time - a.time)
       .slice(0, 12);
-  }, [ownerName, notificationEpoch, inviteNotifyEpoch]);
+  }, [ownerName, notificationEpoch]);
 
   const closeSidebar = () => setSidebarOpen(false);
 

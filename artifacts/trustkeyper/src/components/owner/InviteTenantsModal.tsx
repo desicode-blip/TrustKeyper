@@ -17,18 +17,11 @@ import {
 } from "@/components/ui/select";
 import type { Property } from "@/lib/properties";
 import { useToast } from "@/hooks/use-toast";
-import { getOwnerProfile } from "@/lib/ownerProfile";
 import {
   formatMemberContact,
   getPropertyInviteLabel,
-  refreshOwnerInvitesFromApi,
+  sendOwnerTenantInvites,
 } from "@/lib/ownerTenants";
-import {
-  createTenantInvitation,
-  invitePublicUrl,
-  whatsAppInviteHref,
-  whatsAppInviteMessage,
-} from "@/lib/tenantInvitationsApi";
 
 type Step = "count" | "members" | "confirm";
 
@@ -73,7 +66,7 @@ export function InviteTenantsModal({
   const [monthlyMaintenance, setMonthlyMaintenance] = useState("");
   const [securityDeposit, setSecurityDeposit] = useState("");
   const [startDate, setStartDate] = useState("");
-  const [sending, setSending] = useState(false);
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   const selectedProperty = useMemo(
@@ -129,7 +122,7 @@ export function InviteTenantsModal({
     (slot) => slot.name.trim().length > 0 && slot.contact.replace(/\D/g, "").length === 10,
   );
 
-  const canSendInvite =
+  const canCreateInvite =
     !!propertyId &&
     parseRent(monthlyRent).length > 0 &&
     parseRent(securityDeposit).length > 0 &&
@@ -147,75 +140,33 @@ export function InviteTenantsModal({
     if (!next) onOpenChange(false);
   };
 
-  const handleSendInvite = async () => {
-    if (!selectedProperty || !canSendInvite || sending) return;
+  const handleCreateInvitation = () => {
+    if (!selectedProperty || !canCreateInvite || saving) return;
 
-    const profile = getOwnerProfile();
-    const ownerPhone = profile.phone.replace(/\D/g, "").slice(-10);
-    if (ownerPhone.length !== 10) {
-      toast({
-        title: "Sign in required",
-        description: "Complete owner signup before sending invitations.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    setSaving(true);
     const members = slots.map((slot) => {
       const digits = slot.contact.replace(/\D/g, "").slice(-10);
       return {
         name: slot.name.trim(),
         phone: formatMemberContact(digits),
-        digits,
       };
     });
 
-    setSending(true);
-    let createdCount = 0;
+    sendOwnerTenantInvites({
+      propertyId: selectedProperty.id,
+      propertyLabel,
+      members,
+      monthlyRent: parseRent(monthlyRent),
+      maintenanceIncluded,
+      monthlyMaintenance: parseRent(monthlyMaintenance),
+      securityDeposit: parseRent(securityDeposit),
+      startDate,
+    });
 
-    for (const member of members) {
-      const record = await createTenantInvitation({
-        ownerPhone,
-        ownerName: profile.name || "Property owner",
-        propertyId: selectedProperty.id,
-        propertyLabel,
-        tenantName: member.name,
-        tenantPhone: member.phone,
-        monthlyRent: parseRent(monthlyRent),
-        maintenanceIncluded,
-        monthlyMaintenance: parseRent(monthlyMaintenance),
-        securityDeposit: parseRent(securityDeposit),
-        startDate,
-      });
-
-      if (!record) continue;
-      createdCount += 1;
-      const inviteUrl = invitePublicUrl(record.token);
-      const message = whatsAppInviteMessage({
-        tenantName: member.name,
-        ownerName: profile.name || "your landlord",
-        propertyLabel,
-        inviteUrl,
-      });
-      window.open(whatsAppInviteHref(member.digits, message), "_blank", "noopener,noreferrer");
-    }
-
-    setSending(false);
-
-    if (createdCount === 0) {
-      toast({
-        title: "Could not send invite",
-        description: "Check your connection and try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    await refreshOwnerInvitesFromApi(ownerPhone);
-
+    setSaving(false);
     toast({
-      title: "Invitation sent",
-      description: `WhatsApp opened for ${createdCount} tenant${createdCount > 1 ? "s" : ""}.`,
+      title: "Invitation created",
+      description: "Use Send via WhatsApp on the invite card to message the tenant.",
     });
     onSuccess();
     onOpenChange(false);
@@ -367,12 +318,12 @@ export function InviteTenantsModal({
             <div className="flex justify-center pt-4">
               <OwnerFlowButton
                 type="button"
-                disabled={!canSendInvite || sending}
+                disabled={!canCreateInvite || saving}
                 className="sm:min-w-[160px]"
-                onClick={() => void handleSendInvite()}
+                onClick={handleCreateInvitation}
               >
                 <Send size={16} />
-                {sending ? "Sending…" : "Send Invite"}
+                {saving ? "Saving…" : "Create invitation"}
               </OwnerFlowButton>
             </div>
           </div>

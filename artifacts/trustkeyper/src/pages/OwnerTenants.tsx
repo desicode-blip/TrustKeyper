@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, Send, Users, Utensils } from "lucide-react";
+import { ChevronLeft, MoreVertical, Send, Users, Utensils } from "lucide-react";
 import { FaLinkedin, FaWhatsapp } from "react-icons/fa";
 import { Link } from "wouter";
 import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
@@ -7,24 +7,26 @@ import { InviteTenantsModal } from "@/components/owner/InviteTenantsModal";
 import { OwnerPageEmpty } from "@/components/owner/OwnerPageEmpty";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
-import { getOwnerProfile } from "@/lib/ownerProfile";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { getProperties, type Property } from "@/lib/properties";
 import {
   formatMemberContact,
+  getInviteStatusCounts,
   getOwnerInvites,
   INVITE_STATUS_LABELS,
   isInviteFromInquiry,
   normalizeInviteStatus,
-  refreshOwnerInvitesFromApi,
-  whatsAppHref,
+  openWhatsAppInvite,
+  OWNER_INVITES_UPDATED_EVENT,
+  updateOwnerInviteStatus,
   type InviteStatus,
   type OwnerTenantInvite,
 } from "@/lib/ownerTenants";
-import {
-  invitePublicUrl,
-  whatsAppInviteHref,
-  whatsAppInviteMessage,
-} from "@/lib/tenantInvitationsApi";
 
 const TABS = [
   { id: "invites", label: "Invites" },
@@ -35,7 +37,7 @@ const INVITE_FILTERS = [
   { id: "all", label: "All" },
   { id: "pending", label: "Pending" },
   { id: "accepted", label: "Accepted" },
-  { id: "declined", label: "Declined" },
+  { id: "rejected", label: "Rejected" },
 ] as const;
 
 type TenantTab = (typeof TABS)[number]["id"];
@@ -58,46 +60,16 @@ function getInitials(name: string): string {
 const STATUS_BADGE_CLASS: Record<InviteStatus, string> = {
   pending: "bg-[#768EA7]",
   accepted: "bg-green-600",
-  declined: "bg-gray-500",
-  expired: "bg-amber-600",
+  rejected: "bg-gray-500",
 };
 
 function InviteStatusBadge({ status }: { status: InviteStatus }) {
   return (
     <span
-      className={`inline-flex items-center justify-center px-4 py-2.5 rounded-full text-white text-xs font-medium leading-snug text-center max-w-[240px] sm:max-w-none ${STATUS_BADGE_CLASS[status]}`}
+      className={`inline-flex items-center justify-center px-3 py-1.5 rounded-full text-white text-xs font-medium ${STATUS_BADGE_CLASS[status]}`}
     >
       {INVITE_STATUS_LABELS[status]}
     </span>
-  );
-}
-
-function WhatsAppIconButton({ phone, invite }: { phone: string; invite: OwnerTenantInvite }) {
-  const href = useMemo(() => {
-    if (invite.token && invite.status === "pending") {
-      const profile = getOwnerProfile();
-      const url = invite.inviteUrl ?? invitePublicUrl(invite.token);
-      const message = whatsAppInviteMessage({
-        tenantName: invite.name,
-        ownerName: profile.name || "Property owner",
-        propertyLabel: invite.propertyLabel,
-        inviteUrl: url,
-      });
-      return whatsAppInviteHref(phone, message);
-    }
-    return whatsAppHref(phone);
-  }, [phone, invite]);
-
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Chat on WhatsApp"
-      className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-[#25D366] text-white shadow-sm hover:bg-[#20bd5a] transition-colors shrink-0"
-    >
-      <FaWhatsapp className="w-5 h-5" aria-hidden />
-    </a>
   );
 }
 
@@ -115,48 +87,95 @@ function LinkedInProfileLink({ url }: { url: string }) {
   );
 }
 
-function InvitedTenantRow({ invite }: { invite: OwnerTenantInvite }) {
+function InvitedTenantRow({
+  invite,
+  onUpdate,
+}: {
+  invite: OwnerTenantInvite;
+  onUpdate: () => void;
+}) {
   const fromInquiry = isInviteFromInquiry(invite);
   const status = normalizeInviteStatus(invite.status);
 
+  const handleStatusChange = (next: InviteStatus) => {
+    updateOwnerInviteStatus(invite.id, next);
+    onUpdate();
+  };
+
   return (
-    <div className="rounded-lg bg-[#F3FBF6] border border-green-100/80 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div className="flex items-start gap-4 min-w-0 flex-1">
-        <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-base font-semibold shrink-0">
-          {getInitials(invite.name)}
-        </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <p className="font-semibold text-gray-900 text-[15px]">{invite.name}</p>
-            {fromInquiry && invite.linkedinUrl ? (
-              <LinkedInProfileLink url={invite.linkedinUrl} />
-            ) : null}
+    <div className="rounded-lg bg-[#F3FBF6] border border-green-100/80 p-4 sm:p-5 flex flex-col gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div className="flex items-start gap-4 min-w-0 flex-1">
+          <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-base font-semibold shrink-0">
+            {getInitials(invite.name)}
           </div>
-          {fromInquiry ? (
-            <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
-              <span>For {invite.propertyLabel}</span>
-              {invite.who ? (
-                <span className="inline-flex items-center gap-1">
-                  <Users size={12} className="opacity-70 shrink-0" />
-                  {invite.who}
-                </span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <p className="font-semibold text-gray-900 text-[15px]">{invite.name}</p>
+              {fromInquiry && invite.linkedinUrl ? (
+                <LinkedInProfileLink url={invite.linkedinUrl} />
               ) : null}
-              {invite.food ? (
-                <span className="inline-flex items-center gap-1">
-                  <Utensils size={12} className="opacity-70 shrink-0" />
-                  {invite.food}
-                </span>
-              ) : null}
+              <InviteStatusBadge status={status} />
             </div>
-          ) : (
-            <p className="text-sm text-gray-600">{formatMemberContact(invite.phone)}</p>
-          )}
+            {fromInquiry ? (
+              <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                <span>For {invite.propertyLabel}</span>
+                {invite.who ? (
+                  <span className="inline-flex items-center gap-1">
+                    <Users size={12} className="opacity-70 shrink-0" />
+                    {invite.who}
+                  </span>
+                ) : null}
+                {invite.food ? (
+                  <span className="inline-flex items-center gap-1">
+                    <Utensils size={12} className="opacity-70 shrink-0" />
+                    {invite.food}
+                  </span>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600">{formatMemberContact(invite.phone)}</p>
+            )}
+          </div>
         </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center w-9 h-9 rounded-md border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 shrink-0 self-end sm:self-start"
+              aria-label="Invitation actions"
+            >
+              <MoreVertical size={18} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem
+              disabled={status === "accepted"}
+              onClick={() => handleStatusChange("accepted")}
+            >
+              Mark as Accepted
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={status === "rejected"}
+              onClick={() => handleStatusChange("rejected")}
+            >
+              Mark as Rejected
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      <div className="flex items-center gap-3 w-full sm:w-auto sm:justify-end shrink-0">
-        <InviteStatusBadge status={status} />
-        <WhatsAppIconButton phone={invite.phone} invite={invite} />
+      <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+        <OwnerFlowButton
+          type="button"
+          flowVariant="outline"
+          className="gap-2"
+          onClick={() => openWhatsAppInvite(invite)}
+        >
+          <FaWhatsapp className="w-4 h-4 text-[#25D366]" aria-hidden />
+          Send via WhatsApp
+        </OwnerFlowButton>
       </div>
     </div>
   );
@@ -165,9 +184,11 @@ function InvitedTenantRow({ invite }: { invite: OwnerTenantInvite }) {
 function PropertyInvitesCard({
   propertyLabel,
   invites,
+  onUpdate,
 }: {
   propertyLabel: string;
   invites: OwnerTenantInvite[];
+  onUpdate: () => void;
 }) {
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-5">
@@ -176,7 +197,7 @@ function PropertyInvitesCard({
       </h3>
       <div className="flex flex-col gap-3">
         {invites.map((inv) => (
-          <InvitedTenantRow key={inv.id} invite={inv} />
+          <InvitedTenantRow key={inv.id} invite={inv} onUpdate={onUpdate} />
         ))}
       </div>
     </div>
@@ -194,27 +215,23 @@ export default function OwnerTenants() {
     return filterOwnerProperties(getProperties(), ownerName);
   }, [ownerName]);
 
-  const reload = useCallback(async () => {
-    const phone = getOwnerProfile().phone.replace(/\D/g, "").slice(-10);
-    if (phone.length === 10) {
-      const list = await refreshOwnerInvitesFromApi(phone);
-      setInvites(list);
-      return;
-    }
+  const reload = useCallback(() => {
     setInvites(getOwnerInvites());
   }, []);
 
   useEffect(() => {
-    void reload();
+    reload();
   }, [reload]);
 
   useEffect(() => {
-    const refresh = () => void reload();
+    const refresh = () => reload();
     window.addEventListener("storage", refresh);
     window.addEventListener("focus", refresh);
+    window.addEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
     return () => {
       window.removeEventListener("storage", refresh);
       window.removeEventListener("focus", refresh);
+      window.removeEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
     };
   }, [reload]);
 
@@ -233,26 +250,18 @@ export default function OwnerTenants() {
     return map;
   }, [filteredInvites]);
 
-  const statusCounts = useMemo(() => {
-    const counts = { pending: 0, accepted: 0, declined: 0 };
-    for (const inv of invites) {
-      const s = normalizeInviteStatus(inv.status);
-      if (s in counts) counts[s as keyof typeof counts] += 1;
-    }
-    return counts;
-  }, [invites]);
+  const statusCounts = useMemo(() => getInviteStatusCounts(invites), [invites]);
 
   const tabLabel = (id: TenantTab) => {
     if (id === "invites") return `Invites (${invites.length})`;
-    const accepted = statusCounts.accepted;
-    return `Active Tenants (${accepted})`;
+    return `Active Tenants (${statusCounts.accepted})`;
   };
 
   const filterLabel = (id: InviteFilter) => {
     if (id === "all") return `All (${invites.length})`;
     if (id === "pending") return `Pending (${statusCounts.pending})`;
     if (id === "accepted") return `Accepted (${statusCounts.accepted})`;
-    if (id === "declined") return `Declined (${statusCounts.declined})`;
+    if (id === "rejected") return `Rejected (${statusCounts.rejected})`;
     return id;
   };
 
@@ -295,7 +304,12 @@ export default function OwnerTenants() {
               <section>
                 <div className="flex flex-col gap-4">
                   {Array.from(invitesByProperty.entries()).map(([label, group]) => (
-                    <PropertyInvitesCard key={label} propertyLabel={label} invites={group} />
+                    <PropertyInvitesCard
+                      key={label}
+                      propertyLabel={label}
+                      invites={group}
+                      onUpdate={reload}
+                    />
                   ))}
                 </div>
               </section>
@@ -305,8 +319,8 @@ export default function OwnerTenants() {
                 title={invites.length === 0 ? "No invites yet" : "No invites in this filter"}
                 description={
                   invites.length === 0
-                    ? "Invited tenants will appear here once you send an invitation."
-                    : "Try another filter or send a new invitation."
+                    ? "Create an invitation, then send it manually via WhatsApp."
+                    : "Try another filter or create a new invitation."
                 }
               />
             )}
@@ -316,8 +330,12 @@ export default function OwnerTenants() {
         {activeTab === "active" && (
           <OwnerPageEmpty
             icon={Users}
-            title="No active tenants"
-            description="Tenants who accept your invitation will appear here once you start lease onboarding."
+            title={statusCounts.accepted === 0 ? "No active tenants" : "Active tenants"}
+            description={
+              statusCounts.accepted === 0
+                ? "Mark invitations as Accepted after the tenant replies on WhatsApp."
+                : `${statusCounts.accepted} tenant${statusCounts.accepted === 1 ? "" : "s"} accepted your invitation.`
+            }
           />
         )}
       </div>
@@ -326,7 +344,7 @@ export default function OwnerTenants() {
         open={inviteOpen}
         onOpenChange={setInviteOpen}
         properties={ownerProperties}
-        onSuccess={() => void reload()}
+        onSuccess={reload}
       />
     </OwnerLayout>
   );
