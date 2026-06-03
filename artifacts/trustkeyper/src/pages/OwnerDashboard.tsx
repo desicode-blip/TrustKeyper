@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowRight, Check, Building2 } from "lucide-react";
+import { ArrowRight, Check, Building2, Plus } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
 import { OwnerPropertyCard } from "@/components/owner/OwnerPropertyCard";

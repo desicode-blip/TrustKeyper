@@ -5,6 +5,7 @@ import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
 import { OwnerPropertyCard } from "@/components/owner/OwnerPropertyCard";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { Button } from "@/components/ui/button";
+import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 import { getProperties, type Property } from "@/lib/properties";
 
 const TABS = [
