@@ -8,7 +8,7 @@ import { getProperties, getPropertyTitle } from "@/lib/properties";
 import { getAgreements } from "@/lib/agreements";
 import {
   getOwnerInvites,
-  normalizeInviteStatus,
+  getRecordedInviteStatus,
   OWNER_INVITES_UPDATED_EVENT,
 } from "@/lib/ownerTenants";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
@@ -120,7 +120,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
         : [];
 
     const inviteEvents = getOwnerInvites().flatMap((inv) => {
-      const status = normalizeInviteStatus(inv.status);
+      const status = getRecordedInviteStatus(inv);
       if (status === "accepted" && inv.acceptedAt) {
         return [
           {

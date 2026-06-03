@@ -5,7 +5,8 @@ import { getItem, getSessionItem, setItem, setSessionItem } from "@/lib/storageK
 
 export type InquiryStatus = "open" | "invited";
 
-export type InviteStatus = "pending" | "accepted" | "rejected";
+/** Set only when the owner manually records an outcome. */
+export type RecordedInviteStatus = "accepted" | "rejected";
 
 export interface OwnerTenantInquiry {
   id: string;
@@ -33,7 +34,8 @@ export interface OwnerTenantInvite {
   monthlyMaintenance: string;
   securityDeposit: string;
   startDate: string;
-  status: InviteStatus | "pending_confirmation" | "declined" | "expired";
+  /** Legacy values are normalized on read; new invites omit status until marked. */
+  status?: RecordedInviteStatus | "pending" | "pending_confirmation" | "declined" | "expired";
   inquiryId?: string;
   linkedinUrl?: string;
   createdAt: number;
@@ -86,13 +88,13 @@ function persist(dataType: string, list: unknown[]): void {
   }
 }
 
-export function normalizeInviteStatus(
-  status: OwnerTenantInvite["status"],
-): InviteStatus {
-  if (status === "pending_confirmation" || status === "expired") return "pending";
-  if (status === "declined") return "rejected";
-  if (status === "accepted" || status === "rejected" || status === "pending") return status;
-  return "pending";
+/** Returns a manual outcome badge only after the owner updates status. */
+export function getRecordedInviteStatus(
+  invite: OwnerTenantInvite,
+): RecordedInviteStatus | null {
+  if (invite.status === "accepted") return "accepted";
+  if (invite.status === "rejected" || invite.status === "declined") return "rejected";
+  return null;
 }
 
 export function getPropertyInviteLabel(p: Property): string {
@@ -140,7 +142,6 @@ export function sendOwnerTenantInvites(payload: SendTenantInvitePayload): OwnerT
       monthlyMaintenance: payload.monthlyMaintenance,
       securityDeposit: payload.securityDeposit,
       startDate: payload.startDate,
-      status: "pending",
       inquiryId: member.inquiryId,
       createdAt: Date.now(),
     };
@@ -164,7 +165,7 @@ export function sendOwnerTenantInvites(payload: SendTenantInvitePayload): OwnerT
 
 export function updateOwnerInviteStatus(
   inviteId: string,
-  status: InviteStatus,
+  status: RecordedInviteStatus,
 ): OwnerTenantInvite | null {
   const invites = getOwnerInvites();
   const idx = invites.findIndex((i) => i.id === inviteId);
@@ -180,6 +181,14 @@ export function updateOwnerInviteStatus(
   invites[idx] = updated;
   persist(INVITES_KEY, invites);
   return updated;
+}
+
+export function deleteOwnerInvite(inviteId: string): boolean {
+  const invites = getOwnerInvites();
+  const next = invites.filter((i) => i.id !== inviteId);
+  if (next.length === invites.length) return false;
+  persist(INVITES_KEY, next);
+  return true;
 }
 
 export function formatMemberContact(phone: string): string {
@@ -220,9 +229,6 @@ export function buildWhatsAppInviteMessage(invite: OwnerTenantInvite): string {
     `Monthly Rent: ₹${formatInviteAmount(invite.monthlyRent)}\n` +
     `Security Deposit: ₹${formatInviteAmount(invite.securityDeposit)}\n` +
     `Start Date: ${formatInviteStartDate(invite.startDate)}\n\n` +
-    `Please reply with one of the following:\n\n` +
-    `ACCEPT\n` +
-    `REJECT\n\n` +
     `Sent via TrustKeyper.`
   );
 }
@@ -233,28 +239,21 @@ export function whatsAppInviteHref(phone: string, message: string): string {
   return `https://wa.me/91${digits}?text=${encodeURIComponent(message)}`;
 }
 
-/** Redirects the owner to WhatsApp with the pre-filled invitation message. */
-export function openWhatsAppInvite(invite: OwnerTenantInvite): void {
-  const message = buildWhatsAppInviteMessage(invite);
-  const url = whatsAppInviteHref(invite.phone, message);
-  window.location.href = url;
+export function getWhatsAppInviteHref(invite: OwnerTenantInvite): string {
+  return whatsAppInviteHref(invite.phone, buildWhatsAppInviteMessage(invite));
 }
 
 export function isInviteFromInquiry(invite: OwnerTenantInvite): boolean {
   return !!invite.inquiryId;
 }
 
-export const INVITE_STATUS_LABELS: Record<InviteStatus, string> = {
-  pending: "Pending",
-  accepted: "Accepted",
-  rejected: "Rejected",
-};
-
-export function getInviteStatusCounts(invites: OwnerTenantInvite[]) {
-  const counts = { pending: 0, accepted: 0, rejected: 0 };
+export function countRecordedInvites(invites: OwnerTenantInvite[]) {
+  let accepted = 0;
+  let rejected = 0;
   for (const inv of invites) {
-    const s = normalizeInviteStatus(inv.status);
-    counts[s] += 1;
+    const s = getRecordedInviteStatus(inv);
+    if (s === "accepted") accepted += 1;
+    if (s === "rejected") rejected += 1;
   }
-  return counts;
+  return { accepted, rejected };
 }

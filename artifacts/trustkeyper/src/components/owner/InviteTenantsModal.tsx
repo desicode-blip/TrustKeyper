@@ -165,8 +165,8 @@ export function InviteTenantsModal({
 
     setSaving(false);
     toast({
-      title: "Invitation created",
-      description: "Use Send via WhatsApp on the invite card to message the tenant.",
+      title: "Tenant added",
+      description: "Open WhatsApp from the card to send your invitation message.",
     });
     onSuccess();
     onOpenChange(false);
