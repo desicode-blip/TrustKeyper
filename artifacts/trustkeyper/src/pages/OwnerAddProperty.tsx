@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import OwnerLayout from "@/components/OwnerLayout";
+import { FlowClearButton } from "@/components/owner/FlowClearButton";
 import { addProperty, getProperties, updateProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 import { getItem, getSessionItem, removeItem, setItem } from "@/lib/storageKeys";
@@ -887,6 +888,45 @@ export default function OwnerAddProperty() {
     }
   };
 
+  const handleClearFlow = () => {
+    removeItem("onboarding_data");
+    setSubStep(0);
+    setNickname("");
+    setAddress("");
+    setArea("");
+    setCity("Hyderabad");
+    setPincode("");
+    setCountry("India");
+    setPropertyType("");
+    setPropertyTypeOther("");
+    setUnitSize("");
+    setUnitSizeOther("");
+    setFurnishing("");
+    setBuiltUpArea("");
+    setBuiltUpUnits("sq ft");
+    setTotalFloors("");
+    setBedrooms("");
+    setBathrooms("");
+    setBalconies("");
+    setFloorLevel("");
+    setMainDoorDirection("");
+    setAmenities([]);
+    setAmenityOtherChecked(false);
+    setAmenityOtherText("");
+    setTenantsPreferred([]);
+    setMonthlyRent("");
+    setRentNegotiable(false);
+    setMaintenanceIncluded(false);
+    setMonthlyMaintenance("");
+    setSecurityDeposit("");
+    setAvailableFrom("");
+    setImageUrls([]);
+    const storedName = getSessionItem("name");
+    const storedPhone = getSessionItem("phone") || getSessionItem("contact");
+    if (storedName) setOwnerName(storedName);
+    if (storedPhone) setOwnerContact(storedPhone);
+  };
+
   return (
     <OwnerLayout>
       <div className="p-4 sm:p-8 max-w-5xl mx-auto w-full min-w-0 pb-32 sm:pb-8">
@@ -903,6 +943,9 @@ export default function OwnerAddProperty() {
                 : "Back to Properties"
               : "Back"}
           </button>
+          {!editingPropertyId ? (
+            <FlowClearButton onClick={handleClearFlow} />
+          ) : null}
         </div>
 
         <ProgressBar subStep={subStep} />

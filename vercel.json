@@ -5,12 +5,19 @@
   "functions": {
     "api/sync.ts": {
       "maxDuration": 30
+    },
+    "api/invitations.ts": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
     {
       "source": "/api/sync/(.*)",
       "destination": "/api/sync?syncPath=$1"
+    },
+    {
+      "source": "/api/invitations/(.*)",
+      "destination": "/api/invitations?invitePath=$1"
     },
     {
       "source": "/((?!api/).*)",

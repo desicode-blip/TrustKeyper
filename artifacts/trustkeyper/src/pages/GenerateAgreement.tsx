@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
 import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
+import { FlowClearButton } from "@/components/owner/FlowClearButton";
 import { StepOwnerParties } from "@/components/owner/agreement/StepOwnerParties";
 import {
   StepOwnerPaymentSplit,
@@ -2231,13 +2232,7 @@ export default function GenerateAgreement() {
               : "Back to Dashboard"
             : "Back"}
         </button>
-        <button
-          type="button"
-          onClick={handleClearFlow}
-          className="text-xs font-semibold text-primary border-0 bg-transparent shadow-none px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors"
-        >
-          Clear
-        </button>
+        <FlowClearButton onClick={handleClearFlow} />
       </div>
 
       {/* Header */}

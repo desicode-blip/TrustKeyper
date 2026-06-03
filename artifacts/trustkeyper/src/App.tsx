@@ -30,6 +30,7 @@ import OwnerTickets from "@/pages/OwnerTickets";
 import OwnerAgreements from "@/pages/OwnerAgreements";
 import OwnerFinances from "@/pages/OwnerFinances";
 import OwnerProfile from "@/pages/OwnerProfile";
+import TenantInvite from "@/pages/TenantInvite";
 import AdminLogin from "@/pages/admin/AdminLogin";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminUsers from "@/pages/admin/AdminUsers";
@@ -41,6 +42,7 @@ const queryClient = createAdminQueryClient();
 function Router() {
   return (
     <Switch>
+      <Route path="/invite/:token" component={TenantInvite} />
       <Route path="/login" component={Login} />
       {/* Role-card login — not linked in UI; enable navigation when needed */}
       <Route path="/Logindirect" component={LoginDirect} />

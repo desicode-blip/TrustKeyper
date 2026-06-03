@@ -7,23 +7,39 @@ import { InviteTenantsModal } from "@/components/owner/InviteTenantsModal";
 import { OwnerPageEmpty } from "@/components/owner/OwnerPageEmpty";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
+import { getOwnerProfile } from "@/lib/ownerProfile";
 import { getProperties, type Property } from "@/lib/properties";
 import {
   formatMemberContact,
   getOwnerInvites,
+  INVITE_STATUS_LABELS,
   isInviteFromInquiry,
+  normalizeInviteStatus,
+  refreshOwnerInvitesFromApi,
   whatsAppHref,
+  type InviteStatus,
   type OwnerTenantInvite,
 } from "@/lib/ownerTenants";
+import {
+  invitePublicUrl,
+  whatsAppInviteHref,
+  whatsAppInviteMessage,
+} from "@/lib/tenantInvitationsApi";
 
 const TABS = [
   { id: "invites", label: "Invites" },
   { id: "active", label: "Active Tenants" },
 ] as const;
 
-type TenantTab = (typeof TABS)[number]["id"];
+const INVITE_FILTERS = [
+  { id: "all", label: "All" },
+  { id: "pending", label: "Pending" },
+  { id: "accepted", label: "Accepted" },
+  { id: "declined", label: "Declined" },
+] as const;
 
-const INVITE_STATUS_LABEL = "Confirmation sent. Waiting for tenant to accept.";
+type TenantTab = (typeof TABS)[number]["id"];
+type InviteFilter = (typeof INVITE_FILTERS)[number]["id"];
 
 function filterOwnerProperties(all: Property[], ownerName: string): Property[] {
   const name = ownerName.replace("!", "").trim();
@@ -39,10 +55,42 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-function WhatsAppIconButton({ phone }: { phone: string }) {
+const STATUS_BADGE_CLASS: Record<InviteStatus, string> = {
+  pending: "bg-[#768EA7]",
+  accepted: "bg-green-600",
+  declined: "bg-gray-500",
+  expired: "bg-amber-600",
+};
+
+function InviteStatusBadge({ status }: { status: InviteStatus }) {
+  return (
+    <span
+      className={`inline-flex items-center justify-center px-4 py-2.5 rounded-full text-white text-xs font-medium leading-snug text-center max-w-[240px] sm:max-w-none ${STATUS_BADGE_CLASS[status]}`}
+    >
+      {INVITE_STATUS_LABELS[status]}
+    </span>
+  );
+}
+
+function WhatsAppIconButton({ phone, invite }: { phone: string; invite: OwnerTenantInvite }) {
+  const href = useMemo(() => {
+    if (invite.token && invite.status === "pending") {
+      const profile = getOwnerProfile();
+      const url = invite.inviteUrl ?? invitePublicUrl(invite.token);
+      const message = whatsAppInviteMessage({
+        tenantName: invite.name,
+        ownerName: profile.name || "Property owner",
+        propertyLabel: invite.propertyLabel,
+        inviteUrl: url,
+      });
+      return whatsAppInviteHref(phone, message);
+    }
+    return whatsAppHref(phone);
+  }, [phone, invite]);
+
   return (
     <a
-      href={whatsAppHref(phone)}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat on WhatsApp"
@@ -50,14 +98,6 @@ function WhatsAppIconButton({ phone }: { phone: string }) {
     >
       <FaWhatsapp className="w-5 h-5" aria-hidden />
     </a>
-  );
-}
-
-function InviteStatusBadge() {
-  return (
-    <span className="inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-[#768EA7] text-white text-xs font-medium leading-snug text-center max-w-[240px] sm:max-w-none">
-      {INVITE_STATUS_LABEL}
-    </span>
   );
 }
 
@@ -77,6 +117,7 @@ function LinkedInProfileLink({ url }: { url: string }) {
 
 function InvitedTenantRow({ invite }: { invite: OwnerTenantInvite }) {
   const fromInquiry = isInviteFromInquiry(invite);
+  const status = normalizeInviteStatus(invite.status);
 
   return (
     <div className="rounded-lg bg-[#F3FBF6] border border-green-100/80 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -114,8 +155,8 @@ function InvitedTenantRow({ invite }: { invite: OwnerTenantInvite }) {
       </div>
 
       <div className="flex items-center gap-3 w-full sm:w-auto sm:justify-end shrink-0">
-        <InviteStatusBadge />
-        <WhatsAppIconButton phone={invite.phone} />
+        <InviteStatusBadge status={status} />
+        <WhatsAppIconButton phone={invite.phone} invite={invite} />
       </div>
     </div>
   );
@@ -145,6 +186,7 @@ function PropertyInvitesCard({
 export default function OwnerTenants() {
   const ownerName = getOwnerName();
   const [activeTab, setActiveTab] = useState<TenantTab>("invites");
+  const [inviteFilter, setInviteFilter] = useState<InviteFilter>("all");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [invites, setInvites] = useState<OwnerTenantInvite[]>([]);
 
@@ -152,28 +194,66 @@ export default function OwnerTenants() {
     return filterOwnerProperties(getProperties(), ownerName);
   }, [ownerName]);
 
-  const reload = useCallback(() => {
+  const reload = useCallback(async () => {
+    const phone = getOwnerProfile().phone.replace(/\D/g, "").slice(-10);
+    if (phone.length === 10) {
+      const list = await refreshOwnerInvitesFromApi(phone);
+      setInvites(list);
+      return;
+    }
     setInvites(getOwnerInvites());
   }, []);
 
   useEffect(() => {
-    reload();
+    void reload();
   }, [reload]);
+
+  useEffect(() => {
+    const refresh = () => void reload();
+    window.addEventListener("storage", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [reload]);
+
+  const filteredInvites = useMemo(() => {
+    if (inviteFilter === "all") return invites;
+    return invites.filter((inv) => normalizeInviteStatus(inv.status) === inviteFilter);
+  }, [invites, inviteFilter]);
 
   const invitesByProperty = useMemo(() => {
     const map = new Map<string, OwnerTenantInvite[]>();
-    for (const inv of invites) {
+    for (const inv of filteredInvites) {
       const list = map.get(inv.propertyLabel) ?? [];
       list.push(inv);
       map.set(inv.propertyLabel, list);
     }
     return map;
+  }, [filteredInvites]);
+
+  const statusCounts = useMemo(() => {
+    const counts = { pending: 0, accepted: 0, declined: 0 };
+    for (const inv of invites) {
+      const s = normalizeInviteStatus(inv.status);
+      if (s in counts) counts[s as keyof typeof counts] += 1;
+    }
+    return counts;
   }, [invites]);
 
   const tabLabel = (id: TenantTab) => {
     if (id === "invites") return `Invites (${invites.length})`;
-    if (id === "active") return "Active Tenants (0)";
-    return "Active Tenants (0)";
+    const accepted = statusCounts.accepted;
+    return `Active Tenants (${accepted})`;
+  };
+
+  const filterLabel = (id: InviteFilter) => {
+    if (id === "all") return `All (${invites.length})`;
+    if (id === "pending") return `Pending (${statusCounts.pending})`;
+    if (id === "accepted") return `Accepted (${statusCounts.accepted})`;
+    if (id === "declined") return `Declined (${statusCounts.declined})`;
+    return id;
   };
 
   return (
@@ -194,16 +274,24 @@ export default function OwnerTenants() {
 
         <FlowSegmentTabs
           value={activeTab}
-          onChange={(value) =>
-  setActiveTab(value as "active" | "invites")
-}
-          className="mb-8"
+          onChange={(value) => setActiveTab(value as TenantTab)}
+          className="mb-6"
           options={TABS.map((t) => ({ value: t.id, label: tabLabel(t.id) }))}
         />
 
         {activeTab === "invites" && (
-          <div className="space-y-8">
-            {invites.length > 0 ? (
+          <div className="space-y-6">
+            <FlowSegmentTabs
+              value={inviteFilter}
+              onChange={(value) => setInviteFilter(value as InviteFilter)}
+              className="mb-2 max-w-2xl"
+              options={INVITE_FILTERS.map((f) => ({
+                value: f.id,
+                label: filterLabel(f.id),
+              }))}
+            />
+
+            {filteredInvites.length > 0 ? (
               <section>
                 <div className="flex flex-col gap-4">
                   {Array.from(invitesByProperty.entries()).map(([label, group]) => (
@@ -214,8 +302,12 @@ export default function OwnerTenants() {
             ) : (
               <OwnerPageEmpty
                 icon={Users}
-                title="No invites yet"
-                description="Invited tenants will appear here once you send an invitation."
+                title={invites.length === 0 ? "No invites yet" : "No invites in this filter"}
+                description={
+                  invites.length === 0
+                    ? "Invited tenants will appear here once you send an invitation."
+                    : "Try another filter or send a new invitation."
+                }
               />
             )}
           </div>
@@ -225,17 +317,16 @@ export default function OwnerTenants() {
           <OwnerPageEmpty
             icon={Users}
             title="No active tenants"
-            description="Tenants with an active lease will show up here once they accept your invitation."
+            description="Tenants who accept your invitation will appear here once you start lease onboarding."
           />
         )}
-
       </div>
 
       <InviteTenantsModal
         open={inviteOpen}
         onOpenChange={setInviteOpen}
         properties={ownerProperties}
-        onSuccess={reload}
+        onSuccess={() => void reload()}
       />
     </OwnerLayout>
   );

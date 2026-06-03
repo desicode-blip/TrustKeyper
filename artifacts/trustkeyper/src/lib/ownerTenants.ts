@@ -2,8 +2,16 @@ import type { Food, TenantWho } from "@/lib/tenants";
 import { queueCloudSync } from "@/lib/cloudSync";
 import type { Property } from "@/lib/properties";
 import { getItem, getSessionItem, setItem, setSessionItem } from "@/lib/storageKeys";
+import {
+  fetchOwnerInvitations,
+  invitePublicUrl,
+  type InvitationStatus,
+  type ServerInvitation,
+} from "@/lib/tenantInvitationsApi";
 
 export type InquiryStatus = "open" | "invited";
+
+export type InviteStatus = InvitationStatus;
 
 export interface OwnerTenantInquiry {
   id: string;
@@ -32,7 +40,12 @@ export interface OwnerTenantInvite {
   monthlyMaintenance: string;
   securityDeposit: string;
   startDate: string;
-  status: "pending_confirmation";
+  status: InviteStatus | "pending_confirmation";
+  token?: string;
+  inviteUrl?: string;
+  expiresAt?: string;
+  acceptedAt?: string | null;
+  declinedAt?: string | null;
   inquiryId?: string;
   linkedinUrl?: string;
   createdAt: number;
@@ -79,6 +92,39 @@ function persist(dataType: string, list: unknown[]): void {
   }
 }
 
+export function normalizeInviteStatus(
+  status: OwnerTenantInvite["status"],
+): InviteStatus {
+  if (status === "pending_confirmation") return "pending";
+  return status;
+}
+
+export function mapServerInvitationToLocal(inv: ServerInvitation): OwnerTenantInvite {
+  return {
+    id: inv.id,
+    propertyId: inv.propertyId,
+    propertyLabel: inv.propertyLabel,
+    name: inv.tenantName,
+    phone: inv.tenantPhone,
+    monthlyRent: inv.monthlyRent,
+    maintenanceIncluded: inv.maintenanceIncluded,
+    monthlyMaintenance: inv.monthlyMaintenance,
+    securityDeposit: inv.securityDeposit,
+    startDate: inv.startDate,
+    status: inv.status,
+    token: inv.token,
+    inviteUrl: invitePublicUrl(inv.token),
+    expiresAt: inv.expiresAt,
+    acceptedAt: inv.acceptedAt ?? null,
+    declinedAt: inv.declinedAt ?? null,
+    createdAt: new Date(inv.createdAt).getTime(),
+  };
+}
+
+export function syncOwnerInvitesToLocal(invites: OwnerTenantInvite[]): void {
+  persist(INVITES_KEY, invites);
+}
+
 export function getPropertyInviteLabel(p: Property): string {
   const title = p.nickname || p.address || "Property";
   const loc = [p.area, p.city].filter(Boolean).join(", ");
@@ -106,6 +152,7 @@ export function getOwnerInvites(): OwnerTenantInvite[] {
   return readJson<OwnerTenantInvite>(INVITES_KEY);
 }
 
+/** Legacy local-only invite path (fallback when API unavailable). */
 export function sendOwnerTenantInvites(payload: SendTenantInvitePayload): OwnerTenantInvite[] {
   const inquiries = getOwnerInquiries();
   const invites = getOwnerInvites();
@@ -125,7 +172,7 @@ export function sendOwnerTenantInvites(payload: SendTenantInvitePayload): OwnerT
       monthlyMaintenance: payload.monthlyMaintenance,
       securityDeposit: payload.securityDeposit,
       startDate: payload.startDate,
-      status: "pending_confirmation",
+      status: "pending",
       inquiryId: member.inquiryId,
       createdAt: Date.now(),
     };
@@ -164,4 +211,23 @@ export function whatsAppHref(phone: string): string {
 
 export function isInviteFromInquiry(invite: OwnerTenantInvite): boolean {
   return !!invite.inquiryId;
+}
+
+export const INVITE_STATUS_LABELS: Record<InviteStatus, string> = {
+  pending: "Pending — waiting for tenant response",
+  accepted: "Accepted",
+  declined: "Declined",
+  expired: "Expired",
+};
+
+export async function refreshOwnerInvitesFromApi(
+  ownerPhone: string,
+): Promise<OwnerTenantInvite[]> {
+  const server = await fetchOwnerInvitations(ownerPhone);
+  if (server.length > 0) {
+    const local = server.map(mapServerInvitationToLocal);
+    syncOwnerInvitesToLocal(local);
+    return local;
+  }
+  return getOwnerInvites();
 }

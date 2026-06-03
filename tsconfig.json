@@ -17,6 +17,9 @@
     },
     {
       "path": "./lib/sync-store"
+    },
+    {
+      "path": "./lib/invitations-store"
     }
   ]
 }
