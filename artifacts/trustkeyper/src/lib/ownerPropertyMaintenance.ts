@@ -9,6 +9,7 @@ export interface PropertyMaintenanceTicket {
   category: string;
   title: string;
   description: string;
+  images: string[];
   status: MaintenanceStatus;
   createdAt: number;
 }
@@ -19,7 +20,20 @@ function readAll(): PropertyMaintenanceTicket[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as PropertyMaintenanceTicket[]) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Partial<PropertyMaintenanceTicket>[];
+    return parsed
+      .filter((t): t is Partial<PropertyMaintenanceTicket> & { propertyId: string; id: string } => Boolean(t?.id && t?.propertyId))
+      .map((t) => ({
+        id: t.id!,
+        propertyId: t.propertyId!,
+        category: t.category ?? "Other",
+        title: t.title ?? "",
+        description: t.description ?? "",
+        images: Array.isArray(t.images) ? t.images : [],
+        status: (t.status as MaintenanceStatus) ?? "Open",
+        createdAt: typeof t.createdAt === "number" ? t.createdAt : Date.now(),
+      }));
   } catch {
     return [];
   }
@@ -42,10 +56,13 @@ export function getPropertyMaintenanceTickets(propertyId: string): PropertyMaint
 }
 
 export function addPropertyMaintenanceTicket(
-  input: Omit<PropertyMaintenanceTicket, "id" | "status" | "createdAt">,
+  input: Omit<PropertyMaintenanceTicket, "id" | "status" | "createdAt" | "images"> & {
+    images?: string[];
+  },
 ): PropertyMaintenanceTicket {
   const ticket: PropertyMaintenanceTicket = {
     ...input,
+    images: input.images ?? [],
     id: `mnt_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     status: "Open",
     createdAt: Date.now(),

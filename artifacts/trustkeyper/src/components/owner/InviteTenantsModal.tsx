@@ -18,25 +18,19 @@ import {
 import type { Property } from "@/lib/properties";
 import {
   formatMemberContact,
-  getOpenInquiriesForProperty,
   getPropertyInviteLabel,
   sendOwnerTenantInvites,
-  type OwnerTenantInquiry,
 } from "@/lib/ownerTenants";
 
 type Step = "count" | "members" | "confirm";
 
-type MemberMode = "inquiry" | "manual";
-
 interface MemberSlot {
-  mode: MemberMode;
-  inquiryId: string;
   name: string;
   contact: string;
 }
 
 function emptySlot(): MemberSlot {
-  return { mode: "inquiry", inquiryId: "", name: "", contact: "" };
+  return { name: "", contact: "" };
 }
 
 function parseRent(value: string): string {
@@ -76,16 +70,6 @@ export function InviteTenantsModal({
     () => properties.find((p) => p.id === propertyId),
     [properties, propertyId],
   );
-
-  const [inquiryTick, setInquiryTick] = useState(0);
-  const propertyInquiries = useMemo(() => {
-    void inquiryTick;
-    return propertyId ? getOpenInquiriesForProperty(propertyId) : [];
-  }, [propertyId, inquiryTick]);
-
-  useEffect(() => {
-    if (open) setInquiryTick((t) => t + 1);
-  }, [open, step, propertyId]);
 
   useEffect(() => {
     if (!open) return;
@@ -131,12 +115,9 @@ export function InviteTenantsModal({
 
   const canContinueCount = !!propertyId && tenantCount >= 1;
 
-  const canContinueMembers = slots.every((slot) => {
-    if (slot.mode === "manual") {
-      return slot.name.trim().length > 0 && slot.contact.replace(/\D/g, "").length === 10;
-    }
-    return !!slot.inquiryId;
-  });
+  const canContinueMembers = slots.every(
+    (slot) => slot.name.trim().length > 0 && slot.contact.replace(/\D/g, "").length === 10,
+  );
 
   const canSendInvite =
     !!propertyId &&
@@ -156,33 +137,10 @@ export function InviteTenantsModal({
     if (!next) onOpenChange(false);
   };
 
-  const applyInquiryToSlot = (index: number, inquiry: OwnerTenantInquiry) => {
-    setSlots((prev) => {
-      const next = [...prev];
-      next[index] = {
-        mode: "inquiry",
-        inquiryId: inquiry.id,
-        name: inquiry.name,
-        contact: inquiry.phone,
-      };
-      return next;
-    });
-  };
-
   const handleSendInvite = () => {
     if (!selectedProperty || !canSendInvite) return;
 
     const members = slots.map((slot) => {
-      if (slot.mode === "inquiry") {
-        const inq = propertyInquiries.find((i) => i.id === slot.inquiryId);
-        return {
-          name: inq?.name ?? slot.name,
-          phone: inq?.phone ?? slot.contact,
-          who: inq?.who,
-          food: inq?.food,
-          inquiryId: slot.inquiryId,
-        };
-      }
       const digits = slot.contact.replace(/\D/g, "").slice(-10);
       return {
         name: slot.name.trim(),
@@ -261,11 +219,6 @@ export function InviteTenantsModal({
                 key={index}
                 index={index}
                 slot={slot}
-                inquiries={propertyInquiries}
-                usedInquiryIds={slots
-                  .filter((_, i) => i !== index)
-                  .map((s) => s.inquiryId)
-                  .filter(Boolean)}
                 onChange={(next) =>
                   setSlots((prev) => {
                     const copy = [...prev];
@@ -273,7 +226,6 @@ export function InviteTenantsModal({
                     return copy;
                   })
                 }
-                onSelectInquiry={(inq) => applyInquiryToSlot(index, inq)}
               />
             ))}
             <div className="flex justify-center pt-4">
@@ -409,20 +361,12 @@ function PropertyField({
 function TenantMemberBlock({
   index,
   slot,
-  inquiries,
-  usedInquiryIds,
   onChange,
-  onSelectInquiry,
 }: {
   index: number;
   slot: MemberSlot;
-  inquiries: OwnerTenantInquiry[];
-  usedInquiryIds: string[];
   onChange: (slot: MemberSlot) => void;
-  onSelectInquiry: (inq: OwnerTenantInquiry) => void;
 }) {
-  const available = inquiries.filter((i) => !usedInquiryIds.includes(i.id) || i.id === slot.inquiryId);
-
   return (
     <div className="rounded-lg border border-gray-200 p-4 bg-gray-50/40">
       <div className="flex items-center gap-2 mb-3">
@@ -432,96 +376,44 @@ function TenantMemberBlock({
         <span className="text-sm font-semibold text-gray-900">Tenant {index + 1}</span>
       </div>
 
-      <Select
-        value={slot.mode === "inquiry" && slot.inquiryId ? slot.inquiryId : undefined}
-        onValueChange={(id) => {
-          const inq = inquiries.find((i) => i.id === id);
-          if (inq) {
-            onSelectInquiry(inq);
-            onChange({ mode: "inquiry", inquiryId: id, name: inq.name, contact: inq.phone });
-          }
-        }}
-        disabled={slot.mode === "manual"}
-      >
-        <SelectTrigger className="h-10 w-full bg-white mb-3">
-          <SelectValue placeholder="Select Tenant" />
-        </SelectTrigger>
-        <SelectContent>
-          {available.map((inq) => (
-            <SelectItem key={inq.id} value={inq.id}>
-              {inq.name} · {formatMemberContact(inq.phone)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <div className="space-y-2 mb-3">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            name={`tenant-mode-${index}`}
-            checked={slot.mode === "inquiry"}
-            onChange={() =>
-              onChange({ mode: "inquiry", inquiryId: "", name: "", contact: "" })
-            }
-            className="accent-primary"
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <Label className="text-xs text-gray-500 mb-1.5 block">
+            Tenant name<span className="text-red-500">*</span>
+          </Label>
+          <Input
+            value={slot.name}
+            onChange={(e) => onChange({ ...slot, name: e.target.value })}
+            className="h-10 bg-white"
+            placeholder="Full name"
           />
-          <span className="text-sm text-gray-700">Select from enquiries</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            name={`tenant-mode-${index}`}
-            checked={slot.mode === "manual"}
-            onChange={() =>
-              onChange({ mode: "manual", inquiryId: "", name: slot.name, contact: slot.contact })
-            }
-            className="accent-primary"
-          />
-          <span className="text-sm text-gray-700">Add tenants manually</span>
-        </label>
-      </div>
-
-      {slot.mode === "manual" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs text-gray-500 mb-1.5 block">
-              Tenant name<span className="text-red-500">*</span>
-            </Label>
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500 mb-1.5 block">
+            Phone Number<span className="text-red-500">*</span>
+          </Label>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 shrink-0">+91</span>
             <Input
-              value={slot.name}
-              onChange={(e) => onChange({ ...slot, name: e.target.value })}
-              className="h-10 bg-white"
-              placeholder="Full name"
+              type="tel"
+              inputMode="numeric"
+              value={slot.contact}
+              onChange={(e) =>
+                onChange({
+                  ...slot,
+                  contact: e.target.value.replace(/\D/g, "").slice(0, 10),
+                })
+              }
+              className="h-10 bg-white flex-1"
+              placeholder="10-digit number"
+              maxLength={10}
             />
           </div>
-          <div>
-            <Label className="text-xs text-gray-500 mb-1.5 block">
-              Phone Number<span className="text-red-500">*</span>
-            </Label>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600 shrink-0">+91</span>
-              <Input
-                type="tel"
-                inputMode="numeric"
-                value={slot.contact}
-                onChange={(e) =>
-                  onChange({
-                    ...slot,
-                    contact: e.target.value.replace(/\D/g, "").slice(0, 10),
-                  })
-                }
-                className="h-10 bg-white flex-1"
-                placeholder="10-digit number"
-                maxLength={10}
-              />
-            </div>
-            {slot.contact.length > 0 && slot.contact.length < 10 ? (
-              <p className="text-xs text-red-500 mt-1">Enter a valid 10-digit mobile number.</p>
-            ) : null}
-          </div>
+          {slot.contact.length > 0 && slot.contact.length < 10 ? (
+            <p className="text-xs text-red-500 mt-1">Enter a valid 10-digit mobile number.</p>
+          ) : null}
         </div>
-      )}
+      </div>
     </div>
   );
 }

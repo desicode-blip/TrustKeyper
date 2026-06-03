@@ -3,6 +3,7 @@ import { useLocation, useRoute } from "wouter";
 import {
   MapPin,
   ChevronLeft,
+  ChevronRight,
   Edit,
   Plus,
   Eye,
@@ -111,6 +112,8 @@ export default function OwnerPropertyDetails() {
   const [shareOpen, setShareOpen] = useState(false);
   const [complaintOpen, setComplaintOpen] = useState(false);
   const [viewerDoc, setViewerDoc] = useState<PropertyDocument | null>(null);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
   const [documents, setDocuments] = useState<PropertyDocument[]>([]);
   const [tickets, setTickets] = useState(() =>
     params?.id ? getPropertyMaintenanceTickets(params.id) : [],
@@ -176,6 +179,26 @@ export default function OwnerPropertyDetails() {
       return;
     }
     setViewerDoc(doc);
+  };
+
+  const images = property.images ?? [];
+  const visibleThumbs = images.slice(1, 6);
+
+  const openImageViewer = (list: string[], startIndex: number) => {
+    if (!list[startIndex]) return;
+    setGalleryImages(list);
+    setActiveImageIndex(startIndex);
+  };
+
+  const closeImageViewer = () => {
+    setActiveImageIndex(null);
+    setGalleryImages([]);
+  };
+
+  const goToImage = (delta: number) => {
+    if (activeImageIndex === null || galleryImages.length === 0) return;
+    const next = (activeImageIndex + delta + galleryImages.length) % galleryImages.length;
+    setActiveImageIndex(next);
   };
 
   return (
@@ -267,33 +290,46 @@ export default function OwnerPropertyDetails() {
             </div>
           </div>
 
-          <div className="px-4 sm:px-6 pb-4 border-t border-gray-100 pt-4">
-            <FlowSegmentTabs
-              value={activeTab}
-              onChange={(v) => setActiveTab(v as TabId)}
-              options={TABS}
-              fullWidth
-            />
-          </div>
         </div>
+
+        <FlowSegmentTabs
+          value={activeTab}
+          onChange={(v) => setActiveTab(v as TabId)}
+          options={TABS}
+          fullWidth
+          className="mb-6 bg-transparent border-transparent p-0"
+        />
 
         {activeTab === "overview" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-300">
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm p-3">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {property.images && property.images.length > 0 ? (
+              <div className="space-y-3">
+                {images.length > 0 ? (
                   <>
-                    <div className="col-span-2 sm:col-span-3 h-48 md:h-56 rounded-xl bg-gray-100 overflow-hidden">
-                      <img src={property.images[0]} alt="Main" className="w-full h-full object-cover" />
-                    </div>
-                    {property.images.slice(1, 4).map((img, i) => (
-                      <div key={i} className="aspect-video rounded-xl bg-gray-100 overflow-hidden">
-                        <img src={img} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => openImageViewer(images, 0)}
+                      className="w-full h-[260px] sm:h-[320px] rounded-xl bg-gray-100 overflow-hidden block"
+                    >
+                      <img src={images[0]} alt="Main" className="w-full h-full object-cover" />
+                    </button>
+                    {visibleThumbs.length > 0 && (
+                      <div className="grid grid-cols-5 gap-2">
+                        {visibleThumbs.map((img, i) => (
+                          <button
+                            key={img + i}
+                            type="button"
+                            onClick={() => openImageViewer(images, i + 1)}
+                            className="h-16 sm:h-20 rounded-lg bg-gray-100 overflow-hidden border border-gray-200 hover:border-primary/50"
+                          >
+                            <img src={img} alt="" className="w-full h-full object-cover" />
+                          </button>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </>
                 ) : (
-                  <div className="col-span-full h-56 flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                  <div className="h-56 flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
                     <p className="text-sm font-semibold">No photos uploaded</p>
                   </div>
                 )}
@@ -456,7 +492,7 @@ export default function OwnerPropertyDetails() {
                 className="gap-2 h-10 shrink-0"
                 onClick={() => setComplaintOpen(true)}
               >
-                <Wrench size={16} /> Raise complaint
+                <Wrench size={16} /> Log Maintenance
               </Button>
             </div>
 
@@ -465,7 +501,7 @@ export default function OwnerPropertyDetails() {
                 <Wrench size={32} className="mx-auto text-gray-300 mb-3" />
                 <p className="text-sm font-semibold text-gray-700">No maintenance history</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  Raise a complaint to log an issue for this property.
+                  Log maintenance to record an issue for this property.
                 </p>
               </div>
             ) : (
@@ -484,6 +520,20 @@ export default function OwnerPropertyDetails() {
                       </div>
                       <p className="text-sm font-semibold text-gray-900">{t.title}</p>
                       <p className="text-xs text-gray-500 mt-1 line-clamp-2">{t.description}</p>
+                      {Array.isArray(t.images) && t.images.length > 0 && (
+                        <div className="mt-2 grid grid-cols-4 gap-2">
+                          {t.images.slice(0, 4).map((img, idx) => (
+                            <button
+                              key={`${t.id}-img-${idx}`}
+                              type="button"
+                              onClick={() => openImageViewer(t.images, idx)}
+                              className="h-12 rounded-md overflow-hidden border border-gray-200"
+                            >
+                              <img src={img} alt={`Issue ${idx + 1}`} className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <span
                       className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 self-start sm:self-center ${
@@ -513,6 +563,43 @@ export default function OwnerPropertyDetails() {
         onSubmitted={refreshTickets}
       />
       <DocumentViewerModal doc={viewerDoc} onClose={() => setViewerDoc(null)} />
+      {activeImageIndex !== null && galleryImages[activeImageIndex] && (
+        <div className="fixed inset-0 z-[65] bg-black/90 flex items-center justify-center p-4">
+          <button
+            type="button"
+            onClick={closeImageViewer}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20"
+            aria-label="Close viewer"
+          >
+            <X size={18} />
+          </button>
+          {galleryImages.length > 1 && (
+            <button
+              type="button"
+              onClick={() => goToImage(-1)}
+              className="absolute left-4 sm:left-8 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20"
+              aria-label="Previous image"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          )}
+          <img
+            src={galleryImages[activeImageIndex]}
+            alt={`Property view ${activeImageIndex + 1}`}
+            className="max-h-[85vh] max-w-[90vw] object-contain rounded-lg"
+          />
+          {galleryImages.length > 1 && (
+            <button
+              type="button"
+              onClick={() => goToImage(1)}
+              className="absolute right-4 sm:right-8 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20"
+              aria-label="Next image"
+            >
+              <ChevronRight size={20} />
+            </button>
+          )}
+        </div>
+      )}
     </OwnerLayout>
   );
 }

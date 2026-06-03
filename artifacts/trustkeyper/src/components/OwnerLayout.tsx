@@ -12,7 +12,6 @@ import {
   LayoutDashboard,
   Building2,
   Users,
-  CreditCard,
   Wrench,
   FileSignature,
   LogOut,
@@ -28,7 +27,6 @@ const navItems = [
   { id: "dashboards", label: "Dashboards", icon: LayoutDashboard, href: "/owner/dashboard" },
   { id: "properties", label: "Properties", icon: Building2, href: "/owner/properties" },
   { id: "tenants", label: "Tenants", icon: Users, href: "/owner/tenants" },
-  { id: "finances", label: "Rent Management", icon: CreditCard, href: "/owner/finances" },
   { id: "maintenance", label: "Maintenance", icon: Wrench, href: "/owner/tickets" },
   { id: "agreement", label: "Agreement", icon: FileSignature, href: "/owner/agreements" },
 ];
