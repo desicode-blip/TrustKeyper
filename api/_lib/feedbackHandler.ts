@@ -1,5 +1,5 @@
 /**
- * Orchestrates POST /api/feedback — validate, persist, respond, then async side effects.
+ * Orchestrates POST /api/feedback — validate, persist, side effects, then respond.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { analyseFeedbackWithGemini } from "./feedbackAi.js";
@@ -66,7 +66,7 @@ async function persistEmailNotification(record: FeedbackRecord): Promise<void> {
 }
 
 /**
- * Runs Claude analysis and Resend email after the HTTP response is sent.
+ * Runs Gemini analysis and Resend email before the HTTP response is sent.
  * Failures are logged; feedback row is never deleted.
  * @param record - Persisted feedback record.
  * @returns Promise resolved when side effects settle.
@@ -135,11 +135,6 @@ export async function handleFeedbackRequest(req: VercelRequest, res: VercelRespo
     return;
   }
 
-  json(res, 201, {
-    feedbackId: record.id,
-    createdAt: record.createdAt,
-  });
-
   try {
     await runPostSaveSideEffects(record);
   } catch (err) {
@@ -149,4 +144,9 @@ export async function handleFeedbackRequest(req: VercelRequest, res: VercelRespo
       error: err instanceof Error ? err.message : String(err),
     });
   }
+
+  json(res, 201, {
+    feedbackId: record.id,
+    createdAt: record.createdAt,
+  });
 }
