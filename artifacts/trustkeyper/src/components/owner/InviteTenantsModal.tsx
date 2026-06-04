@@ -4,7 +4,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -200,14 +200,14 @@ export function InviteTenantsModal({
               ))}
             </div>
             <div className="flex justify-center">
-              <Button
+              <OwnerFlowButton
                 type="button"
                 disabled={!canContinueCount || properties.length === 0}
-                className="rounded-xl border-0 px-8 font-semibold gap-2"
+                className="sm:min-w-[160px]"
                 onClick={() => setStep("members")}
               >
                 Continue <ArrowRight size={16} />
-              </Button>
+              </OwnerFlowButton>
             </div>
           </div>
         )}
@@ -229,14 +229,14 @@ export function InviteTenantsModal({
               />
             ))}
             <div className="flex justify-center pt-4">
-              <Button
+              <OwnerFlowButton
                 type="button"
                 disabled={!canContinueMembers}
-                className="rounded-xl border-0 px-8 font-semibold gap-2"
+                className="sm:min-w-[160px]"
                 onClick={() => setStep("confirm")}
               >
                 Continue <ArrowRight size={16} />
-              </Button>
+              </OwnerFlowButton>
             </div>
           </div>
         )}
@@ -307,15 +307,15 @@ export function InviteTenantsModal({
               </div>
             </div>
             <div className="flex justify-center pt-4">
-              <Button
+              <OwnerFlowButton
                 type="button"
                 disabled={!canSendInvite}
-                className="rounded-xl border-0 px-8 font-semibold gap-2"
+                className="sm:min-w-[160px]"
                 onClick={handleSendInvite}
               >
                 <Send size={16} />
                 Send Invite
-              </Button>
+              </OwnerFlowButton>
             </div>
           </div>
         )}

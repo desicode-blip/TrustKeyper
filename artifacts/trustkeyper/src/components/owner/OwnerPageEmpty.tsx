@@ -16,7 +16,7 @@ export function OwnerPageEmpty({ icon: Icon, title, description, action }: Owner
       </div>
       <p className="text-gray-900 font-semibold text-base mb-1">{title}</p>
       {description ? <p className="text-sm text-gray-500 max-w-md">{description}</p> : null}
-      {action ? <div className="mt-6">{action}</div> : null}
+      {action ? <div className="mt-6 w-full max-w-md sm:max-w-none">{action}</div> : null}
     </div>
   );
 }

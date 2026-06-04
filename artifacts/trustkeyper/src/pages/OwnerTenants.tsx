@@ -6,7 +6,7 @@ import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
 import { InviteTenantsModal } from "@/components/owner/InviteTenantsModal";
 import { OwnerPageEmpty } from "@/components/owner/OwnerPageEmpty";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
-import { Button } from "@/components/ui/button";
+import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 import { getProperties, type Property } from "@/lib/properties";
 import {
   formatMemberContact,
@@ -186,13 +186,10 @@ export default function OwnerTenants() {
           >
             <ChevronLeft size={20} /> Back to Dashboard
           </Link>
-          <Button
-            onClick={() => setInviteOpen(true)}
-            className="border-0 font-semibold shadow-md shadow-primary/25 gap-2"
-          >
+          <OwnerFlowButton onClick={() => setInviteOpen(true)}>
             <Send size={16} />
             Invite Tenants
-          </Button>
+          </OwnerFlowButton>
         </div>
 
         <FlowSegmentTabs

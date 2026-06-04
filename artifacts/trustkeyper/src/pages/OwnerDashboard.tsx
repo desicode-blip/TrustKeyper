@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Plus, ArrowRight, Check, Building2 } from "lucide-react";
+import { ArrowRight, Check, Building2, Plus } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
 import { OwnerPropertyCard } from "@/components/owner/OwnerPropertyCard";
-import { Button } from "@/components/ui/button";
+import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 import { getProperties, getPropertyTitle, type Property } from "@/lib/properties";
 import { getItem } from "@/lib/storageKeys";
 
@@ -90,12 +90,9 @@ export default function OwnerDashboard() {
           <h1 className="text-[28px] font-semibold text-primary tracking-tight">
             Welcome, {displayName}!
           </h1>
-          <Button
-            onClick={() => setLocation("/owner/properties/add")}
-            className="rounded-xl border-0 font-semibold shadow-lg shadow-primary/25 h-10 px-6 w-fit"
-          >
-            Add Property <Plus size={18} />
-          </Button>
+          <OwnerFlowButton onClick={() => setLocation("/owner/properties/add")}>
+            Add Property
+          </OwnerFlowButton>
         </div>
 
         {pendingDraft && (
