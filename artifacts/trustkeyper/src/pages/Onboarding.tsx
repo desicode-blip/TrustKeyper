@@ -5,7 +5,9 @@ import { toast } from "@/hooks/use-toast";
 import {
   type Role,
   clearInvalidAuthPendingRole,
+  clearRememberedSessionFromLocalStorage,
   isAuthEntryRole,
+  persistSessionToLocalStorage,
   profileExistsAsync,
   readAuthPendingRole,
   setAuthPendingRole,
@@ -30,6 +32,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
@@ -40,6 +44,7 @@ export default function Onboarding() {
 
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [isManagedPopupOpen, setIsManagedPopupOpen] = useState(false);
+  const [stayLoggedIn, setStayLoggedIn] = useState(false);
   const [, setLocation] = useLocation();
 
   const ownerPhoneDigits = ownerDetails.phone.replace(/\D/g, "").slice(0, 10);
@@ -94,6 +99,12 @@ export default function Onboarding() {
   const goBack = () => setStep((s) => Math.max(1, s - 1));
 
   const handleOwnerSuccessNext = () => {
+    if (stayLoggedIn) {
+      persistSessionToLocalStorage(ownerPhoneDigits, "owner");
+    } else {
+      clearRememberedSessionFromLocalStorage();
+    }
+
     try {
       setSessionItem("name", ownerDetails.name);
       setSessionItem("contact", ownerDetails.phone.replace(/\D/g, "").slice(0, 10));
@@ -220,7 +231,21 @@ export default function Onboarding() {
             </DialogDescription>
           </DialogHeader>
           {role === "owner" && (
-            <div className="mt-6 w-full">
+            <div className="mt-6 w-full space-y-4">
+              <div className="flex items-start gap-2 text-left">
+                <Checkbox
+                  id="owner-stay-logged-in"
+                  checked={stayLoggedIn}
+                  onCheckedChange={(checked) => setStayLoggedIn(checked === true)}
+                  className="mt-0.5"
+                />
+                <Label
+                  htmlFor="owner-stay-logged-in"
+                  className="cursor-pointer text-sm font-normal leading-snug text-gray-600"
+                >
+                  Stay logged in on this device
+                </Label>
+              </div>
               <Button
                 className="w-full bg-primary hover:bg-primary/90 text-white rounded-sm"
                 onClick={handleOwnerSuccessNext}

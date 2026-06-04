@@ -174,12 +174,60 @@ export async function loginSuccess(phone: string, role: Role): Promise<boolean> 
   return false;
 }
 
+/** localStorage keys used when the user opts in to "Remember me" / stay logged in. */
+export const REMEMBERED_SESSION_PHONE_KEY = "tk_active_phone";
+export const REMEMBERED_SESSION_ROLE_KEY = "tk_active_role";
+
 /** Set the active session */
 export function setActiveSession(phone: string, role: Role): void {
   const p = normalizePhoneDigits(phone);
   sessionStorage.setItem("tk_active_phone", p);
   sessionStorage.setItem("tk_active_role", role);
   persistActiveSessionBackup(p, role);
+}
+
+/**
+ * Persists the active session to localStorage so it survives tab/browser restarts.
+ * @param phone - Normalised 10-digit phone.
+ * @param role - Active role for this session.
+ */
+export function persistSessionToLocalStorage(phone: string, role: Role): void {
+  const p = normalizePhoneDigits(phone);
+  localStorage.setItem(REMEMBERED_SESSION_PHONE_KEY, p);
+  localStorage.setItem(REMEMBERED_SESSION_ROLE_KEY, role);
+}
+
+/**
+ * Removes remember-me session keys from localStorage.
+ */
+export function clearRememberedSessionFromLocalStorage(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(REMEMBERED_SESSION_PHONE_KEY);
+  localStorage.removeItem(REMEMBERED_SESSION_ROLE_KEY);
+}
+
+/**
+ * Restores session from localStorage into sessionStorage when remember-me was enabled.
+ * @returns True when a valid session was restored.
+ */
+export function restoreRememberedSessionFromLocalStorage(): boolean {
+  if (typeof window === "undefined") return false;
+
+  const existingPhone = sessionStorage.getItem("tk_active_phone");
+  const existingRole = sessionStorage.getItem("tk_active_role");
+  if (existingPhone && existingRole) return true;
+
+  const phone = localStorage.getItem(REMEMBERED_SESSION_PHONE_KEY);
+  const role = localStorage.getItem(REMEMBERED_SESSION_ROLE_KEY) as Role | null;
+  if (!phone || !role || !ALL_ROLES.includes(role)) return false;
+
+  const p = normalizePhoneDigits(phone);
+  if (p.length !== 10) return false;
+
+  sessionStorage.setItem("tk_active_phone", p);
+  sessionStorage.setItem("tk_active_role", role);
+  persistActiveSessionBackup(p, role);
+  return true;
 }
 
 /** Get active session (typed role) */
@@ -291,5 +339,6 @@ export function logout(): void {
   sessionStorage.removeItem("tk_active_role");
   sessionStorage.removeItem("tk_pending_role");
   clearActiveSessionBackup();
+  clearRememberedSessionFromLocalStorage();
   void supabase.auth.signOut();
 }

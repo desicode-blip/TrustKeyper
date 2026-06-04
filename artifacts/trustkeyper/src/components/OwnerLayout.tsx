@@ -7,7 +7,11 @@ import { getOwnerProfile } from "@/lib/ownerProfile";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import { getAgreements } from "@/lib/agreements";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
-import { logout, getActiveSession } from "@/lib/auth";
+import {
+  getActiveSession,
+  logout,
+  restoreRememberedSessionFromLocalStorage,
+} from "@/lib/auth";
 import {
   LayoutDashboard,
   Building2,
@@ -75,6 +79,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
   }, []);
 
   useEffect(() => {
+    restoreRememberedSessionFromLocalStorage();
     const session = getActiveSession();
     if (!session || session.role !== "owner") {
       sessionStorage.setItem("tk_pending_role", "owner");
