@@ -5,6 +5,9 @@
   "functions": {
     "api/sync.ts": {
       "maxDuration": 30
+    },
+    "api/feedback.ts": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
