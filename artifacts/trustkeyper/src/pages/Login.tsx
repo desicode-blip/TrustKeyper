@@ -25,6 +25,7 @@ import {
   persistSessionToLocalStorage,
   profileExistsAsync,
   readAuthPendingRole,
+  restoreRememberedSessionFromLocalStorage,
   roleDisplayLabel,
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
@@ -46,11 +47,17 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
 
   useEffect(() => {
+    const remembered = restoreRememberedSessionFromLocalStorage();
+    if (remembered) {
+      setLocation(dashboardRouteFor(remembered.role));
+      return;
+    }
+
     resetSessionForAuthEntry();
     clearInvalidAuthPendingRole();
     const pending = readAuthPendingRole();
     if (pending) setLoginRole(pending);
-  }, []);
+  }, [setLocation]);
 
   useEffect(() => {
     if (phase !== "otp" || countdown <= 0) return;

@@ -6,10 +6,12 @@ import {
   type Role,
   clearInvalidAuthPendingRole,
   clearRememberedSessionFromLocalStorage,
+  dashboardRouteFor,
   isAuthEntryRole,
   persistSessionToLocalStorage,
   profileExistsAsync,
   readAuthPendingRole,
+  restoreRememberedSessionFromLocalStorage,
   setAuthPendingRole,
   signUpSuccess,
 } from "@/lib/auth";
@@ -50,6 +52,12 @@ export default function Onboarding() {
   const ownerPhoneDigits = ownerDetails.phone.replace(/\D/g, "").slice(0, 10);
 
   useEffect(() => {
+    const remembered = restoreRememberedSessionFromLocalStorage();
+    if (remembered) {
+      setLocation(dashboardRouteFor(remembered.role));
+      return;
+    }
+
     resetSessionForAuthEntry();
     clearInvalidAuthPendingRole();
     const pending = readAuthPendingRole();
@@ -62,7 +70,7 @@ export default function Onboarding() {
       setStep(6);
       sessionStorage.removeItem("tk_owner_onboarding_resume_step");
     }
-  }, []);
+  }, [setLocation]);
 
   useEffect(() => {
     if (role && !isAuthEntryRole(role)) {

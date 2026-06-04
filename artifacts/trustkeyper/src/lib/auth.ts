@@ -207,27 +207,30 @@ export function clearRememberedSessionFromLocalStorage(): void {
 }
 
 /**
- * Restores session from localStorage into sessionStorage when remember-me was enabled.
- * @returns True when a valid session was restored.
+ * Restores session from sessionStorage or localStorage (remember-me) into the active session.
+ * @returns Restored phone and role when valid; null when no session is available.
  */
-export function restoreRememberedSessionFromLocalStorage(): boolean {
-  if (typeof window === "undefined") return false;
+export function restoreRememberedSessionFromLocalStorage(): { phone: string; role: Role } | null {
+  if (typeof window === "undefined") return null;
 
   const existingPhone = sessionStorage.getItem("tk_active_phone");
-  const existingRole = sessionStorage.getItem("tk_active_role");
-  if (existingPhone && existingRole) return true;
+  const existingRole = sessionStorage.getItem("tk_active_role") as Role | null;
+  if (existingPhone && existingRole && ALL_ROLES.includes(existingRole)) {
+    const p = normalizePhoneDigits(existingPhone);
+    if (p.length === 10) return { phone: p, role: existingRole };
+  }
 
   const phone = localStorage.getItem(REMEMBERED_SESSION_PHONE_KEY);
   const role = localStorage.getItem(REMEMBERED_SESSION_ROLE_KEY) as Role | null;
-  if (!phone || !role || !ALL_ROLES.includes(role)) return false;
+  if (!phone || !role || !ALL_ROLES.includes(role)) return null;
 
   const p = normalizePhoneDigits(phone);
-  if (p.length !== 10) return false;
+  if (p.length !== 10) return null;
 
   sessionStorage.setItem("tk_active_phone", p);
   sessionStorage.setItem("tk_active_role", role);
   persistActiveSessionBackup(p, role);
-  return true;
+  return { phone: p, role };
 }
 
 /** Get active session (typed role) */
