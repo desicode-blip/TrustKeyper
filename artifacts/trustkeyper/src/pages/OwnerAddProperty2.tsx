@@ -870,14 +870,10 @@ export default function OwnerAddProperty2() {
           >
             <ArrowLeft size={15} />
             {subStep === 0
-              ? entrySource === "onboarding"
-                ? "Back to Choose Plan"
-                : "Back to Properties"
-              : "Back"}
+  ? "Back to Properties"
+  : "Back"}
           </button>
-          {!editingPropertyId ? (
-            <FlowClearButton onClick={handleClearFlow} />
-          ) : null}
+          <FlowClearButton onClick={handleClearFlow} />
         </div>
 
         <ProgressBar subStep={subStep} />
