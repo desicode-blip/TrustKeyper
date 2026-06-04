@@ -451,6 +451,7 @@ export default function AddProperty2() {
       images: imageUrls,
       imageCount: imageUrls.length,
       status: "Active",
+      uploadedBy: "broker",
     });
     try {
       setSessionItem("agreement_pending_property", newProp.id);

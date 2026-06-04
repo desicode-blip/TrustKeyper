@@ -51,12 +51,20 @@ import { getItem, getSessionItem, removeSessionItem, setItem, setSessionItem } f
 import { getProperties, getPropertyTitle, updateProperty, type Property } from "@/lib/properties";
 import { ensureTenantFromAgreement, getTenants, type Tenant } from "@/lib/tenants";
 import { addAgreement, getAgreements, updateAgreement, type Agreement } from "@/lib/agreements";
+import {
+  buildAgreementWhatsAppMessage,
+  downloadRentalAgreementPdf,
+  generateRentalAgreementText,
+  type RentalAgreementInput,
+} from "@/lib/rentalAgreementDocument";
+import { whatsAppInviteHref } from "@/lib/ownerTenants";
 import { getBrokerProfile, saveBrokerProfile, hasBankDetails } from "@/lib/brokerProfile";
 import {
   getOwnerProfile,
   hasOwnerBankDetails,
   hasOwnerUpiDetails,
   removeOwnerProfileDocument,
+  saveOwnerProfile,
   saveOwnerProfileBank,
   saveOwnerProfileDocument,
   saveOwnerProfileUpi,
@@ -200,7 +208,7 @@ function ContinueButton({ onClick, disabled, label = "Continue" }: { onClick: ()
           {label} <ChevronRight size={16} />
         </button>
       </div>
-      <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="sm:hidden fixed inset-x-0 bottom-0 z-30 bg-white border-t border-gray-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
         <button
           onClick={onClick}
           disabled={disabled}
@@ -381,9 +389,9 @@ function Step1Property({
 
       <button
         onClick={() =>
-          setLocation(isOwnerFlow ? "/owner/properties/add" : "/broker/properties/add2")
+          setLocation(isOwnerFlow ? "/owner/properties/add2" : "/broker/properties/add2")
         }
-        className="flex items-center justify-center gap-2 w-full h-11 rounded-xl border border-dashed border-gray-300 text-sm text-gray-600 hover:border-primary hover:text-primary transition-colors mb-0"
+        className="flex items-center justify-center gap-2 w-full h-11 rounded-xl border border-dashed border-primary text-sm font-semibold text-primary hover:bg-primary/5 transition-colors mb-0"
       >
         <Plus size={15} /> Add New Property
       </button>
@@ -752,6 +760,8 @@ function BankModal({
   const [accountNumber, setAccountNumber] = useState(saved?.bankAccountNumber ?? "");
   const [ifscCode, setIfscCode] = useState(saved?.bankIFSC ?? "");
   const [upiId, setUpiId] = useState(saved?.upiId ?? "");
+  const qrRef = useRef<HTMLInputElement>(null);
+  const [qrFile, setQrFile] = useState(saved?.upiQrFileName ?? "");
 
   const bankValid = !!(holderName && bankName && accountNumber && ifscCode);
   const upiValid = isValidUpiId(upiId);
@@ -823,11 +833,51 @@ function BankModal({
                   <p className="text-xs text-red-500 text-center mt-1">Enter a valid UPI ID (e.g. name@bank)</p>
                 ) : null}
               </div>
+              <p className="text-xs text-gray-400 text-center font-medium">OR</p>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1 text-center">Upload QR Code</label>
+                <button
+                  type="button"
+                  onClick={() => qrRef.current?.click()}
+                  className="w-full h-20 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5 hover:border-primary/50 hover:bg-gray-50 transition-colors"
+                >
+                  {qrFile ? (
+                    <>
+                      <Check size={18} className="text-green-500" />
+                      <span className="text-xs text-green-600 font-medium">QR uploaded: {qrFile}</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                        <Plus size={12} className="text-gray-600" />
+                      </div>
+                      <span className="text-xs text-gray-600">Upload QR Code</span>
+                      <span className="text-[10px] text-gray-400">(pdf, png, jpeg)</span>
+                    </>
+                  )}
+                </button>
+                <input
+                  ref={qrRef}
+                  type="file"
+                  accept=".pdf,.png,.jpeg,.jpg"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) setQrFile(e.target.files[0].name);
+                  }}
+                />
+              </div>
             </>
           )}
 
           <button
-            onClick={() => { if (tab === "bank" ? bankValid : upiValid) { onSave({ mode: tab, holderName, bankName, accountNumber, ifscCode, upiId }); } }}
+            onClick={() => {
+              if (tab === "bank" ? bankValid : upiValid) {
+                onSave({ mode: tab, holderName, bankName, accountNumber, ifscCode, upiId });
+                if (prefillOwnerProfile && tab === "upi" && qrFile) {
+                  saveOwnerProfile({ ...getOwnerProfile(), upiQrFileName: qrFile });
+                }
+              }
+            }}
             disabled={tab === "bank" ? !bankValid : !upiValid}
             className={`flex items-center justify-center gap-2 w-full h-10 rounded-xl text-sm font-semibold transition-colors ${(tab === "bank" ? bankValid : upiValid) ? "bg-primary text-white hover:bg-primary/90" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
           >
@@ -1011,7 +1061,7 @@ function Step3Documents({
 }: {
   allParties: Party[];
   ownerCount: number;
-  onContinue: (result: { documentsComplete: boolean }) => void;
+  onContinue: (result: { documentsComplete: boolean; persons: PersonState[] }) => void;
   isOwnerFlow?: boolean;
 }) {
   const [persons, setPersons] = useState<PersonState[]>(() => {
@@ -1114,7 +1164,7 @@ function Step3Documents({
     return (
       <div className="max-w-lg text-center py-12">
         <p className="text-sm text-gray-500 mb-4">No parties selected. Go back and add owners and tenants first.</p>
-        <ContinueButton onClick={() => onContinue({ documentsComplete: false })} label="Skip" />
+        <ContinueButton onClick={() => onContinue({ documentsComplete: false, persons: [] })} label="Skip" />
       </div>
     );
   }
@@ -1186,15 +1236,6 @@ function Step3Documents({
               </span>
             )}
           </div>
-          {!(isOwnerFlow && personIdx === 0 && person.personLabel.startsWith("OWNER")) ? (
-            <button
-              onClick={() => handleSendAllPending(personIdx)}
-              disabled={allDoneForPerson}
-              className={`mt-3 flex items-center justify-center gap-1.5 w-full h-8 rounded-lg border text-xs font-medium transition-colors ${allDoneForPerson ? "border-gray-100 text-gray-300 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary hover:bg-primary/5"}`}
-            >
-              <Send size={12} /> Send All Pending Links
-            </button>
-          ) : null}
         </div>
 
         {/* Doc rows */}
@@ -1208,7 +1249,7 @@ function Step3Documents({
               onSendLink={() => handleSendLink(personIdx, dIdx)}
               onRemove={() => handleResetDoc(personIdx, dIdx)}
               onAddDetails={() => setBankModal({ pIdx: personIdx, dIdx })}
-              hideSendLink={isOwnerFlow && personIdx === 0 && person.personLabel.startsWith("OWNER")}
+              hideSendLink
             />
           ))}
         </div>
@@ -1217,13 +1258,17 @@ function Step3Documents({
       {/* Navigation button */}
       <div className="mt-4">
         {isLast ? (
-          <ContinueButton onClick={() => onContinue({ documentsComplete: allDone })} disabled={!allDoneForPerson} label="Continue" />
+          <ContinueButton
+            onClick={() => onContinue({ documentsComplete: allDone, persons })}
+            disabled={!allDoneForPerson}
+            label="Continue"
+          />
         ) : (
           <ContinueButton onClick={() => setPersonIdx((i) => i + 1)} disabled={!allDoneForPerson} label="Next Person" />
         )}
         {!allDoneForPerson && (
           <p className="text-xs text-center text-gray-400 mt-2">
-            Upload or send link for all required documents to continue
+            Upload all required documents to continue
           </p>
         )}
       </div>
@@ -1597,6 +1642,7 @@ function Step6Review({
   lockInPeriod, noticePeriod, rentDueDay, maintenanceCharges,
   brokerageAmount, brokerageAmountOwner, brokerageAmountTenant, brokeragePaidBy, brokerageMode,
   documentsComplete,
+  documentPersons = [],
   isOwnerFlow = false,
   rentSplitSummary = "",
   onGoToStep, onSubmit, submitting,
@@ -1610,6 +1656,7 @@ function Step6Review({
   brokerageAmount: string; brokerageAmountOwner: string; brokerageAmountTenant: string;
   brokeragePaidBy: string; brokerageMode: string;
   documentsComplete: boolean;
+  documentPersons?: PersonState[];
   isOwnerFlow?: boolean;
   rentSplitSummary?: string;
   onGoToStep: (s: Step) => void;
@@ -1707,18 +1754,39 @@ function Step6Review({
 
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <SectionHeader title="Documents" stepTarget={3} />
-          <div className="px-5 py-3">
-            {documentsComplete ? (
-              <div className="flex items-start gap-2 rounded-lg bg-orange-50 border border-orange-100 px-3 py-2.5 text-sm text-orange-700">
-                <Clock size={14} className="shrink-0 mt-0.5 text-orange-600" />
-                <span>Documents collected via upload or send-link flow</span>
-              </div>
+          <div className="px-5 py-3 space-y-3">
+            {documentPersons.length === 0 ? (
+              <p className="text-sm text-gray-500">No documents uploaded in this session.</p>
             ) : (
-              <div className="flex items-start gap-2 text-sm text-amber-700">
-                <Clock size={14} className="shrink-0 mt-0.5" />
-                <span>Documents still pending — finish uploads or send links from the Documents step</span>
-              </div>
+              documentPersons.map((person) => (
+                <div key={person.personLabel} className="rounded-lg border border-gray-100 bg-gray-50/80 p-3">
+                  <p className="text-xs font-semibold text-gray-700 mb-2">
+                    {person.personLabel} — {person.name || "—"}
+                  </p>
+                  <ul className="space-y-1">
+                    {person.docs.map((doc) => (
+                      <li key={doc.id} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="text-gray-600">{doc.label}</span>
+                        <span
+                          className={
+                            doc.status === "uploaded"
+                              ? "font-medium text-green-700 truncate max-w-[55%]"
+                              : "text-amber-600"
+                          }
+                        >
+                          {doc.status === "uploaded"
+                            ? doc.fileName ?? "Uploaded"
+                            : "Not uploaded"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))
             )}
+            {!documentsComplete && documentPersons.length > 0 ? (
+              <p className="text-xs text-amber-700">Some documents were skipped or are still pending.</p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -1774,7 +1842,7 @@ function SuccessOverlay({ onDone }: { onDone: () => void }) {
         </div>
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Agreement Sent!</h2>
         <p className="text-sm text-gray-500 mb-4">
-          The rental agreement has been created and sent to both parties for e-signing.
+          Your agreement PDF has been downloaded. WhatsApp is opening so you can share it with the tenant.
         </p>
         <div className="flex items-center gap-1.5 justify-center text-xs text-gray-500 mb-6">
           <BadgeCheck size={14} className="text-accent" />
@@ -1802,6 +1870,7 @@ export default function GenerateAgreement() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [documentsComplete, setDocumentsComplete] = useState(false);
+  const [documentPersons, setDocumentPersons] = useState<PersonState[]>([]);
 
   const skipOwnerAutofillNext = useRef(false);
   const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1871,6 +1940,7 @@ export default function GenerateAgreement() {
         additionalOwners?: Party[];
         selectedTenants?: Party[];
         documentsComplete?: boolean;
+        documentPersons?: PersonState[];
         startDate?: string;
         monthlyRent?: string;
         securityDeposit?: string;
@@ -1896,6 +1966,7 @@ export default function GenerateAgreement() {
       setAdditionalOwners(d.additionalOwners ?? []);
       setSelectedTenants(d.selectedTenants ?? []);
       setDocumentsComplete(!!d.documentsComplete);
+      setDocumentPersons(d.documentPersons ?? []);
       setStartDate(d.startDate ?? "");
       setMonthlyRent(d.monthlyRent ?? "");
       setSecurityDeposit(d.securityDeposit ?? "");
@@ -2006,6 +2077,7 @@ export default function GenerateAgreement() {
           additionalOwners,
           selectedTenants,
           documentsComplete,
+          documentPersons,
           startDate,
           monthlyRent,
           securityDeposit,
@@ -2040,6 +2112,7 @@ export default function GenerateAgreement() {
     additionalOwners,
     selectedTenants,
     documentsComplete,
+    documentPersons,
     startDate,
     monthlyRent,
     securityDeposit,
@@ -2061,6 +2134,7 @@ export default function GenerateAgreement() {
     setShowSuccess(false);
     setSubmitting(false);
     setDocumentsComplete(false);
+    setDocumentPersons([]);
     setSelectedProperty(null);
     setOwnerName("");
     setOwnerContact("");
@@ -2139,11 +2213,53 @@ export default function GenerateAgreement() {
     if (!selectedProperty) return;
     setSubmitting(true);
     const primaryTenant = selectedTenants[0];
+    const propertyTitle = getPropertyTitle(selectedProperty);
+    const agreementInput: RentalAgreementInput = {
+      propertyTitle,
+      propertyAddress: [selectedProperty.address, selectedProperty.area, selectedProperty.city]
+        .filter(Boolean)
+        .join(", "),
+      ownerName,
+      ownerContact,
+      additionalOwnerNames: additionalOwners.map((o) => o.name).filter(Boolean).join(", "),
+      tenantName: primaryTenant?.name ?? "",
+      tenantContact: primaryTenant?.contact ?? "",
+      coTenantName: selectedTenants.slice(1).map((t) => t.name).join(", "),
+      coTenantContact: selectedTenants.slice(1).map((t) => t.contact).join(", "),
+      startDate,
+      monthlyRent,
+      securityDeposit,
+      lockInPeriod,
+      noticePeriod,
+      rentDueDay,
+      maintenanceCharges,
+      brokerageAmount: isOwnerFlow ? "0" : brokerageAmount,
+      brokeragePaidBy: isOwnerFlow ? "Owner" : brokeragePaidBy,
+      brokerageMode: isOwnerFlow ? "Bank Transfer" : brokerageMode,
+      isOwnerFlow,
+    };
+    const agreementText = generateRentalAgreementText(agreementInput);
+    const waPhone = primaryTenant?.contact || ownerContact;
+
+    void downloadRentalAgreementPdf(agreementInput, propertyTitle).finally(() => {
+      if (waPhone) {
+        window.open(
+          whatsAppInviteHref(waPhone, buildAgreementWhatsAppMessage(propertyTitle)),
+          "_blank",
+          "noopener,noreferrer",
+        );
+      }
+    });
+
     setTimeout(() => {
       const mode = brokerageMode as Agreement["brokerageMode"];
+      const customText =
+        isOwnerFlow && showPaymentSplit
+          ? JSON.stringify({ rentSplitMode, rentSplits, agreementText })
+          : agreementText;
       const base = {
         propertyId: selectedProperty.id,
-        propertyTitle: getPropertyTitle(selectedProperty),
+        propertyTitle,
         ownerName,
         ownerContact,
         tenantName: primaryTenant?.name ?? "",
@@ -2163,9 +2279,7 @@ export default function GenerateAgreement() {
         brokerageAmount: isOwnerFlow ? "0" : brokerageAmount,
         brokeragePaidBy: isOwnerFlow ? "Owner" : brokeragePaidBy,
         brokerageMode: isOwnerFlow ? "Bank Transfer" : mode,
-        customText: isOwnerFlow && showPaymentSplit
-          ? JSON.stringify({ rentSplitMode, rentSplits })
-          : undefined,
+        customText,
       };
 
       if (editingAgreementId) {
@@ -2176,7 +2290,6 @@ export default function GenerateAgreement() {
             tenantAadhaar: existing.tenantAadhaar,
             tenantPan: existing.tenantPan,
             documents: existing.documents,
-            customText: undefined,
             status: "Sent",
           });
         }
@@ -2187,7 +2300,7 @@ export default function GenerateAgreement() {
       setSubmitting(false);
       setShowSuccess(true);
       clearAgreementDraftStorage();
-    }, 1200);
+    }, 400);
   };
 
   return (
@@ -2208,7 +2321,7 @@ export default function GenerateAgreement() {
             : "min-w-0 w-full"
         }
       >
-      <div className={`min-w-0 w-full max-w-full ${step !== 6 ? "pb-32 sm:pb-6" : "pb-6"}`}>
+      <div className={`min-w-0 w-full max-w-full ${step !== 6 ? "pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:pb-6" : "pb-6"}`}>
       <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5">
         <button
           type="button"
@@ -2306,6 +2419,7 @@ export default function GenerateAgreement() {
           isOwnerFlow={isOwnerFlow}
           onContinue={(result) => {
             setDocumentsComplete(result.documentsComplete);
+            setDocumentPersons(result.persons);
             setStep(4);
           }}
         />
@@ -2376,6 +2490,7 @@ export default function GenerateAgreement() {
           brokeragePaidBy={brokeragePaidBy}
           brokerageMode={brokerageMode}
           documentsComplete={documentsComplete}
+          documentPersons={documentPersons}
           isOwnerFlow={isOwnerFlow}
           rentSplitSummary={formatRentSplitSummary()}
           onGoToStep={setStep}
