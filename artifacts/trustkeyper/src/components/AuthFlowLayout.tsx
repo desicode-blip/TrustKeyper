@@ -1,7 +1,6 @@
 import React from "react";
 import { ChevronLeft } from "lucide-react";
 import sidebarImage from "@assets/Frame_3466237_1777382669479.png";
-import { TrustKeyperLogo } from "@/components/brand/TrustKeyperLogo";
 import { AuthCornerDecor } from "@/components/AuthCornerDecor";
 import { AuthMobileBrandBanner } from "@/components/auth/AuthMobileBrandBanner";
 
@@ -20,15 +19,6 @@ export function AuthFlowLayout({
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F5F7FA]">
       <div className="hidden lg:block relative bg-primary overflow-hidden shrink-0 h-screen sticky top-0">
         <img src={sidebarImage} alt="" className="h-full w-auto block" />
-        <a
-          href="https://trustkeyper.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="absolute top-10 left-10 z-10 inline-block rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          aria-label="TrustKeyper"
-        >
-          <TrustKeyperLogo variant="inverse" size="header" />
-        </a>
       </div>
 
       <div className="w-full flex-1 flex flex-col min-h-screen lg:min-h-0">
