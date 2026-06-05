@@ -127,19 +127,18 @@ function InvitedTenantRow({
             </div>
           ) : null}
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 pt-1 border-t border-green-100/60">
         <a
           href={whatsAppUrl}
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`WhatsApp ${invite.name}`}
-          className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-2 h-10 px-3 rounded-[4px] bg-[#25D366] text-white text-sm font-semibold hover:bg-[#20bd5a] transition-colors sm:w-auto sm:min-w-[3rem] sm:px-0 sm:w-10"
+          className="w-10 h-10 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0 hover:bg-[#20bd5a] transition-colors shadow-sm"
         >
-          <FaWhatsapp className="w-5 h-5 shrink-0" aria-hidden />
-          <span className="sm:hidden">WhatsApp</span>
+          <FaWhatsapp className="w-5 h-5" aria-hidden />
         </a>
+      </div>
+
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 pt-1 border-t border-green-100/60">
         <button
           type="button"
           disabled={recorded === "accepted"}
@@ -252,7 +251,7 @@ export default function OwnerTenants() {
           </Link>
           <OwnerFlowButton onClick={() => setInviteOpen(true)} className="w-full sm:w-fit">
             <Send size={16} />
-            Invite Tenants
+            Invite Tenant
           </OwnerFlowButton>
         </div>
 
@@ -282,7 +281,7 @@ export default function OwnerTenants() {
               <OwnerPageEmpty
                 icon={Users}
                 title="No tenants yet"
-                description="Add a tenant, message them on WhatsApp, then mark Accepted or Rejected when you hear back."
+                description="Invite a tenant and send them the rental details on WhatsApp, then mark Accepted or Rejected when you hear back."
               />
             )}
           </div>
