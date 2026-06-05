@@ -13,6 +13,7 @@
     "@workspace/api-zod": "workspace:*",
     "@workspace/auth-server": "workspace:*",
     "@workspace/db": "workspace:*",
+    "@workspace/invitations-store": "workspace:*",
     "@workspace/sync-store": "workspace:*",
     "@electric-sql/pglite": "^0.3.14",
     "cookie-parser": "^1.4.7",

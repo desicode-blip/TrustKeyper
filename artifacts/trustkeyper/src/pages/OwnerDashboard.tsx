@@ -6,6 +6,7 @@ import { OwnerPropertyCard } from "@/components/owner/OwnerPropertyCard";
 import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 import { getProperties, getPropertyTitle, type Property } from "@/lib/properties";
 import { getItem } from "@/lib/storageKeys";
+import BrokerPendingFlowBanners from "@/components/BrokerPendingFlowBanners";
 
 function filterOwnerProperties(all: Property[], ownerName: string): Property[] {
   const name = ownerName.replace("!", "").trim();
@@ -94,6 +95,8 @@ export default function OwnerDashboard() {
             Add Property
           </OwnerFlowButton>
         </div>
+
+        <BrokerPendingFlowBanners role="owner" className="mb-6" />
 
         {pendingDraft && (
           <section className="mb-8">

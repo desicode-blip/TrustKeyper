@@ -128,11 +128,13 @@ function InlinePartyForm({
 }
 
 function TenantPickList({
+  listId,
   propertyId,
   selected,
   onSelect,
   onClose,
 }: {
+  listId: string;
   propertyId: string | undefined;
   selected: AgreementParty[];
   onSelect: (name: string, contact: string) => void;
@@ -178,7 +180,7 @@ function TenantPickList({
           className="w-full h-8 px-3 rounded-md text-sm border border-gray-200 focus:outline-none focus:border-primary"
         />
       </div>
-      <div className="max-h-44 overflow-y-auto">
+      <div className="max-h-44 overflow-y-auto" id={listId} role="listbox" aria-label="Tenant search results">
         {filtered.length === 0 ? (
           <div className="px-3 py-4 text-center text-xs text-gray-400">No tenants found</div>
         ) : (
@@ -186,6 +188,7 @@ function TenantPickList({
             <button
               key={o.key}
               type="button"
+              role="option"
               disabled={selected.some((s) => s.name === o.name && s.contact.includes(o.phone.slice(-10)))}
               onClick={() => onSelect(o.name, o.phone)}
               className={`w-full text-left px-3 py-2.5 hover:bg-gray-50 transition-colors disabled:opacity-40 ${
@@ -341,13 +344,22 @@ export function StepOwnerParties({
                 setTenantDropOpen((v) => !v);
                 setShowTenantForm(false);
               }}
+              aria-expanded={tenantDropOpen}
+              aria-haspopup="listbox"
+              aria-controls="owner-tenant-picker-list"
+              aria-label="Choose a tenant"
               className="flex items-center justify-between w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-sm text-gray-500 hover:border-primary/50 transition-colors"
             >
               <span>Choose a tenant…</span>
-              <ChevronDown size={14} className="text-gray-400" />
+              <ChevronDown
+                size={14}
+                className={`text-gray-400 shrink-0 transition-transform ${tenantDropOpen ? "rotate-180" : ""}`}
+                aria-hidden="true"
+              />
             </button>
             {tenantDropOpen && (
               <TenantPickList
+                listId="owner-tenant-picker-list"
                 propertyId={property?.id}
                 selected={selectedTenants}
                 onSelect={addTenant}
@@ -399,7 +411,7 @@ function OwnerPartiesContinue({ onClick, disabled }: { onClick: () => void; disa
           Continue <ChevronRight size={16} />
         </button>
       </div>
-      <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="sm:hidden fixed inset-x-0 bottom-0 z-30 bg-white border-t border-gray-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
         <button
           type="button"
           onClick={onClick}

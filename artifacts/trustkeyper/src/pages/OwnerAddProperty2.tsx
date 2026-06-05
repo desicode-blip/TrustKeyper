@@ -9,16 +9,15 @@ import {
   Plus,
   ChevronDown,
   ArrowLeft,
-  PhoneCall,
+  SkipForward,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import OwnerLayout from "@/components/OwnerLayout";
 import { FlowClearButton } from "@/components/owner/FlowClearButton";
-import { addProperty, getProperties, updateProperty } from "@/lib/properties";
+import { addProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
-import { getItem, getSessionItem, removeItem, setItem } from "@/lib/storageKeys";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const PROPERTY_TYPES = ["Apartment", "House", "Studio", "Villa", "Other"];
@@ -194,78 +193,29 @@ function AmenityCheck({
   );
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
-function loadPropertyIntoForm(
-  p: ReturnType<typeof getProperties>[number],
-  setters: {
-    setNickname: (v: string) => void;
-    setAddress: (v: string) => void;
-    setArea: (v: string) => void;
-    setCity: (v: string) => void;
-    setPincode: (v: string) => void;
-    setCountry: (v: string) => void;
-    setOwnerName: (v: string) => void;
-    setOwnerContact: (v: string) => void;
-    setPropertyType: (v: string) => void;
-    setPropertyTypeOther: (v: string) => void;
-    setUnitSize: (v: string) => void;
-    setUnitSizeOther: (v: string) => void;
-    setFurnishing: (v: string) => void;
-    setBuiltUpArea: (v: string) => void;
-    setBuiltUpUnits: (v: string) => void;
-    setTotalFloors: (v: string) => void;
-    setBedrooms: (v: string) => void;
-    setBathrooms: (v: string) => void;
-    setBalconies: (v: string) => void;
-    setFloorLevel: (v: string) => void;
-    setMainDoorDirection: (v: string) => void;
-    setAmenities: (v: string[]) => void;
-    setTenantsPreferred: (v: string[]) => void;
-    setMonthlyRent: (v: string) => void;
-    setRentNegotiable: (v: boolean) => void;
-    setMaintenanceIncluded: (v: boolean) => void;
-    setMonthlyMaintenance: (v: string) => void;
-    setSecurityDeposit: (v: string) => void;
-    setAvailableFrom: (v: string) => void;
-    setImageUrls: (v: string[]) => void;
-  },
-) {
-  setters.setNickname(p.nickname || "");
-  setters.setAddress(p.address || "");
-  setters.setArea(p.area || "");
-  setters.setCity(p.city || "Hyderabad");
-  setters.setPincode(p.pincode || "");
-  setters.setCountry(p.country || "India");
-  setters.setOwnerName(p.ownerName || "");
-  setters.setOwnerContact(p.ownerContact || "");
-  setters.setPropertyType(p.propertyType || "");
-  setters.setPropertyTypeOther(p.propertyTypeOther || "");
-  setters.setUnitSize(p.unitSize || "");
-  setters.setUnitSizeOther(p.unitSizeOther || "");
-  setters.setFurnishing(p.furnishing || "");
-  setters.setBuiltUpArea(p.builtUpArea || "");
-  setters.setBuiltUpUnits(p.builtUpUnits || "sq ft");
-  setters.setTotalFloors(p.totalFloors || "");
-  setters.setBedrooms(p.bedrooms || "");
-  setters.setBathrooms(p.bathrooms || "");
-  setters.setBalconies(p.balconies || "");
-  setters.setFloorLevel(p.floorLevel || "");
-  setters.setMainDoorDirection(p.mainDoorDirection || "");
-  setters.setAmenities(p.amenities || []);
-  setters.setTenantsPreferred(p.tenantsPreferred || []);
-  setters.setMonthlyRent(p.monthlyRent || "");
-  setters.setRentNegotiable(p.rentNegotiable || false);
-  setters.setMaintenanceIncluded(p.maintenanceIncluded || false);
-  setters.setMonthlyMaintenance(p.monthlyMaintenance || "");
-  setters.setSecurityDeposit(p.securityDeposit || "");
-  setters.setAvailableFrom(p.availableFrom || "");
-  setters.setImageUrls(p.images || []);
+const AGREEMENT_PROPERTY_DRAFT_KEY = "owner_add_property_agreement";
+
+function SkipBanner({ onSkip }: { onSkip: () => void }) {
+  return (
+    <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-lg px-4 py-2.5 mb-5">
+      <p className="text-xs text-blue-700">
+        These details help generate a more accurate agreement — but you can fill them in later.
+      </p>
+      <button
+        type="button"
+        onClick={onSkip}
+        className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 shrink-0 ml-3"
+      >
+        <SkipForward size={13} /> Skip step
+      </button>
+    </div>
+  );
 }
 
-export default function OwnerAddProperty() {
+// ─── Main Component ────────────────────────────────────────────────────────────
+
+export default function OwnerAddProperty2() {
   const [, setLocation] = useLocation();
-  const [entrySource, setEntrySource] = useState<"dashboard" | "onboarding">("dashboard");
-  const [editingPropertyId, setEditingPropertyId] = useState<string | null>(null);
   const [subStep, setSubStep] = useState(0);
 
   // Sub-step 0 – Property Details
@@ -312,40 +262,15 @@ export default function OwnerAddProperty() {
   // Sub-step 5 – Images & Success
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [isManagedPopupOpen, setIsManagedPopupOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialization & Persistence
   useEffect(() => {
-    const fromOnboarding = sessionStorage.getItem("tk_owner_add_property_entry") === "onboarding";
-    setEntrySource(fromOnboarding ? "onboarding" : "dashboard");
-
-    // Pre-fill owner details from onboarding if available
     const storedName = getSessionItem("name");
     const storedPhone = getSessionItem("phone") || getSessionItem("contact");
     if (storedName) setOwnerName(storedName);
     if (storedPhone) setOwnerContact(storedPhone);
 
-    const editId = new URLSearchParams(window.location.search).get("edit");
-    if (editId) {
-      const existing = getProperties().find((x) => x.id === editId);
-      if (existing) {
-        setEditingPropertyId(editId);
-        loadPropertyIntoForm(existing, {
-          setNickname, setAddress, setArea, setCity, setPincode, setCountry,
-          setOwnerName, setOwnerContact,
-          setPropertyType, setPropertyTypeOther, setUnitSize, setUnitSizeOther, setFurnishing,
-          setBuiltUpArea, setBuiltUpUnits, setTotalFloors, setBedrooms, setBathrooms, setBalconies,
-          setFloorLevel, setMainDoorDirection, setAmenities, setTenantsPreferred,
-          setMonthlyRent, setRentNegotiable, setMaintenanceIncluded, setMonthlyMaintenance,
-          setSecurityDeposit, setAvailableFrom, setImageUrls,
-        });
-        return;
-      }
-    }
-
-    // Load persisted property data
-    const savedData = getItem("onboarding_data");
+    const savedData = getSessionItem(AGREEMENT_PROPERTY_DRAFT_KEY);
     if (savedData) {
       try {
         const data = JSON.parse(savedData);
@@ -379,24 +304,25 @@ export default function OwnerAddProperty() {
         setSecurityDeposit(data.securityDeposit || "");
         setAvailableFrom(data.availableFrom || "");
         setSubStep(data.subStep || 0);
-      } catch (e) {
-        console.error("Error loading saved onboarding data", e);
+      } catch {
+        /* ignore */
       }
     }
   }, []);
 
-  // Save data on every change
   useEffect(() => {
     const data = {
       nickname, address, area, city, pincode, country,
+      ownerName, ownerContact,
       propertyType, propertyTypeOther, unitSize, unitSizeOther, furnishing,
       builtUpArea, builtUpUnits, totalFloors, bedrooms, bathrooms, balconies, floorLevel, mainDoorDirection,
       amenities, amenityOtherChecked, amenityOtherText,
       tenantsPreferred, monthlyRent, rentNegotiable, maintenanceIncluded, monthlyMaintenance, securityDeposit, availableFrom,
-      subStep
+      subStep,
     };
-    setItem("onboarding_data", JSON.stringify(data));
+    setSessionItem(AGREEMENT_PROPERTY_DRAFT_KEY, JSON.stringify(data));
   }, [
+    nickname, address, area, city, pincode, country, ownerName, ownerContact,
     nickname, address, area, city, pincode, country,
     propertyType, propertyTypeOther, unitSize, unitSizeOther, furnishing,
     builtUpArea, builtUpUnits, totalFloors, bedrooms, bathrooms, balconies, floorLevel, mainDoorDirection,
@@ -500,7 +426,12 @@ export default function OwnerAddProperty() {
     if (subStep === 4) {
       return tenantsPreferred.length > 0 && !!monthlyRent && !!securityDeposit && !!availableFrom;
     }
-    return imageUrls.length > 0;
+    return true;
+  };
+
+  const handleSkip = () => {
+    if (subStep < 5) setSubStep((s) => s + 1);
+    else handleSubmit();
   };
 
   const handleSubmit = () => {
@@ -518,34 +449,24 @@ export default function OwnerAddProperty() {
       images: imageUrls, imageCount: imageUrls.length,
     };
 
-    if (editingPropertyId) {
-      updateProperty(editingPropertyId, payload);
-      setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        setLocation(`/owner/properties/${editingPropertyId}`);
-      }, 1500);
-      return;
-    }
-
-    addProperty({
+    const newProp = addProperty({
       ...payload,
       status: "Active",
       uploadedBy: "owner",
     });
 
-    removeItem("onboarding_data");
+    try {
+      setSessionItem("agreement_pending_property", newProp.id);
+      removeSessionItem(AGREEMENT_PROPERTY_DRAFT_KEY);
+    } catch {
+      /* ignore */
+    }
 
     setShowSuccess(true);
     setTimeout(() => {
       setShowSuccess(false);
-      try {
-        sessionStorage.removeItem("tk_owner_add_property_entry");
-      } catch {
-        /* ignore */
-      }
-      setLocation("/owner/dashboard");
-    }, 2000);
+      setLocation("/owner/agreements/generate");
+    }, 1500);
   };
 
   const handleContinue = () => {
@@ -637,6 +558,7 @@ export default function OwnerAddProperty() {
         <h2 className="text-[22px] font-medium text-gray-800 mb-1">Tell us more about your property</h2>
         <p className="text-[13px] text-gray-400">Providing these details will boost your chances of finding a tenant</p>
       </div>
+      <SkipBanner onSkip={handleSkip} />
       <div className="space-y-7">
         <div>
           <FieldLabel>Property Type</FieldLabel>
@@ -680,6 +602,7 @@ export default function OwnerAddProperty() {
         <h2 className="text-[22px] font-medium text-gray-800 mb-1">Tell us more about your property</h2>
         <p className="text-[13px] text-gray-400">Providing these details will boost your chances of finding a tenant</p>
       </div>
+      <SkipBanner onSkip={handleSkip} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
         <div>
           <FieldLabel>Built Up Area</FieldLabel>
@@ -723,6 +646,7 @@ export default function OwnerAddProperty() {
         <h2 className="text-[22px] font-medium text-gray-800 mb-1">Tell us more about your property</h2>
         <p className="text-[13px] text-gray-400">Providing these details will boost your chances of finding a tenant</p>
       </div>
+      <SkipBanner onSkip={handleSkip} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8 max-w-lg mx-auto mb-10">
         <div className="space-y-4">
           {AMENITIES_LEFT.map((a) => (
@@ -832,6 +756,18 @@ export default function OwnerAddProperty() {
       <div className="mb-8 text-center border-b pb-6">
         <h2 className="text-[22px] font-medium text-gray-800 mb-1">Upload property images</h2>
       </div>
+      <div className="flex items-center justify-between bg-amber-50 border border-amber-100 rounded-lg px-4 py-2.5 mb-5">
+        <p className="text-xs text-amber-700">
+          Images are optional — you can add them later from the property details page.
+        </p>
+        <button
+          type="button"
+          onClick={handleSkip}
+          className="flex items-center gap-1 text-xs font-semibold text-amber-600 hover:text-amber-800 shrink-0 ml-3"
+        >
+          <SkipForward size={13} /> Skip
+        </button>
+      </div>
       <div className="space-y-4">
         <div className="rounded-lg bg-green-50 border border-green-200 p-4">
           <p className="text-sm font-semibold text-gray-800 mb-1">Guidelines</p>
@@ -873,23 +809,19 @@ export default function OwnerAddProperty() {
   );
 
   const handleBack = () => {
-    if (subStep > 0) setSubStep((s) => s - 1);
-    else {
-      if (entrySource === "onboarding") {
-        try {
-          sessionStorage.setItem("tk_owner_onboarding_resume_step", "plan");
-        } catch {
-          /* ignore */
-        }
-        setLocation("/");
-      } else {
-        setLocation("/owner/properties");
-      }
+    if (subStep > 0) {
+      setSubStep((s) => s - 1);
+      return;
     }
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    setLocation("/owner/agreements/generate");
   };
 
   const handleClearFlow = () => {
-    removeItem("onboarding_data");
+    removeSessionItem(AGREEMENT_PROPERTY_DRAFT_KEY);
     setSubStep(0);
     setNickname("");
     setAddress("");
@@ -938,14 +870,10 @@ export default function OwnerAddProperty() {
           >
             <ArrowLeft size={15} />
             {subStep === 0
-              ? entrySource === "onboarding"
-                ? "Back to Choose Plan"
-                : "Back to Properties"
-              : "Back"}
+  ? "Back to Properties"
+  : "Back"}
           </button>
-          {!editingPropertyId ? (
-            <FlowClearButton onClick={handleClearFlow} />
-          ) : null}
+          <FlowClearButton onClick={handleClearFlow} />
         </div>
 
         <ProgressBar subStep={subStep} />
@@ -965,21 +893,6 @@ export default function OwnerAddProperty() {
             </Button>
           </div>
 
-          {/* Let us help you Banner */}
-          <div className="w-full bg-white rounded-xl border border-gray-200 p-5 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 mt-12 shadow-sm">
-            <div className="flex items-center gap-4 text-center sm:text-left">
-              <div className="w-12 h-12 rounded-full bg-blue-50 text-primary flex items-center justify-center shrink-0 border border-blue-100">
-                <PhoneCall size={18} />
-              </div>
-              <div>
-                <p className="text-[13px] font-semibold text-gray-800">Don't want to fill all the details? Let us help you!</p>
-                <p className="text-[11px] text-gray-500">Our expert Property Manager will guide you through the process</p>
-              </div>
-            </div>
-            <Button variant="outline" className="border-primary text-primary hover:bg-blue-50 text-xs px-8 h-10 rounded-sm font-semibold transition-all" onClick={() => setIsManagedPopupOpen(true)}>
-              I'm interested
-            </Button>
-          </div>
         </div>
 
         {/* Sticky Mobile Continue */}
@@ -990,35 +903,17 @@ export default function OwnerAddProperty() {
         </div>
       </div>
 
-      {/* Success Modal */}
-      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-        <DialogContent className="sm:max-w-md text-center p-10 flex flex-col items-center">
-          <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mb-2">
-            <Check size={28} className="text-green-500" />
+      {showSuccess && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-8 flex flex-col items-center gap-3 w-72 text-center">
+            <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
+              <Check size={28} className="text-green-500" />
+            </div>
+            <p className="text-lg font-semibold text-gray-900">Property Added!</p>
+            <p className="text-sm text-gray-500">Taking you back to the agreement…</p>
           </div>
-          <DialogTitle className="text-lg font-semibold text-gray-900">Successfully Verified!</DialogTitle>
-          <DialogDescription className="text-sm text-gray-500">Property details have been saved</DialogDescription>
-        </DialogContent>
-      </Dialog>
-
-      {/* Manager Popup */}
-      <Dialog open={isManagedPopupOpen} onOpenChange={setIsManagedPopupOpen}>
-        <DialogContent className="sm:max-w-md text-center p-10 flex flex-col items-center">
-          <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4 text-primary">
-            <PhoneCall size={24} />
-          </div>
-          <DialogTitle className="text-2xl font-semibold text-center">We're on it!</DialogTitle>
-          <DialogDescription className="text-center text-base mt-3 text-gray-600">
-            Thank you for showing interest. Our expert property manager will contact you at your registered mobile number
-            shortly.
-          </DialogDescription>
-          <div className="mt-8 w-full">
-            <Button className="w-full bg-primary hover:bg-primary/90 text-white rounded-sm" onClick={() => { setIsManagedPopupOpen(false); }}>
-              Okay, got it
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </OwnerLayout>
   );
 }
