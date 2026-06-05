@@ -73,7 +73,7 @@ export default function OwnerAgreements() {
             description="Create a rental agreement for your property to collect documents and e-signatures."
           />
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 min-w-0 w-full overflow-x-hidden">
             {recentAgreements.map((agreement) => (
               <AgreementDocumentRow
                 key={agreement.id}
