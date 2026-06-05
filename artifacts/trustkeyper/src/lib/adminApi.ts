@@ -31,12 +31,28 @@ export interface AdminProperty {
   updatedAt: string;
 }
 
+/** A feedback submission returned by GET /api/admin/feedback. */
+export interface AdminFeedback {
+  id: string;
+  message: string;
+  rating: number;
+  category: string;
+  userPhone: string | null;
+  userRole: string | null;
+  pageUrl: string | null;
+  createdAt: string;
+}
+
 interface AdminUsersResponse {
   users: AdminUser[];
 }
 
 interface AdminPropertiesResponse {
   properties: AdminProperty[];
+}
+
+interface AdminFeedbackResponse {
+  feedback: AdminFeedback[];
 }
 
 interface ApiErrorBody {
@@ -111,4 +127,13 @@ export async function fetchAdminUsers(): Promise<AdminUser[]> {
 export async function fetchAdminProperties(): Promise<AdminProperty[]> {
   const json = await adminGet<AdminPropertiesResponse>("properties");
   return json.properties;
+}
+
+/**
+ * Fetches all user feedback submissions for the admin feedback view.
+ * @returns Array of feedback records ordered by newest first.
+ */
+export async function fetchAdminFeedback(): Promise<AdminFeedback[]> {
+  const json = await adminGet<AdminFeedbackResponse>("feedback");
+  return json.feedback;
 }

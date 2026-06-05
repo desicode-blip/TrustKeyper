@@ -1,4 +1,6 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { useState } from "react";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { FeedbackButton, FeedbackModal } from "@/components/feedback";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -21,6 +23,7 @@ import AddProperty2 from "@/pages/AddProperty2";
 import BrokerSettings from "@/pages/BrokerProfile";
 import BrokerActivity from "@/pages/BrokerActivity";
 import OwnerAddProperty from "@/pages/OwnerAddProperty";
+import OwnerAddProperty2 from "@/pages/OwnerAddProperty2";
 import OwnerDashboard from "@/pages/OwnerDashboard";
 import OwnerProperties from "@/pages/OwnerProperties";
 import OwnerPropertyDetails from "@/pages/OwnerPropertyDetails";
@@ -34,18 +37,41 @@ import AdminLogin from "@/pages/admin/AdminLogin";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminProperties from "@/pages/admin/AdminProperties";
+import AdminFeedback from "@/pages/admin/AdminFeedback";
 import { createAdminQueryClient } from "@/hooks/useAdminData";
 
 const queryClient = createAdminQueryClient();
 
+/**
+ * Renders the floating feedback widget on authenticated user-facing routes.
+ * @returns Feedback button and modal, or null on excluded routes.
+ */
+function FeedbackWidget() {
+  const [location] = useLocation();
+  const [open, setOpen] = useState(false);
+
+  if (location === "/" || location === "/login" || location.startsWith("/admin")) {
+    return null;
+  }
+
+  return (
+    <>
+      <FeedbackButton onClick={() => setOpen(true)} />
+      <FeedbackModal open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
 function Router() {
   return (
+    <>
     <Switch>
       <Route path="/login" component={Login} />
       {/* Role-card login — not linked in UI; enable navigation when needed */}
       <Route path="/Logindirect" component={LoginDirect} />
       <Route path="/" component={Onboarding} />
       <Route path="/owner/properties/add" component={OwnerAddProperty} />
+      <Route path="/owner/properties/add2" component={OwnerAddProperty2} />
       <Route path="/owner/dashboard" component={OwnerDashboard} />
       <Route path="/owner/properties" component={OwnerProperties} />
       <Route path="/owner/properties/:id" component={OwnerPropertyDetails} />
@@ -74,8 +100,11 @@ function Router() {
       <Route path="/admin/dashboard" component={AdminDashboard} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/admin/properties" component={AdminProperties} />
+      <Route path="/admin/feedback" component={AdminFeedback} />
       <Route component={NotFound} />
     </Switch>
+    <FeedbackWidget />
+    </>
   );
 }
 

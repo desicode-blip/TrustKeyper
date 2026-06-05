@@ -6,11 +6,14 @@ import {
   signUpSuccess,
   dashboardRouteFor,
   isAuthEntryRole,
+  clearRememberedSessionFromLocalStorage,
+  persistSessionToLocalStorage,
   type Role,
 } from "@/lib/auth";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
@@ -37,6 +40,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   const [countdown, setCountdown] = useState(12);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [stayLoggedIn, setStayLoggedIn] = useState(false);
   const [, setLocation] = useLocation();
 
   const phoneDigits = phone.replace(/\D/g, "").slice(0, 10);
@@ -166,6 +170,11 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
       });
       return;
     }
+    if (stayLoggedIn) {
+      persistSessionToLocalStorage(phoneDigits, role);
+    } else {
+      clearRememberedSessionFromLocalStorage();
+    }
     onComplete?.();
     setLocation(dashboardRouteFor(role));
   };
@@ -293,6 +302,22 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
                     ${d ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
                 />
               ))}
+            </Box>
+
+            <Box className="mb-4 flex max-w-md items-start gap-2">
+              <Checkbox
+                id="broker-stay-logged-in"
+                checked={stayLoggedIn}
+                onCheckedChange={(checked) => setStayLoggedIn(checked === true)}
+                disabled={verifying}
+                className="mt-0.5"
+              />
+              <Label
+                htmlFor="broker-stay-logged-in"
+                className="cursor-pointer text-sm font-normal leading-snug text-gray-600"
+              >
+                Stay logged in on this device
+              </Label>
             </Box>
 
             <p className="text-sm text-gray-600">

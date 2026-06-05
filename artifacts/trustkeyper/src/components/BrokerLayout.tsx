@@ -5,7 +5,11 @@ import { TrustKeyperFooter } from "@/components/TrustKeyperFooter";
 import { hasBankDetails, getBrokerProfile } from "@/lib/brokerProfile";
 import { BROKER_PENDING_FLOWS_EVENT, getPendingFlowItems } from "@/lib/brokerPendingFlows";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
-import { getActiveSession, logout } from "@/lib/auth";
+import {
+  getActiveSession,
+  logout,
+  restoreRememberedSessionFromLocalStorage,
+} from "@/lib/auth";
 import {
   LayoutDashboard,
   Building2,
@@ -77,6 +81,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
   }, []);
 
   useEffect(() => {
+    restoreRememberedSessionFromLocalStorage();
     const session = getActiveSession();
     if (!session || session.role !== "broker") {
       sessionStorage.setItem("tk_pending_role", "broker");

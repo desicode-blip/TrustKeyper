@@ -4,21 +4,31 @@ import { useLocation } from "wouter";
 import OwnerLayout from "@/components/OwnerLayout";
 import { OwnerPageEmpty } from "@/components/owner/OwnerPageEmpty";
 import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
-import { getAgreements, type Agreement } from "@/lib/agreements";
+import {
+  AgreementDocumentRow,
+  AgreementEditManuallyModal,
+  AgreementViewModal,
+  buildAgreementEditDraft,
+} from "@/components/agreements/AgreementDocumentList";
+import { getAgreements, updateAgreement, type Agreement } from "@/lib/agreements";
 import { getOwnerName } from "@/components/OwnerLayout";
+import { setSessionItem } from "@/lib/storageKeys";
 
 export default function OwnerAgreements() {
   const [, setLocation] = useLocation();
   const ownerName = getOwnerName().replace("!", "").trim().toLowerCase();
   const [agreements, setAgreements] = useState<Agreement[]>([]);
+  const [viewing, setViewing] = useState<Agreement | null>(null);
+  const [editingManually, setEditingManually] = useState<Agreement | null>(null);
+
+  const refresh = () => {
+    const list = getAgreements().filter(
+      (a) => a.ownerName?.trim().toLowerCase() === ownerName,
+    );
+    setAgreements(list);
+  };
 
   useEffect(() => {
-    const refresh = () => {
-      const list = getAgreements().filter(
-        (a) => a.ownerName?.trim().toLowerCase() === ownerName,
-      );
-      setAgreements(list);
-    };
     refresh();
     window.addEventListener("storage", refresh);
     window.addEventListener("focus", refresh);
@@ -32,6 +42,11 @@ export default function OwnerAgreements() {
     () => [...agreements].sort((a, b) => b.createdAt - a.createdAt),
     [agreements],
   );
+
+  const handleSaveText = (id: string, text: string) => {
+    updateAgreement(id, { customText: text });
+    refresh();
+  };
 
   return (
     <OwnerLayout>
@@ -58,26 +73,36 @@ export default function OwnerAgreements() {
             description="Create a rental agreement for your property to collect documents and e-signatures."
           />
         ) : (
-          <div className="space-y-4">
+          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 min-w-0 w-full overflow-x-hidden">
             {recentAgreements.map((agreement) => (
-              <div key={agreement.id} className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{agreement.propertyTitle}</p>
-                    <p className="text-xs text-gray-500 mt-1 truncate">Tenant: {agreement.tenantName || "—"}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Added: {new Date(agreement.createdAt).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                  <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold bg-green-50 text-green-700 border border-green-100">
-                    {agreement.status}
-                  </span>
-                </div>
-              </div>
+              <AgreementDocumentRow
+                key={agreement.id}
+                agreement={agreement}
+                onView={() => setViewing(agreement)}
+                onEditManually={() => setEditingManually(agreement)}
+                onEditDetails={() => {
+                  try {
+                    window.sessionStorage.setItem("agreement_needs_resend", agreement.id);
+                  } catch {
+                    /* ignore */
+                  }
+                  setSessionItem("agreement_edit_draft", JSON.stringify(buildAgreementEditDraft(agreement)));
+                  setLocation("/owner/agreements/generate");
+                }}
+              />
             ))}
           </div>
         )}
       </div>
+
+      {viewing ? <AgreementViewModal agreement={viewing} onClose={() => setViewing(null)} /> : null}
+      {editingManually ? (
+        <AgreementEditManuallyModal
+          agreement={editingManually}
+          onClose={() => setEditingManually(null)}
+          onSave={(text) => handleSaveText(editingManually.id, text)}
+        />
+      ) : null}
     </OwnerLayout>
   );
 }

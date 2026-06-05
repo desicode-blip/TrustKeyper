@@ -12,15 +12,20 @@ import {
   authPrimaryButtonClass,
 } from "@/components/auth/authStyles";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import {
   type AuthEntryRole,
   clearInvalidAuthPendingRole,
+  clearRememberedSessionFromLocalStorage,
   dashboardRouteFor,
   isAuthEntryRole,
   loginSuccess,
+  persistSessionToLocalStorage,
   profileExistsAsync,
   readAuthPendingRole,
+  restoreRememberedSessionFromLocalStorage,
   roleDisplayLabel,
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
@@ -39,13 +44,20 @@ export default function Login() {
   const [countdown, setCountdown] = useState(10);
   const [accountKnown, setAccountKnown] = useState<boolean | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   useEffect(() => {
+    const remembered = restoreRememberedSessionFromLocalStorage();
+    if (remembered) {
+      setLocation(dashboardRouteFor(remembered.role));
+      return;
+    }
+
     resetSessionForAuthEntry();
     clearInvalidAuthPendingRole();
     const pending = readAuthPendingRole();
     if (pending) setLoginRole(pending);
-  }, []);
+  }, [setLocation]);
 
   useEffect(() => {
     if (phase !== "otp" || countdown <= 0) return;
@@ -111,6 +123,11 @@ export default function Login() {
       }
       const ok = await loginSuccess(phoneDigits, loginRole);
       if (ok) {
+        if (rememberMe) {
+          persistSessionToLocalStorage(phoneDigits, loginRole);
+        } else {
+          clearRememberedSessionFromLocalStorage();
+        }
         toast({ title: "Signed in", description: "Welcome back to TrustKeyper." });
         setLocation(dashboardRouteFor(loginRole));
         return;
@@ -257,6 +274,22 @@ export default function Login() {
                     ${digit ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
                 />
               ))}
+            </div>
+
+            <div className="mb-4 flex max-w-md items-start gap-2">
+              <Checkbox
+                id="login-remember-me"
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked === true)}
+                disabled={loggingIn}
+                className="mt-0.5"
+              />
+              <Label
+                htmlFor="login-remember-me"
+                className="cursor-pointer text-sm font-normal leading-snug text-gray-600"
+              >
+                Remember me on this device
+              </Label>
             </div>
 
             <p className="text-sm text-gray-600 mb-2 max-w-md">

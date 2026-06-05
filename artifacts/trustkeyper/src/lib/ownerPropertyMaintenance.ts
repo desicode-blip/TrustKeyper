@@ -1,7 +1,7 @@
 import { queueCloudSync } from "@/lib/cloudSync";
 import { getItem, setItem } from "@/lib/storageKeys";
 
-export type MaintenanceStatus = "Open" | "In Progress" | "Resolved";
+export type MaintenanceStatus = "Pending" | "Issue Solved";
 
 export interface PropertyMaintenanceTicket {
   id: string;
@@ -14,7 +14,14 @@ export interface PropertyMaintenanceTicket {
   createdAt: number;
 }
 
+export const MAINTENANCE_TICKETS_CHANGED = "trustkeyper:maintenance-tickets-changed";
+
 const STORAGE_KEY = "owner_property_maintenance";
+
+function normalizeStatus(raw: unknown): MaintenanceStatus {
+  if (raw === "Issue Solved" || raw === "Resolved") return "Issue Solved";
+  return "Pending";
+}
 
 function readAll(): PropertyMaintenanceTicket[] {
   if (typeof window === "undefined") return [];
@@ -23,7 +30,10 @@ function readAll(): PropertyMaintenanceTicket[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as Partial<PropertyMaintenanceTicket>[];
     return parsed
-      .filter((t): t is Partial<PropertyMaintenanceTicket> & { propertyId: string; id: string } => Boolean(t?.id && t?.propertyId))
+      .filter(
+        (t): t is Partial<PropertyMaintenanceTicket> & { propertyId: string; id: string } =>
+          Boolean(t?.id && t?.propertyId),
+      )
       .map((t) => ({
         id: t.id!,
         propertyId: t.propertyId!,
@@ -31,7 +41,7 @@ function readAll(): PropertyMaintenanceTicket[] {
         title: t.title ?? "",
         description: t.description ?? "",
         images: Array.isArray(t.images) ? t.images : [],
-        status: (t.status as MaintenanceStatus) ?? "Open",
+        status: normalizeStatus(t.status),
         createdAt: typeof t.createdAt === "number" ? t.createdAt : Date.now(),
       }));
   } catch {
@@ -39,20 +49,34 @@ function readAll(): PropertyMaintenanceTicket[] {
   }
 }
 
+function notifyChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(MAINTENANCE_TICKETS_CHANGED));
+}
+
 function persist(list: PropertyMaintenanceTicket[]): void {
   try {
     const json = JSON.stringify(list);
     setItem(STORAGE_KEY, json);
     queueCloudSync(STORAGE_KEY, json);
+    notifyChanged();
   } catch {
     /* ignore */
   }
+}
+
+export function getAllMaintenanceTickets(): PropertyMaintenanceTicket[] {
+  return readAll().sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function getPropertyMaintenanceTickets(propertyId: string): PropertyMaintenanceTicket[] {
   return readAll()
     .filter((t) => t.propertyId === propertyId)
     .sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export function getMaintenanceTicketById(ticketId: string): PropertyMaintenanceTicket | undefined {
+  return readAll().find((t) => t.id === ticketId);
 }
 
 export function addPropertyMaintenanceTicket(
@@ -64,11 +88,27 @@ export function addPropertyMaintenanceTicket(
     ...input,
     images: input.images ?? [],
     id: `mnt_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    status: "Open",
+    status: "Pending",
     createdAt: Date.now(),
   };
   const list = readAll();
   list.unshift(ticket);
   persist(list);
   return ticket;
+}
+
+export function updateMaintenanceTicketStatus(
+  ticketId: string,
+  status: MaintenanceStatus,
+): PropertyMaintenanceTicket | undefined {
+  const list = readAll();
+  const idx = list.findIndex((t) => t.id === ticketId);
+  if (idx < 0) return undefined;
+  list[idx] = { ...list[idx], status };
+  persist(list);
+  return list[idx];
+}
+
+export function isMaintenancePending(status: MaintenanceStatus): boolean {
+  return status === "Pending";
 }
