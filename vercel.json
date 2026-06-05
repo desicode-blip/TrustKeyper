@@ -6,7 +6,7 @@
     "api/sync.ts": {
       "maxDuration": 30
     },
-    "api/invitations.ts": {
+    "api/feedback.ts": {
       "maxDuration": 30
     }
   },
