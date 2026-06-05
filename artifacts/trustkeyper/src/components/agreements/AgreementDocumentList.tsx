@@ -341,88 +341,93 @@ export function AgreementDocumentRow({
   };
 
   return (
-    <div className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors first:rounded-t-xl last:rounded-b-xl overflow-visible">
-      <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-        <FileText size={17} className="text-primary" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-sm font-semibold text-gray-900 truncate">
-            Rental Agreement – {agreement.propertyTitle}
-          </p>
-          {isNew ? (
-            <span className="text-[10px] font-semibold text-primary bg-blue-50 border border-primary/20 px-1.5 py-0.5 rounded">
-              NEW
-            </span>
-          ) : null}
+    <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-5 hover:bg-gray-50 transition-colors first:rounded-t-xl last:rounded-b-xl overflow-visible min-w-0">
+      <div className="flex items-start gap-3 min-w-0 flex-1">
+        <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+          <FileText size={17} className="text-primary" />
         </div>
-        <p className="text-xs text-gray-400 mt-0.5">
-          Agreement · {formatDate(agreement.createdAt)}
-        </p>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="text-sm font-semibold text-gray-900 break-words sm:truncate">
+              Rental Agreement – {agreement.propertyTitle}
+            </p>
+            {isNew ? (
+              <span className="text-[10px] font-semibold text-primary bg-blue-50 border border-primary/20 px-1.5 py-0.5 rounded shrink-0">
+                NEW
+              </span>
+            ) : null}
+            <StatusBadge status={agreement.status} />
+          </div>
+          <p className="text-xs text-gray-400 mt-1 break-words">
+            Agreement · {formatDate(agreement.createdAt)}
+          </p>
+        </div>
       </div>
-      <div className="flex items-center gap-1 shrink-0">
-        <StatusBadge status={agreement.status} />
+
+      <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:shrink-0 pl-12 sm:pl-0">
         {recentlyEdited ? (
           <button
             type="button"
             onClick={handleResend}
-            className="h-8 px-3 rounded-lg border border-primary text-primary text-xs font-semibold hover:bg-primary/5 transition-colors mr-1"
+            className="h-8 px-3 rounded-lg border border-primary text-primary text-xs font-semibold hover:bg-primary/5 transition-colors shrink-0"
             title="Resend agreement"
           >
             Resend agreement
           </button>
         ) : null}
-        <button
-          type="button"
-          onClick={onView}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-primary bg-blue-50 hover:bg-primary hover:text-white transition-colors ml-2 cursor-pointer"
-          title="View"
-          aria-label={`View agreement for ${agreement.propertyTitle}`}
-        >
-          <Eye size={15} />
-        </button>
-        <div ref={dropRef} className="relative">
+        <div className="flex items-center gap-1 ml-auto sm:ml-0">
           <button
             type="button"
-            onClick={() => setDropOpen((v) => !v)}
-            aria-expanded={dropOpen}
-            aria-haspopup="menu"
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${dropOpen ? "bg-primary text-white" : "text-primary bg-blue-50 hover:bg-primary hover:text-white"}`}
-            title="Edit"
-            aria-label={`Edit agreement for ${agreement.propertyTitle}`}
+            onClick={onView}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-primary bg-blue-50 hover:bg-primary hover:text-white transition-colors cursor-pointer"
+            title="View"
+            aria-label={`View agreement for ${agreement.propertyTitle}`}
           >
-            <Pencil size={15} />
+            <Eye size={15} />
           </button>
-          {dropOpen ? (
-            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl border border-gray-200 shadow-lg z-50 py-1 min-w-[160px]" role="menu">
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => { setDropOpen(false); onEditDetails(); }}
-                className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary transition-colors"
-              >
-                <Edit size={13} /> Edit Details
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => { setDropOpen(false); onEditManually(); }}
-                className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary transition-colors"
-              >
-                <PenLine size={13} /> Edit Manually
-              </button>
-            </div>
-          ) : null}
+          <div ref={dropRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setDropOpen((v) => !v)}
+              aria-expanded={dropOpen}
+              aria-haspopup="menu"
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${dropOpen ? "bg-primary text-white" : "text-primary bg-blue-50 hover:bg-primary hover:text-white"}`}
+              title="Edit"
+              aria-label={`Edit agreement for ${agreement.propertyTitle}`}
+            >
+              <Pencil size={15} />
+            </button>
+            {dropOpen ? (
+              <div className="absolute right-0 top-full mt-1 bg-white rounded-xl border border-gray-200 shadow-lg z-50 py-1 min-w-[160px]" role="menu">
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { setDropOpen(false); onEditDetails(); }}
+                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary transition-colors"
+                >
+                  <Edit size={13} /> Edit Details
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { setDropOpen(false); onEditManually(); }}
+                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary transition-colors"
+                >
+                  <PenLine size={13} /> Edit Manually
+                </button>
+              </div>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-primary bg-blue-50 hover:bg-primary hover:text-white transition-colors cursor-pointer"
+            title="Download"
+            aria-label={`Download agreement for ${agreement.propertyTitle}`}
+          >
+            <Download size={15} />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={handleDownload}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-primary bg-blue-50 hover:bg-primary hover:text-white transition-colors cursor-pointer"
-          title="Download"
-          aria-label={`Download agreement for ${agreement.propertyTitle}`}
-        >
-          <Download size={15} />
-        </button>
       </div>
     </div>
   );
