@@ -221,16 +221,29 @@ export function formatInviteStartDate(isoOrDate: string): string {
   }
 }
 
+function maintenanceLine(invite: OwnerTenantInvite): string {
+  if (invite.maintenanceIncluded) return "Included in rent";
+  const amt = formatInviteAmount(invite.monthlyMaintenance);
+  return amt === "0" ? "—" : `₹${amt}/month`;
+}
+
 export function buildWhatsAppInviteMessage(invite: OwnerTenantInvite): string {
   return (
     `Hello ${invite.name.trim() || "there"},\n\n` +
-    `You have been invited to join the property:\n\n` +
+    `You have been invited to join the following property:\n\n` +
     `Property: ${invite.propertyLabel}\n` +
     `Monthly Rent: ₹${formatInviteAmount(invite.monthlyRent)}\n` +
+    `Maintenance: ${maintenanceLine(invite)}\n` +
     `Security Deposit: ₹${formatInviteAmount(invite.securityDeposit)}\n` +
     `Start Date: ${formatInviteStartDate(invite.startDate)}\n\n` +
+    `Please let me know if you are interested.\n\n` +
     `Sent via TrustKeyper.`
   );
+}
+
+export function openWhatsAppInvite(invite: OwnerTenantInvite): void {
+  if (typeof window === "undefined") return;
+  window.open(getWhatsAppInviteHref(invite), "_blank", "noopener,noreferrer");
 }
 
 export function whatsAppInviteHref(phone: string, message: string): string {
