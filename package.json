@@ -30,6 +30,7 @@
     "@vercel/node": "^5.3.0",
     "@workspace/auth-server": "workspace:*",
     "@workspace/db": "workspace:*",
+    "@workspace/invitations-store": "workspace:*",
     "@workspace/sync-store": "workspace:*",
     "pg": "^8.20.0"
   },

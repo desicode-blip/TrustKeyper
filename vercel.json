@@ -16,6 +16,10 @@
       "destination": "/api/sync?syncPath=$1"
     },
     {
+      "source": "/api/invitations/(.*)",
+      "destination": "/api/invitations?invitePath=$1"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

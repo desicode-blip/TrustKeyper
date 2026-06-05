@@ -8,6 +8,7 @@
   "include": ["api/**/*.ts"],
   "references": [
     { "path": "./lib/db" },
-    { "path": "./lib/sync-store" }
+    { "path": "./lib/sync-store" },
+    { "path": "./lib/invitations-store" }
   ]
 }

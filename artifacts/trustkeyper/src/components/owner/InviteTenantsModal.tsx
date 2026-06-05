@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Property } from "@/lib/properties";
+import { useToast } from "@/hooks/use-toast";
 import {
   formatMemberContact,
   getPropertyInviteLabel,
@@ -65,6 +66,8 @@ export function InviteTenantsModal({
   const [monthlyMaintenance, setMonthlyMaintenance] = useState("");
   const [securityDeposit, setSecurityDeposit] = useState("");
   const [startDate, setStartDate] = useState("");
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   const selectedProperty = useMemo(
     () => properties.find((p) => p.id === propertyId),
@@ -119,7 +122,7 @@ export function InviteTenantsModal({
     (slot) => slot.name.trim().length > 0 && slot.contact.replace(/\D/g, "").length === 10,
   );
 
-  const canSendInvite =
+  const canCreateInvite =
     !!propertyId &&
     parseRent(monthlyRent).length > 0 &&
     parseRent(securityDeposit).length > 0 &&
@@ -137,9 +140,10 @@ export function InviteTenantsModal({
     if (!next) onOpenChange(false);
   };
 
-  const handleSendInvite = () => {
-    if (!selectedProperty || !canSendInvite) return;
+  const handleCreateInvitation = () => {
+    if (!selectedProperty || !canCreateInvite || saving) return;
 
+    setSaving(true);
     const members = slots.map((slot) => {
       const digits = slot.contact.replace(/\D/g, "").slice(-10);
       return {
@@ -159,6 +163,11 @@ export function InviteTenantsModal({
       startDate,
     });
 
+    setSaving(false);
+    toast({
+      title: "Tenant added",
+      description: "Open WhatsApp from the card to send your invitation message.",
+    });
     onSuccess();
     onOpenChange(false);
   };
@@ -309,12 +318,12 @@ export function InviteTenantsModal({
             <div className="flex justify-center pt-4">
               <OwnerFlowButton
                 type="button"
-                disabled={!canSendInvite}
+                disabled={!canCreateInvite || saving}
                 className="sm:min-w-[160px]"
-                onClick={handleSendInvite}
+                onClick={handleCreateInvitation}
               >
                 <Send size={16} />
-                Send Invite
+                {saving ? "Saving…" : "Create invitation"}
               </OwnerFlowButton>
             </div>
           </div>

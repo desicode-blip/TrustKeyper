@@ -48,13 +48,19 @@ function PendingRow({ item }: { item: PendingFlowItem }) {
   );
 }
 
-export default function BrokerPendingFlowBanners({ className = "" }: { className?: string }) {
+export default function BrokerPendingFlowBanners({
+  className = "",
+  role = "broker",
+}: {
+  className?: string;
+  role?: "broker" | "owner";
+}) {
   const [items, setItems] = useState<PendingFlowItem[]>(() =>
-    typeof window !== "undefined" ? getPendingFlowItems() : [],
+    typeof window !== "undefined" ? getPendingFlowItems(role) : [],
   );
 
   useEffect(() => {
-    const sync = () => setItems(getPendingFlowItems());
+    const sync = () => setItems(getPendingFlowItems(role));
     sync();
     window.addEventListener(BROKER_PENDING_FLOWS_EVENT, sync);
     window.addEventListener("storage", sync);
@@ -62,7 +68,7 @@ export default function BrokerPendingFlowBanners({ className = "" }: { className
       window.removeEventListener(BROKER_PENDING_FLOWS_EVENT, sync);
       window.removeEventListener("storage", sync);
     };
-  }, []);
+  }, [role]);
 
   if (items.length === 0) return null;
 

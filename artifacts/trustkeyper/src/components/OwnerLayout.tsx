@@ -6,6 +6,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { getOwnerProfile } from "@/lib/ownerProfile";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import { getAgreements } from "@/lib/agreements";
+import {
+  getOwnerInvites,
+  getRecordedInviteStatus,
+  OWNER_INVITES_UPDATED_EVENT,
+} from "@/lib/ownerTenants";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
 import {
   getActiveSession,
@@ -67,14 +72,15 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
   const initials = getInitials(ownerName || "Owner");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationEpoch, setNotificationEpoch] = useState(0);
-
   useEffect(() => {
     const refresh = () => setNotificationEpoch((v) => v + 1);
     window.addEventListener("storage", refresh);
     window.addEventListener("focus", refresh);
+    window.addEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
     return () => {
       window.removeEventListener("storage", refresh);
       window.removeEventListener("focus", refresh);
+      window.removeEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
     };
   }, []);
 
@@ -127,7 +133,32 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
           ]
         : [];
 
-    return [...propertyEvents, ...agreementEvents, ...accountEvent]
+    const inviteEvents = getOwnerInvites().flatMap((inv) => {
+      const status = getRecordedInviteStatus(inv);
+      if (status === "accepted" && inv.acceptedAt) {
+        return [
+          {
+            id: `invite-accepted-${inv.id}`,
+            title: "Tenant accepted invite",
+            desc: `${inv.name} • ${inv.propertyLabel}`,
+            time: inv.acceptedAt,
+          },
+        ];
+      }
+      if (status === "rejected" && inv.rejectedAt) {
+        return [
+          {
+            id: `invite-rejected-${inv.id}`,
+            title: "Tenant rejected invite",
+            desc: `${inv.name} • ${inv.propertyLabel}`,
+            time: inv.rejectedAt,
+          },
+        ];
+      }
+      return [];
+    });
+
+    return [...propertyEvents, ...agreementEvents, ...inviteEvents, ...accountEvent]
       .sort((a, b) => b.time - a.time)
       .slice(0, 12);
   }, [ownerName, notificationEpoch]);
