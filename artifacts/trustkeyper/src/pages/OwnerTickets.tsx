@@ -91,7 +91,7 @@ export default function OwnerTickets() {
 
         <FlowSegmentTabs
           value={activeFilter}
-          onChange={setActiveFilter}
+          onChange={(value) => setActiveFilter(value as FilterTab)}
           options={FILTER_TABS}
           className="mb-6"
         />
