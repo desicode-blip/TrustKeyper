@@ -152,10 +152,10 @@ export function agreementFromRentalInput(input: RentalAgreementInput): Agreement
   };
 }
 
-export async function downloadRentalAgreementPdf(
+export async function buildRentalAgreementPdfBlob(
   input: RentalAgreementInput,
   filename?: string,
-): Promise<void> {
+): Promise<{ blob: Blob; filename: string }> {
   const { jsPDF } = await import("jspdf");
   const text = generateRentalAgreementText(input);
   const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -183,7 +183,63 @@ export async function downloadRentalAgreementPdf(
   }
 
   const safeName = (filename ?? input.propertyTitle).replace(/[^\w.-]+/g, "_").slice(0, 80);
-  doc.save(`Rental_Agreement_${safeName}.pdf`);
+  const pdfFilename = `Rental_Agreement_${safeName}.pdf`;
+  const blob = doc.output("blob");
+  return { blob, filename: pdfFilename };
+}
+
+function triggerBlobDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function downloadRentalAgreementPdf(
+  input: RentalAgreementInput,
+  filename?: string,
+): Promise<void> {
+  const { blob, filename: pdfFilename } = await buildRentalAgreementPdfBlob(input, filename);
+  triggerBlobDownload(blob, pdfFilename);
+}
+
+export type AgreementShareResult = "shared" | "whatsapp" | "download-only";
+
+/** Download PDF, then share message + file together when the device supports it. */
+export async function shareRentalAgreementPdf(
+  input: RentalAgreementInput,
+  propertyTitle: string,
+  phone: string,
+  whatsAppHref: (phone: string, message: string) => string,
+): Promise<AgreementShareResult> {
+  const message = buildAgreementWhatsAppMessage(propertyTitle);
+  const { blob, filename } = await buildRentalAgreementPdfBlob(input, propertyTitle);
+  triggerBlobDownload(blob, filename);
+
+  const file = new File([blob], filename, { type: "application/pdf" });
+  const shareData: ShareData = { text: message, files: [file] };
+
+  if (
+    typeof navigator !== "undefined" &&
+    typeof navigator.share === "function" &&
+    (!navigator.canShare || navigator.canShare(shareData))
+  ) {
+    try {
+      await navigator.share(shareData);
+      return "shared";
+    } catch {
+      /* user dismissed share sheet */
+    }
+  }
+
+  if (phone) {
+    window.open(whatsAppHref(phone, message), "_blank", "noopener,noreferrer");
+    return "whatsapp";
+  }
+
+  return "download-only";
 }
 
 export function buildAgreementWhatsAppMessage(propertyTitle: string): string {

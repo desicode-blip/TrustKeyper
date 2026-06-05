@@ -52,9 +52,8 @@ import { getProperties, getPropertyTitle, updateProperty, type Property } from "
 import { ensureTenantFromAgreement, getTenants, type Tenant } from "@/lib/tenants";
 import { addAgreement, getAgreements, updateAgreement, type Agreement } from "@/lib/agreements";
 import {
-  buildAgreementWhatsAppMessage,
-  downloadRentalAgreementPdf,
   generateRentalAgreementText,
+  shareRentalAgreementPdf,
   type RentalAgreementInput,
 } from "@/lib/rentalAgreementDocument";
 import { whatsAppInviteHref } from "@/lib/ownerTenants";
@@ -497,7 +496,8 @@ function InlinePartyForm({ label, onAdd, onCancel }: {
   );
 }
 
-function TenantSearchDrop({ allTenants, onSelect, onClose }: {
+function TenantSearchDrop({ listId, allTenants, onSelect, onClose }: {
+  listId: string;
   allTenants: Tenant[]; onSelect: (t: Tenant) => void; onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
@@ -526,13 +526,15 @@ function TenantSearchDrop({ allTenants, onSelect, onClose }: {
           className="w-full h-8 px-3 rounded-md text-sm border border-gray-200 focus:outline-none focus:border-primary"
         />
       </div>
-      <div className="max-h-44 overflow-y-auto">
+      <div className="max-h-44 overflow-y-auto" id={listId} role="listbox" aria-label="Tenant search results">
         {filtered.length === 0 ? (
           <div className="px-3 py-4 text-center text-xs text-gray-400">No tenants found</div>
         ) : (
           filtered.map((t, i) => (
             <button
               key={t.id}
+              type="button"
+              role="option"
               onClick={() => onSelect(t)}
               className={`w-full text-left px-3 py-2.5 hover:bg-gray-50 transition-colors ${i > 0 ? "border-t border-gray-100" : ""}`}
             >
@@ -619,11 +621,15 @@ function Step2Parties({
           {/* "Add additional owner…" dropdown trigger */}
           {!showOwnerForm && (
             <button
+              type="button"
               onClick={() => setShowOwnerForm(true)}
+              aria-expanded={false}
+              aria-haspopup="dialog"
+              aria-label="Add additional owner"
               className="flex items-center justify-between w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-sm text-gray-500 hover:border-primary/50 mb-3 transition-colors"
             >
               <span>Add additional owner…</span>
-              <ChevronDown size={14} className="text-gray-400" />
+              <ChevronDown size={14} className="text-gray-400 shrink-0" aria-hidden="true" />
             </button>
           )}
 
@@ -655,14 +661,24 @@ function Step2Parties({
           {/* Choose a tenant dropdown */}
           <div ref={tenantDropRef} className="relative mb-3">
             <button
+              type="button"
               onClick={() => { setTenantDropOpen((v) => !v); setShowTenantForm(false); }}
+              aria-expanded={tenantDropOpen}
+              aria-haspopup="listbox"
+              aria-controls="broker-tenant-picker-list"
+              aria-label="Choose a tenant"
               className="flex items-center justify-between w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-sm text-gray-500 hover:border-primary/50 transition-colors"
             >
               <span>Choose a tenant…</span>
-              <ChevronDown size={14} className="text-gray-400" />
+              <ChevronDown
+                size={14}
+                className={`text-gray-400 shrink-0 transition-transform ${tenantDropOpen ? "rotate-180" : ""}`}
+                aria-hidden="true"
+              />
             </button>
             {tenantDropOpen && (
               <TenantSearchDrop
+                listId="broker-tenant-picker-list"
                 allTenants={allTenants}
                 onSelect={addTenantFromSearch}
                 onClose={() => setTenantDropOpen(false)}
@@ -1036,6 +1052,7 @@ function applyOwnerSelfDocPrefill(persons: PersonState[]): PersonState[] {
 
 function isLoggedInOwnerParty(person: PersonState, isOwnerFlow: boolean): boolean {
   if (!isOwnerFlow || !person.personLabel.startsWith("OWNER")) return false;
+  if (person.personLabel !== "OWNER" && person.personLabel !== "OWNER 1") return false;
   const profile = getOwnerProfile();
   const normPhone = (s: string) => s.replace(/\D/g, "").slice(-10);
   const profilePhone = normPhone(profile.phone);
@@ -1174,7 +1191,11 @@ function Step3Documents({
       {/* Bank modal */}
       {bankModal && (
         <BankModal
-          prefillOwnerProfile={isOwnerFlow}
+          key={`${bankModal.pIdx}-${bankModal.dIdx}`}
+          prefillOwnerProfile={
+            isOwnerFlow &&
+            isLoggedInOwnerParty(persons[bankModal.pIdx], isOwnerFlow)
+          }
           onSave={handleBankSave}
           onClose={() => setBankModal(null)}
         />
@@ -1842,7 +1863,7 @@ function SuccessOverlay({ onDone }: { onDone: () => void }) {
         </div>
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Agreement Sent!</h2>
         <p className="text-sm text-gray-500 mb-4">
-          Your agreement PDF has been downloaded. WhatsApp is opening so you can share it with the tenant.
+          Your agreement PDF has been downloaded. On supported devices you can share the PDF and message together; otherwise attach the downloaded PDF in WhatsApp.
         </p>
         <div className="flex items-center gap-1.5 justify-center text-xs text-gray-500 mb-6">
           <BadgeCheck size={14} className="text-accent" />
@@ -2241,15 +2262,7 @@ export default function GenerateAgreement() {
     const agreementText = generateRentalAgreementText(agreementInput);
     const waPhone = primaryTenant?.contact || ownerContact;
 
-    void downloadRentalAgreementPdf(agreementInput, propertyTitle).finally(() => {
-      if (waPhone) {
-        window.open(
-          whatsAppInviteHref(waPhone, buildAgreementWhatsAppMessage(propertyTitle)),
-          "_blank",
-          "noopener,noreferrer",
-        );
-      }
-    });
+    void shareRentalAgreementPdf(agreementInput, propertyTitle, waPhone, whatsAppInviteHref);
 
     setTimeout(() => {
       const mode = brokerageMode as Agreement["brokerageMode"];
