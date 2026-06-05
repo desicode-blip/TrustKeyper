@@ -45,6 +45,11 @@ export default function BrokerDocuments() {
               onView={() => setViewing(agr)}
               onEditManually={() => setEditingManually(agr)}
               onEditDetails={() => {
+                try {
+                  window.sessionStorage.setItem("agreement_needs_resend", agr.id);
+                } catch {
+                  /* ignore */
+                }
                 setSessionItem("agreement_edit_draft", JSON.stringify(buildAgreementEditDraft(agr)));
                 setLocation("/broker/agreements/generate");
               }}

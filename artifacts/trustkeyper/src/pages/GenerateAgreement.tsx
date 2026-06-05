@@ -75,6 +75,25 @@ import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
+type BankData =
+  | {
+      mode: "bank";
+      holderName: string;
+      bankName: string;
+      accountNumber: string;
+      ifscCode: string;
+      upiId?: string;
+      upiQrFileName?: string;
+    }
+  | {
+      mode: "upi";
+      holderName?: string;
+      bankName?: string;
+      accountNumber?: string;
+      ifscCode?: string;
+      upiId: string;
+      upiQrFileName?: string;
+    };
 
 const STEPS: { id: Step; label: string; shortLabel: string; Icon: React.ElementType }[] = [
   { id: 1, label: "Property", shortLabel: "Property", Icon: Home },
@@ -726,15 +745,6 @@ interface PersonState {
   docs: DocState[];
 }
 
-interface BankData {
-  mode: "bank" | "upi";
-  holderName: string;
-  bankName: string;
-  accountNumber: string;
-  ifscCode: string;
-  upiId: string;
-}
-
 const BANK_NAMES = [
   "State Bank of India", "HDFC Bank", "ICICI Bank", "Axis Bank",
   "Kotak Mahindra Bank", "Punjab National Bank", "Bank of Baroda",
@@ -780,7 +790,8 @@ function BankModal({
   const [qrFile, setQrFile] = useState(saved?.upiQrFileName ?? "");
 
   const bankValid = !!(holderName && bankName && accountNumber && ifscCode);
-  const upiValid = isValidUpiId(upiId);
+  const upiIdValid = isValidUpiId(upiId);
+  const upiValid = upiIdValid || !!qrFile;
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -888,7 +899,15 @@ function BankModal({
           <button
             onClick={() => {
               if (tab === "bank" ? bankValid : upiValid) {
-                onSave({ mode: tab, holderName, bankName, accountNumber, ifscCode, upiId });
+                onSave({
+                  mode: tab,
+                  holderName,
+                  bankName,
+                  accountNumber,
+                  ifscCode,
+                  upiId,
+                  upiQrFileName: qrFile || undefined,
+                } as BankData);
                 if (prefillOwnerProfile && tab === "upi" && qrFile) {
                   saveOwnerProfile({ ...getOwnerProfile(), upiQrFileName: qrFile });
                 }
@@ -1075,13 +1094,16 @@ function Step3Documents({
   ownerCount,
   onContinue,
   isOwnerFlow = false,
+  initialPersons = [],
 }: {
   allParties: Party[];
   ownerCount: number;
   onContinue: (result: { documentsComplete: boolean; persons: PersonState[] }) => void;
   isOwnerFlow?: boolean;
+  initialPersons?: PersonState[];
 }) {
   const [persons, setPersons] = useState<PersonState[]>(() => {
+    if (initialPersons && initialPersons.length > 0) return initialPersons;
     if (!allParties || allParties.length === 0) return [initPersonDocs("Owner", "", "OWNER 1")];
     let ownerIdx = 0;
     let tenantIdx = 0;
@@ -1165,8 +1187,11 @@ function Step3Documents({
           accountNumber: data.accountNumber,
           ifscCode: data.ifscCode,
         });
-      } else if (data.mode === "upi" && isValidUpiId(data.upiId)) {
-        saveOwnerProfileUpi(data.upiId);
+      } else if (data.mode === "upi") {
+        if (isValidUpiId(data.upiId)) saveOwnerProfileUpi(data.upiId);
+        if (data.upiQrFileName) {
+          saveOwnerProfile({ ...getOwnerProfile(), upiQrFileName: data.upiQrFileName });
+        }
       }
     }
     setBankModal(null);
@@ -1458,7 +1483,7 @@ function Step5Brokerage({
 
   const bankDetailsFilled = brokerageMode === "Bank Transfer"
     ? (holderName && bankName && accountNumber && ifscCode)
-    : isValidUpiId(upiId);
+    : (isValidUpiId(upiId) || !!qrFile);
 
   const valid = amountFilled && bankDetailsFilled;
 
@@ -1631,8 +1656,11 @@ function Step5Brokerage({
           const current = getBrokerProfile();
           if (brokerageMode === "Bank Transfer" && holderName && bankName && accountNumber && ifscCode) {
             saveBrokerProfile({ ...current, bankHolderName: holderName, bankName, bankAccountNumber: accountNumber, bankIFSC: ifscCode });
-          } else if (brokerageMode === "UPI" && isValidUpiId(upiId)) {
-            saveBrokerProfile({ ...current, upiId });
+          } else if (brokerageMode === "UPI") {
+            const next = { ...current };
+            if (isValidUpiId(upiId)) next.upiId = upiId;
+            if (qrFile) next.upiQrFileName = qrFile;
+            saveBrokerProfile(next);
           }
           onContinue();
         }}
@@ -2262,7 +2290,16 @@ export default function GenerateAgreement() {
     const agreementText = generateRentalAgreementText(agreementInput);
     const waPhone = primaryTenant?.contact || ownerContact;
 
-    void shareRentalAgreementPdf(agreementInput, propertyTitle, waPhone, whatsAppInviteHref);
+    const senderLabel = isOwnerFlow
+      ? (ownerName?.trim() ? ownerName.trim() : "Owner")
+      : (getBrokerProfile().name?.trim() ? getBrokerProfile().name.trim() : "Broker");
+    const shareMessage =
+      `Rental agreement for:\n` +
+      `${propertyTitle}\n\n` +
+      `Sent by ${senderLabel} via TrustKeyper.\n\n` +
+      `Please review the attached PDF.`;
+
+    void shareRentalAgreementPdf(agreementInput, propertyTitle, waPhone, whatsAppInviteHref, shareMessage);
 
     setTimeout(() => {
       const mode = brokerageMode as Agreement["brokerageMode"];
@@ -2430,6 +2467,7 @@ export default function GenerateAgreement() {
           ]}
           ownerCount={ownerCount}
           isOwnerFlow={isOwnerFlow}
+          initialPersons={documentPersons}
           onContinue={(result) => {
             setDocumentsComplete(result.documentsComplete);
             setDocumentPersons(result.persons);

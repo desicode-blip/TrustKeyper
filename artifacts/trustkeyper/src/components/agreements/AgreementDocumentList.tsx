@@ -4,13 +4,14 @@ import {
   Eye,
   Pencil,
   Download,
-  Clock,
   Edit,
   PenLine,
   X,
   CheckCircle2,
 } from "lucide-react";
 import { type Agreement, type AgreementStatus } from "@/lib/agreements";
+import { shareRentalAgreementPdf, type RentalAgreementInput } from "@/lib/rentalAgreementDocument";
+import { whatsAppInviteHref } from "@/lib/ownerTenants";
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
@@ -136,12 +137,7 @@ export function buildAgreementEditDraft(agr: Agreement) {
 
 function StatusBadge({ status }: { status: AgreementStatus }) {
   if (status === "Sent") {
-    return (
-      <span className="flex items-center gap-1.5 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full whitespace-nowrap">
-        <Clock size={11} />
-        Review Pending
-      </span>
-    );
+    return null;
   }
   if (status === "Signed") {
     return (
@@ -252,7 +248,19 @@ export function AgreementEditManuallyModal({
           <button type="button" onClick={onClose} className="h-9 px-5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
             Cancel
           </button>
-          <button type="button" onClick={() => { onSave(text); onClose(); }} className="h-9 px-5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors">
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                window.sessionStorage.setItem("agreement_needs_resend", agreement.id);
+              } catch {
+                /* ignore */
+              }
+              onSave(text);
+              onClose();
+            }}
+            className="h-9 px-5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
+          >
             Save Changes
           </button>
         </div>
@@ -272,9 +280,12 @@ export function AgreementDocumentRow({
   onEditManually: () => void;
   onEditDetails: () => void;
 }) {
-  const isNew = Date.now() - agreement.createdAt < 7 * 24 * 60 * 60 * 1000;
+  const isNew = Date.now() - agreement.createdAt < 24 * 60 * 60 * 1000;
   const [dropOpen, setDropOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
+  const recentlyEdited =
+    typeof window !== "undefined" &&
+    window.sessionStorage.getItem("agreement_needs_resend") === agreement.id;
 
   useEffect(() => {
     if (!dropOpen) return;
@@ -296,6 +307,37 @@ export function AgreementDocumentRow({
     a.download = `Rental_Agreement_${agreement.propertyTitle.replace(/\s+/g, "_")}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleResend = async () => {
+    const input: RentalAgreementInput = {
+      propertyTitle: agreement.propertyTitle,
+      ownerName: agreement.ownerName,
+      ownerContact: agreement.ownerContact,
+      additionalOwnerNames: "",
+      tenantName: agreement.tenantName,
+      tenantContact: agreement.tenantContact,
+      coTenantName: agreement.coTenantName ?? "",
+      coTenantContact: agreement.coTenantContact ?? "",
+      startDate: agreement.startDate,
+      monthlyRent: agreement.monthlyRent,
+      securityDeposit: agreement.securityDeposit,
+      lockInPeriod: agreement.lockInPeriod,
+      noticePeriod: agreement.noticePeriod,
+      rentDueDay: agreement.rentDueDay,
+      maintenanceCharges: agreement.maintenanceCharges ?? "",
+      brokerageAmount: agreement.brokerageAmount,
+      brokeragePaidBy: agreement.brokeragePaidBy,
+      brokerageMode: agreement.brokerageMode,
+      isOwnerFlow: true,
+    };
+    const senderLabel = agreement.ownerName?.trim() ? agreement.ownerName.trim() : "Owner";
+    const msg =
+      `Rental agreement for:\n` +
+      `${agreement.propertyTitle}\n\n` +
+      `Sent by ${senderLabel} via TrustKeyper.\n\n` +
+      `Please review the attached PDF.`;
+    await shareRentalAgreementPdf(input, agreement.propertyTitle, "", whatsAppInviteHref, msg);
   };
 
   return (
@@ -320,6 +362,16 @@ export function AgreementDocumentRow({
       </div>
       <div className="flex items-center gap-1 shrink-0">
         <StatusBadge status={agreement.status} />
+        {recentlyEdited ? (
+          <button
+            type="button"
+            onClick={handleResend}
+            className="h-8 px-3 rounded-lg border border-primary text-primary text-xs font-semibold hover:bg-primary/5 transition-colors mr-1"
+            title="Resend agreement"
+          >
+            Resend agreement
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={onView}

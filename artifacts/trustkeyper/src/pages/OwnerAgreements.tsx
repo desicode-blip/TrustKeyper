@@ -81,6 +81,11 @@ export default function OwnerAgreements() {
                 onView={() => setViewing(agreement)}
                 onEditManually={() => setEditingManually(agreement)}
                 onEditDetails={() => {
+                  try {
+                    window.sessionStorage.setItem("agreement_needs_resend", agreement.id);
+                  } catch {
+                    /* ignore */
+                  }
                   setSessionItem("agreement_edit_draft", JSON.stringify(buildAgreementEditDraft(agreement)));
                   setLocation("/owner/agreements/generate");
                 }}

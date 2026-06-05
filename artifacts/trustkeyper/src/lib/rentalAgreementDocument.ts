@@ -213,8 +213,9 @@ export async function shareRentalAgreementPdf(
   propertyTitle: string,
   phone: string,
   whatsAppHref: (phone: string, message: string) => string,
+  messageOverride?: string,
 ): Promise<AgreementShareResult> {
-  const message = buildAgreementWhatsAppMessage(propertyTitle);
+  const message = messageOverride ?? buildAgreementWhatsAppMessage(propertyTitle);
   const { blob, filename } = await buildRentalAgreementPdfBlob(input, propertyTitle);
   triggerBlobDownload(blob, filename);
 
@@ -242,12 +243,16 @@ export async function shareRentalAgreementPdf(
   return "download-only";
 }
 
-export function buildAgreementWhatsAppMessage(propertyTitle: string): string {
+export function buildAgreementWhatsAppMessage(
+  propertyTitle: string,
+  senderLabel: string = "Owner",
+): string {
   return (
     `Hello,\n\n` +
-    `This is the rental agreement for the following property:\n` +
+    `Rental agreement for:\n` +
     `${propertyTitle}\n\n` +
-    `Please review the agreement PDF and confirm your acceptance.\n\n` +
+    `Sent by ${senderLabel} via TrustKeyper.\n\n` +
+    `Please review the attached PDF and confirm your acceptance.\n\n` +
     `Sent via TrustKeyper.`
   );
 }
