@@ -29,7 +29,15 @@ import {
   removePropertyDocumentUpload,
   type PropertyDocument,
 } from "@/lib/ownerPropertyDocuments";
-import { getPropertyMaintenanceTickets } from "@/lib/ownerPropertyMaintenance";
+import {
+  getMaintenanceTicketById,
+  getPropertyMaintenanceTickets,
+  MAINTENANCE_TICKETS_CHANGED,
+  updateMaintenanceTicketStatus,
+  type PropertyMaintenanceTicket,
+} from "@/lib/ownerPropertyMaintenance";
+import { MaintenanceTicketCard } from "@/components/owner/MaintenanceTicketCard";
+import { MaintenanceTicketDetailsModal } from "@/components/owner/MaintenanceTicketDetailsModal";
 import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -118,6 +126,7 @@ export default function OwnerPropertyDetails() {
   const [tickets, setTickets] = useState(() =>
     params?.id ? getPropertyMaintenanceTickets(params.id) : [],
   );
+  const [detailsTicket, setDetailsTicket] = useState<PropertyMaintenanceTicket | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
 
   const refreshDocuments = useCallback(() => {
@@ -136,6 +145,16 @@ export default function OwnerPropertyDetails() {
       refreshTickets();
     }
   }, [params?.id, refreshDocuments, refreshTickets]);
+
+  useEffect(() => {
+    const onChange = () => refreshTickets();
+    window.addEventListener(MAINTENANCE_TICKETS_CHANGED, onChange);
+    window.addEventListener("storage", onChange);
+    return () => {
+      window.removeEventListener(MAINTENANCE_TICKETS_CHANGED, onChange);
+      window.removeEventListener("storage", onChange);
+    };
+  }, [refreshTickets]);
 
   if (!property) {
     return (
@@ -500,47 +519,18 @@ export default function OwnerPropertyDetails() {
               </div>
             ) : (
               <div className="space-y-4">
-                {tickets.map((t) => (
-                  <div
+                {tickets.map((t, idx) => (
+                  <MaintenanceTicketCard
                     key={t.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-gray-100 bg-[#FAFCFE]"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-primary bg-blue-50 px-2 py-0.5 rounded">
-                          {t.category}
-                        </span>
-                        <span className="text-xs text-gray-400">{formatDate(t.createdAt)}</span>
-                      </div>
-                      <p className="text-sm font-semibold text-gray-900">{t.title}</p>
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{t.description}</p>
-                      {Array.isArray(t.images) && t.images.length > 0 && (
-                        <div className="mt-2 grid grid-cols-4 gap-2">
-                          {t.images.slice(0, 4).map((img, idx) => (
-                            <button
-                              key={`${t.id}-img-${idx}`}
-                              type="button"
-                              onClick={() => openImageViewer(t.images, idx)}
-                              className="h-12 rounded-md overflow-hidden border border-gray-200"
-                            >
-                              <img src={img} alt={`Issue ${idx + 1}`} className="w-full h-full object-cover" />
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <span
-                      className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 self-start sm:self-center ${
-                        t.status === "Resolved"
-                          ? "bg-green-50 text-green-700"
-                          : t.status === "In Progress"
-                            ? "bg-amber-50 text-amber-700"
-                            : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {t.status}
-                    </span>
-                  </div>
+                    ticket={t}
+                    ticketLabel={`Ticket- ${String(idx + 1).padStart(2, "0")}`}
+                    propertyLabel={getPropertyTitle(property)}
+                    onViewDetails={() => setDetailsTicket(t)}
+                    onStatusChange={(status) => {
+                      updateMaintenanceTicketStatus(t.id, status);
+                      refreshTickets();
+                    }}
+                  />
                 ))}
               </div>
             )}
@@ -555,6 +545,19 @@ export default function OwnerPropertyDetails() {
         open={complaintOpen}
         onClose={() => setComplaintOpen(false)}
         onSubmitted={refreshTickets}
+      />
+      <MaintenanceTicketDetailsModal
+        ticket={detailsTicket}
+        propertyLabel={getPropertyTitle(property)}
+        open={Boolean(detailsTicket)}
+        onClose={() => setDetailsTicket(null)}
+        onUpdated={() => {
+          refreshTickets();
+          if (detailsTicket) {
+            const updated = getMaintenanceTicketById(detailsTicket.id);
+            if (updated) setDetailsTicket(updated);
+          }
+        }}
       />
       <DocumentViewerModal doc={viewerDoc} onClose={() => setViewerDoc(null)} />
       {activeImageIndex !== null && galleryImages[activeImageIndex] && (
