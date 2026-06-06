@@ -17,7 +17,7 @@ import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 interface OwnerStep4OTPProps {
   phone: string;
   details: { name: string; phone: string };
-  onNext: (accessToken: string) => void;
+  onNext: (accessToken: string) => Promise<void>;
 }
 
 export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPProps) {
@@ -81,7 +81,7 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
         });
         return;
       }
-      onNext(accessToken);
+      await onNext(accessToken);
     } finally {
       setVerifying(false);
     }

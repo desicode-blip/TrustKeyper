@@ -29,6 +29,7 @@ import {
   roleDisplayLabel,
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
+import { clearActiveSessionBackup } from "@/lib/initAppStorage";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 
@@ -127,6 +128,7 @@ export default function Login() {
           persistSessionToLocalStorage(phoneDigits, loginRole);
         } else {
           clearRememberedSessionFromLocalStorage();
+          clearActiveSessionBackup();
         }
         toast({ title: "Signed in", description: "Welcome back to TrustKeyper." });
         setLocation(dashboardRouteFor(loginRole));

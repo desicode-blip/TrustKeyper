@@ -19,6 +19,7 @@ import { FlowChipButton } from "@/components/FlowChipButton";
 import { AddPropertyProgressBar } from "@/components/AddPropertyProgressBar";
 import { useScrollToTopOnChange } from "@/hooks/useScrollToTopOnChange";
 import { getActiveSession } from "@/lib/auth";
+import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { addProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
@@ -127,6 +128,7 @@ function AmenityCheck({
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function AddProperty() {
+  const availableFromMin = todayLocalDateInputMin();
   const [, setLocation] = useLocation();
 
   const loadSavedData = () => {
@@ -875,6 +877,7 @@ export default function AddProperty() {
             <input
               ref={availableFromRef}
               type="date"
+              min={availableFromMin}
               value={availableFrom}
               onChange={(e) => setAvailableFrom(e.target.value)}
               className="flex-1 h-9 px-2 text-sm focus:outline-none bg-white appearance-none [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:w-0 [&::-webkit-calendar-picker-indicator]:h-0"

@@ -16,6 +16,7 @@ import {
   signUpSuccess,
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
+import { clearActiveSessionBackup } from "@/lib/initAppStorage";
 import { getOwnerProfile, saveOwnerProfile } from "@/lib/ownerProfile";
 import { setSessionItem } from "@/lib/storageKeys";
 import { sendPhoneOtp } from "@/lib/phoneOtp";
@@ -112,6 +113,7 @@ export default function Onboarding() {
       persistSessionToLocalStorage(ownerPhoneDigits, "owner");
     } else {
       clearRememberedSessionFromLocalStorage();
+      clearActiveSessionBackup();
     }
 
     try {
