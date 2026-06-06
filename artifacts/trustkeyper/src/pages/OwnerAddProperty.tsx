@@ -17,7 +17,8 @@ import OwnerLayout from "@/components/OwnerLayout";
 import { FlowClearButton } from "@/components/owner/FlowClearButton";
 import { addProperty, getProperties, updateProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
-import { getItem, getSessionItem, removeItem, setItem } from "@/lib/storageKeys";
+import { getOwnerProfile } from "@/lib/ownerProfile";
+import { getActiveSession, getItem, getSessionItem, removeItem, setItem } from "@/lib/storageKeys";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -320,9 +321,20 @@ export default function OwnerAddProperty() {
     const fromOnboarding = sessionStorage.getItem("tk_owner_add_property_entry") === "onboarding";
     setEntrySource(fromOnboarding ? "onboarding" : "dashboard");
 
-    // Pre-fill owner details from onboarding if available
-    const storedName = getSessionItem("name");
-    const storedPhone = getSessionItem("phone") || getSessionItem("contact");
+    // Pre-fill owner details from session mirrors and profile blob
+    const profile = getOwnerProfile();
+    const storedName =
+      getSessionItem("name") ||
+      getSessionItem("owner_name") ||
+      profile.name ||
+      "";
+    const storedPhone =
+      getSessionItem("phone") ||
+      getSessionItem("contact") ||
+      getSessionItem("owner_phone") ||
+      profile.phone ||
+      getActiveSession()?.phone ||
+      "";
     if (storedName) setOwnerName(storedName);
     if (storedPhone) setOwnerContact(storedPhone);
 
@@ -921,8 +933,19 @@ export default function OwnerAddProperty() {
     setSecurityDeposit("");
     setAvailableFrom("");
     setImageUrls([]);
-    const storedName = getSessionItem("name");
-    const storedPhone = getSessionItem("phone") || getSessionItem("contact");
+    const profile = getOwnerProfile();
+    const storedName =
+      getSessionItem("name") ||
+      getSessionItem("owner_name") ||
+      profile.name ||
+      "";
+    const storedPhone =
+      getSessionItem("phone") ||
+      getSessionItem("contact") ||
+      getSessionItem("owner_phone") ||
+      profile.phone ||
+      getActiveSession()?.phone ||
+      "";
     if (storedName) setOwnerName(storedName);
     if (storedPhone) setOwnerContact(storedPhone);
   };
