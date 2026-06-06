@@ -49,7 +49,7 @@ import { broadcastBrokerPendingFlowsUpdated, clearAgreementDraftStorage } from "
 import { queueCloudSync } from "@/lib/cloudSync";
 import { getItem, getSessionItem, removeSessionItem, setItem, setSessionItem } from "@/lib/storageKeys";
 import { getProperties, getPropertyTitle, updateProperty, type Property } from "@/lib/properties";
-import { ensureTenantFromAgreement, getTenants, type Tenant } from "@/lib/tenants";
+import { ensureTenantFromAgreement, getTenants, resolveTenantKyc, type Tenant } from "@/lib/tenants";
 import { addAgreement, getAgreements, updateAgreement, type Agreement } from "@/lib/agreements";
 import {
   generateRentalAgreementText,
@@ -1333,6 +1333,7 @@ function Step4Details({
   noticePeriod, setNoticePeriod,
   rentDueDay, setRentDueDay,
   maintenanceCharges, setMaintenanceCharges,
+  maintenanceIncluded, setMaintenanceIncluded,
   onContinue,
 }: {
   property: Property | null;
@@ -1343,10 +1344,9 @@ function Step4Details({
   noticePeriod: string; setNoticePeriod: (v: string) => void;
   rentDueDay: string; setRentDueDay: (v: string) => void;
   maintenanceCharges: string; setMaintenanceCharges: (v: string) => void;
+  maintenanceIncluded: boolean; setMaintenanceIncluded: (v: boolean) => void;
   onContinue: () => void;
 }) {
-  const [maintenanceIncluded, setMaintenanceIncluded] = useState(false);
-
   useEffect(() => {
     if (property) {
       if (!monthlyRent) setMonthlyRent(property.monthlyRent || "");
@@ -1688,7 +1688,7 @@ function Step6Review({
   property,
   ownerName, ownerContact, additionalOwners, selectedTenants,
   startDate, monthlyRent, securityDeposit,
-  lockInPeriod, noticePeriod, rentDueDay, maintenanceCharges,
+  lockInPeriod, noticePeriod, rentDueDay, maintenanceCharges, maintenanceIncluded,
   brokerageAmount, brokerageAmountOwner, brokerageAmountTenant, brokeragePaidBy, brokerageMode,
   documentsComplete,
   documentPersons = [],
@@ -1702,6 +1702,7 @@ function Step6Review({
   startDate: string;
   monthlyRent: string; securityDeposit: string;
   lockInPeriod: string; noticePeriod: string; rentDueDay: string; maintenanceCharges: string;
+  maintenanceIncluded?: boolean;
   brokerageAmount: string; brokerageAmountOwner: string; brokerageAmountTenant: string;
   brokeragePaidBy: string; brokerageMode: string;
   documentsComplete: boolean;
@@ -1767,7 +1768,17 @@ function Step6Review({
             <ReviewRow icon={Lock} label="Lock-in Period" value={lockInPeriod} />
             <ReviewRow icon={Bell} label="Notice Period" value={noticePeriod} />
             <ReviewRow icon={Calendar} label="Rent Due Day" value={rentDueDay ? `${rentDueDay}${rentDueDay === "1" ? "st" : rentDueDay === "2" ? "nd" : rentDueDay === "3" ? "rd" : "th"} of month` : "—"} />
-            <ReviewRow icon={IndianRupee} label="Maintenance" value={maintenanceCharges ? `₹${Number(maintenanceCharges).toLocaleString("en-IN")}` : "Not included"} />
+            <ReviewRow
+              icon={IndianRupee}
+              label="Maintenance"
+              value={
+                maintenanceIncluded
+                  ? "Included in rent"
+                  : maintenanceCharges
+                    ? `₹${Number(maintenanceCharges).toLocaleString("en-IN")}`
+                    : "Not included"
+              }
+            />
           </div>
         </div>
 
@@ -1935,9 +1946,6 @@ export default function GenerateAgreement() {
   const [selectedTenants, setSelectedTenants] = useState<Party[]>([]);
   const [rentSplitMode, setRentSplitMode] = useState<RentSplitMode>("percent");
   const [rentSplits, setRentSplits] = useState<OwnerRentSplit[]>([]);
-  const tenantAadhaar = "";
-  const tenantPan = "";
-
   // Step 4
   const [startDate, setStartDate] = useState("");
   const [monthlyRent, setMonthlyRent] = useState("");
@@ -1946,6 +1954,7 @@ export default function GenerateAgreement() {
   const [noticePeriod, setNoticePeriod] = useState("");
   const [rentDueDay, setRentDueDay] = useState("");
   const [maintenanceCharges, setMaintenanceCharges] = useState("");
+  const [maintenanceIncluded, setMaintenanceIncluded] = useState(false);
 
   // Step 5
   const [brokerageAmount, setBrokerageAmount] = useState("");
@@ -1986,6 +1995,7 @@ export default function GenerateAgreement() {
         selectedPropertyId?: string | null;
         ownerName?: string;
         ownerContact?: string;
+        primaryOwnerSelected?: boolean;
         additionalOwners?: Party[];
         selectedTenants?: Party[];
         documentsComplete?: boolean;
@@ -1997,6 +2007,7 @@ export default function GenerateAgreement() {
         noticePeriod?: string;
         rentDueDay?: string;
         maintenanceCharges?: string;
+        maintenanceIncluded?: boolean;
         brokerageAmount?: string;
         brokerageAmountOwner?: string;
         brokerageAmountTenant?: string;
@@ -2012,6 +2023,7 @@ export default function GenerateAgreement() {
       if (typeof d.step === "number" && d.step >= 1 && d.step <= 6) setStep(d.step);
       setOwnerName(d.ownerName ?? "");
       setOwnerContact(d.ownerContact ?? "");
+      setPrimaryOwnerSelected(d.primaryOwnerSelected ?? true);
       setAdditionalOwners(d.additionalOwners ?? []);
       setSelectedTenants(d.selectedTenants ?? []);
       setDocumentsComplete(!!d.documentsComplete);
@@ -2023,6 +2035,7 @@ export default function GenerateAgreement() {
       setNoticePeriod(d.noticePeriod ?? "");
       setRentDueDay(d.rentDueDay ?? "");
       setMaintenanceCharges(d.maintenanceCharges ?? "");
+      setMaintenanceIncluded(d.maintenanceIncluded ?? false);
       setBrokerageAmount(d.brokerageAmount ?? "");
       setBrokerageAmountOwner(d.brokerageAmountOwner ?? "");
       setBrokerageAmountTenant(d.brokerageAmountTenant ?? "");
@@ -2123,6 +2136,7 @@ export default function GenerateAgreement() {
           selectedPropertyId: selectedProperty?.id ?? null,
           ownerName,
           ownerContact,
+          primaryOwnerSelected,
           additionalOwners,
           selectedTenants,
           documentsComplete,
@@ -2134,6 +2148,7 @@ export default function GenerateAgreement() {
           noticePeriod,
           rentDueDay,
           maintenanceCharges,
+          maintenanceIncluded,
           brokerageAmount,
           brokerageAmountOwner,
           brokerageAmountTenant,
@@ -2158,6 +2173,7 @@ export default function GenerateAgreement() {
     selectedProperty,
     ownerName,
     ownerContact,
+    primaryOwnerSelected,
     additionalOwners,
     selectedTenants,
     documentsComplete,
@@ -2169,6 +2185,7 @@ export default function GenerateAgreement() {
     noticePeriod,
     rentDueDay,
     maintenanceCharges,
+    maintenanceIncluded,
     brokerageAmount,
     brokerageAmountOwner,
     brokerageAmountTenant,
@@ -2199,6 +2216,7 @@ export default function GenerateAgreement() {
     setNoticePeriod("");
     setRentDueDay("");
     setMaintenanceCharges("");
+    setMaintenanceIncluded(false);
     setBrokerageAmount("");
     setBrokerageAmountOwner("");
     setBrokerageAmountTenant("");
@@ -2262,6 +2280,9 @@ export default function GenerateAgreement() {
     if (!selectedProperty) return;
     setSubmitting(true);
     const primaryTenant = selectedTenants[0];
+    const { aadhaar: tenantAadhaar, pan: tenantPan } = resolveTenantKyc(
+      primaryTenant?.contact ?? "",
+    );
     const propertyTitle = getPropertyTitle(selectedProperty);
     const agreementInput: RentalAgreementInput = {
       propertyTitle,
@@ -2326,6 +2347,7 @@ export default function GenerateAgreement() {
         noticePeriod,
         rentDueDay,
         maintenanceCharges,
+        maintenanceIncluded,
         brokerageAmount: isOwnerFlow ? "0" : brokerageAmount,
         brokeragePaidBy: isOwnerFlow ? "Owner" : brokeragePaidBy,
         brokerageMode: isOwnerFlow ? "Bank Transfer" : mode,
@@ -2492,6 +2514,8 @@ export default function GenerateAgreement() {
           setRentDueDay={setRentDueDay}
           maintenanceCharges={maintenanceCharges}
           setMaintenanceCharges={setMaintenanceCharges}
+          maintenanceIncluded={maintenanceIncluded}
+          setMaintenanceIncluded={setMaintenanceIncluded}
           onContinue={goToNextAfterDetails}
         />
       )}
@@ -2535,6 +2559,7 @@ export default function GenerateAgreement() {
           noticePeriod={noticePeriod}
           rentDueDay={rentDueDay}
           maintenanceCharges={maintenanceCharges}
+          maintenanceIncluded={maintenanceIncluded}
           brokerageAmount={brokerageAmount}
           brokerageAmountOwner={brokerageAmountOwner}
           brokerageAmountTenant={brokerageAmountTenant}

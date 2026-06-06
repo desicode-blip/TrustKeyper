@@ -16,6 +16,7 @@ import {
   signUpSuccess,
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
+import { getOwnerProfile, saveOwnerProfile } from "@/lib/ownerProfile";
 import { setSessionItem } from "@/lib/storageKeys";
 import { sendPhoneOtp } from "@/lib/phoneOtp";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
@@ -187,17 +188,19 @@ export default function Onboarding() {
                     ownerPhoneDigits,
                     r,
                     {
-                    name: ownerDetails.name,
-                    phone: ownerPhoneDigits,
-                    email: "",
-                    firm: "",
-                    bankHolderName: "",
-                    bankName: "",
-                    bankAccountNumber: "",
-                    bankIFSC: "",
-                    upiId: "",
-                    upiQrFileName: "",
-                  },
+                      name: ownerDetails.name,
+                      phone: ownerPhoneDigits,
+                      email: "",
+                      firm: "",
+                      bankHolderName: "",
+                      bankName: "",
+                      bankAccountNumber: "",
+                      bankIFSC: "",
+                      upiId: "",
+                      upiQrFileName: "",
+                      propertyCount: propertiesCount,
+                      propertyIntent: "",
+                    },
                     accessToken,
                   );
                 } catch (err) {
@@ -216,7 +219,13 @@ export default function Onboarding() {
             <OwnerStep2Intent
               propertyIntent={propertyIntent}
               setPropertyIntent={setPropertyIntent}
-              onNext={goNext}
+              onNext={() => {
+                saveOwnerProfile({
+                  ...getOwnerProfile(),
+                  propertyIntent: JSON.stringify(propertyIntent),
+                });
+                goNext();
+              }}
             />
           )}
           {step === 6 && role === "owner" && (

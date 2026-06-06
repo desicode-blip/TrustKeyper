@@ -20,7 +20,7 @@ import { getActiveSession } from "@/lib/auth";
 import { addProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
-import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
+import { getItem, removeItem, setItem } from "@/lib/storageKeys";
 import { toast } from "@/hooks/use-toast";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -142,7 +142,7 @@ export default function AddProperty() {
   const loadSavedData = () => {
     if (typeof window === "undefined") return null;
     try {
-      return JSON.parse(getSessionItem("add_property_data") ?? "null");
+      return JSON.parse(getItem("add_property_data") ?? "null");
     } catch {
       return null;
     }
@@ -200,7 +200,7 @@ export default function AddProperty() {
 
   const clearDraft = () => {
     try {
-      removeSessionItem("add_property_data");
+      removeItem("add_property_data");
     } catch {}
     setSubStep(0);
     setNickname("");
@@ -348,7 +348,7 @@ export default function AddProperty() {
     };
 
     try {
-      setSessionItem("add_property_data", JSON.stringify(data));
+      setItem("add_property_data", JSON.stringify(data));
       broadcastBrokerPendingFlowsUpdated();
     } catch {
       // ignore storage errors
@@ -469,7 +469,7 @@ export default function AddProperty() {
       status: "Active",
     });
     try {
-      removeSessionItem("add_property_data");
+      removeItem("add_property_data");
     } catch {
       // ignore
     }

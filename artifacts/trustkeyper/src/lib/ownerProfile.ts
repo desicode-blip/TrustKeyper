@@ -12,6 +12,8 @@ export interface OwnerDocumentMeta {
 }
 
 export interface OwnerProfile extends BrokerProfile {
+  propertyCount?: string;
+  propertyIntent?: string;
   aadhaar?: OwnerDocumentMeta;
   pan?: OwnerDocumentMeta;
 }

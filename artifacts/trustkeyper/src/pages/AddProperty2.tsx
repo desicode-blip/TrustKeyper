@@ -21,7 +21,7 @@ import { toast } from "@/hooks/use-toast";
 import { getActiveSession } from "@/lib/auth";
 import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
 import { addProperty } from "@/lib/properties";
-import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
+import { getItem, getSessionItem, removeItem, removeSessionItem, setItem, setSessionItem } from "@/lib/storageKeys";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -133,7 +133,7 @@ export default function AddProperty2() {
   const loadSavedData = () => {
     if (typeof window === "undefined") return null;
     try {
-      return JSON.parse(getSessionItem("add_property_data") ?? "null");
+      return JSON.parse(getItem("add_property_data") ?? "null");
     } catch {
       return null;
     }
@@ -191,7 +191,7 @@ export default function AddProperty2() {
 
   const clearDraft = () => {
     try {
-      removeSessionItem("add_property_data");
+      removeItem("add_property_data");
     } catch {}
     setSubStep(0);
     setNickname("");
@@ -342,7 +342,7 @@ export default function AddProperty2() {
     };
 
     try {
-      setSessionItem("add_property_data", JSON.stringify(data));
+      setItem("add_property_data", JSON.stringify(data));
       broadcastBrokerPendingFlowsUpdated();
     } catch {
       // ignore storage failure
@@ -455,7 +455,7 @@ export default function AddProperty2() {
     });
     try {
       setSessionItem("agreement_pending_property", newProp.id);
-      removeSessionItem("add_property_data");
+      removeItem("add_property_data");
       broadcastBrokerPendingFlowsUpdated();
     } catch {}
     setShowSuccess(true);
