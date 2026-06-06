@@ -38,6 +38,7 @@ import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminProperties from "@/pages/admin/AdminProperties";
 import AdminFeedback from "@/pages/admin/AdminFeedback";
+import NotFound from "@/pages/not-found";
 import { createAdminQueryClient } from "@/hooks/useAdminData";
 
 const queryClient = createAdminQueryClient();
