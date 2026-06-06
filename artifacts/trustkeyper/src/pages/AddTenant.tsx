@@ -2,20 +2,19 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import {
   ArrowLeft,
-  Link2,
-  UserPlus,
   ChevronDown,
   ArrowRight,
-  X,
-  Copy,
-  Check,
-  MapPin,
   CheckCircle2,
   FileText,
+  X,
 } from "lucide-react";
-import { FaInstagram, FaSms, FaTelegramPlane, FaWhatsapp } from "react-icons/fa";
 import BrokerLayout from "@/components/BrokerLayout";
-import { Button } from "@/components/ui/button";
+import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
+import { FlowChipButton } from "@/components/FlowChipButton";
+import {
+  FLOW_STICKY_CONTENT_CLASS,
+  FlowStickyActionBar,
+} from "@/components/FlowStickyActionBar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,6 +30,8 @@ import { useToast } from "@/hooks/use-toast";
 import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
 import {
   addTenant,
+  getTenantById,
+  updateTenant,
   CITY_LOCALITIES,
   type Identify,
   type PropertyType,
@@ -39,7 +40,6 @@ import {
 } from "@/lib/tenants";
 import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
 
-type ModalStep = "closed" | "form" | "share";
 type Step = 1 | 2;
 
 const PROPERTY_TYPES: PropertyType[] = [
@@ -57,16 +57,14 @@ export default function AddTenant() {
   const { toast } = useToast();
 
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draftPausedRef = useRef(false);
+  const editId =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("edit")
+      : null;
 
   // wizard step
   const [step, setStep] = useState<Step>(1);
-
-  // generate-link modal flow (unchanged)
-  const [modalStep, setModalStep] = useState<ModalStep>("closed");
-  const [linkName, setLinkName] = useState("");
-  const [linkPhone, setLinkPhone] = useState("");
-  const [generatedLink, setGeneratedLink] = useState("");
-  const [copied, setCopied] = useState(false);
 
   // Step 1 — Tenant L1
   const [name, setName] = useState("");
@@ -88,7 +86,26 @@ export default function AddTenant() {
   const [successOpen, setSuccessOpen] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!editId || typeof window === "undefined") return;
+    const tenant = getTenantById(editId);
+    if (!tenant) return;
+    draftPausedRef.current = true;
+    setName(tenant.name);
+    setPhone(tenant.phone.replace(/\D/g, "").slice(-10));
+    setOccupancyFrom(tenant.occupancyFrom ?? "");
+    setWho(tenant.who ?? "");
+    setIdentify(tenant.identify ?? []);
+    setFood(tenant.food ?? "");
+    setCity(tenant.city ?? "Hyderabad");
+    setLocalities(tenant.localities ?? []);
+    setPropertyType(tenant.propertyType ?? "");
+    setSharing(tenant.sharing ?? "");
+    setRoommate(tenant.roommate ?? []);
+    setStep(tenant.detailsComplete ? 2 : 1);
+  }, [editId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || editId) return;
     try {
       const raw = getSessionItem("add_tenant_draft");
       if (!raw) return;
@@ -108,10 +125,10 @@ export default function AddTenant() {
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [editId]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || draftPausedRef.current) return;
     if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
     draftTimerRef.current = setTimeout(() => {
       try {
@@ -157,17 +174,13 @@ export default function AddTenant() {
   ]);
 
   const handleClearTenantForm = () => {
+    draftPausedRef.current = false;
     try {
       removeSessionItem("add_tenant_draft");
     } catch {
       /* ignore */
     }
     setStep(1);
-    setModalStep("closed");
-    setLinkName("");
-    setLinkPhone("");
-    setGeneratedLink("");
-    setCopied(false);
     setName("");
     setPhone("");
     setOccupancyFrom("");
@@ -183,9 +196,6 @@ export default function AddTenant() {
     setSuccessOpen(false);
     broadcastBrokerPendingFlowsUpdated();
   };
-
-  const linkValid =
-    linkName.trim().length > 0 && linkPhone.trim().length === 10;
 
   const step1Valid = useMemo(() => {
     if (
@@ -208,43 +218,14 @@ export default function AddTenant() {
     return true;
   }, [localities, propertyType, sharing, roommate]);
 
-  const openLinkModal = () => {
-    setLinkName("");
-    setLinkPhone("");
-    setGeneratedLink("");
-    setCopied(false);
-    setModalStep("form");
-  };
-
-  const handleGenerateLink = () => {
-    if (!linkValid) return;
-    const code = Math.random().toString(36).slice(2, 12).toUpperCase();
-    const link = `https://app.trustkeyper.in/tenant/onboard/${code}`;
-    setGeneratedLink(link);
-    addTenant({
-      name: linkName,
-      phone: `+91${linkPhone}`,
-      invitationSent: true,
-    });
-    setModalStep("share");
-    toast({ description: "Onboarding link generated!" });
-  };
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(generatedLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {}
-  };
-
   const handleStep1Continue = () => {
     if (!step1Valid) return;
     setStep(2);
   };
 
   const persistTenant = (complete: boolean) => {
-    addTenant({
+    draftPausedRef.current = true;
+    const payload = {
       name,
       phone: `+91${phone}`,
       occupancyFrom,
@@ -255,17 +236,29 @@ export default function AddTenant() {
       localities: complete ? localities : undefined,
       propertyType: complete ? (propertyType as PropertyType) : undefined,
       sharing: complete ? (sharing as Sharing) : undefined,
-      roommate:
-        complete && sharing !== "Entire Property" ? roommate : undefined,
+      roommate: complete && sharing !== "Entire Property" ? roommate : undefined,
       detailsComplete: complete,
-    });
+    };
+
+    if (editId) {
+      updateTenant(editId, payload);
+    } else {
+      addTenant(payload);
+    }
+
     try {
       removeSessionItem("add_tenant_draft");
     } catch {
       /* ignore */
     }
     broadcastBrokerPendingFlowsUpdated();
-    toast({ description: "Tenant added successfully!" });
+    toast({
+      description: editId ? "Tenant lead updated." : "Tenant added successfully!",
+    });
+    if (editId) {
+      setLocation("/broker/tenants");
+      return;
+    }
     setSuccessOpen(true);
   };
 
@@ -309,56 +302,25 @@ export default function AddTenant() {
     (l) => !localities.includes(l),
   );
 
-  const shareMessage = `Hi ${linkName}! Your broker wants to onboard you into TrustKeyper. Please complete your tenant profile using this link: ${generatedLink}`;
-  const encodedMsg = encodeURIComponent(shareMessage);
-
-  const shareTargets: {
-    id: string;
-    label: string;
-    Icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
-    bg: string;
-    href: string;
-  }[] = [
-    {
-      id: "whatsapp",
-      label: "WhatsApp",
-      Icon: FaWhatsapp,
-      bg: "bg-[#25D366]",
-      href: `https://wa.me/91${linkPhone}?text=${encodedMsg}`,
-    },
-    {
-      id: "instagram",
-      label: "Instagram",
-      Icon: FaInstagram,
-      bg: "bg-gradient-to-br from-[#f58529] via-[#dd2a7b] to-[#8134af]",
-      href: "https://www.instagram.com/",
-    },
-    {
-      id: "telegram",
-      label: "Telegram",
-      Icon: FaTelegramPlane,
-      bg: "bg-[#229ED9]",
-      href: `https://t.me/share/url?url=${encodeURIComponent(generatedLink)}&text=${encodedMsg}`,
-    },
-    {
-      id: "sms",
-      label: "SMS",
-      Icon: FaSms,
-      bg: "bg-[#5f6368]",
-      href: `sms:+91${linkPhone}?body=${encodedMsg}`,
-    },
-  ];
-
   return (
     <BrokerLayout>
-      <div className="max-w-3xl mx-auto">
+      <div className={`max-w-3xl mx-auto ${FLOW_STICKY_CONTENT_CLASS}`}>
         {step === 1 ? (
-          <Link
-            href="/broker/dashboard"
-            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6"
-          >
-            <ArrowLeft size={16} /> Back to Dashboard
-          </Link>
+          editId ? (
+            <Link
+              href="/broker/tenants"
+              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6"
+            >
+              <ArrowLeft size={16} /> Back to Tenants
+            </Link>
+          ) : (
+            <Link
+              href="/broker/dashboard"
+              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6"
+            >
+              <ArrowLeft size={16} /> Back to Dashboard
+            </Link>
+          )
         ) : (
           <button
             onClick={() => setStep(1)}
@@ -368,45 +330,25 @@ export default function AddTenant() {
           </button>
         )}
 
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">Add Tenant</h1>
-          <button
-            type="button"
-            onClick={handleClearTenantForm}
-            className="text-xs font-semibold text-primary border-0 bg-transparent shadow-none px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors shrink-0"
-          >
-            Clear
-          </button>
-        </div>
-
-        {/* Generate Link card (always visible) */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5 mb-8 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 text-primary flex items-center justify-center">
-              <Link2 size={18} />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900">Generate link</p>
-              <p className="text-sm text-gray-500">
-                Send onboarding link to tenant, they'll fill it themselves
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            onClick={openLinkModal}
-            className="border-primary text-primary hover:bg-primary/5"
-          >
-            Generate Link
-          </Button>
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <h1 className="text-2xl font-semibold text-gray-900">
+            {editId ? "Edit Tenant Lead" : "Add Tenant"}
+          </h1>
+          {!editId ? (
+            <button
+              type="button"
+              onClick={handleClearTenantForm}
+              className="text-xs font-semibold text-primary border-0 bg-transparent shadow-none px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors shrink-0"
+            >
+              Clear
+            </button>
+          ) : null}
         </div>
 
         {step === 1 && (
           <>
-            <div className="flex items-center gap-2 text-primary font-medium mb-4">
-              <UserPlus size={16} />
-              <span>Add Manually</span>
-            </div>
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Tenant details</h2>
+            <p className="text-sm text-gray-500 mb-4">Add the tenant&apos;s basic information manually.</p>
 
             <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -468,26 +410,18 @@ export default function AddTenant() {
                   <span className="text-destructive">*</span>
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
-                  {(["Family", "Bachelor"] as const).map((opt) => {
-                    const isActive = who === opt;
-                    return (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => {
-                          setWho(opt);
-                          if (opt === "Family") setIdentify([]);
-                        }}
-                        className={`py-3 rounded-lg border text-sm font-medium transition-colors ${
-                          isActive
-                            ? "border-accent bg-accent/10 text-accent"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                        }`}
-                      >
-                        {opt === "Family" ? "👨‍👩‍👧 Family" : "🧑 Bachelor"}
-                      </button>
-                    );
-                  })}
+                  {(["Family", "Bachelor"] as const).map((opt) => (
+                    <FlowChipButton
+                      key={opt}
+                      label={opt === "Family" ? "👨‍👩‍👧 Family" : "🧑 Bachelor"}
+                      selected={who === opt}
+                      onClick={() => {
+                        setWho(opt);
+                        if (opt === "Family") setIdentify([]);
+                      }}
+                      className="w-full"
+                    />
+                  ))}
                 </div>
               </div>
 
@@ -519,45 +453,37 @@ export default function AddTenant() {
                   Food Preference <span className="text-destructive">*</span>
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
-                  {(["Veg", "Non-Veg"] as const).map((opt) => {
-                    const isActive = food === opt;
-                    return (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setFood(opt)}
-                        className={`py-3 rounded-lg border text-sm font-medium transition-colors ${
-                          isActive
-                            ? "border-accent bg-accent/10 text-accent"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                        }`}
-                      >
-                        {opt === "Veg" ? "🟢 Veg" : "🔴 Non-Veg"}
-                      </button>
-                    );
-                  })}
+                  {(["Veg", "Non-Veg"] as const).map((opt) => (
+                    <FlowChipButton
+                      key={opt}
+                      label={opt === "Veg" ? "🟢 Veg" : "🔴 Non-Veg"}
+                      selected={food === opt}
+                      onClick={() => setFood(opt)}
+                      className="w-full"
+                    />
+                  ))}
                 </div>
               </div>
             </div>
 
             {/* Step 1 CTA — desktop */}
-            <Button
-              size="lg"
-              onClick={handleStep1Continue}
-              disabled={!step1Valid}
-              className="hidden sm:flex w-48 mx-auto mt-8 bg-primary hover:bg-primary/90"
-            >
-              Continue <ArrowRight size={16} className="ml-1" />
-            </Button>
+            <div className="hidden sm:flex justify-center mt-8">
+              <OwnerFlowButton
+                type="button"
+                onClick={handleStep1Continue}
+                disabled={!step1Valid}
+                className="sm:min-w-[160px]"
+              >
+                Continue <ArrowRight size={16} />
+              </OwnerFlowButton>
+            </div>
           </>
         )}
 
         {step === 2 && (
           <>
-            <div className="flex items-center gap-2 text-primary font-medium mb-4">
-              <MapPin size={16} />
-              <span>Location & Property Preference</span>
-            </div>
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Location & property preference</h2>
+            <p className="text-sm text-gray-500 mb-4">Optional details to help match the right property.</p>
 
             <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-6">
               {/* Locality */}
@@ -638,23 +564,15 @@ export default function AddTenant() {
                   Property Type <span className="text-destructive">*</span>
                 </Label>
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                  {PROPERTY_TYPES.map((p) => {
-                    const isActive = propertyType === p;
-                    return (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => setPropertyType(p)}
-                        className={`py-2 rounded-md border text-sm font-medium transition-colors ${
-                          isActive
-                            ? "border-accent bg-accent/10 text-accent"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    );
-                  })}
+                  {PROPERTY_TYPES.map((p) => (
+                    <FlowChipButton
+                      key={p}
+                      label={p}
+                      selected={propertyType === p}
+                      onClick={() => setPropertyType(p)}
+                      className="px-2 text-xs sm:text-sm"
+                    />
+                  ))}
                 </div>
               </div>
 
@@ -665,28 +583,18 @@ export default function AddTenant() {
                   <span className="text-destructive">*</span>
                 </Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {SHARING_OPTIONS.map((s) => {
-                    const isActive = sharing === s;
-                    return (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => {
-                          setSharing(s);
-                          if (s === "Entire Property") setRoommate([]);
-                        }}
-                        className={`py-2 rounded-md border text-sm font-medium transition-colors ${
-                          isActive
-                            ? "border-accent bg-accent/10 text-accent"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                        }`}
-                      >
-                        {s === "Entire Property"
-                          ? "Entire Property (No sharing)"
-                          : s}
-                      </button>
-                    );
-                  })}
+                  {SHARING_OPTIONS.map((s) => (
+                    <FlowChipButton
+                      key={s}
+                      label={s === "Entire Property" ? "Entire Property (No sharing)" : s}
+                      selected={sharing === s}
+                      onClick={() => {
+                        setSharing(s);
+                        if (s === "Entire Property") setRoommate([]);
+                      }}
+                      className="px-2 text-xs sm:text-sm whitespace-normal h-auto min-h-[42px]"
+                    />
+                  ))}
                 </div>
               </div>
 
@@ -725,206 +633,59 @@ export default function AddTenant() {
 
             {/* Step 2 CTA — desktop */}
             <div className="hidden sm:flex justify-center gap-3 mt-6">
-              <Button
-                variant="outline"
+              <OwnerFlowButton
+                type="button"
+                flowVariant="outline"
                 onClick={handleSkipSave}
-                className="w-48 border-primary text-primary hover:bg-primary/5"
+                className="sm:min-w-[160px]"
               >
                 Skip and Save details
-              </Button>
-              <Button
+              </OwnerFlowButton>
+              <OwnerFlowButton
+                type="button"
                 onClick={handleSaveDetails}
                 disabled={!step2Valid}
-                className="w-48 bg-primary hover:bg-primary/90"
+                className="sm:min-w-[160px]"
               >
                 Save Details
-              </Button>
+              </OwnerFlowButton>
             </div>
           </>
         )}
       </div>
 
-      {/* Mobile sticky CTAs */}
       {step === 1 && (
-        <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white border-t border-gray-200 px-4 py-3">
-          <button
+        <FlowStickyActionBar>
+          <OwnerFlowButton
+            type="button"
             onClick={handleStep1Continue}
             disabled={!step1Valid}
-            className={`flex items-center justify-center gap-2 w-full h-12 rounded-xl text-sm font-semibold transition-colors ${
-              step1Valid ? "bg-primary text-white" : "bg-primary/40 text-white cursor-not-allowed"
-            }`}
+            className="w-full"
           >
             Continue <ArrowRight size={16} />
-          </button>
-        </div>
+          </OwnerFlowButton>
+        </FlowStickyActionBar>
       )}
       {step === 2 && (
-        <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white border-t border-gray-200 px-4 py-3 flex gap-3">
-          <button
+        <FlowStickyActionBar innerClassName="flex gap-3">
+          <OwnerFlowButton
+            type="button"
+            flowVariant="outline"
             onClick={handleSkipSave}
-            className="flex-1 h-12 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors"
+            className="flex-1"
           >
             Skip
-          </button>
-          <button
+          </OwnerFlowButton>
+          <OwnerFlowButton
+            type="button"
             onClick={handleSaveDetails}
             disabled={!step2Valid}
-            className={`flex-1 h-12 rounded-xl text-sm font-semibold transition-colors ${
-              step2Valid ? "bg-primary text-white" : "bg-primary/40 text-white cursor-not-allowed"
-            }`}
+            className="flex-1"
           >
             Save Details
-          </button>
-        </div>
+          </OwnerFlowButton>
+        </FlowStickyActionBar>
       )}
-
-      {/* Generate Link modal */}
-      <Dialog
-        open={modalStep !== "closed"}
-        onOpenChange={(o) => !o && setModalStep("closed")}
-      >
-        <DialogContent className="sm:max-w-md p-0 [&>button]:hidden">
-          {modalStep === "form" && (
-            <div className="p-6">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Send Onboarding Link
-                  </h2>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Enter tenant's basic details to generate a personalized link
-                  </p>
-                </div>
-                <button
-                  onClick={() => setModalStep("closed")}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="space-y-4 mt-6">
-                <div className="space-y-2">
-                  <Label htmlFor="modal-name" className="text-gray-700">
-                    Tenant Name <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="modal-name"
-                    placeholder="Enter name"
-                    value={linkName}
-                    onChange={(e) => setLinkName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="modal-phone" className="text-gray-700">
-                    Phone Number <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1 px-3 rounded-md border border-input bg-gray-50 text-sm text-gray-700"
-                    >
-                      +91… <ChevronDown size={14} />
-                    </button>
-                    <Input
-                      id="modal-phone"
-                      type="tel"
-                      inputMode="numeric"
-                      maxLength={10}
-                      placeholder="10-digit number"
-                      value={linkPhone}
-                      onChange={(e) =>
-                        setLinkPhone(
-                          e.target.value.replace(/\D/g, "").slice(0, 10),
-                        )
-                      }
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                size="lg"
-                onClick={handleGenerateLink}
-                disabled={!linkValid}
-                className="w-full mt-8 bg-primary hover:bg-primary/90"
-              >
-                <Link2 size={16} className="mr-2" /> Generate Link
-              </Button>
-            </div>
-          )}
-
-          {modalStep === "share" && (
-            <div className="p-6">
-              <div className="flex items-start justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Share link with {linkName}
-                </h2>
-                <button
-                  onClick={() => setModalStep("closed")}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <p className="text-sm text-gray-500 mb-3">Share this link via</p>
-              <div className="grid grid-cols-4 gap-3 mb-6">
-                {shareTargets.map((t) => {
-                  const Icon = t.Icon;
-                  return (
-                    <a
-                      key={t.id}
-                      href={t.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex flex-col items-center gap-2 transition-transform hover:scale-105"
-                    >
-                      <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm text-white ${t.bg}`}
-                      >
-                        <Icon className="w-6 h-6" aria-hidden />
-                      </div>
-                      <span className="text-xs text-gray-700 font-medium">{t.label}</span>
-                    </a>
-                  );
-                })}
-              </div>
-
-              <Label className="text-gray-700 text-sm">Page link</Label>
-              <div className="flex items-center gap-2 mt-2 mb-6">
-                <Input
-                  readOnly
-                  value={generatedLink}
-                  className="bg-gray-50 text-sm flex-1"
-                />
-                <button
-                  onClick={handleCopy}
-                  className="w-10 h-10 rounded-md border border-input flex items-center justify-center text-gray-600 hover:bg-gray-50"
-                >
-                  {copied ? (
-                    <Check size={16} className="text-accent" />
-                  ) : (
-                    <Copy size={16} />
-                  )}
-                </button>
-              </div>
-
-              <Button
-                size="lg"
-                onClick={() => {
-                  setModalStep("closed");
-                  setLocation("/broker/tenants");
-                }}
-                className="w-full bg-primary hover:bg-primary/90"
-              >
-                <Check size={16} className="mr-2" /> Done
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Success modal */}
       <Dialog
@@ -945,27 +706,27 @@ export default function AddTenant() {
             <p className="text-sm text-gray-500 mb-6">
               The tenant details have been saved successfully.
             </p>
-            <div className="flex items-center justify-center gap-3">
-              <Button
-                variant="outline"
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <OwnerFlowButton
+                type="button"
+                flowVariant="outline"
                 onClick={() => {
                   setSuccessOpen(false);
                   setLocation("/broker/tenants");
                 }}
-                className="border-primary text-primary hover:bg-primary/5"
               >
                 Skip for now
-              </Button>
-              <Button
+              </OwnerFlowButton>
+              <OwnerFlowButton
+                type="button"
                 onClick={() => {
                   setSuccessOpen(false);
                   setLocation("/broker/agreements/generate");
                 }}
-                className="bg-primary hover:bg-primary/90"
               >
-                <FileText size={16} className="mr-2" />
+                <FileText size={16} />
                 Generate Agreement
-              </Button>
+              </OwnerFlowButton>
             </div>
           </div>
         </DialogContent>

@@ -14,6 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BrokerLayout from "@/components/BrokerLayout";
+import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/FlowStickyActionBar";
+import { FlowChipButton } from "@/components/FlowChipButton";
 import { AddPropertyProgressBar } from "@/components/AddPropertyProgressBar";
 import { useScrollToTopOnChange } from "@/hooks/useScrollToTopOnChange";
 import { getActiveSession } from "@/lib/auth";
@@ -99,19 +101,7 @@ function ChipButton({
   selected: boolean;
   onClick: () => void;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`px-4 py-2 rounded-md border text-sm font-medium transition-colors ${
-        selected
-          ? "bg-primary/10 border-primary text-primary"
-          : "bg-white border-gray-300 text-gray-700 hover:border-primary/50"
-      }`}
-    >
-      {label}
-    </button>
-  );
+  return <FlowChipButton label={label} selected={selected} onClick={onClick} />;
 }
 
 function AmenityCheck({
@@ -1010,7 +1000,7 @@ export default function AddProperty() {
       <AddPropertyProgressBar subStep={subStep} />
 
       {/* Card */}
-      <div className="max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-8 pb-32 sm:pb-8">
+      <div className={`max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-8 ${FLOW_STICKY_CONTENT_CLASS} sm:pb-8`}>
         {subStep === 0 && renderStep0()}
         {subStep === 1 && renderStep1()}
         {subStep === 2 && renderStep2()}
@@ -1032,16 +1022,16 @@ export default function AddProperty() {
       </div>
 
       {/* Continue / Submit — mobile sticky */}
-      <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <FlowStickyActionBar>
         <Button
           size="lg"
           onClick={handleContinue}
           disabled={!canContinue()}
-          className="w-full bg-primary hover:bg-primary/90"
+          className="w-full bg-primary hover:bg-primary/90 rounded-[4px]"
         >
           {subStep === 5 ? "Submit" : "Continue →"}
         </Button>
-      </div>
+      </FlowStickyActionBar>
 
       {/* Success overlay */}
       {showSuccess && (

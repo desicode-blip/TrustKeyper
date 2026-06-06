@@ -233,30 +233,10 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
         </aside>
 
         {/* ── Main Content ─────────────────────────────────────────────────── */}
-        <main className="flex-1 px-4 py-4 sm:px-8 sm:py-8 pb-20 md:pb-8 min-w-0">
+        <main className="flex-1 px-4 py-4 sm:px-8 sm:py-8 min-w-0">
           {children}
         </main>
       </div>
-
-      {/* ── Mobile Bottom Nav ───────────────────────────────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex items-center justify-around px-2 h-14 safe-area-bottom">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active = location === item.href;
-          return (
-            <Link
-              key={item.id}
-              href={item.href}
-              className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition-colors ${
-                active ? "text-primary" : "text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              <Icon size={20} />
-              <span className="text-[9px] font-medium leading-tight">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
 
       <TrustKeyperFooter className="hidden md:block" />
     </div>

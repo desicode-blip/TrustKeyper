@@ -103,7 +103,7 @@ export function getPendingFlowItems(role: "broker" | "owner" = "broker"): Pendin
     if (hasMeaningfulTenantDraft(ten)) {
       items.push({
         kind: "add_tenant",
-        title: "Tenant onboarding is pending — continue adding the tenant.",
+        title: "Tenant lead in progress — continue adding details.",
         continueHref: "/broker/tenants/add",
       });
     }

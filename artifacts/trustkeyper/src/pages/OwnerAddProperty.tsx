@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import OwnerLayout from "@/components/OwnerLayout";
+import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/FlowStickyActionBar";
 import { FlowClearButton } from "@/components/owner/FlowClearButton";
 import { addProperty, getProperties, updateProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
@@ -952,7 +953,7 @@ export default function OwnerAddProperty() {
 
   return (
     <OwnerLayout>
-      <div className="p-4 sm:p-8 max-w-5xl mx-auto w-full min-w-0 pb-32 sm:pb-8">
+      <div className={`p-4 sm:p-8 max-w-5xl mx-auto w-full min-w-0 ${FLOW_STICKY_CONTENT_CLASS} sm:pb-8`}>
         <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5">
           <button
             type="button"
@@ -1006,11 +1007,11 @@ export default function OwnerAddProperty() {
         </div>
 
         {/* Sticky Mobile Continue */}
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-gray-200 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-          <Button size="lg" onClick={handleContinue} disabled={!canContinue()} className="w-full bg-primary hover:bg-primary/90 rounded-sm">
+        <FlowStickyActionBar>
+          <Button size="lg" onClick={handleContinue} disabled={!canContinue()} className="w-full bg-primary hover:bg-primary/90 rounded-[4px]">
             {subStep === 5 ? "Submit" : "Continue \u2192"}
           </Button>
-        </div>
+        </FlowStickyActionBar>
       </div>
 
       {/* Success Modal */}
