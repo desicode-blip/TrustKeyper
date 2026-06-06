@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BrokerLayout from "@/components/BrokerLayout";
 import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/FlowStickyActionBar";
+import { FlowChipButton } from "@/components/FlowChipButton";
 import { AddPropertyProgressBar } from "@/components/AddPropertyProgressBar";
 import { useScrollToTopOnChange } from "@/hooks/useScrollToTopOnChange";
 import { getActiveSession } from "@/lib/auth";
@@ -100,19 +101,7 @@ function ChipButton({
   selected: boolean;
   onClick: () => void;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`px-4 py-2 rounded-md border text-sm font-medium transition-colors ${
-        selected
-          ? "bg-primary/10 border-primary text-primary"
-          : "bg-white border-gray-300 text-gray-700 hover:border-primary/50"
-      }`}
-    >
-      {label}
-    </button>
-  );
+  return <FlowChipButton label={label} selected={selected} onClick={onClick} />;
 }
 
 function AmenityCheck({

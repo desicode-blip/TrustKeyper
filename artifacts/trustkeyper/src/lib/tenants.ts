@@ -27,7 +27,7 @@ export interface Tenant {
   propertyType?: PropertyType;
   sharing?: Sharing;
   roommate?: Roommate[];
-  status: "Onboarding Pending" | "Profile Complete";
+  status: "Lead Added" | "Profile Complete";
   invitationSent: boolean;
   detailsComplete: boolean;
   createdAt: number;
@@ -70,7 +70,7 @@ export function addTenant(
     ...rest,
     id: `t_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     createdAt: Date.now(),
-    status: detailsComplete ? "Profile Complete" : "Onboarding Pending",
+    status: detailsComplete ? "Profile Complete" : "Lead Added",
     invitationSent,
     detailsComplete,
   };
@@ -78,6 +78,26 @@ export function addTenant(
   list.unshift(tenant);
   persistTenantList(list);
   return tenant;
+}
+
+export function getTenantById(id: string): Tenant | undefined {
+  return getTenants().find((t) => t.id === id);
+}
+
+export function updateTenant(
+  id: string,
+  patch: Partial<Omit<Tenant, "id" | "createdAt">>,
+): Tenant | null {
+  const list = getTenants();
+  const idx = list.findIndex((t) => t.id === id);
+  if (idx === -1) return null;
+  const next: Tenant = { ...list[idx], ...patch };
+  if ("detailsComplete" in patch) {
+    next.status = next.detailsComplete ? "Profile Complete" : "Lead Added";
+  }
+  list[idx] = next;
+  persistTenantList(list);
+  return next;
 }
 
 function phoneLast10(phone: string): string {

@@ -2,16 +2,15 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import {
   ArrowLeft,
-  UserPlus,
   ChevronDown,
   ArrowRight,
-  MapPin,
   CheckCircle2,
   FileText,
   X,
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
 import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
+import { FlowChipButton } from "@/components/FlowChipButton";
 import {
   FLOW_STICKY_CONTENT_CLASS,
   FlowStickyActionBar,
@@ -31,6 +30,8 @@ import { useToast } from "@/hooks/use-toast";
 import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
 import {
   addTenant,
+  getTenantById,
+  updateTenant,
   CITY_LOCALITIES,
   type Identify,
   type PropertyType,
@@ -56,6 +57,11 @@ export default function AddTenant() {
   const { toast } = useToast();
 
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draftPausedRef = useRef(false);
+  const editId =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("edit")
+      : null;
 
   // wizard step
   const [step, setStep] = useState<Step>(1);
@@ -80,7 +86,26 @@ export default function AddTenant() {
   const [successOpen, setSuccessOpen] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!editId || typeof window === "undefined") return;
+    const tenant = getTenantById(editId);
+    if (!tenant) return;
+    draftPausedRef.current = true;
+    setName(tenant.name);
+    setPhone(tenant.phone.replace(/\D/g, "").slice(-10));
+    setOccupancyFrom(tenant.occupancyFrom ?? "");
+    setWho(tenant.who ?? "");
+    setIdentify(tenant.identify ?? []);
+    setFood(tenant.food ?? "");
+    setCity(tenant.city ?? "Hyderabad");
+    setLocalities(tenant.localities ?? []);
+    setPropertyType(tenant.propertyType ?? "");
+    setSharing(tenant.sharing ?? "");
+    setRoommate(tenant.roommate ?? []);
+    setStep(tenant.detailsComplete ? 2 : 1);
+  }, [editId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || editId) return;
     try {
       const raw = getSessionItem("add_tenant_draft");
       if (!raw) return;
@@ -100,10 +125,10 @@ export default function AddTenant() {
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [editId]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || draftPausedRef.current) return;
     if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
     draftTimerRef.current = setTimeout(() => {
       try {
@@ -149,6 +174,7 @@ export default function AddTenant() {
   ]);
 
   const handleClearTenantForm = () => {
+    draftPausedRef.current = false;
     try {
       removeSessionItem("add_tenant_draft");
     } catch {
@@ -198,7 +224,8 @@ export default function AddTenant() {
   };
 
   const persistTenant = (complete: boolean) => {
-    addTenant({
+    draftPausedRef.current = true;
+    const payload = {
       name,
       phone: `+91${phone}`,
       occupancyFrom,
@@ -209,17 +236,29 @@ export default function AddTenant() {
       localities: complete ? localities : undefined,
       propertyType: complete ? (propertyType as PropertyType) : undefined,
       sharing: complete ? (sharing as Sharing) : undefined,
-      roommate:
-        complete && sharing !== "Entire Property" ? roommate : undefined,
+      roommate: complete && sharing !== "Entire Property" ? roommate : undefined,
       detailsComplete: complete,
-    });
+    };
+
+    if (editId) {
+      updateTenant(editId, payload);
+    } else {
+      addTenant(payload);
+    }
+
     try {
       removeSessionItem("add_tenant_draft");
     } catch {
       /* ignore */
     }
     broadcastBrokerPendingFlowsUpdated();
-    toast({ description: "Tenant added successfully!" });
+    toast({
+      description: editId ? "Tenant lead updated." : "Tenant added successfully!",
+    });
+    if (editId) {
+      setLocation("/broker/tenants");
+      return;
+    }
     setSuccessOpen(true);
   };
 
@@ -267,12 +306,21 @@ export default function AddTenant() {
     <BrokerLayout>
       <div className={`max-w-3xl mx-auto ${FLOW_STICKY_CONTENT_CLASS}`}>
         {step === 1 ? (
-          <Link
-            href="/broker/dashboard"
-            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6"
-          >
-            <ArrowLeft size={16} /> Back to Dashboard
-          </Link>
+          editId ? (
+            <Link
+              href="/broker/tenants"
+              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6"
+            >
+              <ArrowLeft size={16} /> Back to Tenants
+            </Link>
+          ) : (
+            <Link
+              href="/broker/dashboard"
+              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6"
+            >
+              <ArrowLeft size={16} /> Back to Dashboard
+            </Link>
+          )
         ) : (
           <button
             onClick={() => setStep(1)}
@@ -282,23 +330,25 @@ export default function AddTenant() {
           </button>
         )}
 
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">Add Tenant</h1>
-          <button
-            type="button"
-            onClick={handleClearTenantForm}
-            className="text-xs font-semibold text-primary border-0 bg-transparent shadow-none px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors shrink-0"
-          >
-            Clear
-          </button>
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <h1 className="text-2xl font-semibold text-gray-900">
+            {editId ? "Edit Tenant Lead" : "Add Tenant"}
+          </h1>
+          {!editId ? (
+            <button
+              type="button"
+              onClick={handleClearTenantForm}
+              className="text-xs font-semibold text-primary border-0 bg-transparent shadow-none px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors shrink-0"
+            >
+              Clear
+            </button>
+          ) : null}
         </div>
 
         {step === 1 && (
           <>
-            <div className="flex items-center gap-2 text-primary font-medium mb-4">
-              <UserPlus size={16} />
-              <span>Add Manually</span>
-            </div>
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Tenant details</h2>
+            <p className="text-sm text-gray-500 mb-4">Add the tenant&apos;s basic information manually.</p>
 
             <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -360,26 +410,18 @@ export default function AddTenant() {
                   <span className="text-destructive">*</span>
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
-                  {(["Family", "Bachelor"] as const).map((opt) => {
-                    const isActive = who === opt;
-                    return (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => {
-                          setWho(opt);
-                          if (opt === "Family") setIdentify([]);
-                        }}
-                        className={`py-3 rounded-lg border text-sm font-medium transition-colors ${
-                          isActive
-                            ? "border-accent bg-accent/10 text-accent"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                        }`}
-                      >
-                        {opt === "Family" ? "👨‍👩‍👧 Family" : "🧑 Bachelor"}
-                      </button>
-                    );
-                  })}
+                  {(["Family", "Bachelor"] as const).map((opt) => (
+                    <FlowChipButton
+                      key={opt}
+                      label={opt === "Family" ? "👨‍👩‍👧 Family" : "🧑 Bachelor"}
+                      selected={who === opt}
+                      onClick={() => {
+                        setWho(opt);
+                        if (opt === "Family") setIdentify([]);
+                      }}
+                      className="w-full"
+                    />
+                  ))}
                 </div>
               </div>
 
@@ -411,23 +453,15 @@ export default function AddTenant() {
                   Food Preference <span className="text-destructive">*</span>
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
-                  {(["Veg", "Non-Veg"] as const).map((opt) => {
-                    const isActive = food === opt;
-                    return (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setFood(opt)}
-                        className={`py-3 rounded-lg border text-sm font-medium transition-colors ${
-                          isActive
-                            ? "border-accent bg-accent/10 text-accent"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                        }`}
-                      >
-                        {opt === "Veg" ? "🟢 Veg" : "🔴 Non-Veg"}
-                      </button>
-                    );
-                  })}
+                  {(["Veg", "Non-Veg"] as const).map((opt) => (
+                    <FlowChipButton
+                      key={opt}
+                      label={opt === "Veg" ? "🟢 Veg" : "🔴 Non-Veg"}
+                      selected={food === opt}
+                      onClick={() => setFood(opt)}
+                      className="w-full"
+                    />
+                  ))}
                 </div>
               </div>
             </div>
@@ -448,10 +482,8 @@ export default function AddTenant() {
 
         {step === 2 && (
           <>
-            <div className="flex items-center gap-2 text-primary font-medium mb-4">
-              <MapPin size={16} />
-              <span>Location & Property Preference</span>
-            </div>
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Location & property preference</h2>
+            <p className="text-sm text-gray-500 mb-4">Optional details to help match the right property.</p>
 
             <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-6">
               {/* Locality */}
@@ -532,23 +564,15 @@ export default function AddTenant() {
                   Property Type <span className="text-destructive">*</span>
                 </Label>
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                  {PROPERTY_TYPES.map((p) => {
-                    const isActive = propertyType === p;
-                    return (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => setPropertyType(p)}
-                        className={`py-2 rounded-md border text-sm font-medium transition-colors ${
-                          isActive
-                            ? "border-accent bg-accent/10 text-accent"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    );
-                  })}
+                  {PROPERTY_TYPES.map((p) => (
+                    <FlowChipButton
+                      key={p}
+                      label={p}
+                      selected={propertyType === p}
+                      onClick={() => setPropertyType(p)}
+                      className="px-2 text-xs sm:text-sm"
+                    />
+                  ))}
                 </div>
               </div>
 
@@ -559,28 +583,18 @@ export default function AddTenant() {
                   <span className="text-destructive">*</span>
                 </Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {SHARING_OPTIONS.map((s) => {
-                    const isActive = sharing === s;
-                    return (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => {
-                          setSharing(s);
-                          if (s === "Entire Property") setRoommate([]);
-                        }}
-                        className={`py-2 rounded-md border text-sm font-medium transition-colors ${
-                          isActive
-                            ? "border-accent bg-accent/10 text-accent"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                        }`}
-                      >
-                        {s === "Entire Property"
-                          ? "Entire Property (No sharing)"
-                          : s}
-                      </button>
-                    );
-                  })}
+                  {SHARING_OPTIONS.map((s) => (
+                    <FlowChipButton
+                      key={s}
+                      label={s === "Entire Property" ? "Entire Property (No sharing)" : s}
+                      selected={sharing === s}
+                      onClick={() => {
+                        setSharing(s);
+                        if (s === "Entire Property") setRoommate([]);
+                      }}
+                      className="px-2 text-xs sm:text-sm whitespace-normal h-auto min-h-[42px]"
+                    />
+                  ))}
                 </div>
               </div>
 

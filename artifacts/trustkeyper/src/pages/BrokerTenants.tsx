@@ -10,6 +10,7 @@ import {
   Building2,
   Users as UsersIcon,
   Utensils,
+  Pencil,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import BrokerLayout from "@/components/BrokerLayout";
@@ -34,7 +35,7 @@ function formatDate(d?: string): string {
   }
 }
 
-function TenantCard({ t }: { t: Tenant }) {
+function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const whatsAppUrl = getBrokerTenantWhatsAppHref(t);
 
@@ -100,7 +101,7 @@ function TenantCard({ t }: { t: Tenant }) {
         </div>
       )}
 
-      {open && t.detailsComplete && (
+      {open && (
         <div className="mt-4 ml-14 rounded-lg border border-gray-100 bg-gray-50/60 p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <DetailRow label="Occupancy from" value={formatDate(t.occupancyFrom)} />
           <DetailRow label="Staying as" value={t.who ?? "—"} />
@@ -108,25 +109,25 @@ function TenantCard({ t }: { t: Tenant }) {
             <DetailRow label="Identifies as" value={t.identify.join(", ")} />
           )}
           <DetailRow label="Food preference" value={t.food ?? "—"} />
-          <DetailRow label="City" value={t.city ?? "—"} />
-          <DetailRow
-            label="Localities"
-            value={t.localities?.join(", ") ?? "—"}
-          />
-          <DetailRow label="Property type" value={t.propertyType ?? "—"} />
-          <DetailRow label="Sharing" value={t.sharing ?? "—"} />
-          {t.roommate && t.roommate.length > 0 && (
-            <DetailRow
-              label="Roommate preference"
-              value={t.roommate.join(", ")}
-            />
+          {t.detailsComplete ? (
+            <>
+              <DetailRow label="City" value={t.city ?? "—"} />
+              <DetailRow label="Localities" value={t.localities?.join(", ") ?? "—"} />
+              <DetailRow label="Property type" value={t.propertyType ?? "—"} />
+              <DetailRow label="Sharing" value={t.sharing ?? "—"} />
+              {t.roommate && t.roommate.length > 0 && (
+                <DetailRow label="Roommate preference" value={t.roommate.join(", ")} />
+              )}
+            </>
+          ) : (
+            <DetailRow label="Preferences" value="L2 details not added yet" />
           )}
         </div>
       )}
 
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 flex-wrap gap-3">
         <p className="text-xs text-gray-500">Added {timeAgo(t.createdAt)}</p>
-        {t.detailsComplete ? (
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setOpen((o) => !o)}
             className="inline-flex items-center gap-2 h-9 px-3 rounded-[4px] border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50"
@@ -141,7 +142,14 @@ function TenantCard({ t }: { t: Tenant }) {
               </>
             )}
           </button>
-        ) : null}
+          <button
+            type="button"
+            onClick={() => onEdit(t.id)}
+            className="inline-flex items-center gap-2 h-9 px-3 rounded-[4px] border border-primary text-primary text-xs font-semibold hover:bg-primary/5"
+          >
+            <Pencil size={14} /> Edit details
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -164,7 +172,10 @@ export default function BrokerTenants() {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    setTenants(getTenants());
+    const refresh = () => setTenants(getTenants());
+    refresh();
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
   }, []);
 
   const counts = {
@@ -220,7 +231,11 @@ export default function BrokerTenants() {
       ) : (
         <div className="space-y-3">
           {visibleTenants.map((t) => (
-            <TenantCard key={t.id} t={t} />
+            <TenantCard
+              key={t.id}
+              t={t}
+              onEdit={(id) => setLocation(`/broker/tenants/add?edit=${id}`)}
+            />
           ))}
         </div>
       )}
