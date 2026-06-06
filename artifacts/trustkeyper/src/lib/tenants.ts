@@ -158,3 +158,13 @@ export const CITY_LOCALITIES: Record<string, string[]> = {
   Pune: ["Hinjewadi", "Kothrud", "Baner", "Viman Nagar", "Wakad", "Kharadi"],
   Noida: ["Sector 62", "Sector 18", "Sector 78", "Sector 137", "Sector 50"],
 };
+
+export function buildBrokerTenantWhatsAppMessage(tenant: Pick<Tenant, "name">): string {
+  return `Hello ${tenant.name.trim() || "there"},\n\nThis is your broker from TrustKeyper. Please let me know if you have any questions about your rental search.\n\nSent via TrustKeyper.`;
+}
+
+export function getBrokerTenantWhatsAppHref(tenant: Pick<Tenant, "name" | "phone">): string {
+  const digits = tenant.phone.replace(/\D/g, "").slice(-10);
+  if (digits.length !== 10) return "https://wa.me/";
+  return `https://wa.me/91${digits}?text=${encodeURIComponent(buildBrokerTenantWhatsAppMessage(tenant))}`;
+}

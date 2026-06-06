@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BrokerLayout from "@/components/BrokerLayout";
+import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/FlowStickyActionBar";
 import { AddPropertyProgressBar } from "@/components/AddPropertyProgressBar";
 import { useScrollToTopOnChange } from "@/hooks/useScrollToTopOnChange";
 import { toast } from "@/hooks/use-toast";
@@ -853,7 +854,7 @@ export default function AddProperty2() {
 
       <AddPropertyProgressBar subStep={subStep} />
 
-      <div className="max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-8 pb-24 sm:pb-8">
+      <div className={`max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-8 ${FLOW_STICKY_CONTENT_CLASS} sm:pb-8`}>
         {subStep === 0 && renderStep0()}
         {subStep === 1 && renderStep1()}
         {subStep === 2 && renderStep2()}
@@ -875,16 +876,16 @@ export default function AddProperty2() {
       </div>
 
       {/* Continue / Submit — mobile sticky */}
-      <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white border-t border-gray-200 px-4 py-3">
+      <FlowStickyActionBar>
         <Button
           size="lg"
           onClick={handleContinue}
           disabled={!canContinue()}
-          className="w-full bg-primary hover:bg-primary/90"
+          className="w-full bg-primary hover:bg-primary/90 rounded-[4px]"
         >
           {subStep === 5 ? "Submit" : "Continue →"}
         </Button>
-      </div>
+      </FlowStickyActionBar>
 
       {showSuccess && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
