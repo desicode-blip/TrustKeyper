@@ -153,7 +153,7 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
         </p>
       </div>
 
-      <AuthSignupScreenFooter cta={cta} showTerms={false} persistRole="owner" />
+      <AuthSignupScreenFooter cta={cta} showTerms={false} linkType="none" persistRole="owner" />
     </div>
   );
 }

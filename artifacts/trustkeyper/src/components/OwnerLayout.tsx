@@ -228,7 +228,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
               </div>
             </PopoverContent>
           </Popover>
-          <Link href="/owner/profile" className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-900 flex items-center justify-center text-white hover:bg-gray-800">
+          <Link href="/owner/profile" className="relative hidden md:flex w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-900 items-center justify-center text-white hover:bg-gray-800">
             <Users size={17} />
           </Link>
         </div>

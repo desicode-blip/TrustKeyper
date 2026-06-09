@@ -119,7 +119,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" aria-hidden />
             )}
           </Link>
-          <Link href="/broker/settings" className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50">
+          <Link href="/broker/settings" className="relative hidden md:flex w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-200 items-center justify-center text-gray-600 hover:bg-gray-50">
             <Settings size={17} />
             {!hasBankDetails() && (
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400 border border-white" title="Complete your payment details" />

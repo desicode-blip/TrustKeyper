@@ -278,7 +278,16 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
             />
           </Box>
           {duplicateSignupPhone && !otpStage ? (
-            <p className="text-sm text-destructive">An account already exists for this number.</p>
+            <p className="text-sm text-destructive">
+              Account exists.{" "}
+              <button
+                type="button"
+                onClick={() => setLocation("/login")}
+                className="font-medium underline underline-offset-2 hover:text-destructive/80"
+              >
+                Log in instead?
+              </button>
+            </p>
           ) : (
             <p className="text-xs text-gray-500">We&apos;ll send an OTP to verify</p>
           )}

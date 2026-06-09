@@ -38,6 +38,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
@@ -180,8 +181,13 @@ export default function Onboarding() {
                 const r = readAuthPendingRole() ?? ("owner" as Role);
                 if (await profileExistsAsync(ownerPhoneDigits, r)) {
                   toast({
-                    title: "An account already exists for this number.",
+                    title: "An account already exists for this number. Please log in instead.",
                     variant: "destructive",
+                    action: (
+                      <ToastAction altText="Log in" onClick={() => setLocation("/login")}>
+                        Log in
+                      </ToastAction>
+                    ),
                   });
                   return;
                 }
