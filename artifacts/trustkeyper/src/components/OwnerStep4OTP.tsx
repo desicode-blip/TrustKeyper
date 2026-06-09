@@ -12,6 +12,8 @@ import {
 } from "@/components/auth/authStyles";
 import { toast } from "@/hooks/use-toast";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
+import { handleOtpKeyDown } from "@/lib/otpInput";
+import { Spinner } from "@/components/ui/spinner";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 
 interface OwnerStep4OTPProps {
@@ -94,7 +96,14 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
       disabled={!isComplete || verifying}
       className={authPrimaryButtonClass}
     >
-      Continue &rarr;
+      {verifying ? (
+        <>
+          <Spinner className="mr-2" />
+          Verifying...
+        </>
+      ) : (
+        <>Continue &rarr;</>
+      )}
     </Button>
   );
 
@@ -122,6 +131,7 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
               maxLength={1}
               value={digit}
               onChange={(e) => handleChange(i, e.target.value)}
+              onKeyDown={(e) => handleOtpKeyDown(i, e, otp, setOtp, "owner-otp")}
               className={`w-full h-11 sm:h-12 text-center text-xl font-medium rounded-lg outline-none transition-colors
                 ${digit ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
             />

@@ -31,6 +31,8 @@ import {
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { clearActiveSessionBackup } from "@/lib/initAppStorage";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
+import { handleOtpKeyDown } from "@/lib/otpInput";
+import { Spinner } from "@/components/ui/spinner";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 
 type Phase = "phone" | "otp";
@@ -196,7 +198,14 @@ export default function Login() {
       onClick={() => void finishLogin()}
       className={authPrimaryButtonClass}
     >
-      Continue &rarr;
+      {loggingIn ? (
+        <>
+          <Spinner className="mr-2" />
+          Verifying...
+        </>
+      ) : (
+        <>Continue &rarr;</>
+      )}
     </Button>
   );
 
@@ -272,6 +281,7 @@ export default function Login() {
                   maxLength={1}
                   value={digit}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
+                  onKeyDown={(e) => handleOtpKeyDown(i, e, otp, setOtp, "login-otp")}
                   className={`w-full h-11 sm:h-12 text-center text-xl font-medium rounded-lg outline-none transition-colors
                     ${digit ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
                 />
