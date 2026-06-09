@@ -31,7 +31,7 @@ export function AuthFlowLayout({
       <div className="w-full flex-1 flex flex-col min-h-screen lg:min-h-0">
         <AuthMobileBrandBanner />
 
-        <div className="flex-1 flex flex-col pt-4 pb-[5.5rem] px-5 sm:px-6 lg:pt-[60px] lg:pb-16 lg:px-[140px] relative bg-[#F5F7FA]">
+        <div className="flex-1 flex flex-col pt-4 pb-6 px-5 sm:px-6 lg:pt-[60px] lg:pb-16 lg:px-[140px] relative bg-[#F5F7FA]">
           <AuthCornerDecor className="hidden lg:block absolute bottom-4 right-8 z-0" />
 
           <div className="relative z-10 flex-1 flex flex-col min-h-0 max-w-full mx-auto w-full lg:max-w-none">
