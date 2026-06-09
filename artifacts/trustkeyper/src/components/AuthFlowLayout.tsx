@@ -35,20 +35,20 @@ export function AuthFlowLayout({
           <AuthCornerDecor className="hidden lg:block absolute bottom-4 right-8 z-0" />
 
           <div className="relative z-10 flex-1 flex flex-col min-h-0 max-w-full mx-auto w-full lg:max-w-none">
-            <div className="flex items-start gap-3 mb-2">
-              {!backDisabled ? (
+            <div className="relative flex flex-col min-h-0">
+              {!backDisabled && (
                 <button
                   type="button"
                   onClick={onBack}
-                  className="mt-1 shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-[#E8EEF4] text-gray-700 transition-colors hover:bg-[#DCE4EC]"
+                  className="absolute left-0 top-0 w-10 h-10 flex items-center justify-center rounded-lg bg-[#E8EEF4] text-gray-700 transition-colors hover:bg-[#DCE4EC] z-10"
                   aria-label="Go back"
                 >
                   <ChevronLeft size={20} />
                 </button>
-              ) : (
-                <div className="shrink-0 w-10 h-10" />
               )}
-              <div className="flex-1 flex flex-col min-h-0 lg:max-w-none">{children}</div>
+              <div className={`flex-1 flex flex-col min-h-0 ${!backDisabled ? "pl-14" : ""}`}>
+                {children}
+              </div>
             </div>
           </div>
         </div>
