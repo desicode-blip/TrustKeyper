@@ -24,7 +24,6 @@ import {
   Lock,
   Bell,
   Wallet,
-  BadgeCheck,
   Edit2,
   Trash2,
   RefreshCw,
@@ -1926,7 +1925,7 @@ function Step6Review({
 
 // ─── Success Overlay ──────────────────────────────────────────────────────────
 
-function SuccessOverlay({ onDone }: { onDone: () => void }) {
+function SuccessOverlay({ onDone, isOwnerFlow }: { onDone: () => void; isOwnerFlow: boolean }) {
   useEffect(() => {
     const t = setTimeout(onDone, 2000);
     return () => clearTimeout(t);
@@ -1938,20 +1937,21 @@ function SuccessOverlay({ onDone }: { onDone: () => void }) {
         <div className="w-20 h-20 rounded-full bg-accent/15 mx-auto mb-5 flex items-center justify-center">
           <CheckCircle2 size={44} className="text-accent" />
         </div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Agreement Sent!</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Agreement Saved!</h2>
         <p className="text-sm text-gray-500 mb-4">
-          Your agreement PDF has been downloaded. On supported devices you can share the PDF and message together; otherwise attach the downloaded PDF in WhatsApp.
+          Your rental agreement details have been saved successfully. You can view and manage it from your Agreements page.
         </p>
-        <div className="flex items-center gap-1.5 justify-center text-xs text-gray-500 mb-6">
-          <BadgeCheck size={14} className="text-accent" />
-          Powered by TrustKeyper E-Sign
-        </div>
-        <p className="text-xs text-gray-400 mb-4">Redirecting to Documents…</p>
+        <p className="text-xs text-gray-500 mb-6">
+          Note: PDF generation and e-signature are coming soon.
+        </p>
+        <p className="text-xs text-gray-400 mb-4">
+          {isOwnerFlow ? "Redirecting to Agreements…" : "Redirecting to Documents…"}
+        </p>
         <button
           onClick={onDone}
           className="w-full h-10 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90"
         >
-          Go to Documents
+          {isOwnerFlow ? "View Agreements" : "View Documents"}
         </button>
       </div>
     </div>
@@ -2417,6 +2417,7 @@ export default function GenerateAgreement() {
     <Layout>
       {showSuccess && (
         <SuccessOverlay
+          isOwnerFlow={isOwnerFlow}
           onDone={() => {
             setShowSuccess(false);
             setLocation(isOwnerFlow ? "/owner/agreements" : "/broker/documents");
