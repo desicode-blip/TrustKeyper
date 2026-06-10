@@ -71,6 +71,8 @@ import {
   type OwnerDocumentKind,
 } from "@/lib/ownerProfile";
 import { isValidUpiId, sanitizeUpiInput } from "@/lib/upi";
+import { getFileTypeError, isValidAccountNumber, isValidIFSC } from "@/lib/fileValidation";
+import { toast as pushToast } from "@/hooks/use-toast";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -791,7 +793,14 @@ function BankModal({
   const qrRef = useRef<HTMLInputElement>(null);
   const [qrFile, setQrFile] = useState(saved?.upiQrFileName ?? "");
 
-  const bankValid = !!(holderName && bankName && accountNumber && ifscCode);
+  const bankValid = !!(
+    holderName &&
+    bankName &&
+    accountNumber &&
+    ifscCode &&
+    isValidAccountNumber(accountNumber) &&
+    isValidIFSC(ifscCode)
+  );
   const upiIdValid = isValidUpiId(upiId);
   const upiValid = upiIdValid || !!qrFile;
 
@@ -835,10 +844,16 @@ function BankModal({
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Account Number*</label>
                   <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                  {accountNumber && !isValidAccountNumber(accountNumber) ? (
+                    <p className="text-xs text-red-500 mt-1">Account number must be 9–18 digits</p>
+                  ) : null}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">IFSC Code*</label>
                   <input value={ifscCode} onChange={(e) => setIfscCode(e.target.value.toUpperCase())} placeholder="e.g. SBIN0001234" className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                  {ifscCode && !isValidIFSC(ifscCode) ? (
+                    <p className="text-xs text-red-500 mt-1">Invalid IFSC code (e.g. HDFC0001234)</p>
+                  ) : null}
                 </div>
               </div>
             </>
@@ -1142,6 +1157,11 @@ function Step3Documents({
   };
 
   const handleUpload = (pIdx: number, dIdx: number, file: File) => {
+    const error = getFileTypeError(file);
+    if (error) {
+      pushToast({ title: "Invalid file", description: error, variant: "destructive" });
+      return;
+    }
     updateDoc(pIdx, dIdx, { status: "uploaded", fileName: file.name, fileSize: file.size, uploadedAt: Date.now() });
     const person = persons[pIdx];
     const docId = person?.docs[dIdx]?.id;
@@ -1487,7 +1507,14 @@ function Step5Brokerage({
     : brokerageAmount.trim() !== "";
 
   const bankDetailsFilled = brokerageMode === "Bank Transfer"
-    ? (holderName && bankName && accountNumber && ifscCode)
+    ? !!(
+        holderName &&
+        bankName &&
+        accountNumber &&
+        ifscCode &&
+        isValidAccountNumber(accountNumber) &&
+        isValidIFSC(ifscCode)
+      )
     : (isValidUpiId(upiId) || !!qrFile);
 
   const valid = amountFilled && bankDetailsFilled;
@@ -1611,10 +1638,16 @@ function Step5Brokerage({
                 <div>
                   <FieldLabel required>Account Number</FieldLabel>
                   <TextInput value={accountNumber} onChange={setAccountNumber} placeholder="Enter account number" />
+                  {accountNumber && !isValidAccountNumber(accountNumber) ? (
+                    <p className="text-xs text-red-500 mt-1">Account number must be 9–18 digits</p>
+                  ) : null}
                 </div>
                 <div>
                   <FieldLabel required>IFSC Code</FieldLabel>
                   <TextInput value={ifscCode} onChange={(v) => setIfscCode(v.toUpperCase())} placeholder="e.g. SBIN0001234" />
+                  {ifscCode && !isValidIFSC(ifscCode) ? (
+                    <p className="text-xs text-red-500 mt-1">Invalid IFSC code (e.g. HDFC0001234)</p>
+                  ) : null}
                 </div>
               </div>
             </div>
