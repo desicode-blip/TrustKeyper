@@ -128,10 +128,14 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
               id={`owner-otp-${i}`}
               type="text"
               inputMode="numeric"
+              autoComplete="one-time-code"
+              aria-label={`Digit ${i + 1} of 6`}
               maxLength={1}
               value={digit}
               onChange={(e) => handleChange(i, e.target.value)}
-              onKeyDown={(e) => handleOtpKeyDown(i, e, otp, setOtp, "owner-otp")}
+              onKeyDown={(e) =>
+                handleOtpKeyDown(i, e, otp, setOtp, "owner-otp", () => void handleContinue())
+              }
               className={`w-full h-11 sm:h-12 text-center text-xl font-medium rounded-lg outline-none transition-colors
                 ${digit ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
             />

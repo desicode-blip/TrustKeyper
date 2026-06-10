@@ -11,7 +11,16 @@ export function handleOtpKeyDown(
   otp: string[],
   setOtp: Dispatch<SetStateAction<string[]>>,
   inputIdPrefix: string,
+  onSubmit?: () => void,
 ): void {
+  if (e.key === "Enter") {
+    const isComplete = otp.every((d) => d.length === 1);
+    if (isComplete && onSubmit) {
+      e.preventDefault();
+      onSubmit();
+    }
+    return;
+  }
   if (e.key === "Backspace") {
     if (otp[index]) {
       const next = [...otp];

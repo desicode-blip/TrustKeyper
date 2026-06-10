@@ -194,10 +194,14 @@ export default function AdminLogin() {
                     id={`admin-otp-${index}`}
                     type="text"
                     inputMode="numeric"
+                    autoComplete="one-time-code"
+                    aria-label={`Digit ${index + 1} of 6`}
                     maxLength={1}
                     value={digit}
                     onChange={(event) => handleOtpChange(index, event.target.value)}
-                    onKeyDown={(e) => handleOtpKeyDown(index, e, otp, setOtp, "admin-otp")}
+                    onKeyDown={(e) =>
+                      handleOtpKeyDown(index, e, otp, setOtp, "admin-otp", () => void handleVerifyOtp())
+                    }
                     className="h-12 w-12 rounded-lg border border-gray-200 text-center text-lg font-medium outline-none transition-colors focus:border-[#1B4F8A] focus:ring-2 focus:ring-[#1B4F8A]/20"
                     style={digit ? { borderColor: ADMIN_PRIMARY } : undefined}
                   />

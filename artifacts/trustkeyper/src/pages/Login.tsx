@@ -278,10 +278,14 @@ export default function Login() {
                   id={`login-otp-${i}`}
                   type="text"
                   inputMode="numeric"
+                  autoComplete="one-time-code"
+                  aria-label={`Digit ${i + 1} of 6`}
                   maxLength={1}
                   value={digit}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
-                  onKeyDown={(e) => handleOtpKeyDown(i, e, otp, setOtp, "login-otp")}
+                  onKeyDown={(e) =>
+                    handleOtpKeyDown(i, e, otp, setOtp, "login-otp", () => void finishLogin())
+                  }
                   className={`w-full h-11 sm:h-12 text-center text-xl font-medium rounded-lg outline-none transition-colors
                     ${digit ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
                 />
