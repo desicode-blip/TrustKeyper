@@ -1585,7 +1585,9 @@ function Step5Brokerage({
             </div>
           ) : (
             <div>
-              <FieldLabel required>Amount (₹)</FieldLabel>
+              <FieldLabel required>
+                {brokeragePaidBy === "Owner" ? "Owner pays (₹)" : "Tenant pays (₹)"}
+              </FieldLabel>
               <TextInput type="number" value={brokerageAmount} onChange={setBrokerageAmount} placeholder="e.g. 15000" />
               {brokeragePercentOfRent(brokerageAmount, monthlyRent) && (
                 <p className="text-sm font-medium text-green-600 mt-1">{brokeragePercentOfRent(brokerageAmount, monthlyRent)}</p>
@@ -1619,6 +1621,7 @@ function Step5Brokerage({
                 <div>
                   <FieldLabel required>Account Holder Name</FieldLabel>
                   <TextInput value={holderName} onChange={setHolderName} placeholder="Full name" />
+                  <p className="text-xs text-gray-400 mt-1">Your (broker&apos;s) bank account</p>
                 </div>
                 <div>
                   <FieldLabel required>Bank Name</FieldLabel>

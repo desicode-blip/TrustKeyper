@@ -187,7 +187,6 @@ export default function BrokerTenants() {
   const tabs = [
     { id: "all", label: "All", count: counts.all },
     { id: "new", label: "New", count: counts.new },
-    { id: "invitation", label: "Invitation Sent", count: counts.invitation },
   ];
 
   const visibleTenants = tenants.filter((t) => {

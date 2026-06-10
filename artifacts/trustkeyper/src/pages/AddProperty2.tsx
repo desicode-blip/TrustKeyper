@@ -531,7 +531,7 @@ export default function AddProperty2() {
           <h3 className="text-base font-semibold text-gray-900 pb-3 border-b border-gray-100">Property Owner Details</h3>
         </div>
         <div>
-          <FieldLabel required>Your Name</FieldLabel>
+          <FieldLabel required>Owner&apos;s Name</FieldLabel>
           <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="" />
         </div>
         <div>
