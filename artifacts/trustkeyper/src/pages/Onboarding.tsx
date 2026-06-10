@@ -131,6 +131,23 @@ export default function Onboarding() {
   const handlePlanSelect = (plan: "diy" | "managed") => {
     if (plan === "managed") {
       setIsManagedPopupOpen(true);
+      void (async () => {
+        try {
+          await fetch("/api/managed-interest", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: ownerDetails.name,
+              phone: ownerPhoneDigits,
+              propertyCount: propertiesCount,
+              propertyIntent: JSON.stringify(propertyIntent),
+              entrySource: "onboarding",
+            }),
+          });
+        } catch {
+          // silent — dialog already opened, email failure is non-blocking
+        }
+      })();
     } else {
       try {
         sessionStorage.removeItem("tk_owner_onboarding_resume_step");

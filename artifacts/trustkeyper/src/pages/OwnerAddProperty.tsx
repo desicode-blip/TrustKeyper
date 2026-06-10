@@ -1002,7 +1002,29 @@ export default function OwnerAddProperty() {
                 <p className="text-[11px] text-gray-500">Our expert Property Manager will guide you through the process</p>
               </div>
             </div>
-            <Button variant="outline" className="border-primary text-primary hover:bg-blue-50 text-xs px-8 h-10 rounded-sm font-semibold transition-all" onClick={() => setIsManagedPopupOpen(true)}>
+            <Button
+              variant="outline"
+              className="border-primary text-primary hover:bg-blue-50 text-xs px-8 h-10 rounded-sm font-semibold transition-all"
+              onClick={async () => {
+                setIsManagedPopupOpen(true);
+                const profile = getOwnerProfile();
+                try {
+                  await fetch("/api/managed-interest", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      name: ownerName || profile.name,
+                      phone: ownerContact || profile.phone,
+                      propertyCount: profile.propertyCount,
+                      propertyIntent: profile.propertyIntent,
+                      entrySource,
+                    }),
+                  });
+                } catch {
+                  // silent — dialog already opened, email failure is non-blocking
+                }
+              }}
+            >
               I'm interested
             </Button>
           </div>
