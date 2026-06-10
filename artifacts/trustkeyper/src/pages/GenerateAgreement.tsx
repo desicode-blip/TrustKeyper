@@ -806,7 +806,12 @@ function BankModal({
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md relative">
-        <button onClick={onClose} className="absolute top-4 right-4 w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-4 right-4 w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+        >
           <X size={14} className="text-gray-600" />
         </button>
         <div className="px-6 pt-6 pb-2 border-b border-gray-100">
@@ -999,8 +1004,8 @@ function DocRow({
             <button className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors">
               <Eye size={12} /> View
             </button>
-            <button onClick={onRemove} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400"><RefreshCw size={13} /></button>
-            <button onClick={onRemove} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>
+            <button type="button" onClick={onRemove} aria-label="Replace document" className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400"><RefreshCw size={13} /></button>
+            <button type="button" onClick={onRemove} aria-label="Remove document" className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>
           </>
         )}
         {doc.status === "link_sent" && (
@@ -1010,7 +1015,7 @@ function DocRow({
                 <RefreshCw size={11} /> Resend
               </button>
             ) : null}
-            <button onClick={onRemove} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>
+            <button type="button" onClick={onRemove} aria-label="Remove document" className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>
           </>
         )}
         {doc.status === "pending" && (
