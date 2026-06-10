@@ -28,32 +28,30 @@ export function AuthFlowLayout({
         />
       </div>
 
-      <div className="w-full flex-1 flex flex-col min-h-screen lg:min-h-0">
+      <div className="w-full flex-1 flex flex-col">
         <AuthMobileBrandBanner />
 
-        <div className="flex-1 flex flex-col pt-4 pb-6 px-5 sm:px-6 lg:pt-[60px] lg:pb-16 lg:px-[140px] relative bg-[#F5F7FA]">
+        <div className="flex flex-col pt-4 pb-6 px-5 sm:px-6 lg:pt-[60px] lg:pb-16 lg:px-[140px] relative bg-[#F5F7FA]">
           <AuthCornerDecor className="hidden lg:block absolute bottom-4 right-8 z-0" />
 
-          <div className="relative z-10 flex-1 flex flex-col min-h-0 max-w-full mx-auto w-full lg:max-w-none">
-            <div className="relative flex flex-col min-h-0">
-              {!backDisabled && (
-                <button
-                  type="button"
-                  onClick={onBack}
-                  className="absolute left-0 top-0 w-10 h-10 flex items-center justify-center rounded-lg bg-[#E8EEF4] text-gray-700 transition-colors hover:bg-[#DCE4EC] z-10"
-                  aria-label="Go back"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-              )}
-              <div className={`flex-1 flex flex-col min-h-0 ${!backDisabled ? "pl-14" : ""}`}>
-                {children}
-              </div>
+          <div className="relative z-10 flex flex-col min-h-0 max-w-full mx-auto w-full lg:max-w-none">
+            {!backDisabled && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="absolute -left-1 top-0 w-10 h-10 flex items-center justify-center rounded-lg bg-[#E8EEF4] text-gray-700 transition-colors hover:bg-[#DCE4EC] z-10"
+                aria-label="Go back"
+              >
+                <ChevronLeft size={20} />
+              </button>
+            )}
+            <div
+              className={`flex flex-col min-h-0 w-full${!backDisabled ? " [&_.auth-step-heading]:pl-14" : ""}`}
+            >
+              {children}
             </div>
           </div>
         </div>
-
-        <div className="lg:hidden h-1.5 shrink-0 bg-[#1E4FD9]" aria-hidden />
       </div>
     </div>
   );

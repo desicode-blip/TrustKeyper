@@ -228,7 +228,7 @@ export default function Login() {
   return (
     <AuthFlowLayout onBack={handleBack} backDisabled={false}>
       <div className={`flex flex-col flex-1 min-h-0 max-w-md w-full ${authMobileScrollPadClass}`}>
-        <div className="mb-8 border-b border-gray-200 pb-4 shrink-0">
+        <div className="auth-step-heading mb-8 border-b border-gray-200 pb-4 shrink-0">
           <h1 className="text-3xl font-semibold text-gray-900">
             Login to TrustKeyper as {roleDisplayLabel(loginRole)}
           </h1>
