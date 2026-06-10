@@ -40,12 +40,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   `;
 
   try {
-    const response = await fetch("https://api.resend.com/emails", {
+    const response = (await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ from, to, subject: `[Managed Interest] ${name || "Unknown"} — ${phone}`, html }),
       signal: AbortSignal.timeout(8000),
-    });
+    })) as Response & { ok: boolean; status: number };
     if (!response.ok) return res.status(500).json({ error: "Failed to send email" });
     return res.status(200).json({ ok: true });
   } catch {
