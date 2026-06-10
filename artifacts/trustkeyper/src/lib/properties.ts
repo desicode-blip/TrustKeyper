@@ -105,5 +105,6 @@ export function getPropertyTitle(p: Property): string {
   const type = p.propertyType === "Other" ? (p.propertyTypeOther || "Property") : p.propertyType;
   const size = p.unitSize === "Other" ? (p.unitSizeOther || "") : p.unitSize;
   const label = size ? `${size} ${type}` : type;
-  return `${label} in ${p.nickname || p.area}`;
+  const location = p.city || p.area || p.nickname || "";
+  return location ? `${label} in ${location}` : label;
 }

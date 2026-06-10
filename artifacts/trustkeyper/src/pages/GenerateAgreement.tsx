@@ -48,6 +48,7 @@ import {
 import { broadcastBrokerPendingFlowsUpdated, clearAgreementDraftStorage } from "@/lib/brokerPendingFlows";
 import { queueCloudSync } from "@/lib/cloudSync";
 import { getItem, getSessionItem, removeSessionItem, setItem, setSessionItem } from "@/lib/storageKeys";
+import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { getProperties, getPropertyTitle, updateProperty, type Property } from "@/lib/properties";
 import { ensureTenantFromAgreement, getTenants, resolveTenantKyc, type Tenant } from "@/lib/tenants";
 import { addAgreement, getAgreements, updateAgreement, type Agreement } from "@/lib/agreements";
@@ -180,14 +181,15 @@ function FieldLabel({ children, required }: { children: React.ReactNode; require
 }
 
 function TextInput({
-  value, onChange, placeholder, type = "text", className = "",
+  value, onChange, placeholder, type = "text", className = "", min,
 }: {
-  value: string; onChange: (v: string) => void; placeholder?: string; type?: string; className?: string;
+  value: string; onChange: (v: string) => void; placeholder?: string; type?: string; className?: string; min?: string;
 }) {
   return (
     <input
       type={type}
       value={value}
+      min={min}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       className={`w-full h-10 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${className}`}
@@ -958,10 +960,13 @@ function DocRow({
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-900">{doc.label}</p>
         {doc.status === "uploaded" && (
-          <p className="text-xs text-gray-500 mt-0.5 break-words">
-            {doc.fileName ? `${doc.fileName} · ${doc.fileSize ? fmtFileSize(doc.fileSize) : ""} · ` : ""}
-            Uploaded just now · <span className="text-green-600 font-medium">Verified ✓</span>
-          </p>
+          <>
+            <p className="text-xs text-gray-500 mt-0.5 break-words">
+              {doc.fileName ? `${doc.fileName} · ${doc.fileSize ? fmtFileSize(doc.fileSize) : ""} · ` : ""}
+              Uploaded just now · <span className="text-blue-600 font-medium">Saved</span>
+            </p>
+            <p className="text-[11px] text-gray-400 mt-0.5">Document pending verification</p>
+          </>
         )}
         {doc.status === "link_sent" && (
           <p className="text-xs text-gray-500 mt-0.5 break-words">
@@ -1374,7 +1379,7 @@ function Step4Details({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <FieldLabel required>Start Date</FieldLabel>
-              <TextInput type="date" value={startDate} onChange={setStartDate} />
+              <TextInput type="date" value={startDate} onChange={setStartDate} min={todayLocalDateInputMin()} />
             </div>
             <div>
               <FieldLabel required>Lock-in Period</FieldLabel>
