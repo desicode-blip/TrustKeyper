@@ -213,7 +213,7 @@ export default function Login() {
     return (
       <AuthFlowLayout onBack={() => setLocation("/")} backDisabled={false}>
         <div className={`flex flex-col flex-1 max-w-md w-full ${authMobileScrollPadClass}`}>
-          <div className="mb-8 border-b border-gray-200 pb-4">
+          <div className="auth-step-heading mb-8 border-b border-gray-200 pb-4">
             <h1 className="text-3xl font-semibold text-gray-900">Login to TrustKeyper</h1>
             <p className="mt-2 text-sm text-gray-500">
               Choose Property Owner or Broker on signup first, then return here to log in.
