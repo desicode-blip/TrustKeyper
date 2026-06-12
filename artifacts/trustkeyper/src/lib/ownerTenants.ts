@@ -5,6 +5,9 @@ import { getItem, getSessionItem, setItem, setSessionItem } from "@/lib/storageK
 
 export type InquiryStatus = "open" | "invited";
 
+/** Lead status for property-share inquiries on the owner Inquiries tab. */
+export type PropertyInquiryLeadStatus = "new" | "contacted" | "converted" | "rejected";
+
 /** Set only when the owner manually records an outcome. */
 export type RecordedInviteStatus = "accepted" | "rejected";
 
@@ -18,7 +21,11 @@ export interface OwnerTenantInquiry {
   food?: Food;
   linkedinUrl?: string;
   status: InquiryStatus;
+  /** Property share link inquiries use leadStatus; legacy rows default to "new". */
+  leadStatus?: PropertyInquiryLeadStatus;
+  source?: "property_share" | "manual";
   createdAt: number;
+  updatedAt?: number;
 }
 
 export interface OwnerTenantInvite {
@@ -62,7 +69,9 @@ export interface SendTenantInvitePayload {
 
 const INQUIRIES_KEY = "owner_tenant_inquiries";
 const INVITES_KEY = "owner_tenant_invites";
+const DECLINES_KEY = "tenant_property_declines";
 export const OWNER_INVITES_UPDATED_EVENT = "tk-owner-invites-updated";
+export const OWNER_INQUIRIES_UPDATED_EVENT = "tk-owner-inquiries-updated";
 
 function readJson<T>(dataType: string): T[] {
   if (typeof window === "undefined") return [];
@@ -74,14 +83,40 @@ function readJson<T>(dataType: string): T[] {
   }
 }
 
+function phoneLast10(phone: string): string {
+  return phone.replace(/\D/g, "").slice(-10);
+}
+
+function normalizeInquiry(raw: Partial<OwnerTenantInquiry> & { id: string }): OwnerTenantInquiry {
+  return {
+    id: raw.id,
+    name: raw.name ?? "",
+    phone: raw.phone ?? "",
+    propertyId: raw.propertyId ?? "",
+    propertyLabel: raw.propertyLabel ?? "",
+    who: raw.who,
+    food: raw.food,
+    linkedinUrl: raw.linkedinUrl,
+    status: raw.status === "invited" ? "invited" : "open",
+    leadStatus: raw.leadStatus ?? "new",
+    source: raw.source,
+    createdAt: typeof raw.createdAt === "number" ? raw.createdAt : Date.now(),
+    updatedAt: raw.updatedAt,
+  };
+}
+
 function persist(dataType: string, list: unknown[]): void {
   try {
     const payload = JSON.stringify(list);
     setSessionItem(dataType, payload);
     setItem(dataType, payload);
     queueCloudSync(dataType, payload);
-    if (dataType === INVITES_KEY && typeof window !== "undefined") {
+    if (typeof window === "undefined") return;
+    if (dataType === INVITES_KEY) {
       window.dispatchEvent(new Event(OWNER_INVITES_UPDATED_EVENT));
+    }
+    if (dataType === INQUIRIES_KEY) {
+      window.dispatchEvent(new Event(OWNER_INQUIRIES_UPDATED_EVENT));
     }
   } catch {
     /* ignore */
@@ -112,7 +147,103 @@ export function removeLegacySeedInquiries(): void {
 }
 
 export function getOwnerInquiries(): OwnerTenantInquiry[] {
-  return readJson<OwnerTenantInquiry>(INQUIRIES_KEY);
+  return readJson<OwnerTenantInquiry>(INQUIRIES_KEY).map((row) =>
+    normalizeInquiry(row as Partial<OwnerTenantInquiry> & { id: string }),
+  );
+}
+
+/** Property-share inquiries for the owner Inquiries tab (newest first). */
+export function getPropertyShareInquiries(): OwnerTenantInquiry[] {
+  return getOwnerInquiries()
+    .filter(
+      (i) =>
+        i.source === "property_share" &&
+        i.status === "open" &&
+        i.leadStatus !== "rejected",
+    )
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export function findOpenPropertyShareInquiry(
+  propertyId: string,
+  phone: string,
+): OwnerTenantInquiry | undefined {
+  const digits = phoneLast10(phone);
+  return getOwnerInquiries().find(
+    (i) =>
+      i.propertyId === propertyId &&
+      phoneLast10(i.phone) === digits &&
+      i.source === "property_share" &&
+      i.status === "open" &&
+      i.leadStatus !== "rejected",
+  );
+}
+
+export function createPropertyShareInquiry(input: {
+  name: string;
+  phone: string;
+  propertyId: string;
+  propertyLabel: string;
+}): { inquiry: OwnerTenantInquiry; isDuplicate: boolean } {
+  const existing = findOpenPropertyShareInquiry(input.propertyId, input.phone);
+  if (existing) {
+    return { inquiry: existing, isDuplicate: true };
+  }
+
+  const digits = phoneLast10(input.phone);
+  const inquiry: OwnerTenantInquiry = {
+    id: `inq_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    name: input.name.trim(),
+    phone: formatMemberContact(digits),
+    propertyId: input.propertyId,
+    propertyLabel: input.propertyLabel,
+    status: "open",
+    leadStatus: "new",
+    source: "property_share",
+    createdAt: Date.now(),
+  };
+  const list = getOwnerInquiries();
+  list.unshift(inquiry);
+  persist(INQUIRIES_KEY, list);
+  return { inquiry, isDuplicate: false };
+}
+
+export function updatePropertyInquiryLeadStatus(
+  inquiryId: string,
+  leadStatus: PropertyInquiryLeadStatus,
+): OwnerTenantInquiry | null {
+  const list = getOwnerInquiries();
+  const idx = list.findIndex((i) => i.id === inquiryId);
+  if (idx === -1) return null;
+  list[idx] = {
+    ...list[idx],
+    leadStatus,
+    updatedAt: Date.now(),
+    status: leadStatus === "converted" ? "invited" : list[idx].status,
+  };
+  persist(INQUIRIES_KEY, list);
+  return list[idx];
+}
+
+export function recordPropertyNotInterested(input: {
+  name: string;
+  phone: string;
+  propertyId: string;
+}): void {
+  try {
+    const raw = getSessionItem(DECLINES_KEY) ?? getItem(DECLINES_KEY);
+    const list = raw ? (JSON.parse(raw) as unknown[]) : [];
+    list.unshift({
+      ...input,
+      phone: formatMemberContact(phoneLast10(input.phone)),
+      createdAt: Date.now(),
+    });
+    const payload = JSON.stringify(list.slice(0, 200));
+    setSessionItem(DECLINES_KEY, payload);
+    setItem(DECLINES_KEY, payload);
+  } catch {
+    /* ignore */
+  }
 }
 
 export function getOpenInquiriesForProperty(propertyId: string): OwnerTenantInquiry[] {
@@ -254,6 +385,14 @@ export function whatsAppInviteHref(phone: string, message: string): string {
 
 export function getWhatsAppInviteHref(invite: OwnerTenantInvite): string {
   return whatsAppInviteHref(invite.phone, buildWhatsAppInviteMessage(invite));
+}
+
+export function getInquiryWhatsAppHref(inquiry: OwnerTenantInquiry): string {
+  const message =
+    `Hello ${inquiry.name.trim() || "there"},\n\n` +
+    `Thank you for your interest in ${inquiry.propertyLabel}. I would like to discuss this property with you.\n\n` +
+    `Sent via TrustKeyper.`;
+  return whatsAppInviteHref(inquiry.phone, message);
 }
 
 export function isInviteFromInquiry(invite: OwnerTenantInvite): boolean {

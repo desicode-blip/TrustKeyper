@@ -1,25 +1,158 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useRoute } from "wouter";
-import { Building2, MapPin, BedDouble, Bath, Calendar, IndianRupee } from "lucide-react";
+import { Building2, CheckCircle2, X } from "lucide-react";
 import { TrustKeyperLogo } from "@/components/brand";
+import { Button } from "@/components/ui/button";
+import { PropertyPublicCard, PropertyPublicCardSkeleton } from "@/components/tenant/PropertyPublicCard";
+import { TenantPropertyVerification } from "@/components/tenant/TenantPropertyVerification";
 import { getProperties, getPropertyTitle, type Property } from "@/lib/properties";
+import {
+  createPropertyShareInquiry,
+  getPropertyInviteLabel,
+  recordPropertyNotInterested,
+} from "@/lib/ownerTenants";
+import {
+  getTenantShareResponse,
+  getTenantShareSession,
+  setTenantShareResponse,
+  type TenantShareSession,
+} from "@/lib/tenantShareSession";
 
-function formatRent(v?: string): string {
-  if (!v) return "—";
-  return `₹${Number(v).toLocaleString("en-IN")}/mo`;
+type PagePhase =
+  | "loading"
+  | "not_found"
+  | "unavailable"
+  | "verify"
+  | "property"
+  | "interest_success"
+  | "not_interested_thanks";
+
+function isPropertyShareable(property: Property): boolean {
+  return property.status === "Active";
 }
 
 export default function SharedProperty() {
   const [, params] = useRoute("/share/property/:id");
+  const propertyId = params?.id ?? "";
+
+  const [phase, setPhase] = useState<PagePhase>("loading");
   const [property, setProperty] = useState<Property | null>(null);
+  const [session, setSession] = useState<TenantShareSession | null>(null);
+  const [response, setResponse] = useState<ReturnType<typeof getTenantShareResponse>>(null);
+  const [ctaLoading, setCtaLoading] = useState(false);
+  const [ctaError, setCtaError] = useState<string | null>(null);
+
+  const bootstrap = useCallback(() => {
+    if (!propertyId) {
+      setPhase("not_found");
+      return;
+    }
+
+    setPhase("loading");
+    const found = getProperties().find((p) => p.id === propertyId) ?? null;
+
+    if (!found) {
+      setProperty(null);
+      setPhase("not_found");
+      return;
+    }
+
+    if (!isPropertyShareable(found)) {
+      setProperty(found);
+      setPhase("unavailable");
+      return;
+    }
+
+    setProperty(found);
+    const savedSession = getTenantShareSession(propertyId);
+    const savedResponse = getTenantShareResponse(propertyId);
+    setSession(savedSession);
+    setResponse(savedResponse);
+
+    if (!savedSession) {
+      setPhase("verify");
+      return;
+    }
+
+    if (savedResponse === "not_interested") {
+      setPhase("not_interested_thanks");
+      return;
+    }
+
+    setPhase("property");
+  }, [propertyId]);
 
   useEffect(() => {
-    if (!params?.id) return;
-    const found = getProperties().find((p) => p.id === params.id) ?? null;
-    setProperty(found);
-  }, [params?.id]);
+    bootstrap();
+  }, [bootstrap]);
 
-  if (!property) {
+  const handleVerified = (verified: TenantShareSession) => {
+    setSession(verified);
+    const savedResponse = getTenantShareResponse(propertyId);
+    setResponse(savedResponse);
+    if (savedResponse === "not_interested") {
+      setPhase("not_interested_thanks");
+    } else {
+      setPhase("property");
+    }
+  };
+
+  const handleInterested = async () => {
+    if (!property || !session) return;
+    setCtaError(null);
+    setCtaLoading(true);
+    try {
+      const label = getPropertyInviteLabel(property);
+      createPropertyShareInquiry({
+        name: session.name,
+        phone: session.phone,
+        propertyId: property.id,
+        propertyLabel: label,
+      });
+      setTenantShareResponse(property.id, "interested");
+      setResponse("interested");
+      setPhase("interest_success");
+    } catch {
+      setCtaError("Something went wrong. Please check your connection and try again.");
+    } finally {
+      setCtaLoading(false);
+    }
+  };
+
+  const handleNotInterested = () => {
+    if (!property || !session) return;
+    setCtaError(null);
+    setCtaLoading(true);
+    try {
+      recordPropertyNotInterested({
+        name: session.name,
+        phone: session.phone,
+        propertyId: property.id,
+      });
+      setTenantShareResponse(property.id, "not_interested");
+      setResponse("not_interested");
+      setPhase("not_interested_thanks");
+    } catch {
+      setCtaError("Something went wrong. Please try again.");
+    } finally {
+      setCtaLoading(false);
+    }
+  };
+
+  const pageShell = (children: React.ReactNode) => (
+    <div className="min-h-screen bg-[#F5F7FA]">
+      <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-center px-4 sticky top-0 z-10">
+        <TrustKeyperLogo variant="brand" size="header" />
+      </header>
+      <main className="max-w-lg mx-auto p-4 pb-8">{children}</main>
+    </div>
+  );
+
+  if (phase === "loading") {
+    return pageShell(<PropertyPublicCardSkeleton />);
+  }
+
+  if (phase === "not_found") {
     return (
       <div className="min-h-screen bg-[#F5F7FA] flex flex-col items-center justify-center p-6 text-center">
         <Building2 size={40} className="text-gray-300 mb-3" />
@@ -29,108 +162,105 @@ export default function SharedProperty() {
     );
   }
 
-  const title = getPropertyTitle(property);
-  const images = property.images ?? [];
-  const type =
-    property.propertyType === "Other"
-      ? property.propertyTypeOther || "Property"
-      : property.propertyType;
+  if (phase === "unavailable") {
+    return (
+      <div className="min-h-screen bg-[#F5F7FA] flex flex-col items-center justify-center p-6 text-center">
+        <Building2 size={40} className="text-gray-300 mb-3" />
+        <p className="text-gray-600 font-medium">This property is no longer available</p>
+        <p className="text-sm text-gray-400 mt-1">
+          {property ? getPropertyTitle(property) : "The listing"} may have been rented or removed.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA]">
-      <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-center px-4">
-        <TrustKeyperLogo variant="brand" size="header" />
-      </header>
+    <>
+      {phase === "verify" && property ? (
+        <TenantPropertyVerification
+          propertyId={property.id}
+          onVerified={handleVerified}
+        />
+      ) : null}
 
-      <main className="max-w-3xl mx-auto p-4 sm:p-8 space-y-5">
-        <div className="rounded-xl overflow-hidden bg-gray-100 aspect-[16/10]">
-          {images[0] ? (
-            <img src={images[0]} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-300">
-              <Building2 size={48} />
-            </div>
-          )}
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
-            <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-              <MapPin size={14} />
-              {[property.area, property.city].filter(Boolean).join(", ") || "—"}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-            <div className="rounded-lg bg-gray-50 p-3">
-              <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-                <IndianRupee size={12} /> Rent
-              </p>
-              <p className="font-semibold text-gray-900">{formatRent(property.monthlyRent)}</p>
-            </div>
-            <div className="rounded-lg bg-gray-50 p-3">
-              <p className="text-xs text-gray-500 mb-1">Type</p>
-              <p className="font-semibold text-gray-900">{type || "—"}</p>
-            </div>
-            <div className="rounded-lg bg-gray-50 p-3">
-              <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-                <BedDouble size={12} /> Beds
-              </p>
-              <p className="font-semibold text-gray-900">{property.bedrooms || property.unitSize || "—"}</p>
-            </div>
-            <div className="rounded-lg bg-gray-50 p-3">
-              <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-                <Calendar size={12} /> Available
-              </p>
-              <p className="font-semibold text-gray-900">
-                {property.availableFrom
-                  ? new Date(property.availableFrom).toLocaleDateString("en-IN")
-                  : "Immediately"}
-              </p>
-            </div>
-          </div>
-
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <div>
-              <dt className="text-gray-500">Furnishing</dt>
-              <dd className="font-medium text-gray-900">{property.furnishing || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">Built-up area</dt>
-              <dd className="font-medium text-gray-900">
-                {property.builtUpArea
-                  ? `${property.builtUpArea} ${property.builtUpUnits || ""}`.trim()
-                  : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">Deposit</dt>
-              <dd className="font-medium text-gray-900">
-                {property.securityDeposit
-                  ? `₹${Number(property.securityDeposit).toLocaleString("en-IN")}`
-                  : "—"}
-              </dd>
-            </div>
-            <div className="flex items-start gap-1">
-              <Bath size={14} className="text-gray-400 mt-0.5 shrink-0" />
-              <div>
-                <dt className="text-gray-500">Bathrooms</dt>
-                <dd className="font-medium text-gray-900">{property.bathrooms || "—"}</dd>
+      {(phase === "property" ||
+        phase === "interest_success" ||
+        phase === "not_interested_thanks") &&
+      property &&
+      session ? (
+        pageShell(
+          <>
+            {ctaError ? (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {ctaError}
               </div>
-            </div>
-          </dl>
+            ) : null}
+            <PropertyPublicCard
+              property={property}
+              response={response}
+              ctaLoading={ctaLoading}
+              onInterested={() => void handleInterested()}
+              onNotInterested={handleNotInterested}
+            />
+            <p className="text-center text-xs text-gray-400 mt-6">Shared via TrustKeyper</p>
+          </>,
+        )
+      ) : null}
 
-          {property.address ? (
-            <div className="pt-3 border-t border-gray-100">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Address</p>
-              <p className="text-sm text-gray-700">{property.address}</p>
+      {phase === "interest_success" ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8 text-center relative">
+            <div className="w-16 h-16 rounded-full bg-green-50 mx-auto mb-4 flex items-center justify-center">
+              <CheckCircle2 size={36} className="text-green-600" />
             </div>
-          ) : null}
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Interest shared</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Your interest has been shared with the property owner.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button
+                type="button"
+                className="w-full h-11 rounded-[4px] font-semibold"
+                onClick={() => setPhase("property")}
+              >
+                View Property Again
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-11 rounded-[4px] font-semibold"
+                onClick={() => setPhase("property")}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
         </div>
+      ) : null}
 
-        <p className="text-center text-xs text-gray-400 pb-6">Shared via TrustKeyper</p>
-      </main>
-    </div>
+      {phase === "not_interested_thanks" && !ctaLoading ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 pointer-events-none">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8 text-center pointer-events-auto relative">
+            <button
+              type="button"
+              onClick={() => setPhase("property")}
+              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+              aria-label="Close"
+            >
+              <X size={18} className="text-gray-600" />
+            </button>
+            <p className="text-lg font-semibold text-gray-900 mb-2">Thank you for your response.</p>
+            <p className="text-sm text-gray-500 mb-6">We&apos;ve recorded your preference.</p>
+            <Button
+              type="button"
+              className="w-full h-11 rounded-[4px] font-semibold"
+              onClick={() => setPhase("property")}
+            >
+              Continue
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
