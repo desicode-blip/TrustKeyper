@@ -39,13 +39,15 @@ export function AuthPhoneField({
           value={value}
           onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 10))}
           disabled={disabled}
+          aria-required="true"
+          aria-describedby={errorText ? `${id}-error` : helperText ? `${id}-helper` : undefined}
           className="bg-white flex-1"
         />
       </Box>
       {errorText ? (
-        <p className="text-sm text-destructive">{errorText}</p>
+        <p id={`${id}-error`} className="text-sm text-destructive">{errorText}</p>
       ) : helperText ? (
-        <p className="text-xs text-gray-500">{helperText}</p>
+        <p id={`${id}-helper`} className="text-xs text-gray-500">{helperText}</p>
       ) : null}
     </Box>
   );

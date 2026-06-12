@@ -11,21 +11,16 @@ import {
   buildAgreementEditDraft,
 } from "@/components/agreements/AgreementDocumentList";
 import { getAgreements, updateAgreement, type Agreement } from "@/lib/agreements";
-import { getOwnerName } from "@/components/OwnerLayout";
 import { setSessionItem } from "@/lib/storageKeys";
 
 export default function OwnerAgreements() {
   const [, setLocation] = useLocation();
-  const ownerName = getOwnerName().replace("!", "").trim().toLowerCase();
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [viewing, setViewing] = useState<Agreement | null>(null);
   const [editingManually, setEditingManually] = useState<Agreement | null>(null);
 
   const refresh = () => {
-    const list = getAgreements().filter(
-      (a) => a.ownerName?.trim().toLowerCase() === ownerName,
-    );
-    setAgreements(list);
+    setAgreements(getAgreements());
   };
 
   useEffect(() => {
@@ -36,7 +31,7 @@ export default function OwnerAgreements() {
       window.removeEventListener("storage", refresh);
       window.removeEventListener("focus", refresh);
     };
-  }, [ownerName]);
+  }, []);
 
   const recentAgreements = useMemo(
     () => [...agreements].sort((a, b) => b.createdAt - a.createdAt),
@@ -73,7 +68,7 @@ export default function OwnerAgreements() {
             description="Create a rental agreement for your property to collect documents and e-signatures."
           />
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 min-w-0 w-full overflow-x-hidden">
             {recentAgreements.map((agreement) => (
               <AgreementDocumentRow
                 key={agreement.id}

@@ -3,14 +3,10 @@ import { useParams, useLocation } from "wouter";
 import {
   ArrowLeft,
   MapPin,
-  Home,
   Users,
   Building2,
   Calendar,
   Share2,
-  Eye,
-  Heart,
-  MessageSquare,
   Flag,
   Layers,
   Wind,
@@ -43,6 +39,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import BrokerLayout from "@/components/BrokerLayout";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
+import { SharePropertyModal } from "@/components/owner/SharePropertyModal";
+import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 
 // ─── Neighbourhood data keyed by city ─────────────────────────────────────────
 
@@ -499,6 +497,92 @@ function ImageGallery({ images, selectedImage, onSelect }: {
   );
 }
 
+// ─── Summary card ─────────────────────────────────────────────────────────────
+
+function PropertySummaryCard({
+  property,
+  title,
+  type,
+  isEditing,
+  onEdit,
+  onShare,
+}: {
+  property: Property;
+  title: string;
+  type: string;
+  isEditing: boolean;
+  onEdit: () => void;
+  onShare: () => void;
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+      <div>
+        <h1 className="text-lg font-semibold text-gray-900 leading-tight">{title}</h1>
+        <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
+          <MapPin size={13} className="text-gray-400" />
+          <span>
+            {property.area}, {property.city}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div>
+          <p className="text-lg font-semibold text-primary">{formatRent(property.monthlyRent)}</p>
+          <p className="text-[10px] text-gray-500">Rent/month</p>
+        </div>
+        <div>
+          <p className="text-lg font-semibold text-gray-900">{property.builtUpArea || "—"}</p>
+          <p className="text-[10px] text-gray-500">{property.builtUpArea ? property.builtUpUnits : ""}</p>
+        </div>
+        <div>
+          <p className="text-lg font-semibold text-gray-900">{formatDeposit(property.securityDeposit)}</p>
+          <p className="text-[10px] text-gray-500">Deposit</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-y-2 text-sm">
+        {property.unitSize && (
+          <div className="flex items-center gap-2 text-gray-700">
+            <BedDouble size={14} className="text-gray-400" />
+            <span>{property.unitSize !== "Other" ? property.unitSize : property.unitSizeOther}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-2 text-gray-700">
+          <Building2 size={14} className="text-gray-400" />
+          <span>{type}</span>
+        </div>
+        {property.tenantsPreferred?.length > 0 && (
+          <div className="flex items-center gap-2 text-gray-700">
+            <Users size={14} className="text-gray-400" />
+            <span className="truncate">{property.tenantsPreferred[0]}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-2 text-gray-700">
+          <Calendar size={14} className="text-gray-400" />
+          <span>{property.availableFrom ? formatDate(property.availableFrom) : "Immediately"}</span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1.5 text-sm font-medium text-green-600">
+        <CheckCircle2 size={15} />
+        <span>Verified Available</span>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <OwnerFlowButton type="button" onClick={onShare} className="w-full">
+          <Share2 size={15} /> Share Property
+        </OwnerFlowButton>
+        {!isEditing && (
+          <OwnerFlowButton type="button" flowVariant="outline" onClick={onEdit} className="w-full">
+            Edit Property
+          </OwnerFlowButton>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function PropertyDetails() {
@@ -508,6 +592,7 @@ export default function PropertyDetails() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [selectedImage, setSelectedImage] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const { toast } = useToast();
 
   // Form states
@@ -599,14 +684,9 @@ export default function PropertyDetails() {
     { value: "owner", label: "About Owner" },
   ];
 
-const whatsappMsg = encodeURIComponent(
-    `${property.ownerName || "Broker"} wants to share this property with you: ${title} in ${property.area}, ${property.city}.`
-  );
-
   return (
     <BrokerLayout>
       <div>
-        {/* Back */}
         <div className="flex items-center justify-between mb-5">
           <button
             onClick={() => setLocation("/broker/properties")}
@@ -617,23 +697,31 @@ const whatsappMsg = encodeURIComponent(
           {!isEditing && (
             <button
               onClick={() => setIsEditing(true)}
-              className="text-sm font-medium text-primary hover:underline"
+              className="text-sm font-medium text-primary hover:underline md:hidden"
             >
               Edit Property
             </button>
           )}
         </div>
 
-        {/* Main grid */}
         <div className="grid grid-cols-1 md:grid-cols-[1fr_296px] gap-6 items-start">
-          {/* ── Left column ─────────────────────────────────────────────── */}
           <div className="min-w-0">
-            {/* Gallery */}
             <ImageGallery
               images={property.images ?? []}
               selectedImage={selectedImage}
               onSelect={setSelectedImage}
             />
+
+            <div className="md:hidden mt-4">
+              <PropertySummaryCard
+                property={property}
+                title={title}
+                type={type}
+                isEditing={isEditing}
+                onEdit={() => setIsEditing(true)}
+                onShare={() => setShareOpen(true)}
+              />
+            </div>
 
             <FlowSegmentTabs
               value={activeTab}
@@ -642,17 +730,20 @@ const whatsappMsg = encodeURIComponent(
               className="mt-6"
             />
 
-            {/* Tab content */}
             <div className="mt-4">
               {isEditing ? (
-                <EditForm 
-                  onSave={handleSave} 
-                  onCancel={handleDiscard} 
+                <EditForm
+                  onSave={handleSave}
+                  onCancel={handleDiscard}
                   drafts={{
-                    nickname: draftNickname, setNickname: setDraftNickname,
-                    rent: draftRent, setRent: setDraftRent,
-                    area: draftArea, setArea: setDraftArea,
-                    city: draftCity, setCity: setDraftCity
+                    nickname: draftNickname,
+                    setNickname: setDraftNickname,
+                    rent: draftRent,
+                    setRent: setDraftRent,
+                    area: draftArea,
+                    setArea: setDraftArea,
+                    city: draftCity,
+                    setCity: setDraftCity,
                   }}
                 />
               ) : (
@@ -666,121 +757,20 @@ const whatsappMsg = encodeURIComponent(
             </div>
           </div>
 
-          {/* ── Right column ─────────────────────────────────────────────── */}
-          <div className="space-y-4 sticky top-6">
-            {/* Summary card */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-              {/* Title */}
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900 leading-tight">{title}</h1>
-                <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
-                  <MapPin size={13} className="text-gray-400" />
-                  <span>{property.area}, {property.city}</span>
-                </div>
-              </div>
-
-              {/* Stats row */}
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <p className="text-lg font-semibold text-accent">{formatRent(property.monthlyRent)}</p>
-                  <p className="text-[10px] text-gray-500">Rent/month</p>
-                </div>
-                <div>
-                  <p className="text-lg font-semibold text-gray-900">
-                    {property.builtUpArea || "—"}
-                  </p>
-                  <p className="text-[10px] text-gray-500">{property.builtUpArea ? property.builtUpUnits : ""}</p>
-                </div>
-                <div>
-                  <p className="text-lg font-semibold text-gray-900">{formatDeposit(property.securityDeposit)}</p>
-                  <p className="text-[10px] text-gray-500">Deposit</p>
-                </div>
-              </div>
-
-              {/* Info grid */}
-              <div className="grid grid-cols-2 gap-y-2 text-sm">
-                {property.unitSize && (
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <BedDouble size={14} className="text-gray-400" />
-                    <span>{property.unitSize !== "Other" ? property.unitSize : property.unitSizeOther}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 text-gray-700">
-                  <Building2 size={14} className="text-gray-400" />
-                  <span>{type}</span>
-                </div>
-                {property.tenantsPreferred?.length > 0 && (
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <Users size={14} className="text-gray-400" />
-                    <span className="truncate">{property.tenantsPreferred[0]}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 text-gray-700">
-                  <Calendar size={14} className="text-gray-400" />
-                  <span>{property.availableFrom ? formatDate(property.availableFrom) : "Immediately"}</span>
-                </div>
-              </div>
-
-              {/* Verified badge */}
-              <div className="flex items-center gap-1.5 text-sm font-medium text-green-600">
-                <CheckCircle2 size={15} />
-                <span>Verified Available</span>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex flex-col gap-2">
-                <a
-                  href={`https://wa.me/?text=${whatsappMsg}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex w-full items-center justify-center gap-2 h-10 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
-                >
-                  <Share2 size={15} /> Share via WhatsApp
-                </a>
-                {!isEditing && (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="flex w-full items-center justify-center gap-2 h-10 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5 transition-colors"
-                  >
-                    Edit Property
-                  </button>
-                )}
-              </div>
-
-
-            </div>
-
-            {/* Activity card */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <p className="text-sm font-semibold text-gray-800 mb-4">Activity on This Property</p>
-              <div className="grid grid-cols-3 text-center">
-                <div>
-                  <div className="flex items-center justify-center gap-1 text-gray-500 mb-1">
-                    <Eye size={14} />
-                    <span className="font-semibold text-gray-900 text-base">0</span>
-                  </div>
-                  <p className="text-[10px] text-gray-500">Views</p>
-                </div>
-                <div>
-                  <div className="flex items-center justify-center gap-1 text-red-400 mb-1">
-                    <Heart size={14} />
-                    <span className="font-semibold text-gray-900 text-base">0</span>
-                  </div>
-                  <p className="text-[10px] text-gray-500">Shortlists</p>
-                </div>
-                <div>
-                  <div className="flex items-center justify-center gap-1 text-blue-400 mb-1">
-                    <MessageSquare size={14} />
-                    <span className="font-semibold text-gray-900 text-base">0</span>
-                  </div>
-                  <p className="text-[10px] text-gray-500">Contacted</p>
-                </div>
-              </div>
-            </div>
+          <div className="hidden md:block sticky top-6">
+            <PropertySummaryCard
+              property={property}
+              title={title}
+              type={type}
+              isEditing={isEditing}
+              onEdit={() => setIsEditing(true)}
+              onShare={() => setShareOpen(true)}
+            />
           </div>
         </div>
       </div>
+
+      <SharePropertyModal property={property} open={shareOpen} onClose={() => setShareOpen(false)} />
     </BrokerLayout>
   );
 }
