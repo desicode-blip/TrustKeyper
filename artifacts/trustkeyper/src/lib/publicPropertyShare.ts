@@ -3,38 +3,71 @@ import { getProperties } from "@/lib/properties";
 import { getActiveSession } from "@/lib/storageKeys";
 import { pushAccountKeyToCloud } from "@/lib/cloudSync";
 import { getPropertyInviteLabel } from "@/lib/ownerTenants";
+import {
+  resolveShareSource,
+  sanitizePropertyForPublicShare,
+  shouldMaskOwnerDetails,
+  type PropertyShareSource,
+} from "@/lib/propertyShareView";
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
+
+export type SharedPropertyPayload = {
+  property: Property;
+  sharedBy: PropertyShareSource;
+  maskOwnerDetails: boolean;
+};
 
 function shareSnapshotKey(propertyId: string): string {
   return `property_share_${propertyId}`;
 }
 
-export async function fetchSharedProperty(propertyId: string): Promise<Property | null> {
+export async function fetchSharedProperty(propertyId: string): Promise<SharedPropertyPayload | null> {
   try {
     const res = await fetch(`${API_BASE}/share/property/${encodeURIComponent(propertyId)}`, {
       headers: { Accept: "application/json" },
     });
     if (res.ok) {
-      const json = (await res.json()) as { property?: Property };
-      if (json.property?.id === propertyId) return json.property;
+      const json = (await res.json()) as {
+        property?: Property;
+        sharedBy?: PropertyShareSource;
+        maskOwnerDetails?: boolean;
+      };
+      if (json.property?.id === propertyId) {
+        const sharedBy = resolveShareSource(json.sharedBy, json.property);
+        const maskOwnerDetails = json.maskOwnerDetails ?? shouldMaskOwnerDetails(sharedBy, json.property);
+        return {
+          property: sanitizePropertyForPublicShare(json.property, maskOwnerDetails),
+          sharedBy,
+          maskOwnerDetails,
+        };
+      }
     }
   } catch {
     /* fall through to local */
   }
 
   if (typeof window === "undefined") return null;
-  return getProperties().find((p) => p.id === propertyId) ?? null;
+  const local = getProperties().find((p) => p.id === propertyId) ?? null;
+  if (!local) return null;
+  const sharedBy = resolveShareSource(null, local);
+  const maskOwnerDetails = shouldMaskOwnerDetails(sharedBy, local);
+  return {
+    property: sanitizePropertyForPublicShare(local, maskOwnerDetails),
+    sharedBy,
+    maskOwnerDetails,
+  };
 }
 
 export async function publishPropertyShare(property: Property): Promise<void> {
   const session = getActiveSession();
   if (!session) return;
 
+  const sharedByRole = session.role === "broker" ? "broker" : "owner";
   const payload = JSON.stringify({
     property,
-    ownerPhone: session.phone,
-    ownerRole: session.role,
+    sharedByPhone: session.phone,
+    sharedByRole,
     updatedAt: Date.now(),
   });
 
@@ -53,6 +86,7 @@ export async function submitPropertyShareInquiry(input: {
   name: string;
   phone: string;
   propertyLabel: string;
+  sharedBy?: PropertyShareSource;
 }): Promise<{ ok: boolean; isDuplicate?: boolean; error?: string }> {
   try {
     const res = await fetch(
@@ -64,6 +98,7 @@ export async function submitPropertyShareInquiry(input: {
           name: input.name,
           phone: input.phone,
           propertyLabel: input.propertyLabel,
+          sharedBy: input.sharedBy,
         }),
       },
     );

@@ -5,17 +5,23 @@ import * as vercelDb from "./vercelSyncDb.js";
 type StoredProperty = {
   id: string;
   status?: string;
+  uploadedBy?: string;
+  ownerName?: string;
+  ownerContact?: string;
+  coOwners?: { name?: string; contact?: string }[];
   [key: string]: unknown;
 };
 
 type PropertyShareSnapshot = {
   property: StoredProperty;
+  sharedByPhone?: string;
+  sharedByRole?: string;
   ownerPhone?: string;
   ownerRole?: string;
   updatedAt?: number;
 };
 
-type OwnerInquiry = {
+type ShareInquiry = {
   id: string;
   name: string;
   phone: string;
@@ -24,6 +30,7 @@ type OwnerInquiry = {
   status: "open" | "invited";
   leadStatus?: "new" | "contacted" | "converted" | "rejected";
   source?: "property_share" | "manual";
+  sharedBy?: "broker" | "owner";
   createdAt: number;
   updatedAt?: number;
 };
@@ -51,9 +58,30 @@ function isActiveProperty(property: StoredProperty): boolean {
   return property.status === "Active" || property.status === undefined;
 }
 
-async function findPropertyRecord(
-  propertyId: string,
-): Promise<{ phone: string; role: string; property: StoredProperty } | null> {
+function resolveSharedByRole(
+  snapshotRole?: string,
+  property?: StoredProperty,
+): "broker" | "owner" {
+  if (snapshotRole === "broker" || snapshotRole === "owner") return snapshotRole;
+  return property?.uploadedBy === "broker" ? "broker" : "owner";
+}
+
+function sanitizePropertyForPublic(property: StoredProperty, maskOwner: boolean): StoredProperty {
+  if (!maskOwner) return property;
+  return {
+    ...property,
+    ownerName: "",
+    ownerContact: "",
+    coOwners: [],
+  };
+}
+
+async function findPropertyRecord(propertyId: string): Promise<{
+  phone: string;
+  role: string;
+  property: StoredProperty;
+  sharedBy: "broker" | "owner";
+} | null> {
   if (!vercelDb.usePostgres()) return null;
 
   const snapshotRows = await vercelDb.queryRows<{ phone: string; role: string; value: string }>(
@@ -64,10 +92,14 @@ async function findPropertyRecord(
     try {
       const snap = JSON.parse(snapshotRows[0].value) as PropertyShareSnapshot;
       if (snap.property?.id === propertyId && isActiveProperty(snap.property)) {
+        const sharedBy = resolveSharedByRole(snap.sharedByRole, snap.property);
+        const recipientPhone = snap.sharedByPhone ?? snapshotRows[0].phone;
+        const recipientRole = snap.sharedByRole ?? snapshotRows[0].role;
         return {
-          phone: snap.ownerPhone ?? snapshotRows[0].phone,
-          role: snap.ownerRole ?? snapshotRows[0].role,
-          property: snap.property,
+          phone: recipientPhone,
+          role: recipientRole,
+          sharedBy,
+          property: sanitizePropertyForPublic(snap.property, sharedBy === "broker"),
         };
       }
     } catch {
@@ -85,7 +117,13 @@ async function findPropertyRecord(
       if (!Array.isArray(list)) continue;
       const found = list.find((p) => p.id === propertyId);
       if (found && isActiveProperty(found)) {
-        return { phone: row.phone, role: row.role, property: found };
+        const sharedBy = resolveSharedByRole(row.role, found);
+        return {
+          phone: row.phone,
+          role: row.role,
+          sharedBy,
+          property: sanitizePropertyForPublic(found, sharedBy === "broker"),
+        };
       }
     } catch {
       /* ignore malformed row */
@@ -95,14 +133,19 @@ async function findPropertyRecord(
   return null;
 }
 
-async function appendOwnerInquiry(
-  ownerPhone: string,
-  ownerRole: string,
-  inquiry: OwnerInquiry,
-): Promise<{ inquiry: OwnerInquiry; isDuplicate: boolean }> {
-  const data = await vercelDb.getAccountData(ownerPhone, ownerRole);
-  const raw = data.owner_tenant_inquiries;
-  const list: OwnerInquiry[] = raw ? (JSON.parse(raw) as OwnerInquiry[]) : [];
+function inquiriesDataKey(role: string): string {
+  return role === "broker" ? "broker_property_inquiries" : "owner_tenant_inquiries";
+}
+
+async function appendShareInquiry(
+  recipientPhone: string,
+  recipientRole: string,
+  inquiry: ShareInquiry,
+): Promise<{ inquiry: ShareInquiry; isDuplicate: boolean }> {
+  const dataKey = inquiriesDataKey(recipientRole);
+  const data = await vercelDb.getAccountData(recipientPhone, recipientRole);
+  const raw = data[dataKey];
+  const list: ShareInquiry[] = raw ? (JSON.parse(raw) as ShareInquiry[]) : [];
   const digits = phoneLast10(inquiry.phone);
   const existing = list.find(
     (row) =>
@@ -116,12 +159,7 @@ async function appendOwnerInquiry(
     return { inquiry: existing, isDuplicate: true };
   }
   list.unshift(inquiry);
-  await vercelDb.setAccountDataKey(
-    ownerPhone,
-    ownerRole,
-    "owner_tenant_inquiries",
-    JSON.stringify(list),
-  );
+  await vercelDb.setAccountDataKey(recipientPhone, recipientRole, dataKey, JSON.stringify(list));
   return { inquiry, isDuplicate: false };
 }
 
@@ -149,7 +187,11 @@ export async function handleSharePropertyRequest(
       return;
     }
 
-    json(res, 200, { property: record.property });
+    json(res, 200, {
+      property: record.property,
+      sharedBy: record.sharedBy,
+      maskOwnerDetails: record.sharedBy === "broker",
+    });
     return;
   }
 
@@ -163,6 +205,7 @@ export async function handleSharePropertyRequest(
       name?: string;
       phone?: string;
       propertyLabel?: string;
+      sharedBy?: "broker" | "owner";
     } | null;
     const name = body?.name?.trim() ?? "";
     const phone = body?.phone?.trim() ?? "";
@@ -183,7 +226,11 @@ export async function handleSharePropertyRequest(
       return;
     }
 
-    const inquiry: OwnerInquiry = {
+    const sharedBy = body?.sharedBy === "broker" || body?.sharedBy === "owner"
+      ? body.sharedBy
+      : record.sharedBy;
+
+    const inquiry: ShareInquiry = {
       id: `inq_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       name,
       phone: formatMemberContact(phone),
@@ -192,10 +239,11 @@ export async function handleSharePropertyRequest(
       status: "open",
       leadStatus: "new",
       source: "property_share",
+      sharedBy,
       createdAt: Date.now(),
     };
 
-    const result = await appendOwnerInquiry(record.phone, record.role, inquiry);
+    const result = await appendShareInquiry(record.phone, record.role, inquiry);
     json(res, 200, result);
     return;
   }
