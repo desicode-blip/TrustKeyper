@@ -58,6 +58,8 @@ const emptyProfileRecord = (): Record<string, string> => ({
   bankIFSC: "",
   upiId: "",
   upiQrFileName: "",
+  propertyCount: "",
+  propertyIntent: "",
 });
 
 function applyProfileToSession(phone: string, role: Role): void {

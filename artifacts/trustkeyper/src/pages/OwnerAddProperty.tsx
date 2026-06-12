@@ -14,10 +14,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import OwnerLayout from "@/components/OwnerLayout";
+import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/FlowStickyActionBar";
 import { FlowClearButton } from "@/components/owner/FlowClearButton";
 import { addProperty, getProperties, updateProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
-import { getItem, getSessionItem, removeItem, setItem } from "@/lib/storageKeys";
+import { todayLocalDateInputMin } from "@/lib/dateInput";
+import { getOwnerProfile } from "@/lib/ownerProfile";
+import { getActiveSession, getItem, getSessionItem, removeItem, setItem } from "@/lib/storageKeys";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -263,6 +266,7 @@ function loadPropertyIntoForm(
 }
 
 export default function OwnerAddProperty() {
+  const availableFromMin = todayLocalDateInputMin();
   const [, setLocation] = useLocation();
   const [entrySource, setEntrySource] = useState<"dashboard" | "onboarding">("dashboard");
   const [editingPropertyId, setEditingPropertyId] = useState<string | null>(null);
@@ -320,9 +324,20 @@ export default function OwnerAddProperty() {
     const fromOnboarding = sessionStorage.getItem("tk_owner_add_property_entry") === "onboarding";
     setEntrySource(fromOnboarding ? "onboarding" : "dashboard");
 
-    // Pre-fill owner details from onboarding if available
-    const storedName = getSessionItem("name");
-    const storedPhone = getSessionItem("phone") || getSessionItem("contact");
+    // Pre-fill owner details from session mirrors and profile blob
+    const profile = getOwnerProfile();
+    const storedName =
+      getSessionItem("name") ||
+      getSessionItem("owner_name") ||
+      profile.name ||
+      "";
+    const storedPhone =
+      getSessionItem("phone") ||
+      getSessionItem("contact") ||
+      getSessionItem("owner_phone") ||
+      profile.phone ||
+      getActiveSession()?.phone ||
+      "";
     if (storedName) setOwnerName(storedName);
     if (storedPhone) setOwnerContact(storedPhone);
 
@@ -820,7 +835,7 @@ export default function OwnerAddProperty() {
             <span className="px-3 text-gray-400 h-10 flex items-center">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </span>
-            <input type="date" value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} className="flex-1 h-10 px-2 text-[13px] text-gray-600 focus:outline-none bg-white w-full" />
+            <input type="date" min={availableFromMin} value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} className="flex-1 h-10 px-2 text-[13px] text-gray-600 focus:outline-none bg-white w-full" />
           </div>
         </div>
       </div>
@@ -921,15 +936,26 @@ export default function OwnerAddProperty() {
     setSecurityDeposit("");
     setAvailableFrom("");
     setImageUrls([]);
-    const storedName = getSessionItem("name");
-    const storedPhone = getSessionItem("phone") || getSessionItem("contact");
+    const profile = getOwnerProfile();
+    const storedName =
+      getSessionItem("name") ||
+      getSessionItem("owner_name") ||
+      profile.name ||
+      "";
+    const storedPhone =
+      getSessionItem("phone") ||
+      getSessionItem("contact") ||
+      getSessionItem("owner_phone") ||
+      profile.phone ||
+      getActiveSession()?.phone ||
+      "";
     if (storedName) setOwnerName(storedName);
     if (storedPhone) setOwnerContact(storedPhone);
   };
 
   return (
     <OwnerLayout>
-      <div className="p-4 sm:p-8 max-w-5xl mx-auto w-full min-w-0 pb-32 sm:pb-8">
+      <div className={`p-4 sm:p-8 max-w-5xl mx-auto w-full min-w-0 ${FLOW_STICKY_CONTENT_CLASS} sm:pb-8`}>
         <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5">
           <button
             type="button"
@@ -976,18 +1002,40 @@ export default function OwnerAddProperty() {
                 <p className="text-[11px] text-gray-500">Our expert Property Manager will guide you through the process</p>
               </div>
             </div>
-            <Button variant="outline" className="border-primary text-primary hover:bg-blue-50 text-xs px-8 h-10 rounded-sm font-semibold transition-all" onClick={() => setIsManagedPopupOpen(true)}>
+            <Button
+              variant="outline"
+              className="border-primary text-primary hover:bg-blue-50 text-xs px-8 h-10 rounded-sm font-semibold transition-all"
+              onClick={async () => {
+                setIsManagedPopupOpen(true);
+                const profile = getOwnerProfile();
+                try {
+                  await fetch("/api/managed-interest", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      name: ownerName || profile.name,
+                      phone: ownerContact || profile.phone,
+                      propertyCount: profile.propertyCount,
+                      propertyIntent: profile.propertyIntent,
+                      entrySource,
+                    }),
+                  });
+                } catch {
+                  // silent — dialog already opened, email failure is non-blocking
+                }
+              }}
+            >
               I'm interested
             </Button>
           </div>
         </div>
 
         {/* Sticky Mobile Continue */}
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-gray-200 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-          <Button size="lg" onClick={handleContinue} disabled={!canContinue()} className="w-full bg-primary hover:bg-primary/90 rounded-sm">
+        <FlowStickyActionBar>
+          <Button size="lg" onClick={handleContinue} disabled={!canContinue()} className="w-full bg-primary hover:bg-primary/90 rounded-[4px]">
             {subStep === 5 ? "Submit" : "Continue \u2192"}
           </Button>
-        </div>
+        </FlowStickyActionBar>
       </div>
 
       {/* Success Modal */}

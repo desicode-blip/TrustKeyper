@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { AuthTextField } from "@/components/auth/AuthTextField";
@@ -14,6 +15,7 @@ interface OwnerStep3DetailsProps {
 }
 
 export default function OwnerStep3Details({ details, setDetails, onNext }: OwnerStep3DetailsProps) {
+  const [, setLocation] = useLocation();
   const digits = details.phone.replace(/\D/g, "").slice(0, 10);
   const [duplicateOwnerPhone, setDuplicateOwnerPhone] = useState(false);
 
@@ -54,12 +56,23 @@ export default function OwnerStep3Details({ details, setDetails, onNext }: Owner
           id="phone"
           value={digits}
           onChange={(phone) => setDetails({ ...details, phone })}
-          errorText={duplicateOwnerPhone ? "An account already exists for this number." : null}
           helperText={duplicateOwnerPhone ? undefined : "We'll send an OTP to verify"}
         />
+        {duplicateOwnerPhone ? (
+          <p className="text-sm text-destructive">
+            Account exists.{" "}
+            <button
+              type="button"
+              onClick={() => setLocation("/login")}
+              className="font-medium underline underline-offset-2 hover:text-destructive/80"
+            >
+              Log in instead?
+            </button>
+          </p>
+        ) : null}
       </div>
 
-      <AuthSignupScreenFooter cta={cta} persistRole="owner" />
+      <AuthSignupScreenFooter cta={cta} linkType="none" persistRole="owner" />
     </div>
   );
 }

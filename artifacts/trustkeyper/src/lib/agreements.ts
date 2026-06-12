@@ -24,6 +24,7 @@ export interface Agreement {
   noticePeriod: string;
   rentDueDay: string;
   maintenanceCharges?: string;
+  maintenanceIncluded?: boolean;
   brokerageAmount: string;
   brokeragePaidBy: "Owner" | "Tenant" | "Both";
   brokerageMode: "Cash" | "Bank Transfer" | "UPI";
@@ -74,6 +75,7 @@ export function addAgreement(
 ): Agreement {
   const agreement: Agreement = {
     ...a,
+    documents: a.documents ?? [],
     id: `agr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     createdAt: Date.now(),
     status: a.status ?? "Draft",

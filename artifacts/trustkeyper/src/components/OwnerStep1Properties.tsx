@@ -50,9 +50,7 @@ export default function OwnerStep1Properties({
         })}
       </div>
 
-      <p className="text-gray-500 text-sm text-center lg:text-left mb-3 mt-1">This will help us personalize your journey</p>
-
-      <AuthSignupScreenFooter cta={cta} showTerms={false} persistRole="owner" />
+      <AuthSignupScreenFooter cta={cta} showTerms={false} linkType="none" persistRole="owner" />
     </div>
   );
 }
