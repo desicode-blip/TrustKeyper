@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, Send, Trash2, Users, Utensils } from "lucide-react";
+import { ChevronLeft, MessageCircle, Send, Trash2, Users, Utensils } from "lucide-react";
 import { FaLinkedin, FaWhatsapp } from "react-icons/fa";
 import { Link } from "wouter";
 import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
@@ -12,17 +12,24 @@ import {
   countRecordedInvites,
   deleteOwnerInvite,
   formatMemberContact,
+  getInquiryWhatsAppHref,
   getOwnerInvites,
+  getPropertyShareInquiries,
   getRecordedInviteStatus,
   getWhatsAppInviteHref,
   isInviteFromInquiry,
+  OWNER_INQUIRIES_UPDATED_EVENT,
   OWNER_INVITES_UPDATED_EVENT,
   updateOwnerInviteStatus,
+  updatePropertyInquiryLeadStatus,
+  type OwnerTenantInquiry,
   type OwnerTenantInvite,
+  type PropertyInquiryLeadStatus,
   type RecordedInviteStatus,
 } from "@/lib/ownerTenants";
 
 const TABS = [
+  { id: "inquiries", label: "Inquiries" },
   { id: "invites", label: "Invites" },
   { id: "active", label: "Active Tenants" },
 ] as const;
@@ -41,6 +48,98 @@ function getInitials(name: string): string {
     .join("")
     .substring(0, 2)
     .toUpperCase();
+}
+
+const LEAD_STATUS_LABELS: Record<PropertyInquiryLeadStatus, string> = {
+  new: "New",
+  contacted: "Contacted",
+  converted: "Converted",
+  rejected: "Rejected",
+};
+
+function LeadStatusBadge({ status }: { status: PropertyInquiryLeadStatus }) {
+  const className =
+    status === "new"
+      ? "bg-blue-100 text-blue-800 border-blue-200"
+      : status === "contacted"
+        ? "bg-amber-100 text-amber-800 border-amber-200"
+        : status === "converted"
+          ? "bg-green-100 text-green-800 border-green-200"
+          : "bg-gray-100 text-gray-700 border-gray-200";
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${className}`}
+    >
+      {LEAD_STATUS_LABELS[status]}
+    </span>
+  );
+}
+
+function formatInquiryDate(ts: number): string {
+  return new Date(ts).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function InquiryRow({
+  inquiry,
+  onUpdate,
+}: {
+  inquiry: OwnerTenantInquiry;
+  onUpdate: () => void;
+}) {
+  const whatsAppUrl = getInquiryWhatsAppHref(inquiry);
+  const leadStatus = inquiry.leadStatus ?? "new";
+
+  const handleStatusChange = (next: PropertyInquiryLeadStatus) => {
+    updatePropertyInquiryLeadStatus(inquiry.id, next);
+    onUpdate();
+  };
+
+  return (
+    <div className="rounded-lg bg-white border border-gray-200 p-4 flex flex-col sm:flex-row sm:items-center gap-4 min-w-0">
+      <div className="flex items-start gap-3 min-w-0 flex-1">
+        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-semibold shrink-0">
+          {getInitials(inquiry.name)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-semibold text-gray-900 text-[15px] truncate">{inquiry.name}</p>
+            <LeadStatusBadge status={leadStatus} />
+          </div>
+          <p className="text-sm text-gray-600 mt-0.5">{formatMemberContact(inquiry.phone)}</p>
+          <p className="text-xs text-gray-500 mt-1 leading-snug">For {inquiry.propertyLabel}</p>
+          <p className="text-xs text-gray-400 mt-1">Inquired {formatInquiryDate(inquiry.createdAt)}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:items-end gap-2 shrink-0">
+        <a
+          href={whatsAppUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="h-10 px-4 rounded-[4px] text-sm font-semibold border border-green-600 text-green-700 bg-white hover:bg-green-50 transition-colors inline-flex items-center justify-center gap-2"
+        >
+          <FaWhatsapp className="w-4 h-4 shrink-0 text-[#25D366]" aria-hidden />
+          Chat
+        </a>
+        <select
+          value={leadStatus}
+          onChange={(e) => handleStatusChange(e.target.value as PropertyInquiryLeadStatus)}
+          className="h-9 text-xs border border-gray-200 rounded-[4px] px-2 text-gray-700 bg-white"
+          aria-label={`Update status for ${inquiry.name}`}
+        >
+          {(Object.keys(LEAD_STATUS_LABELS) as PropertyInquiryLeadStatus[]).map((key) => (
+            <option key={key} value={key}>
+              {LEAD_STATUS_LABELS[key]}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
 }
 
 function OutcomeBadge({ status }: { status: RecordedInviteStatus }) {
@@ -194,9 +293,10 @@ function PropertyInvitesCard({
 
 export default function OwnerTenants() {
   const ownerName = getOwnerName();
-  const [activeTab, setActiveTab] = useState<TenantTab>("invites");
+  const [activeTab, setActiveTab] = useState<TenantTab>("inquiries");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [invites, setInvites] = useState<OwnerTenantInvite[]>([]);
+  const [inquiries, setInquiries] = useState<OwnerTenantInquiry[]>([]);
 
   const ownerProperties = useMemo(() => {
     return filterOwnerProperties(getProperties(), ownerName);
@@ -204,6 +304,7 @@ export default function OwnerTenants() {
 
   const reload = useCallback(() => {
     setInvites(getOwnerInvites());
+    setInquiries(getPropertyShareInquiries());
   }, []);
 
   useEffect(() => {
@@ -215,10 +316,12 @@ export default function OwnerTenants() {
     window.addEventListener("storage", refresh);
     window.addEventListener("focus", refresh);
     window.addEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
+    window.addEventListener(OWNER_INQUIRIES_UPDATED_EVENT, refresh);
     return () => {
       window.removeEventListener("storage", refresh);
       window.removeEventListener("focus", refresh);
       window.removeEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
+      window.removeEventListener(OWNER_INQUIRIES_UPDATED_EVENT, refresh);
     };
   }, [reload]);
 
@@ -235,6 +338,7 @@ export default function OwnerTenants() {
   const { accepted } = useMemo(() => countRecordedInvites(invites), [invites]);
 
   const tabLabel = (id: TenantTab) => {
+    if (id === "inquiries") return `Inquiries (${inquiries.length})`;
     if (id === "invites") return `Invites (${invites.length})`;
     return `Active Tenants (${accepted})`;
   };
@@ -261,6 +365,25 @@ export default function OwnerTenants() {
           className="mb-6"
           options={TABS.map((t) => ({ value: t.id, label: tabLabel(t.id) }))}
         />
+
+        {activeTab === "inquiries" && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">Inquiries</h2>
+            {inquiries.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                {inquiries.map((inq) => (
+                  <InquiryRow key={inq.id} inquiry={inq} onUpdate={reload} />
+                ))}
+              </div>
+            ) : (
+              <OwnerPageEmpty
+                icon={MessageCircle}
+                title="No inquiries yet"
+                description="When tenants express interest via your shared property link, they will appear here."
+              />
+            )}
+          </div>
+        )}
 
         {activeTab === "invites" && (
           <div className="space-y-6">
