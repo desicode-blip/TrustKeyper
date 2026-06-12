@@ -34,6 +34,7 @@ import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/FlowStickyActionBar";
 import { Button } from "@/components/ui/button";
 import { getPropertyTitle, type Property } from "@/lib/properties";
+import { BROKER_OWNER_MASK_MESSAGE } from "@/lib/propertyShareView";
 import type { TenantShareResponse } from "@/lib/tenantShareSession";
 import { cn } from "@/lib/utils";
 
@@ -336,7 +337,28 @@ function NeighbourhoodTab({ property }: { property: Property }) {
   );
 }
 
-function AboutOwnerTab({ property }: { property: Property }) {
+function AboutOwnerTab({
+  property,
+  maskOwnerDetails,
+}: {
+  property: Property;
+  maskOwnerDetails: boolean;
+}) {
+  if (maskOwnerDetails) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
+        <h3 className="text-base font-semibold text-gray-900 mb-4">About Owner</h3>
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-5 text-center">
+          <ShieldCheck size={28} className="text-primary mx-auto mb-3" />
+          <p className="text-sm font-medium text-gray-800">{BROKER_OWNER_MASK_MESSAGE}</p>
+          <p className="text-xs text-gray-500 mt-2">
+            Your broker will guide you through the next steps on TrustKeyper.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const co = property.coOwners ?? [];
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
@@ -415,7 +437,7 @@ function CtaSection({
       <div className={cn("rounded-xl border border-green-200 bg-green-50 p-4 text-center", className)}>
         <CheckCircle2 size={28} className="text-green-600 mx-auto mb-2" />
         <p className="text-sm font-semibold text-green-900">You expressed interest</p>
-        <p className="text-xs text-green-700 mt-1">The owner has been notified.</p>
+        <p className="text-xs text-green-700 mt-1">Your interest has been shared successfully.</p>
       </div>
     );
   }
@@ -452,7 +474,7 @@ function CtaSection({
         disabled={loading}
         onClick={onNotInterested}
       >
-        not interested
+        Not Interested
       </Button>
     </div>
   );
@@ -477,12 +499,14 @@ export function PropertyPublicCardSkeleton() {
 
 export function PropertyPublicCard({
   property,
+  maskOwnerDetails = false,
   response,
   ctaLoading,
   onInterested,
   onNotInterested,
 }: {
   property: Property;
+  maskOwnerDetails?: boolean;
   response: TenantShareResponse | null;
   ctaLoading: boolean;
   onInterested: () => void;
@@ -561,7 +585,9 @@ export function PropertyPublicCard({
         {activeTab === "overview" && <OverviewTab property={property} />}
         {activeTab === "amenities" && <AmenitiesTab property={property} />}
         {activeTab === "neighbourhood" && <NeighbourhoodTab property={property} />}
-        {activeTab === "owner" && <AboutOwnerTab property={property} />}
+        {activeTab === "owner" && (
+          <AboutOwnerTab property={property} maskOwnerDetails={maskOwnerDetails} />
+        )}
       </div>
 
       <FlowStickyActionBar>

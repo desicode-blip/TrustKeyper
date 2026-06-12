@@ -1,17 +1,21 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRoute } from "wouter";
-import { Building2, CheckCircle2, Loader2, X } from "lucide-react";
+import { Building2, Loader2 } from "lucide-react";
 import { TrustKeyperLogo } from "@/components/brand";
 import { Button } from "@/components/ui/button";
-import { PropertyPublicCard } from "@/components/tenant/PropertyPublicCard";
+import { PropertyPublicCard, PropertyPublicCardSkeleton } from "@/components/tenant/PropertyPublicCard";
+import { SharedPropertyLandingBackdrop } from "@/components/tenant/SharedPropertyLandingBackdrop";
 import { TenantPropertyVerification } from "@/components/tenant/TenantPropertyVerification";
+import { toast } from "@/hooks/use-toast";
 import { getPropertyTitle, type Property } from "@/lib/properties";
 import { createPropertyShareInquiry } from "@/lib/ownerTenants";
 import {
   fetchSharedProperty,
   getPropertyShareLabel,
   submitPropertyShareInquiry,
+  type SharedPropertyPayload,
 } from "@/lib/publicPropertyShare";
+import type { PropertyShareSource } from "@/lib/propertyShareView";
 import {
   getTenantShareResponse,
   getTenantShareSession,
@@ -25,7 +29,6 @@ type PagePhase =
   | "unavailable"
   | "verify"
   | "property"
-  | "interest_success"
   | "not_interested_thanks";
 
 function isPropertyShareable(property: Property): boolean {
@@ -36,7 +39,7 @@ function LoadingScreen() {
   return (
     <div className="min-h-screen bg-[#F5F7FA] flex flex-col items-center justify-center p-6">
       <Loader2 size={32} className="animate-spin text-primary mb-4" />
-      <p className="text-sm text-gray-500">Loading…</p>
+      <p className="text-sm text-gray-500">Loading property link…</p>
     </div>
   );
 }
@@ -46,11 +49,16 @@ export default function SharedProperty() {
   const propertyId = params?.id ?? "";
 
   const [phase, setPhase] = useState<PagePhase>("loading");
-  const [property, setProperty] = useState<Property | null>(null);
+  const [sharePayload, setSharePayload] = useState<SharedPropertyPayload | null>(null);
   const [session, setSession] = useState<TenantShareSession | null>(null);
   const [response, setResponse] = useState<ReturnType<typeof getTenantShareResponse>>(null);
   const [ctaLoading, setCtaLoading] = useState(false);
   const [ctaError, setCtaError] = useState<string | null>(null);
+  const [cardLoading, setCardLoading] = useState(false);
+
+  const property = sharePayload?.property ?? null;
+  const sharedBy: PropertyShareSource = sharePayload?.sharedBy ?? "owner";
+  const maskOwnerDetails = sharePayload?.maskOwnerDetails ?? false;
 
   const bootstrap = useCallback(async () => {
     if (!propertyId) {
@@ -59,21 +67,21 @@ export default function SharedProperty() {
     }
 
     setPhase("loading");
-    const found = await fetchSharedProperty(propertyId);
+    const payload = await fetchSharedProperty(propertyId);
 
-    if (!found) {
-      setProperty(null);
+    if (!payload?.property) {
+      setSharePayload(null);
       setPhase("not_found");
       return;
     }
 
-    if (!isPropertyShareable(found)) {
-      setProperty(found);
+    if (!isPropertyShareable(payload.property)) {
+      setSharePayload(payload);
       setPhase("unavailable");
       return;
     }
 
-    setProperty(found);
+    setSharePayload(payload);
     const savedSession = getTenantShareSession(propertyId);
     const savedResponse = getTenantShareResponse(propertyId);
     setSession(savedSession);
@@ -85,7 +93,7 @@ export default function SharedProperty() {
     }
 
     if (savedResponse === "not_interested") {
-      setPhase("not_interested_thanks");
+      setPhase("property");
       return;
     }
 
@@ -97,14 +105,14 @@ export default function SharedProperty() {
   }, [bootstrap]);
 
   const handleVerified = (verified: TenantShareSession) => {
+    setCardLoading(true);
     setSession(verified);
     const savedResponse = getTenantShareResponse(propertyId);
     setResponse(savedResponse);
-    if (savedResponse === "not_interested") {
-      setPhase("not_interested_thanks");
-    } else {
+    window.setTimeout(() => {
+      setCardLoading(false);
       setPhase("property");
-    }
+    }, 400);
   };
 
   const handleInterested = async () => {
@@ -118,20 +126,29 @@ export default function SharedProperty() {
         name: session.name,
         phone: session.phone,
         propertyLabel: label,
+        sharedBy,
       });
 
+      let isDuplicate = apiResult.isDuplicate;
       if (!apiResult.ok) {
-        createPropertyShareInquiry({
+        const local = createPropertyShareInquiry({
           name: session.name,
           phone: session.phone,
           propertyId: property.id,
           propertyLabel: label,
+          sharedBy,
         });
+        isDuplicate = local.isDuplicate;
       }
 
       setTenantShareResponse(property.id, "interested");
       setResponse("interested");
-      setPhase("interest_success");
+      toast({
+        title: isDuplicate ? "Already submitted" : "Interest shared",
+        description: isDuplicate
+          ? "You have already expressed interest in this property."
+          : "Your interest has been shared successfully.",
+      });
     } catch {
       setCtaError("Something went wrong. Please check your connection and try again.");
     } finally {
@@ -172,7 +189,9 @@ export default function SharedProperty() {
       <div className="min-h-screen bg-[#F5F7FA] flex flex-col items-center justify-center p-6 text-center">
         <Building2 size={40} className="text-gray-300 mb-3" />
         <p className="text-gray-600 font-medium">Property not found</p>
-        <p className="text-sm text-gray-400 mt-1">This link may be outdated or invalid.</p>
+        <p className="text-sm text-gray-400 mt-1 max-w-sm">
+          This link may be invalid, expired, or the property may have been removed.
+        </p>
       </div>
     );
   }
@@ -182,8 +201,9 @@ export default function SharedProperty() {
       <div className="min-h-screen bg-[#F5F7FA] flex flex-col items-center justify-center p-6 text-center">
         <Building2 size={40} className="text-gray-300 mb-3" />
         <p className="text-gray-600 font-medium">This property is no longer available</p>
-        <p className="text-sm text-gray-400 mt-1">
-          {property ? getPropertyTitle(property) : "The listing"} may have been rented or removed.
+        <p className="text-sm text-gray-400 mt-1 max-w-sm">
+          {property ? getPropertyTitle(property) : "The listing"} may have been rented or is no longer
+          accepting inquiries.
         </p>
       </div>
     );
@@ -191,90 +211,50 @@ export default function SharedProperty() {
 
   if (phase === "verify" && property) {
     return (
-      <div className="min-h-screen bg-[#F5F7FA] relative">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-          <div className="min-h-screen blur-sm opacity-40 scale-[1.02]">
-            {pageShell(
-              <div className="space-y-4 pt-8">
-                <div className="h-64 rounded-xl bg-gray-200" />
-                <div className="h-40 rounded-xl bg-white border border-gray-200" />
-              </div>,
-            )}
-          </div>
+      <div className="relative min-h-screen overflow-hidden">
+        <div className="absolute inset-0 blur-md scale-[1.02] pointer-events-none select-none" aria-hidden>
+          <SharedPropertyLandingBackdrop />
         </div>
-        <TenantPropertyVerification propertyId={property.id} onVerified={handleVerified} />
+        <div className="absolute inset-0 bg-black/45 pointer-events-none" aria-hidden />
+        <TenantPropertyVerification
+          propertyId={property.id}
+          onVerified={handleVerified}
+          onCancel={() => window.history.back()}
+        />
       </div>
     );
   }
 
   return (
     <>
-      {(phase === "property" ||
-        phase === "interest_success" ||
-        phase === "not_interested_thanks") &&
-      property &&
-      session ? (
-        pageShell(
-          <>
-            {ctaError ? (
-              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {ctaError}
-              </div>
-            ) : null}
-            <PropertyPublicCard
-              property={property}
-              response={response}
-              ctaLoading={ctaLoading}
-              onInterested={() => void handleInterested()}
-              onNotInterested={handleNotInterested}
-            />
-            <p className="text-center text-xs text-gray-400 mt-6">Shared via TrustKeyper</p>
-          </>,
-        )
-      ) : null}
-
-      {phase === "interest_success" ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8 text-center relative">
-            <div className="w-16 h-16 rounded-full bg-green-50 mx-auto mb-4 flex items-center justify-center">
-              <CheckCircle2 size={36} className="text-green-600" />
-            </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Interest shared</h2>
-            <p className="text-sm text-gray-500 mb-6">
-              Your interest has been shared with the property owner.
-            </p>
-            <div className="flex flex-col gap-2">
-              <Button
-                type="button"
-                className="w-full h-11 rounded-[4px] font-semibold"
-                onClick={() => setPhase("property")}
-              >
-                View Property Again
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full h-11 rounded-[4px] font-semibold"
-                onClick={() => setPhase("property")}
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {(phase === "property" || phase === "not_interested_thanks") && property && session
+        ? pageShell(
+            <>
+              {ctaError ? (
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {ctaError}
+                </div>
+              ) : null}
+              {cardLoading ? (
+                <PropertyPublicCardSkeleton />
+              ) : (
+                <PropertyPublicCard
+                  property={property}
+                  maskOwnerDetails={maskOwnerDetails}
+                  response={response}
+                  ctaLoading={ctaLoading}
+                  onInterested={() => void handleInterested()}
+                  onNotInterested={handleNotInterested}
+                />
+              )}
+              <p className="text-center text-xs text-gray-400 mt-6">Shared via TrustKeyper</p>
+            </>,
+          )
+        : null}
 
       {phase === "not_interested_thanks" && !ctaLoading ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 pointer-events-none">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8 text-center pointer-events-auto relative">
-            <button
-              type="button"
-              onClick={() => setPhase("property")}
-              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
-              aria-label="Close"
-            >
-              <X size={18} className="text-gray-600" />
-            </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8 text-center animate-in fade-in zoom-in-95 duration-200">
             <p className="text-lg font-semibold text-gray-900 mb-2">Thank you for your response.</p>
             <p className="text-sm text-gray-500 mb-6">We&apos;ve recorded your preference.</p>
             <Button

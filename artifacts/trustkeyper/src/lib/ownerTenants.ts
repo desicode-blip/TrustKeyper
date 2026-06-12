@@ -1,6 +1,7 @@
 import type { Food, TenantWho } from "@/lib/tenants";
 import { queueCloudSync } from "@/lib/cloudSync";
 import type { Property } from "@/lib/properties";
+import type { PropertyShareSource } from "@/lib/propertyShareView";
 import { getItem, getSessionItem, setItem, setSessionItem } from "@/lib/storageKeys";
 
 export type InquiryStatus = "open" | "invited";
@@ -24,6 +25,8 @@ export interface OwnerTenantInquiry {
   /** Property share link inquiries use leadStatus; legacy rows default to "new". */
   leadStatus?: PropertyInquiryLeadStatus;
   source?: "property_share" | "manual";
+  /** Who shared the property link — broker or owner. */
+  sharedBy?: PropertyShareSource;
   createdAt: number;
   updatedAt?: number;
 }
@@ -68,10 +71,12 @@ export interface SendTenantInvitePayload {
 }
 
 const INQUIRIES_KEY = "owner_tenant_inquiries";
+const BROKER_INQUIRIES_KEY = "broker_property_inquiries";
 const INVITES_KEY = "owner_tenant_invites";
 const DECLINES_KEY = "tenant_property_declines";
 export const OWNER_INVITES_UPDATED_EVENT = "tk-owner-invites-updated";
 export const OWNER_INQUIRIES_UPDATED_EVENT = "tk-owner-inquiries-updated";
+export const BROKER_INQUIRIES_UPDATED_EVENT = "tk-broker-inquiries-updated";
 
 function readJson<T>(dataType: string): T[] {
   if (typeof window === "undefined") return [];
@@ -100,9 +105,21 @@ function normalizeInquiry(raw: Partial<OwnerTenantInquiry> & { id: string }): Ow
     status: raw.status === "invited" ? "invited" : "open",
     leadStatus: raw.leadStatus ?? "new",
     source: raw.source,
+    sharedBy: raw.sharedBy,
     createdAt: typeof raw.createdAt === "number" ? raw.createdAt : Date.now(),
     updatedAt: raw.updatedAt,
   };
+}
+
+function inquiriesKeyForRole(role: PropertyShareSource): string {
+  return role === "broker" ? BROKER_INQUIRIES_KEY : INQUIRIES_KEY;
+}
+
+function readInquiriesForRole(role: PropertyShareSource): OwnerTenantInquiry[] {
+  const key = inquiriesKeyForRole(role);
+  return readJson<OwnerTenantInquiry>(key).map((row) =>
+    normalizeInquiry(row as Partial<OwnerTenantInquiry> & { id: string }),
+  );
 }
 
 function persist(dataType: string, list: unknown[]): void {
@@ -117,6 +134,9 @@ function persist(dataType: string, list: unknown[]): void {
     }
     if (dataType === INQUIRIES_KEY) {
       window.dispatchEvent(new Event(OWNER_INQUIRIES_UPDATED_EVENT));
+    }
+    if (dataType === BROKER_INQUIRIES_KEY) {
+      window.dispatchEvent(new Event(BROKER_INQUIRIES_UPDATED_EVENT));
     }
   } catch {
     /* ignore */
@@ -159,6 +179,19 @@ export function getPropertyShareInquiries(): OwnerTenantInquiry[] {
       (i) =>
         i.source === "property_share" &&
         i.status === "open" &&
+        i.leadStatus !== "rejected" &&
+        (i.sharedBy === "owner" || !i.sharedBy),
+    )
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+
+/** Property-share inquiries for the broker Tenants → Inquiries tab (newest first). */
+export function getBrokerPropertyShareInquiries(): OwnerTenantInquiry[] {
+  return readInquiriesForRole("broker")
+    .filter(
+      (i) =>
+        i.source === "property_share" &&
+        i.status === "open" &&
         i.leadStatus !== "rejected",
     )
     .sort((a, b) => b.createdAt - a.createdAt);
@@ -184,13 +217,24 @@ export function createPropertyShareInquiry(input: {
   phone: string;
   propertyId: string;
   propertyLabel: string;
+  sharedBy?: PropertyShareSource;
 }): { inquiry: OwnerTenantInquiry; isDuplicate: boolean } {
-  const existing = findOpenPropertyShareInquiry(input.propertyId, input.phone);
+  const sharedBy = input.sharedBy ?? "owner";
+  const list =
+    sharedBy === "broker" ? readInquiriesForRole("broker") : getOwnerInquiries();
+  const digits = phoneLast10(input.phone);
+  const existing = list.find(
+    (i) =>
+      i.propertyId === input.propertyId &&
+      phoneLast10(i.phone) === digits &&
+      i.source === "property_share" &&
+      i.status === "open" &&
+      i.leadStatus !== "rejected",
+  );
   if (existing) {
     return { inquiry: existing, isDuplicate: true };
   }
 
-  const digits = phoneLast10(input.phone);
   const inquiry: OwnerTenantInquiry = {
     id: `inq_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     name: input.name.trim(),
@@ -200,19 +244,21 @@ export function createPropertyShareInquiry(input: {
     status: "open",
     leadStatus: "new",
     source: "property_share",
+    sharedBy,
     createdAt: Date.now(),
   };
-  const list = getOwnerInquiries();
   list.unshift(inquiry);
-  persist(INQUIRIES_KEY, list);
+  persist(inquiriesKeyForRole(sharedBy), list);
   return { inquiry, isDuplicate: false };
 }
 
 export function updatePropertyInquiryLeadStatus(
   inquiryId: string,
   leadStatus: PropertyInquiryLeadStatus,
+  role: PropertyShareSource = "owner",
 ): OwnerTenantInquiry | null {
-  const list = getOwnerInquiries();
+  const key = inquiriesKeyForRole(role);
+  const list = readInquiriesForRole(role);
   const idx = list.findIndex((i) => i.id === inquiryId);
   if (idx === -1) return null;
   list[idx] = {
@@ -221,7 +267,7 @@ export function updatePropertyInquiryLeadStatus(
     updatedAt: Date.now(),
     status: leadStatus === "converted" ? "invited" : list[idx].status,
   };
-  persist(INQUIRIES_KEY, list);
+  persist(key, list);
   return list[idx];
 }
 
