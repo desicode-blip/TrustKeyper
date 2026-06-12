@@ -3,7 +3,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
 import pg from "pg";
-import { ensureUserDataTable } from "./ensureSchema.js";
+import { ensureTenantInvitationsTable, ensureUserDataTable } from "./ensureSchema.js";
 import * as schema from "./schema/index.js";
 
 const { Pool } = pg;
@@ -47,6 +47,7 @@ async function initEmbeddedDb(): Promise<void> {
   const { drizzle } = await import("drizzle-orm/pglite");
   const client = new PGlite(pgliteDataDir());
   await ensureUserDataTable((sql: string) => client.exec(sql));
+  await ensureTenantInvitationsTable((sql: string) => client.exec(sql));
   pgliteClient = client;
   dbInstance = drizzle({ client, schema });
 }

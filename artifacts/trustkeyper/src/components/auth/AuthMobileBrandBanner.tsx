@@ -12,11 +12,19 @@ export function AuthMobileBrandBanner() {
       <img
         src={topPanel}
         alt=""
-        className="block w-full h-auto min-h-[72px] object-cover object-center"
+        className="block w-full h-20 object-cover object-center"
         aria-hidden
       />
       <div className="absolute inset-0 flex items-center justify-center px-6 py-5">
-        <TrustKeyperLogo variant="inverse" size="authMobile" className="mx-auto object-center" />
+        <a
+          href="https://trustkeyper.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          aria-label="TrustKeyper"
+        >
+          <TrustKeyperLogo variant="inverse" size="authMobile" className="mx-auto object-center" />
+        </a>
       </div>
     </div>
   );

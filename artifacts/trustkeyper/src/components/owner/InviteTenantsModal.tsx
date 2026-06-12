@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Calendar, Send, User } from "lucide-react";
+import { ArrowRight, Calendar, Send } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,32 +16,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Property } from "@/lib/properties";
+import { useToast } from "@/hooks/use-toast";
 import {
   formatMemberContact,
   getPropertyInviteLabel,
+  openWhatsAppInvite,
   sendOwnerTenantInvites,
 } from "@/lib/ownerTenants";
 
-type Step = "count" | "members" | "confirm";
-
-interface MemberSlot {
-  name: string;
-  contact: string;
-}
-
-function emptySlot(): MemberSlot {
-  return { name: "", contact: "" };
-}
-
-function parseRent(value: string): string {
-  return value.replace(/[^\d]/g, "");
-}
-
-function formatRentInput(value: string): string {
-  const n = parseRent(value);
-  if (!n) return "";
-  return `₹ ${Number(n).toLocaleString("en-IN")}`;
-}
+type Step = "tenant" | "rental";
 
 export interface InviteTenantsModalProps {
   open: boolean;
@@ -56,15 +39,17 @@ export function InviteTenantsModal({
   properties,
   onSuccess,
 }: InviteTenantsModalProps) {
-  const [step, setStep] = useState<Step>("count");
+  const [step, setStep] = useState<Step>("tenant");
   const [propertyId, setPropertyId] = useState("");
-  const [tenantCount, setTenantCount] = useState(1);
-  const [slots, setSlots] = useState<MemberSlot[]>([emptySlot()]);
+  const [tenantName, setTenantName] = useState("");
+  const [tenantPhone, setTenantPhone] = useState("");
   const [monthlyRent, setMonthlyRent] = useState("");
   const [maintenanceIncluded, setMaintenanceIncluded] = useState(false);
   const [monthlyMaintenance, setMonthlyMaintenance] = useState("");
   const [securityDeposit, setSecurityDeposit] = useState("");
   const [startDate, setStartDate] = useState("");
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   const selectedProperty = useMemo(
     () => properties.find((p) => p.id === propertyId),
@@ -73,11 +58,11 @@ export function InviteTenantsModal({
 
   useEffect(() => {
     if (!open) return;
-    setStep("count");
+    setStep("tenant");
     const first = properties[0];
     setPropertyId(first?.id ?? "");
-    setTenantCount(1);
-    setSlots([emptySlot()]);
+    setTenantName("");
+    setTenantPhone("");
     if (first) {
       setMonthlyRent(formatRentInput(first.monthlyRent || ""));
       setMaintenanceIncluded(!!first.maintenanceIncluded);
@@ -100,58 +85,44 @@ export function InviteTenantsModal({
     setSecurityDeposit(formatRentInput(selectedProperty.securityDeposit || ""));
   }, [propertyId, selectedProperty?.id]);
 
-  useEffect(() => {
-    setSlots((prev) => {
-      const next = [...prev];
-      while (next.length < tenantCount) next.push(emptySlot());
-      while (next.length > tenantCount) next.pop();
-      return next;
-    });
-  }, [tenantCount]);
-
   const propertyLabel = selectedProperty
     ? getPropertyInviteLabel(selectedProperty)
     : "";
 
-  const canContinueCount = !!propertyId && tenantCount >= 1;
-
-  const canContinueMembers = slots.every(
-    (slot) => slot.name.trim().length > 0 && slot.contact.replace(/\D/g, "").length === 10,
-  );
+  const canContinueTenant =
+    !!propertyId &&
+    tenantName.trim().length > 0 &&
+    tenantPhone.replace(/\D/g, "").length === 10;
 
   const canSendInvite =
     !!propertyId &&
+    canContinueTenant &&
     parseRent(monthlyRent).length > 0 &&
     parseRent(securityDeposit).length > 0 &&
     !!startDate &&
     (maintenanceIncluded || parseRent(monthlyMaintenance).length > 0);
 
   const modalTitle =
-    step === "count"
-      ? null
-      : step === "members"
-        ? "Add members to your property"
-        : "Confirm rental details for your property";
+    step === "tenant" ? "Invite tenant" : "Confirm rental details for your property";
 
   const handleClose = (next: boolean) => {
     if (!next) onOpenChange(false);
   };
 
   const handleSendInvite = () => {
-    if (!selectedProperty || !canSendInvite) return;
+    if (!selectedProperty || !canSendInvite || saving) return;
 
-    const members = slots.map((slot) => {
-      const digits = slot.contact.replace(/\D/g, "").slice(-10);
-      return {
-        name: slot.name.trim(),
-        phone: formatMemberContact(digits),
-      };
-    });
-
-    sendOwnerTenantInvites({
+    setSaving(true);
+    const digits = tenantPhone.replace(/\D/g, "").slice(-10);
+    const created = sendOwnerTenantInvites({
       propertyId: selectedProperty.id,
       propertyLabel,
-      members,
+      members: [
+        {
+          name: tenantName.trim(),
+          phone: formatMemberContact(digits),
+        },
+      ],
       monthlyRent: parseRent(monthlyRent),
       maintenanceIncluded,
       monthlyMaintenance: parseRent(monthlyMaintenance),
@@ -159,6 +130,15 @@ export function InviteTenantsModal({
       startDate,
     });
 
+    setSaving(false);
+    const invite = created[0];
+    if (invite) {
+      openWhatsAppInvite(invite);
+      toast({
+        title: "Invite sent",
+        description: "WhatsApp opened with your invitation message.",
+      });
+    }
     onSuccess();
     onOpenChange(false);
   };
@@ -166,74 +146,56 @@ export function InviteTenantsModal({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 gap-0">
-        {modalTitle ? (
-          <h2 className="text-center text-lg font-semibold text-gray-900 mb-6 pr-8">
-            {modalTitle}
-          </h2>
-        ) : null}
+        <h2 className="text-center text-lg font-semibold text-gray-900 mb-6 pr-8">
+          {modalTitle}
+        </h2>
 
-        <PropertyField
-          properties={properties}
-          propertyId={propertyId}
-          onPropertyIdChange={setPropertyId}
-        />
-
-        {step === "count" && (
-          <div className="mt-6">
-            <p className="text-center text-sm font-medium text-gray-700 mb-4">
-              Choose total number of tenants
-            </p>
-            <div className="grid grid-cols-5 sm:grid-cols-10 gap-2 mb-8">
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setTenantCount(n)}
-                  className={`aspect-square rounded-md border text-sm font-semibold transition-colors ${
-                    tenantCount === n
-                      ? "border-green-500 bg-green-50 text-green-800"
-                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-            <div className="flex justify-center">
-              <OwnerFlowButton
-                type="button"
-                disabled={!canContinueCount || properties.length === 0}
-                className="sm:min-w-[160px]"
-                onClick={() => setStep("members")}
-              >
-                Continue <ArrowRight size={16} />
-              </OwnerFlowButton>
-            </div>
-          </div>
-        )}
-
-        {step === "members" && (
-          <div className="mt-4 space-y-4">
-            {slots.map((slot, index) => (
-              <TenantMemberBlock
-                key={index}
-                index={index}
-                slot={slot}
-                onChange={(next) =>
-                  setSlots((prev) => {
-                    const copy = [...prev];
-                    copy[index] = next;
-                    return copy;
-                  })
-                }
+        {step === "tenant" && (
+          <div className="space-y-4">
+            <PropertyField
+              properties={properties}
+              propertyId={propertyId}
+              onPropertyIdChange={setPropertyId}
+            />
+            <div>
+              <Label className="text-xs text-gray-500 mb-1.5 block">
+                Tenant name<span className="text-red-500">*</span>
+              </Label>
+              <Input
+                value={tenantName}
+                onChange={(e) => setTenantName(e.target.value)}
+                className="h-10"
+                placeholder="Full name"
               />
-            ))}
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500 mb-1.5 block">
+                Phone Number<span className="text-red-500">*</span>
+              </Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600 shrink-0">+91</span>
+                <Input
+                  type="tel"
+                  inputMode="numeric"
+                  value={tenantPhone}
+                  onChange={(e) =>
+                    setTenantPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+                  }
+                  className="h-10 flex-1"
+                  placeholder="10-digit number"
+                  maxLength={10}
+                />
+              </div>
+              {tenantPhone.length > 0 && tenantPhone.length < 10 ? (
+                <p className="text-xs text-red-500 mt-1">Enter a valid 10-digit mobile number.</p>
+              ) : null}
+            </div>
             <div className="flex justify-center pt-4">
               <OwnerFlowButton
                 type="button"
-                disabled={!canContinueMembers}
+                disabled={!canContinueTenant || properties.length === 0}
                 className="sm:min-w-[160px]"
-                onClick={() => setStep("confirm")}
+                onClick={() => setStep("rental")}
               >
                 Continue <ArrowRight size={16} />
               </OwnerFlowButton>
@@ -241,8 +203,19 @@ export function InviteTenantsModal({
           </div>
         )}
 
-        {step === "confirm" && (
-          <div className="mt-4 space-y-4">
+        {step === "rental" && (
+          <div className="space-y-4">
+            <PropertyField
+              properties={properties}
+              propertyId={propertyId}
+              onPropertyIdChange={setPropertyId}
+            />
+            <div className="rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-sm text-gray-700">
+              <span className="text-gray-500">Tenant: </span>
+              <span className="font-medium">{tenantName.trim()}</span>
+              <span className="text-gray-400 mx-2">·</span>
+              <span className="font-medium">{formatMemberContact(tenantPhone)}</span>
+            </div>
             <div>
               <Label className="text-xs text-gray-500 mb-1.5 block">
                 Monthly Rent<span className="text-red-500">*</span>
@@ -306,15 +279,23 @@ export function InviteTenantsModal({
                 />
               </div>
             </div>
-            <div className="flex justify-center pt-4">
+            <div className="flex flex-col sm:flex-row justify-center gap-2 pt-4">
               <OwnerFlowButton
                 type="button"
-                disabled={!canSendInvite}
+                flowVariant="outline"
+                className="sm:min-w-[120px]"
+                onClick={() => setStep("tenant")}
+              >
+                Back
+              </OwnerFlowButton>
+              <OwnerFlowButton
+                type="button"
+                disabled={!canSendInvite || saving}
                 className="sm:min-w-[160px]"
                 onClick={handleSendInvite}
               >
                 <Send size={16} />
-                Send Invite
+                {saving ? "Sending…" : "Send Invite"}
               </OwnerFlowButton>
             </div>
           </div>
@@ -328,6 +309,16 @@ export function InviteTenantsModal({
       </DialogContent>
     </Dialog>
   );
+}
+
+function parseRent(value: string): string {
+  return value.replace(/[^\d]/g, "");
+}
+
+function formatRentInput(value: string): string {
+  const n = parseRent(value);
+  if (!n) return "";
+  return `₹ ${Number(n).toLocaleString("en-IN")}`;
 }
 
 function PropertyField({
@@ -354,66 +345,6 @@ function PropertyField({
           ))}
         </SelectContent>
       </Select>
-    </div>
-  );
-}
-
-function TenantMemberBlock({
-  index,
-  slot,
-  onChange,
-}: {
-  index: number;
-  slot: MemberSlot;
-  onChange: (slot: MemberSlot) => void;
-}) {
-  return (
-    <div className="rounded-lg border border-gray-200 p-4 bg-gray-50/40">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-full bg-pink-50 text-pink-400 flex items-center justify-center shrink-0">
-          <User size={16} />
-        </div>
-        <span className="text-sm font-semibold text-gray-900">Tenant {index + 1}</span>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <Label className="text-xs text-gray-500 mb-1.5 block">
-            Tenant name<span className="text-red-500">*</span>
-          </Label>
-          <Input
-            value={slot.name}
-            onChange={(e) => onChange({ ...slot, name: e.target.value })}
-            className="h-10 bg-white"
-            placeholder="Full name"
-          />
-        </div>
-        <div>
-          <Label className="text-xs text-gray-500 mb-1.5 block">
-            Phone Number<span className="text-red-500">*</span>
-          </Label>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 shrink-0">+91</span>
-            <Input
-              type="tel"
-              inputMode="numeric"
-              value={slot.contact}
-              onChange={(e) =>
-                onChange({
-                  ...slot,
-                  contact: e.target.value.replace(/\D/g, "").slice(0, 10),
-                })
-              }
-              className="h-10 bg-white flex-1"
-              placeholder="10-digit number"
-              maxLength={10}
-            />
-          </div>
-          {slot.contact.length > 0 && slot.contact.length < 10 ? (
-            <p className="text-xs text-red-500 mt-1">Enter a valid 10-digit mobile number.</p>
-          ) : null}
-        </div>
-      </div>
     </div>
   );
 }

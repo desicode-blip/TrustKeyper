@@ -12,6 +12,8 @@ export interface OwnerDocumentMeta {
 }
 
 export interface OwnerProfile extends BrokerProfile {
+  propertyCount?: string;
+  propertyIntent?: string;
   aadhaar?: OwnerDocumentMeta;
   pan?: OwnerDocumentMeta;
 }
@@ -92,20 +94,40 @@ export function hasOwnerUpiDetails(): boolean {
   return !!p.upiId?.trim();
 }
 
-export function saveOwnerProfileDocument(kind: OwnerDocumentKind, file: File): void {
+const MAX_PROFILE_DOC_BYTES = 4 * 1024 * 1024;
+
+export function saveOwnerProfileDocument(
+  kind: OwnerDocumentKind,
+  file: File,
+  callbacks?: { onSuccess?: () => void; onError?: (message: string) => void },
+): void {
+  if (file.size > MAX_PROFILE_DOC_BYTES) {
+    callbacks?.onError?.("File too large. Maximum size is 4MB for profile storage.");
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = () => {
-    const current = getOwnerProfile();
-    const meta: OwnerDocumentMeta = {
-      fileName: file.name,
-      fileSize: file.size,
-      uploadedAt: Date.now(),
-      dataUrl: typeof reader.result === "string" ? reader.result : undefined,
-    };
-    saveOwnerProfile({
-      ...current,
-      [kind]: meta,
-    });
+    try {
+      const current = getOwnerProfile();
+      const meta: OwnerDocumentMeta = {
+        fileName: file.name,
+        fileSize: file.size,
+        uploadedAt: Date.now(),
+        dataUrl: typeof reader.result === "string" ? reader.result : undefined,
+      };
+      saveOwnerProfile({
+        ...current,
+        [kind]: meta,
+      });
+      callbacks?.onSuccess?.();
+    } catch {
+      callbacks?.onError?.("Could not save document. Storage may be full.");
+    }
+  };
+  reader.onerror = () => {
+    console.error("saveOwnerProfileDocument: failed to read file", kind, file.name);
+    callbacks?.onError?.("Could not read the file. Please try again.");
   };
   reader.readAsDataURL(file);
 }

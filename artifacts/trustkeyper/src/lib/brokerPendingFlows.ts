@@ -63,20 +63,30 @@ export function hasPendingAgreementDraft(): boolean {
   }
 }
 
-export function getPendingFlowItems(): PendingFlowItem[] {
+export function getPendingFlowItems(role: "broker" | "owner" = "broker"): PendingFlowItem[] {
   if (typeof window === "undefined") return [];
   const items: PendingFlowItem[] = [];
 
   if (hasPendingAgreementDraft()) {
     items.push({
       kind: "agreement",
-      title: "Agreement generation is pending — pick up where you left off.",
-      continueHref: "/broker/agreements/generate?resume=1",
+      title:
+        role === "owner"
+          ? "Your rental agreement is in progress — continue where you left off."
+          : "Agreement generation is pending — pick up where you left off.",
+      continueHref:
+        role === "owner"
+          ? "/owner/agreements/generate?resume=1"
+          : "/broker/agreements/generate?resume=1",
     });
   }
 
+  if (role === "owner") {
+    return items;
+  }
+
   try {
-    const prop = getSessionItem("add_property_data");
+    const prop = getItem("add_property_data");
     if (hasMeaningfulPropertyDraft(prop)) {
       items.push({
         kind: "add_property",
@@ -93,7 +103,7 @@ export function getPendingFlowItems(): PendingFlowItem[] {
     if (hasMeaningfulTenantDraft(ten)) {
       items.push({
         kind: "add_tenant",
-        title: "Tenant onboarding is pending — continue adding the tenant.",
+        title: "Tenant lead in progress — continue adding details.",
         continueHref: "/broker/tenants/add",
       });
     }

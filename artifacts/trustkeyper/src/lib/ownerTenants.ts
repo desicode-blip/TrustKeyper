@@ -5,6 +5,9 @@ import { getItem, getSessionItem, setItem, setSessionItem } from "@/lib/storageK
 
 export type InquiryStatus = "open" | "invited";
 
+/** Set only when the owner manually records an outcome. */
+export type RecordedInviteStatus = "accepted" | "rejected";
+
 export interface OwnerTenantInquiry {
   id: string;
   name: string;
@@ -13,7 +16,6 @@ export interface OwnerTenantInquiry {
   propertyLabel: string;
   who?: TenantWho;
   food?: Food;
-  /** LinkedIn profile URL — only set when a logged-in tenant submits an inquiry. */
   linkedinUrl?: string;
   status: InquiryStatus;
   createdAt: number;
@@ -32,10 +34,13 @@ export interface OwnerTenantInvite {
   monthlyMaintenance: string;
   securityDeposit: string;
   startDate: string;
-  status: "pending_confirmation";
+  /** Legacy values are normalized on read; new invites omit status until marked. */
+  status?: RecordedInviteStatus | "pending" | "pending_confirmation" | "declined" | "expired";
   inquiryId?: string;
   linkedinUrl?: string;
   createdAt: number;
+  acceptedAt?: number;
+  rejectedAt?: number;
 }
 
 export interface SendTenantInvitePayload {
@@ -57,6 +62,7 @@ export interface SendTenantInvitePayload {
 
 const INQUIRIES_KEY = "owner_tenant_inquiries";
 const INVITES_KEY = "owner_tenant_invites";
+export const OWNER_INVITES_UPDATED_EVENT = "tk-owner-invites-updated";
 
 function readJson<T>(dataType: string): T[] {
   if (typeof window === "undefined") return [];
@@ -74,9 +80,21 @@ function persist(dataType: string, list: unknown[]): void {
     setSessionItem(dataType, payload);
     setItem(dataType, payload);
     queueCloudSync(dataType, payload);
+    if (dataType === INVITES_KEY && typeof window !== "undefined") {
+      window.dispatchEvent(new Event(OWNER_INVITES_UPDATED_EVENT));
+    }
   } catch {
     /* ignore */
   }
+}
+
+/** Returns a manual outcome badge only after the owner updates status. */
+export function getRecordedInviteStatus(
+  invite: OwnerTenantInvite,
+): RecordedInviteStatus | null {
+  if (invite.status === "accepted") return "accepted";
+  if (invite.status === "rejected" || invite.status === "declined") return "rejected";
+  return null;
 }
 
 export function getPropertyInviteLabel(p: Property): string {
@@ -85,7 +103,6 @@ export function getPropertyInviteLabel(p: Property): string {
   return loc ? `${title}, ${loc}` : title;
 }
 
-/** Remove legacy demo inquiry rows from earlier builds. */
 export function removeLegacySeedInquiries(): void {
   const list = readJson<OwnerTenantInquiry>(INQUIRIES_KEY);
   const cleaned = list.filter((i) => !i.id.startsWith("inq_seed_"));
@@ -125,7 +142,6 @@ export function sendOwnerTenantInvites(payload: SendTenantInvitePayload): OwnerT
       monthlyMaintenance: payload.monthlyMaintenance,
       securityDeposit: payload.securityDeposit,
       startDate: payload.startDate,
-      status: "pending_confirmation",
       inquiryId: member.inquiryId,
       createdAt: Date.now(),
     };
@@ -147,6 +163,34 @@ export function sendOwnerTenantInvites(payload: SendTenantInvitePayload): OwnerT
   return created;
 }
 
+export function updateOwnerInviteStatus(
+  inviteId: string,
+  status: RecordedInviteStatus,
+): OwnerTenantInvite | null {
+  const invites = getOwnerInvites();
+  const idx = invites.findIndex((i) => i.id === inviteId);
+  if (idx === -1) return null;
+
+  const now = Date.now();
+  const updated: OwnerTenantInvite = {
+    ...invites[idx],
+    status,
+    acceptedAt: status === "accepted" ? now : invites[idx].acceptedAt,
+    rejectedAt: status === "rejected" ? now : invites[idx].rejectedAt,
+  };
+  invites[idx] = updated;
+  persist(INVITES_KEY, invites);
+  return updated;
+}
+
+export function deleteOwnerInvite(inviteId: string): boolean {
+  const invites = getOwnerInvites();
+  const next = invites.filter((i) => i.id !== inviteId);
+  if (next.length === invites.length) return false;
+  persist(INVITES_KEY, next);
+  return true;
+}
+
 export function formatMemberContact(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   if (digits.length >= 10) {
@@ -156,12 +200,73 @@ export function formatMemberContact(phone: string): string {
   return phone;
 }
 
-export function whatsAppHref(phone: string): string {
+export function formatInviteAmount(value: string): string {
+  const n = value.replace(/\D/g, "");
+  if (!n) return "0";
+  return Number(n).toLocaleString("en-IN");
+}
+
+export function formatInviteStartDate(isoOrDate: string): string {
+  if (!isoOrDate) return "—";
+  try {
+    const d = new Date(isoOrDate);
+    if (Number.isNaN(d.getTime())) return isoOrDate;
+    return d.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return isoOrDate;
+  }
+}
+
+function maintenanceLine(invite: OwnerTenantInvite): string {
+  if (invite.maintenanceIncluded) return "Included in rent";
+  const amt = formatInviteAmount(invite.monthlyMaintenance);
+  return amt === "0" ? "—" : `₹${amt}/month`;
+}
+
+export function buildWhatsAppInviteMessage(invite: OwnerTenantInvite): string {
+  return (
+    `Hello ${invite.name.trim() || "there"},\n\n` +
+    `You have been invited to join the following property:\n\n` +
+    `Property: ${invite.propertyLabel}\n` +
+    `Monthly Rent: ₹${formatInviteAmount(invite.monthlyRent)}\n` +
+    `Maintenance: ${maintenanceLine(invite)}\n` +
+    `Security Deposit: ₹${formatInviteAmount(invite.securityDeposit)}\n` +
+    `Start Date: ${formatInviteStartDate(invite.startDate)}\n\n` +
+    `Please let me know if you are interested.\n\n` +
+    `Sent via TrustKeyper.`
+  );
+}
+
+export function openWhatsAppInvite(invite: OwnerTenantInvite): void {
+  if (typeof window === "undefined") return;
+  window.open(getWhatsAppInviteHref(invite), "_blank", "noopener,noreferrer");
+}
+
+export function whatsAppInviteHref(phone: string, message: string): string {
   const digits = phone.replace(/\D/g, "").slice(-10);
   if (digits.length !== 10) return "https://wa.me/";
-  return `https://wa.me/91${digits}`;
+  return `https://wa.me/91${digits}?text=${encodeURIComponent(message)}`;
+}
+
+export function getWhatsAppInviteHref(invite: OwnerTenantInvite): string {
+  return whatsAppInviteHref(invite.phone, buildWhatsAppInviteMessage(invite));
 }
 
 export function isInviteFromInquiry(invite: OwnerTenantInvite): boolean {
   return !!invite.inquiryId;
+}
+
+export function countRecordedInvites(invites: OwnerTenantInvite[]) {
+  let accepted = 0;
+  let rejected = 0;
+  for (const inv of invites) {
+    const s = getRecordedInviteStatus(inv);
+    if (s === "accepted") accepted += 1;
+    if (s === "rejected") rejected += 1;
+  }
+  return { accepted, rejected };
 }

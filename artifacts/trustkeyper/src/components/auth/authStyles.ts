@@ -1,9 +1,8 @@
-/** Primary CTA on auth / signup screens */
+/** Primary CTA on auth / signup screens — matches OwnerFlowButton (4px radius, full width mobile). */
 export const authPrimaryButtonClass =
-  "w-full sm:w-auto min-w-[12rem] rounded-lg bg-primary hover:bg-primary/90 text-white border-0 shadow-none disabled:opacity-50";
+  "w-full sm:w-auto min-w-[12rem] min-h-10 h-10 px-6 rounded-[4px] text-sm font-semibold bg-primary hover:bg-primary/90 text-white border-0 shadow-md shadow-primary/25 disabled:opacity-50";
 
-/** Room for fixed mobile sticky CTA bar */
-export const authMobileScrollPadClass = "pb-[5.5rem] sm:pb-0";
+export const authMobileScrollPadClass = "";
 
 /**
  * Role / option card — selected.

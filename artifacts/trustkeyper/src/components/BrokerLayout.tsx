@@ -70,6 +70,15 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
   const closeSidebar = () => setSidebarOpen(false);
 
   useEffect(() => {
+    if (!sidebarOpen) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeSidebar();
+    };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [sidebarOpen]);
+
+  useEffect(() => {
     const sync = () => setPendingFlows(getPendingFlowItems());
     sync();
     window.addEventListener(BROKER_PENDING_FLOWS_EVENT, sync);
@@ -97,9 +106,12 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
         <div className="flex items-center gap-3">
           {/* Hamburger — mobile only */}
           <button
+            type="button"
             onClick={() => setSidebarOpen(true)}
             className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100"
             aria-label="Open menu"
+            aria-expanded={sidebarOpen}
+            aria-controls="mobile-sidebar"
           >
             <Menu size={20} />
           </button>
@@ -113,13 +125,17 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
             <Clock size={14} />
             <span>IST</span>
           </div>
-          <Link href="/broker/activity" className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50">
+          <Link
+            href="/broker/activity"
+            aria-label="Activity and notifications"
+            className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50"
+          >
             <Bell size={17} />
             {pendingFlows.length > 0 && (
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" aria-hidden />
             )}
           </Link>
-          <Link href="/broker/settings" className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50">
+          <Link href="/broker/settings" className="relative hidden md:flex w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-200 items-center justify-center text-gray-600 hover:bg-gray-50">
             <Settings size={17} />
             {!hasBankDetails() && (
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400 border border-white" title="Complete your payment details" />
@@ -132,6 +148,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
         {/* ── Mobile sidebar backdrop ─────────────────────────────────────── */}
         {sidebarOpen && (
           <div
+            role="presentation"
             className="fixed inset-0 z-40 md:hidden bg-black/40"
             onClick={closeSidebar}
           />
@@ -139,6 +156,10 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
 
         {/* ── Sidebar ─────────────────────────────────────────────────────── */}
         <aside
+          id="mobile-sidebar"
+          role="dialog"
+          aria-label="Navigation menu"
+          aria-modal="true"
           className={`
             fixed md:relative inset-y-0 left-0 z-50 md:z-auto
             w-64 bg-white border-r border-gray-200 px-4 py-6
@@ -150,7 +171,9 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
         >
           {/* Close button — mobile only */}
           <button
+            type="button"
             onClick={closeSidebar}
+            aria-label="Close menu"
             className="md:hidden absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
           >
             <X size={18} />
@@ -233,30 +256,10 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
         </aside>
 
         {/* ── Main Content ─────────────────────────────────────────────────── */}
-        <main className="flex-1 px-4 py-4 sm:px-8 sm:py-8 pb-20 md:pb-8 min-w-0">
+        <main className="flex-1 px-4 py-4 sm:px-8 sm:py-8 min-w-0">
           {children}
         </main>
       </div>
-
-      {/* ── Mobile Bottom Nav ───────────────────────────────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex items-center justify-around px-2 h-14 safe-area-bottom">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active = location === item.href;
-          return (
-            <Link
-              key={item.id}
-              href={item.href}
-              className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition-colors ${
-                active ? "text-primary" : "text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              <Icon size={20} />
-              <span className="text-[9px] font-medium leading-tight">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
 
       <TrustKeyperFooter className="hidden md:block" />
     </div>

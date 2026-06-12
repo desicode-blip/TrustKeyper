@@ -24,7 +24,6 @@ import {
   Lock,
   Bell,
   Wallet,
-  BadgeCheck,
   Edit2,
   Trash2,
   RefreshCw,
@@ -37,6 +36,7 @@ import {
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
 import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
+import { FlowClearButton } from "@/components/owner/FlowClearButton";
 import { StepOwnerParties } from "@/components/owner/agreement/StepOwnerParties";
 import {
   StepOwnerPaymentSplit,
@@ -47,26 +47,55 @@ import {
 import { broadcastBrokerPendingFlowsUpdated, clearAgreementDraftStorage } from "@/lib/brokerPendingFlows";
 import { queueCloudSync } from "@/lib/cloudSync";
 import { getItem, getSessionItem, removeSessionItem, setItem, setSessionItem } from "@/lib/storageKeys";
+import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { getProperties, getPropertyTitle, updateProperty, type Property } from "@/lib/properties";
-import { ensureTenantFromAgreement, getTenants, type Tenant } from "@/lib/tenants";
+import { ensureTenantFromAgreement, getTenants, resolveTenantKyc, type Tenant } from "@/lib/tenants";
 import { addAgreement, getAgreements, updateAgreement, type Agreement } from "@/lib/agreements";
+import {
+  generateRentalAgreementText,
+  shareRentalAgreementPdf,
+  type RentalAgreementInput,
+} from "@/lib/rentalAgreementDocument";
+import { whatsAppInviteHref } from "@/lib/ownerTenants";
 import { getBrokerProfile, saveBrokerProfile, hasBankDetails } from "@/lib/brokerProfile";
 import {
   getOwnerProfile,
   hasOwnerBankDetails,
   hasOwnerUpiDetails,
   removeOwnerProfileDocument,
+  saveOwnerProfile,
   saveOwnerProfileBank,
   saveOwnerProfileDocument,
   saveOwnerProfileUpi,
   type OwnerDocumentKind,
 } from "@/lib/ownerProfile";
 import { isValidUpiId, sanitizeUpiInput } from "@/lib/upi";
+import { getFileTypeError, isValidAccountNumber, isValidIFSC } from "@/lib/fileValidation";
+import { toast as pushToast } from "@/hooks/use-toast";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
+type BankData =
+  | {
+      mode: "bank";
+      holderName: string;
+      bankName: string;
+      accountNumber: string;
+      ifscCode: string;
+      upiId?: string;
+      upiQrFileName?: string;
+    }
+  | {
+      mode: "upi";
+      holderName?: string;
+      bankName?: string;
+      accountNumber?: string;
+      ifscCode?: string;
+      upiId: string;
+      upiQrFileName?: string;
+    };
 
 const STEPS: { id: Step; label: string; shortLabel: string; Icon: React.ElementType }[] = [
   { id: 1, label: "Property", shortLabel: "Property", Icon: Home },
@@ -153,14 +182,15 @@ function FieldLabel({ children, required }: { children: React.ReactNode; require
 }
 
 function TextInput({
-  value, onChange, placeholder, type = "text", className = "",
+  value, onChange, placeholder, type = "text", className = "", min,
 }: {
-  value: string; onChange: (v: string) => void; placeholder?: string; type?: string; className?: string;
+  value: string; onChange: (v: string) => void; placeholder?: string; type?: string; className?: string; min?: string;
 }) {
   return (
     <input
       type={type}
       value={value}
+      min={min}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       className={`w-full h-10 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${className}`}
@@ -199,7 +229,7 @@ function ContinueButton({ onClick, disabled, label = "Continue" }: { onClick: ()
           {label} <ChevronRight size={16} />
         </button>
       </div>
-      <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="sm:hidden fixed inset-x-0 bottom-0 z-30 bg-white border-t border-gray-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
         <button
           onClick={onClick}
           disabled={disabled}
@@ -380,9 +410,9 @@ function Step1Property({
 
       <button
         onClick={() =>
-          setLocation(isOwnerFlow ? "/owner/properties/add" : "/broker/properties/add2")
+          setLocation(isOwnerFlow ? "/owner/properties/add2" : "/broker/properties/add2")
         }
-        className="flex items-center justify-center gap-2 w-full h-11 rounded-xl border border-dashed border-gray-300 text-sm text-gray-600 hover:border-primary hover:text-primary transition-colors mb-0"
+        className="flex items-center justify-center gap-2 w-full h-11 rounded-xl border border-dashed border-primary text-sm font-semibold text-primary hover:bg-primary/5 transition-colors mb-0"
       >
         <Plus size={15} /> Add New Property
       </button>
@@ -488,7 +518,8 @@ function InlinePartyForm({ label, onAdd, onCancel }: {
   );
 }
 
-function TenantSearchDrop({ allTenants, onSelect, onClose }: {
+function TenantSearchDrop({ listId, allTenants, onSelect, onClose }: {
+  listId: string;
   allTenants: Tenant[]; onSelect: (t: Tenant) => void; onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
@@ -517,13 +548,15 @@ function TenantSearchDrop({ allTenants, onSelect, onClose }: {
           className="w-full h-8 px-3 rounded-md text-sm border border-gray-200 focus:outline-none focus:border-primary"
         />
       </div>
-      <div className="max-h-44 overflow-y-auto">
+      <div className="max-h-44 overflow-y-auto" id={listId} role="listbox" aria-label="Tenant search results">
         {filtered.length === 0 ? (
           <div className="px-3 py-4 text-center text-xs text-gray-400">No tenants found</div>
         ) : (
           filtered.map((t, i) => (
             <button
               key={t.id}
+              type="button"
+              role="option"
               onClick={() => onSelect(t)}
               className={`w-full text-left px-3 py-2.5 hover:bg-gray-50 transition-colors ${i > 0 ? "border-t border-gray-100" : ""}`}
             >
@@ -610,11 +643,15 @@ function Step2Parties({
           {/* "Add additional owner…" dropdown trigger */}
           {!showOwnerForm && (
             <button
+              type="button"
               onClick={() => setShowOwnerForm(true)}
+              aria-expanded={false}
+              aria-haspopup="dialog"
+              aria-label="Add additional owner"
               className="flex items-center justify-between w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-sm text-gray-500 hover:border-primary/50 mb-3 transition-colors"
             >
               <span>Add additional owner…</span>
-              <ChevronDown size={14} className="text-gray-400" />
+              <ChevronDown size={14} className="text-gray-400 shrink-0" aria-hidden="true" />
             </button>
           )}
 
@@ -646,14 +683,24 @@ function Step2Parties({
           {/* Choose a tenant dropdown */}
           <div ref={tenantDropRef} className="relative mb-3">
             <button
+              type="button"
               onClick={() => { setTenantDropOpen((v) => !v); setShowTenantForm(false); }}
+              aria-expanded={tenantDropOpen}
+              aria-haspopup="listbox"
+              aria-controls="broker-tenant-picker-list"
+              aria-label="Choose a tenant"
               className="flex items-center justify-between w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-sm text-gray-500 hover:border-primary/50 transition-colors"
             >
               <span>Choose a tenant…</span>
-              <ChevronDown size={14} className="text-gray-400" />
+              <ChevronDown
+                size={14}
+                className={`text-gray-400 shrink-0 transition-transform ${tenantDropOpen ? "rotate-180" : ""}`}
+                aria-hidden="true"
+              />
             </button>
             {tenantDropOpen && (
               <TenantSearchDrop
+                listId="broker-tenant-picker-list"
                 allTenants={allTenants}
                 onSelect={addTenantFromSearch}
                 onClose={() => setTenantDropOpen(false)}
@@ -701,15 +748,6 @@ interface PersonState {
   docs: DocState[];
 }
 
-interface BankData {
-  mode: "bank" | "upi";
-  holderName: string;
-  bankName: string;
-  accountNumber: string;
-  ifscCode: string;
-  upiId: string;
-}
-
 const BANK_NAMES = [
   "State Bank of India", "HDFC Bank", "ICICI Bank", "Axis Bank",
   "Kotak Mahindra Bank", "Punjab National Bank", "Bank of Baroda",
@@ -751,14 +789,29 @@ function BankModal({
   const [accountNumber, setAccountNumber] = useState(saved?.bankAccountNumber ?? "");
   const [ifscCode, setIfscCode] = useState(saved?.bankIFSC ?? "");
   const [upiId, setUpiId] = useState(saved?.upiId ?? "");
+  const qrRef = useRef<HTMLInputElement>(null);
+  const [qrFile, setQrFile] = useState(saved?.upiQrFileName ?? "");
 
-  const bankValid = !!(holderName && bankName && accountNumber && ifscCode);
-  const upiValid = isValidUpiId(upiId);
+  const bankValid = !!(
+    holderName &&
+    bankName &&
+    accountNumber &&
+    ifscCode &&
+    isValidAccountNumber(accountNumber) &&
+    isValidIFSC(ifscCode)
+  );
+  const upiIdValid = isValidUpiId(upiId);
+  const upiValid = upiIdValid || !!qrFile;
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md relative">
-        <button onClick={onClose} className="absolute top-4 right-4 w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-4 right-4 w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+        >
           <X size={14} className="text-gray-600" />
         </button>
         <div className="px-6 pt-6 pb-2 border-b border-gray-100">
@@ -795,10 +848,16 @@ function BankModal({
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Account Number*</label>
                   <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                  {accountNumber && !isValidAccountNumber(accountNumber) ? (
+                    <p className="text-xs text-red-500 mt-1">Account number must be 9–18 digits</p>
+                  ) : null}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">IFSC Code*</label>
                   <input value={ifscCode} onChange={(e) => setIfscCode(e.target.value.toUpperCase())} placeholder="e.g. SBIN0001234" className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                  {ifscCode && !isValidIFSC(ifscCode) ? (
+                    <p className="text-xs text-red-500 mt-1">Invalid IFSC code (e.g. HDFC0001234)</p>
+                  ) : null}
                 </div>
               </div>
             </>
@@ -822,11 +881,59 @@ function BankModal({
                   <p className="text-xs text-red-500 text-center mt-1">Enter a valid UPI ID (e.g. name@bank)</p>
                 ) : null}
               </div>
+              <p className="text-xs text-gray-400 text-center font-medium">OR</p>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1 text-center">Upload QR Code</label>
+                <button
+                  type="button"
+                  onClick={() => qrRef.current?.click()}
+                  className="w-full h-20 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5 hover:border-primary/50 hover:bg-gray-50 transition-colors"
+                >
+                  {qrFile ? (
+                    <>
+                      <Check size={18} className="text-green-500" />
+                      <span className="text-xs text-green-600 font-medium">QR uploaded: {qrFile}</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                        <Plus size={12} className="text-gray-600" />
+                      </div>
+                      <span className="text-xs text-gray-600">Upload QR Code</span>
+                      <span className="text-[10px] text-gray-400">(pdf, png, jpeg)</span>
+                    </>
+                  )}
+                </button>
+                <input
+                  ref={qrRef}
+                  type="file"
+                  accept=".pdf,.png,.jpeg,.jpg"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) setQrFile(e.target.files[0].name);
+                  }}
+                />
+              </div>
             </>
           )}
 
           <button
-            onClick={() => { if (tab === "bank" ? bankValid : upiValid) { onSave({ mode: tab, holderName, bankName, accountNumber, ifscCode, upiId }); } }}
+            onClick={() => {
+              if (tab === "bank" ? bankValid : upiValid) {
+                onSave({
+                  mode: tab,
+                  holderName,
+                  bankName,
+                  accountNumber,
+                  ifscCode,
+                  upiId,
+                  upiQrFileName: qrFile || undefined,
+                } as BankData);
+                if (prefillOwnerProfile && tab === "upi" && qrFile) {
+                  saveOwnerProfile({ ...getOwnerProfile(), upiQrFileName: qrFile });
+                }
+              }
+            }}
             disabled={tab === "bank" ? !bankValid : !upiValid}
             className={`flex items-center justify-center gap-2 w-full h-10 rounded-xl text-sm font-semibold transition-colors ${(tab === "bank" ? bankValid : upiValid) ? "bg-primary text-white hover:bg-primary/90" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
           >
@@ -872,10 +979,13 @@ function DocRow({
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-900">{doc.label}</p>
         {doc.status === "uploaded" && (
-          <p className="text-xs text-gray-500 mt-0.5 break-words">
-            {doc.fileName ? `${doc.fileName} · ${doc.fileSize ? fmtFileSize(doc.fileSize) : ""} · ` : ""}
-            Uploaded just now · <span className="text-green-600 font-medium">Verified ✓</span>
-          </p>
+          <>
+            <p className="text-xs text-gray-500 mt-0.5 break-words">
+              {doc.fileName ? `${doc.fileName} · ${doc.fileSize ? fmtFileSize(doc.fileSize) : ""} · ` : ""}
+              Uploaded just now · <span className="text-blue-600 font-medium">Saved</span>
+            </p>
+            <p className="text-[11px] text-gray-400 mt-0.5">Document pending verification</p>
+          </>
         )}
         {doc.status === "link_sent" && (
           <p className="text-xs text-gray-500 mt-0.5 break-words">
@@ -894,8 +1004,8 @@ function DocRow({
             <button className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors">
               <Eye size={12} /> View
             </button>
-            <button onClick={onRemove} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400"><RefreshCw size={13} /></button>
-            <button onClick={onRemove} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>
+            <button type="button" onClick={onRemove} aria-label="Replace document" className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400"><RefreshCw size={13} /></button>
+            <button type="button" onClick={onRemove} aria-label="Remove document" className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>
           </>
         )}
         {doc.status === "link_sent" && (
@@ -905,7 +1015,7 @@ function DocRow({
                 <RefreshCw size={11} /> Resend
               </button>
             ) : null}
-            <button onClick={onRemove} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>
+            <button type="button" onClick={onRemove} aria-label="Remove document" className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>
           </>
         )}
         {doc.status === "pending" && (
@@ -985,6 +1095,7 @@ function applyOwnerSelfDocPrefill(persons: PersonState[]): PersonState[] {
 
 function isLoggedInOwnerParty(person: PersonState, isOwnerFlow: boolean): boolean {
   if (!isOwnerFlow || !person.personLabel.startsWith("OWNER")) return false;
+  if (person.personLabel !== "OWNER" && person.personLabel !== "OWNER 1") return false;
   const profile = getOwnerProfile();
   const normPhone = (s: string) => s.replace(/\D/g, "").slice(-10);
   const profilePhone = normPhone(profile.phone);
@@ -1007,13 +1118,16 @@ function Step3Documents({
   ownerCount,
   onContinue,
   isOwnerFlow = false,
+  initialPersons = [],
 }: {
   allParties: Party[];
   ownerCount: number;
-  onContinue: (result: { documentsComplete: boolean }) => void;
+  onContinue: (result: { documentsComplete: boolean; persons: PersonState[] }) => void;
   isOwnerFlow?: boolean;
+  initialPersons?: PersonState[];
 }) {
   const [persons, setPersons] = useState<PersonState[]>(() => {
+    if (initialPersons && initialPersons.length > 0) return initialPersons;
     if (!allParties || allParties.length === 0) return [initPersonDocs("Owner", "", "OWNER 1")];
     let ownerIdx = 0;
     let tenantIdx = 0;
@@ -1047,6 +1161,11 @@ function Step3Documents({
   };
 
   const handleUpload = (pIdx: number, dIdx: number, file: File) => {
+    const error = getFileTypeError(file);
+    if (error) {
+      pushToast({ title: "Invalid file", description: error, variant: "destructive" });
+      return;
+    }
     updateDoc(pIdx, dIdx, { status: "uploaded", fileName: file.name, fileSize: file.size, uploadedAt: Date.now() });
     const person = persons[pIdx];
     const docId = person?.docs[dIdx]?.id;
@@ -1097,8 +1216,11 @@ function Step3Documents({
           accountNumber: data.accountNumber,
           ifscCode: data.ifscCode,
         });
-      } else if (data.mode === "upi" && isValidUpiId(data.upiId)) {
-        saveOwnerProfileUpi(data.upiId);
+      } else if (data.mode === "upi") {
+        if (isValidUpiId(data.upiId)) saveOwnerProfileUpi(data.upiId);
+        if (data.upiQrFileName) {
+          saveOwnerProfile({ ...getOwnerProfile(), upiQrFileName: data.upiQrFileName });
+        }
       }
     }
     setBankModal(null);
@@ -1113,7 +1235,7 @@ function Step3Documents({
     return (
       <div className="max-w-lg text-center py-12">
         <p className="text-sm text-gray-500 mb-4">No parties selected. Go back and add owners and tenants first.</p>
-        <ContinueButton onClick={() => onContinue({ documentsComplete: false })} label="Skip" />
+        <ContinueButton onClick={() => onContinue({ documentsComplete: false, persons: [] })} label="Skip" />
       </div>
     );
   }
@@ -1123,7 +1245,11 @@ function Step3Documents({
       {/* Bank modal */}
       {bankModal && (
         <BankModal
-          prefillOwnerProfile={isOwnerFlow}
+          key={`${bankModal.pIdx}-${bankModal.dIdx}`}
+          prefillOwnerProfile={
+            isOwnerFlow &&
+            isLoggedInOwnerParty(persons[bankModal.pIdx], isOwnerFlow)
+          }
           onSave={handleBankSave}
           onClose={() => setBankModal(null)}
         />
@@ -1185,15 +1311,6 @@ function Step3Documents({
               </span>
             )}
           </div>
-          {!(isOwnerFlow && personIdx === 0 && person.personLabel.startsWith("OWNER")) ? (
-            <button
-              onClick={() => handleSendAllPending(personIdx)}
-              disabled={allDoneForPerson}
-              className={`mt-3 flex items-center justify-center gap-1.5 w-full h-8 rounded-lg border text-xs font-medium transition-colors ${allDoneForPerson ? "border-gray-100 text-gray-300 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary hover:bg-primary/5"}`}
-            >
-              <Send size={12} /> Send All Pending Links
-            </button>
-          ) : null}
         </div>
 
         {/* Doc rows */}
@@ -1207,7 +1324,7 @@ function Step3Documents({
               onSendLink={() => handleSendLink(personIdx, dIdx)}
               onRemove={() => handleResetDoc(personIdx, dIdx)}
               onAddDetails={() => setBankModal({ pIdx: personIdx, dIdx })}
-              hideSendLink={isOwnerFlow && personIdx === 0 && person.personLabel.startsWith("OWNER")}
+              hideSendLink
             />
           ))}
         </div>
@@ -1216,13 +1333,17 @@ function Step3Documents({
       {/* Navigation button */}
       <div className="mt-4">
         {isLast ? (
-          <ContinueButton onClick={() => onContinue({ documentsComplete: allDone })} disabled={!allDoneForPerson} label="Continue" />
+          <ContinueButton
+            onClick={() => onContinue({ documentsComplete: allDone, persons })}
+            disabled={!allDoneForPerson}
+            label="Continue"
+          />
         ) : (
           <ContinueButton onClick={() => setPersonIdx((i) => i + 1)} disabled={!allDoneForPerson} label="Next Person" />
         )}
         {!allDoneForPerson && (
           <p className="text-xs text-center text-gray-400 mt-2">
-            Upload or send link for all required documents to continue
+            Upload all required documents to continue
           </p>
         )}
       </div>
@@ -1241,6 +1362,7 @@ function Step4Details({
   noticePeriod, setNoticePeriod,
   rentDueDay, setRentDueDay,
   maintenanceCharges, setMaintenanceCharges,
+  maintenanceIncluded, setMaintenanceIncluded,
   onContinue,
 }: {
   property: Property | null;
@@ -1251,10 +1373,9 @@ function Step4Details({
   noticePeriod: string; setNoticePeriod: (v: string) => void;
   rentDueDay: string; setRentDueDay: (v: string) => void;
   maintenanceCharges: string; setMaintenanceCharges: (v: string) => void;
+  maintenanceIncluded: boolean; setMaintenanceIncluded: (v: boolean) => void;
   onContinue: () => void;
 }) {
-  const [maintenanceIncluded, setMaintenanceIncluded] = useState(false);
-
   useEffect(() => {
     if (property) {
       if (!monthlyRent) setMonthlyRent(property.monthlyRent || "");
@@ -1282,7 +1403,7 @@ function Step4Details({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <FieldLabel required>Start Date</FieldLabel>
-              <TextInput type="date" value={startDate} onChange={setStartDate} />
+              <TextInput type="date" value={startDate} onChange={setStartDate} min={todayLocalDateInputMin()} />
             </div>
             <div>
               <FieldLabel required>Lock-in Period</FieldLabel>
@@ -1390,8 +1511,15 @@ function Step5Brokerage({
     : brokerageAmount.trim() !== "";
 
   const bankDetailsFilled = brokerageMode === "Bank Transfer"
-    ? (holderName && bankName && accountNumber && ifscCode)
-    : isValidUpiId(upiId);
+    ? !!(
+        holderName &&
+        bankName &&
+        accountNumber &&
+        ifscCode &&
+        isValidAccountNumber(accountNumber) &&
+        isValidIFSC(ifscCode)
+      )
+    : (isValidUpiId(upiId) || !!qrFile);
 
   const valid = amountFilled && bankDetailsFilled;
 
@@ -1462,7 +1590,9 @@ function Step5Brokerage({
             </div>
           ) : (
             <div>
-              <FieldLabel required>Amount (₹)</FieldLabel>
+              <FieldLabel required>
+                {brokeragePaidBy === "Owner" ? "Owner pays (₹)" : "Tenant pays (₹)"}
+              </FieldLabel>
               <TextInput type="number" value={brokerageAmount} onChange={setBrokerageAmount} placeholder="e.g. 15000" />
               {brokeragePercentOfRent(brokerageAmount, monthlyRent) && (
                 <p className="text-sm font-medium text-green-600 mt-1">{brokeragePercentOfRent(brokerageAmount, monthlyRent)}</p>
@@ -1496,6 +1626,7 @@ function Step5Brokerage({
                 <div>
                   <FieldLabel required>Account Holder Name</FieldLabel>
                   <TextInput value={holderName} onChange={setHolderName} placeholder="Full name" />
+                  <p className="text-xs text-gray-400 mt-1">Your (broker&apos;s) bank account</p>
                 </div>
                 <div>
                   <FieldLabel required>Bank Name</FieldLabel>
@@ -1514,10 +1645,16 @@ function Step5Brokerage({
                 <div>
                   <FieldLabel required>Account Number</FieldLabel>
                   <TextInput value={accountNumber} onChange={setAccountNumber} placeholder="Enter account number" />
+                  {accountNumber && !isValidAccountNumber(accountNumber) ? (
+                    <p className="text-xs text-red-500 mt-1">Account number must be 9–18 digits</p>
+                  ) : null}
                 </div>
                 <div>
                   <FieldLabel required>IFSC Code</FieldLabel>
                   <TextInput value={ifscCode} onChange={(v) => setIfscCode(v.toUpperCase())} placeholder="e.g. SBIN0001234" />
+                  {ifscCode && !isValidIFSC(ifscCode) ? (
+                    <p className="text-xs text-red-500 mt-1">Invalid IFSC code (e.g. HDFC0001234)</p>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -1564,8 +1701,11 @@ function Step5Brokerage({
           const current = getBrokerProfile();
           if (brokerageMode === "Bank Transfer" && holderName && bankName && accountNumber && ifscCode) {
             saveBrokerProfile({ ...current, bankHolderName: holderName, bankName, bankAccountNumber: accountNumber, bankIFSC: ifscCode });
-          } else if (brokerageMode === "UPI" && isValidUpiId(upiId)) {
-            saveBrokerProfile({ ...current, upiId });
+          } else if (brokerageMode === "UPI") {
+            const next = { ...current };
+            if (isValidUpiId(upiId)) next.upiId = upiId;
+            if (qrFile) next.upiQrFileName = qrFile;
+            saveBrokerProfile(next);
           }
           onContinue();
         }}
@@ -1593,9 +1733,10 @@ function Step6Review({
   property,
   ownerName, ownerContact, additionalOwners, selectedTenants,
   startDate, monthlyRent, securityDeposit,
-  lockInPeriod, noticePeriod, rentDueDay, maintenanceCharges,
+  lockInPeriod, noticePeriod, rentDueDay, maintenanceCharges, maintenanceIncluded,
   brokerageAmount, brokerageAmountOwner, brokerageAmountTenant, brokeragePaidBy, brokerageMode,
   documentsComplete,
+  documentPersons = [],
   isOwnerFlow = false,
   rentSplitSummary = "",
   onGoToStep, onSubmit, submitting,
@@ -1606,9 +1747,11 @@ function Step6Review({
   startDate: string;
   monthlyRent: string; securityDeposit: string;
   lockInPeriod: string; noticePeriod: string; rentDueDay: string; maintenanceCharges: string;
+  maintenanceIncluded?: boolean;
   brokerageAmount: string; brokerageAmountOwner: string; brokerageAmountTenant: string;
   brokeragePaidBy: string; brokerageMode: string;
   documentsComplete: boolean;
+  documentPersons?: PersonState[];
   isOwnerFlow?: boolean;
   rentSplitSummary?: string;
   onGoToStep: (s: Step) => void;
@@ -1670,7 +1813,17 @@ function Step6Review({
             <ReviewRow icon={Lock} label="Lock-in Period" value={lockInPeriod} />
             <ReviewRow icon={Bell} label="Notice Period" value={noticePeriod} />
             <ReviewRow icon={Calendar} label="Rent Due Day" value={rentDueDay ? `${rentDueDay}${rentDueDay === "1" ? "st" : rentDueDay === "2" ? "nd" : rentDueDay === "3" ? "rd" : "th"} of month` : "—"} />
-            <ReviewRow icon={IndianRupee} label="Maintenance" value={maintenanceCharges ? `₹${Number(maintenanceCharges).toLocaleString("en-IN")}` : "Not included"} />
+            <ReviewRow
+              icon={IndianRupee}
+              label="Maintenance"
+              value={
+                maintenanceIncluded
+                  ? "Included in rent"
+                  : maintenanceCharges
+                    ? `₹${Number(maintenanceCharges).toLocaleString("en-IN")}`
+                    : "Not included"
+              }
+            />
           </div>
         </div>
 
@@ -1706,18 +1859,39 @@ function Step6Review({
 
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <SectionHeader title="Documents" stepTarget={3} />
-          <div className="px-5 py-3">
-            {documentsComplete ? (
-              <div className="flex items-start gap-2 rounded-lg bg-orange-50 border border-orange-100 px-3 py-2.5 text-sm text-orange-700">
-                <Clock size={14} className="shrink-0 mt-0.5 text-orange-600" />
-                <span>Documents collected via upload or send-link flow</span>
-              </div>
+          <div className="px-5 py-3 space-y-3">
+            {documentPersons.length === 0 ? (
+              <p className="text-sm text-gray-500">No documents uploaded in this session.</p>
             ) : (
-              <div className="flex items-start gap-2 text-sm text-amber-700">
-                <Clock size={14} className="shrink-0 mt-0.5" />
-                <span>Documents still pending — finish uploads or send links from the Documents step</span>
-              </div>
+              documentPersons.map((person) => (
+                <div key={person.personLabel} className="rounded-lg border border-gray-100 bg-gray-50/80 p-3">
+                  <p className="text-xs font-semibold text-gray-700 mb-2">
+                    {person.personLabel} — {person.name || "—"}
+                  </p>
+                  <ul className="space-y-1">
+                    {person.docs.map((doc) => (
+                      <li key={doc.id} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="text-gray-600">{doc.label}</span>
+                        <span
+                          className={
+                            doc.status === "uploaded"
+                              ? "font-medium text-green-700 truncate max-w-[55%]"
+                              : "text-amber-600"
+                          }
+                        >
+                          {doc.status === "uploaded"
+                            ? doc.fileName ?? "Uploaded"
+                            : "Not uploaded"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))
             )}
+            {!documentsComplete && documentPersons.length > 0 ? (
+              <p className="text-xs text-amber-700">Some documents were skipped or are still pending.</p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -1759,7 +1933,7 @@ function Step6Review({
 
 // ─── Success Overlay ──────────────────────────────────────────────────────────
 
-function SuccessOverlay({ onDone }: { onDone: () => void }) {
+function SuccessOverlay({ onDone, isOwnerFlow }: { onDone: () => void; isOwnerFlow: boolean }) {
   useEffect(() => {
     const t = setTimeout(onDone, 2000);
     return () => clearTimeout(t);
@@ -1771,20 +1945,21 @@ function SuccessOverlay({ onDone }: { onDone: () => void }) {
         <div className="w-20 h-20 rounded-full bg-accent/15 mx-auto mb-5 flex items-center justify-center">
           <CheckCircle2 size={44} className="text-accent" />
         </div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Agreement Sent!</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Agreement Saved!</h2>
         <p className="text-sm text-gray-500 mb-4">
-          The rental agreement has been created and sent to both parties for e-signing.
+          Your rental agreement details have been saved successfully. You can view and manage it from your Agreements page.
         </p>
-        <div className="flex items-center gap-1.5 justify-center text-xs text-gray-500 mb-6">
-          <BadgeCheck size={14} className="text-accent" />
-          Powered by TrustKeyper E-Sign
-        </div>
-        <p className="text-xs text-gray-400 mb-4">Redirecting to Documents…</p>
+        <p className="text-xs text-gray-500 mb-6">
+          Note: PDF generation and e-signature are coming soon.
+        </p>
+        <p className="text-xs text-gray-400 mb-4">
+          {isOwnerFlow ? "Redirecting to Agreements…" : "Redirecting to Documents…"}
+        </p>
         <button
           onClick={onDone}
           className="w-full h-10 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90"
         >
-          Go to Documents
+          {isOwnerFlow ? "View Agreements" : "View Documents"}
         </button>
       </div>
     </div>
@@ -1801,6 +1976,7 @@ export default function GenerateAgreement() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [documentsComplete, setDocumentsComplete] = useState(false);
+  const [documentPersons, setDocumentPersons] = useState<PersonState[]>([]);
 
   const skipOwnerAutofillNext = useRef(false);
   const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1816,9 +1992,6 @@ export default function GenerateAgreement() {
   const [selectedTenants, setSelectedTenants] = useState<Party[]>([]);
   const [rentSplitMode, setRentSplitMode] = useState<RentSplitMode>("percent");
   const [rentSplits, setRentSplits] = useState<OwnerRentSplit[]>([]);
-  const tenantAadhaar = "";
-  const tenantPan = "";
-
   // Step 4
   const [startDate, setStartDate] = useState("");
   const [monthlyRent, setMonthlyRent] = useState("");
@@ -1827,6 +2000,7 @@ export default function GenerateAgreement() {
   const [noticePeriod, setNoticePeriod] = useState("");
   const [rentDueDay, setRentDueDay] = useState("");
   const [maintenanceCharges, setMaintenanceCharges] = useState("");
+  const [maintenanceIncluded, setMaintenanceIncluded] = useState(false);
 
   // Step 5
   const [brokerageAmount, setBrokerageAmount] = useState("");
@@ -1867,9 +2041,11 @@ export default function GenerateAgreement() {
         selectedPropertyId?: string | null;
         ownerName?: string;
         ownerContact?: string;
+        primaryOwnerSelected?: boolean;
         additionalOwners?: Party[];
         selectedTenants?: Party[];
         documentsComplete?: boolean;
+        documentPersons?: PersonState[];
         startDate?: string;
         monthlyRent?: string;
         securityDeposit?: string;
@@ -1877,6 +2053,7 @@ export default function GenerateAgreement() {
         noticePeriod?: string;
         rentDueDay?: string;
         maintenanceCharges?: string;
+        maintenanceIncluded?: boolean;
         brokerageAmount?: string;
         brokerageAmountOwner?: string;
         brokerageAmountTenant?: string;
@@ -1892,9 +2069,11 @@ export default function GenerateAgreement() {
       if (typeof d.step === "number" && d.step >= 1 && d.step <= 6) setStep(d.step);
       setOwnerName(d.ownerName ?? "");
       setOwnerContact(d.ownerContact ?? "");
+      setPrimaryOwnerSelected(d.primaryOwnerSelected ?? true);
       setAdditionalOwners(d.additionalOwners ?? []);
       setSelectedTenants(d.selectedTenants ?? []);
       setDocumentsComplete(!!d.documentsComplete);
+      setDocumentPersons(d.documentPersons ?? []);
       setStartDate(d.startDate ?? "");
       setMonthlyRent(d.monthlyRent ?? "");
       setSecurityDeposit(d.securityDeposit ?? "");
@@ -1902,6 +2081,7 @@ export default function GenerateAgreement() {
       setNoticePeriod(d.noticePeriod ?? "");
       setRentDueDay(d.rentDueDay ?? "");
       setMaintenanceCharges(d.maintenanceCharges ?? "");
+      setMaintenanceIncluded(d.maintenanceIncluded ?? false);
       setBrokerageAmount(d.brokerageAmount ?? "");
       setBrokerageAmountOwner(d.brokerageAmountOwner ?? "");
       setBrokerageAmountTenant(d.brokerageAmountTenant ?? "");
@@ -2002,9 +2182,11 @@ export default function GenerateAgreement() {
           selectedPropertyId: selectedProperty?.id ?? null,
           ownerName,
           ownerContact,
+          primaryOwnerSelected,
           additionalOwners,
           selectedTenants,
           documentsComplete,
+          documentPersons,
           startDate,
           monthlyRent,
           securityDeposit,
@@ -2012,6 +2194,7 @@ export default function GenerateAgreement() {
           noticePeriod,
           rentDueDay,
           maintenanceCharges,
+          maintenanceIncluded,
           brokerageAmount,
           brokerageAmountOwner,
           brokerageAmountTenant,
@@ -2036,9 +2219,11 @@ export default function GenerateAgreement() {
     selectedProperty,
     ownerName,
     ownerContact,
+    primaryOwnerSelected,
     additionalOwners,
     selectedTenants,
     documentsComplete,
+    documentPersons,
     startDate,
     monthlyRent,
     securityDeposit,
@@ -2046,6 +2231,7 @@ export default function GenerateAgreement() {
     noticePeriod,
     rentDueDay,
     maintenanceCharges,
+    maintenanceIncluded,
     brokerageAmount,
     brokerageAmountOwner,
     brokerageAmountTenant,
@@ -2060,6 +2246,7 @@ export default function GenerateAgreement() {
     setShowSuccess(false);
     setSubmitting(false);
     setDocumentsComplete(false);
+    setDocumentPersons([]);
     setSelectedProperty(null);
     setOwnerName("");
     setOwnerContact("");
@@ -2075,6 +2262,7 @@ export default function GenerateAgreement() {
     setNoticePeriod("");
     setRentDueDay("");
     setMaintenanceCharges("");
+    setMaintenanceIncluded(false);
     setBrokerageAmount("");
     setBrokerageAmountOwner("");
     setBrokerageAmountTenant("");
@@ -2138,11 +2326,57 @@ export default function GenerateAgreement() {
     if (!selectedProperty) return;
     setSubmitting(true);
     const primaryTenant = selectedTenants[0];
+    const { aadhaar: tenantAadhaar, pan: tenantPan } = resolveTenantKyc(
+      primaryTenant?.contact ?? "",
+    );
+    const propertyTitle = getPropertyTitle(selectedProperty);
+    const agreementInput: RentalAgreementInput = {
+      propertyTitle,
+      propertyAddress: [selectedProperty.address, selectedProperty.area, selectedProperty.city]
+        .filter(Boolean)
+        .join(", "),
+      ownerName,
+      ownerContact,
+      additionalOwnerNames: additionalOwners.map((o) => o.name).filter(Boolean).join(", "),
+      tenantName: primaryTenant?.name ?? "",
+      tenantContact: primaryTenant?.contact ?? "",
+      coTenantName: selectedTenants.slice(1).map((t) => t.name).join(", "),
+      coTenantContact: selectedTenants.slice(1).map((t) => t.contact).join(", "),
+      startDate,
+      monthlyRent,
+      securityDeposit,
+      lockInPeriod,
+      noticePeriod,
+      rentDueDay,
+      maintenanceCharges,
+      brokerageAmount: isOwnerFlow ? "0" : brokerageAmount,
+      brokeragePaidBy: isOwnerFlow ? "Owner" : brokeragePaidBy,
+      brokerageMode: isOwnerFlow ? "Bank Transfer" : brokerageMode,
+      isOwnerFlow,
+    };
+    const agreementText = generateRentalAgreementText(agreementInput);
+    const waPhone = primaryTenant?.contact || ownerContact;
+
+    const senderLabel = isOwnerFlow
+      ? (ownerName?.trim() ? ownerName.trim() : "Owner")
+      : (getBrokerProfile().name?.trim() ? getBrokerProfile().name.trim() : "Broker");
+    const shareMessage =
+      `Rental agreement for:\n` +
+      `${propertyTitle}\n\n` +
+      `Sent by ${senderLabel} via TrustKeyper.\n\n` +
+      `Please review the attached PDF.`;
+
+    void shareRentalAgreementPdf(agreementInput, propertyTitle, waPhone, whatsAppInviteHref, shareMessage);
+
     setTimeout(() => {
       const mode = brokerageMode as Agreement["brokerageMode"];
+      const customText =
+        isOwnerFlow && showPaymentSplit
+          ? JSON.stringify({ rentSplitMode, rentSplits, agreementText })
+          : agreementText;
       const base = {
         propertyId: selectedProperty.id,
-        propertyTitle: getPropertyTitle(selectedProperty),
+        propertyTitle,
         ownerName,
         ownerContact,
         tenantName: primaryTenant?.name ?? "",
@@ -2159,12 +2393,11 @@ export default function GenerateAgreement() {
         noticePeriod,
         rentDueDay,
         maintenanceCharges,
+        maintenanceIncluded,
         brokerageAmount: isOwnerFlow ? "0" : brokerageAmount,
         brokeragePaidBy: isOwnerFlow ? "Owner" : brokeragePaidBy,
         brokerageMode: isOwnerFlow ? "Bank Transfer" : mode,
-        customText: isOwnerFlow && showPaymentSplit
-          ? JSON.stringify({ rentSplitMode, rentSplits })
-          : undefined,
+        customText,
       };
 
       if (editingAgreementId) {
@@ -2175,7 +2408,6 @@ export default function GenerateAgreement() {
             tenantAadhaar: existing.tenantAadhaar,
             tenantPan: existing.tenantPan,
             documents: existing.documents,
-            customText: undefined,
             status: "Sent",
           });
         }
@@ -2186,13 +2418,14 @@ export default function GenerateAgreement() {
       setSubmitting(false);
       setShowSuccess(true);
       clearAgreementDraftStorage();
-    }, 1200);
+    }, 400);
   };
 
   return (
     <Layout>
       {showSuccess && (
         <SuccessOverlay
+          isOwnerFlow={isOwnerFlow}
           onDone={() => {
             setShowSuccess(false);
             setLocation(isOwnerFlow ? "/owner/agreements" : "/broker/documents");
@@ -2207,7 +2440,7 @@ export default function GenerateAgreement() {
             : "min-w-0 w-full"
         }
       >
-      <div className={`min-w-0 w-full max-w-full ${step !== 6 ? "pb-32 sm:pb-6" : "pb-6"}`}>
+      <div className={`min-w-0 w-full max-w-full ${step !== 6 ? "pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:pb-6" : "pb-6"}`}>
       <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5">
         <button
           type="button"
@@ -2231,13 +2464,7 @@ export default function GenerateAgreement() {
               : "Back to Dashboard"
             : "Back"}
         </button>
-        <button
-          type="button"
-          onClick={handleClearFlow}
-          className="text-xs font-semibold text-primary border-0 bg-transparent shadow-none px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors"
-        >
-          Clear
-        </button>
+        <FlowClearButton onClick={handleClearFlow} />
       </div>
 
       {/* Header */}
@@ -2309,8 +2536,10 @@ export default function GenerateAgreement() {
           ]}
           ownerCount={ownerCount}
           isOwnerFlow={isOwnerFlow}
+          initialPersons={documentPersons}
           onContinue={(result) => {
             setDocumentsComplete(result.documentsComplete);
+            setDocumentPersons(result.persons);
             setStep(4);
           }}
         />
@@ -2332,6 +2561,8 @@ export default function GenerateAgreement() {
           setRentDueDay={setRentDueDay}
           maintenanceCharges={maintenanceCharges}
           setMaintenanceCharges={setMaintenanceCharges}
+          maintenanceIncluded={maintenanceIncluded}
+          setMaintenanceIncluded={setMaintenanceIncluded}
           onContinue={goToNextAfterDetails}
         />
       )}
@@ -2375,12 +2606,14 @@ export default function GenerateAgreement() {
           noticePeriod={noticePeriod}
           rentDueDay={rentDueDay}
           maintenanceCharges={maintenanceCharges}
+          maintenanceIncluded={maintenanceIncluded}
           brokerageAmount={brokerageAmount}
           brokerageAmountOwner={brokerageAmountOwner}
           brokerageAmountTenant={brokerageAmountTenant}
           brokeragePaidBy={brokeragePaidBy}
           brokerageMode={brokerageMode}
           documentsComplete={documentsComplete}
+          documentPersons={documentPersons}
           isOwnerFlow={isOwnerFlow}
           rentSplitSummary={formatRentSplitSummary()}
           onGoToStep={setStep}

@@ -6,6 +6,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { getOwnerProfile } from "@/lib/ownerProfile";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import { getAgreements } from "@/lib/agreements";
+import {
+  getOwnerInvites,
+  getRecordedInviteStatus,
+  OWNER_INVITES_UPDATED_EVENT,
+} from "@/lib/ownerTenants";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
 import {
   getActiveSession,
@@ -67,14 +72,15 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
   const initials = getInitials(ownerName || "Owner");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationEpoch, setNotificationEpoch] = useState(0);
-
   useEffect(() => {
     const refresh = () => setNotificationEpoch((v) => v + 1);
     window.addEventListener("storage", refresh);
     window.addEventListener("focus", refresh);
+    window.addEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
     return () => {
       window.removeEventListener("storage", refresh);
       window.removeEventListener("focus", refresh);
+      window.removeEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
     };
   }, []);
 
@@ -127,12 +133,46 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
           ]
         : [];
 
-    return [...propertyEvents, ...agreementEvents, ...accountEvent]
+    const inviteEvents = getOwnerInvites().flatMap((inv) => {
+      const status = getRecordedInviteStatus(inv);
+      if (status === "accepted" && inv.acceptedAt) {
+        return [
+          {
+            id: `invite-accepted-${inv.id}`,
+            title: "Tenant accepted invite",
+            desc: `${inv.name} • ${inv.propertyLabel}`,
+            time: inv.acceptedAt,
+          },
+        ];
+      }
+      if (status === "rejected" && inv.rejectedAt) {
+        return [
+          {
+            id: `invite-rejected-${inv.id}`,
+            title: "Tenant rejected invite",
+            desc: `${inv.name} • ${inv.propertyLabel}`,
+            time: inv.rejectedAt,
+          },
+        ];
+      }
+      return [];
+    });
+
+    return [...propertyEvents, ...agreementEvents, ...inviteEvents, ...accountEvent]
       .sort((a, b) => b.time - a.time)
       .slice(0, 12);
   }, [ownerName, notificationEpoch]);
 
   const closeSidebar = () => setSidebarOpen(false);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeSidebar();
+    };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [sidebarOpen]);
 
   return (
     <div className="min-h-screen w-full bg-[#F5F7FA] flex flex-col">
@@ -141,9 +181,12 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
         <div className="flex items-center gap-3">
           {/* Hamburger — mobile only */}
           <button
+            type="button"
             onClick={() => setSidebarOpen(true)}
             className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100"
             aria-label="Open menu"
+            aria-expanded={sidebarOpen}
+            aria-controls="mobile-sidebar"
           >
             <Menu size={20} />
           </button>
@@ -159,7 +202,11 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
           </div>
           <Popover>
             <PopoverTrigger asChild>
-              <button className="relative w-10 h-10 rounded-xl border border-gray-100 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50 focus:outline-none transition-all hover:border-gray-200 shadow-sm">
+              <button
+                type="button"
+                aria-label="Notifications"
+                className="relative w-10 h-10 rounded-xl border border-gray-100 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50 focus:outline-none transition-all hover:border-gray-200 shadow-sm"
+              >
                 <Bell size={18} className="text-gray-500" />
                 {notifications.length > 0 ? (
                   <span className="absolute -top-1 -right-1 min-w-5 h-5 rounded-full bg-[#EB5757] text-[10px] font-semibold text-white flex items-center justify-center border-2 border-white px-1">
@@ -197,7 +244,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
               </div>
             </PopoverContent>
           </Popover>
-          <Link href="/owner/profile" className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-900 flex items-center justify-center text-white hover:bg-gray-800">
+          <Link href="/owner/profile" className="relative hidden md:flex w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-900 items-center justify-center text-white hover:bg-gray-800">
             <Users size={17} />
           </Link>
         </div>
@@ -207,6 +254,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
         {/* ── Mobile sidebar backdrop ─────────────────────────────────────── */}
         {sidebarOpen && (
           <div
+            role="presentation"
             className="fixed inset-0 z-40 md:hidden bg-black/40"
             onClick={closeSidebar}
           />
@@ -214,6 +262,10 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
 
         {/* ── Sidebar ─────────────────────────────────────────────────────── */}
         <aside
+          id="mobile-sidebar"
+          role="dialog"
+          aria-label="Navigation menu"
+          aria-modal="true"
           className={`
             fixed md:relative inset-y-0 left-0 z-50 md:z-auto
             w-64 bg-white border-r border-gray-200 px-4 py-6
@@ -225,7 +277,9 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
         >
           {/* Close button — mobile only */}
           <button
+            type="button"
             onClick={closeSidebar}
+            aria-label="Close menu"
             className="md:hidden absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
           >
             <X size={18} />

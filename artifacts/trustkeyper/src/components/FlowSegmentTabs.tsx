@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 export type FlowSegmentOption<T extends string> = { value: T; label: string };
 
@@ -19,9 +19,15 @@ export function FlowSegmentTabs<const T extends string>({
   className = "",
   fullWidth = false,
 }: FlowSegmentTabsProps<T>) {
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [value]);
+
   return (
     <div
-      className={`flex items-center gap-1 bg-white border border-gray-200 rounded-[4px] p-1 overflow-x-auto max-w-full ${
+      className={`flex items-center gap-1 bg-white border border-gray-200 rounded-[4px] p-1 overflow-x-auto max-w-full scroll-smooth ${
         fullWidth ? "w-full" : "w-fit"
       } ${className}`}
       role="tablist"
@@ -31,6 +37,7 @@ export function FlowSegmentTabs<const T extends string>({
         return (
           <button
             key={opt.value}
+            ref={active ? activeRef : undefined}
             type="button"
             role="tab"
             aria-selected={active}
