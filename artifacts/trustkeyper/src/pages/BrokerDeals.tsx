@@ -342,7 +342,7 @@ export default function BrokerDeals() {
             value={view}
             onChange={(v) => setView(v)}
             options={[
-              { value: "kanban", label: "Kanban" },
+              { value: "kanban", label: "Board" },
               { value: "table", label: "Table" },
             ]}
           />

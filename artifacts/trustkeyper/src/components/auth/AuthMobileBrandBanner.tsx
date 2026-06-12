@@ -12,7 +12,7 @@ export function AuthMobileBrandBanner() {
       <img
         src={topPanel}
         alt=""
-        className="block w-full h-auto min-h-[72px] object-cover object-center"
+        className="block w-full h-20 object-cover object-center"
         aria-hidden
       />
       <div className="absolute inset-0 flex items-center justify-center px-6 py-5">

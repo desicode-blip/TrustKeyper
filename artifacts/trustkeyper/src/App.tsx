@@ -5,7 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
+import SharedProperty from "@/pages/SharedProperty";
 import Onboarding from "@/pages/Onboarding";
 import Login from "@/pages/Login";
 import LoginDirect from "@/pages/LoginDirect";
@@ -38,6 +38,9 @@ import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminProperties from "@/pages/admin/AdminProperties";
 import AdminFeedback from "@/pages/admin/AdminFeedback";
+import NotFound from "@/pages/not-found";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
 import { createAdminQueryClient } from "@/hooks/useAdminData";
 
 const queryClient = createAdminQueryClient();
@@ -50,7 +53,7 @@ function FeedbackWidget() {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
 
-  if (location === "/" || location === "/login" || location.startsWith("/admin")) {
+  if (location === "/" || location === "/login" || location.startsWith("/admin") || location.startsWith("/share/")) {
     return null;
   }
 
@@ -66,7 +69,10 @@ function Router() {
   return (
     <>
     <Switch>
+      <Route path="/share/property/:id" component={SharedProperty} />
       <Route path="/login" component={Login} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/privacy" component={Privacy} />
       {/* Role-card login — not linked in UI; enable navigation when needed */}
       <Route path="/Logindirect" component={LoginDirect} />
       <Route path="/" component={Onboarding} />

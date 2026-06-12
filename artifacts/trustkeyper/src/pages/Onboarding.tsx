@@ -16,6 +16,8 @@ import {
   signUpSuccess,
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
+import { clearActiveSessionBackup } from "@/lib/initAppStorage";
+import { getOwnerProfile, saveOwnerProfile } from "@/lib/ownerProfile";
 import { setSessionItem } from "@/lib/storageKeys";
 import { sendPhoneOtp } from "@/lib/phoneOtp";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
@@ -36,6 +38,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
@@ -111,6 +114,7 @@ export default function Onboarding() {
       persistSessionToLocalStorage(ownerPhoneDigits, "owner");
     } else {
       clearRememberedSessionFromLocalStorage();
+      clearActiveSessionBackup();
     }
 
     try {
@@ -127,6 +131,23 @@ export default function Onboarding() {
   const handlePlanSelect = (plan: "diy" | "managed") => {
     if (plan === "managed") {
       setIsManagedPopupOpen(true);
+      void (async () => {
+        try {
+          await fetch("/api/managed-interest", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: ownerDetails.name,
+              phone: ownerPhoneDigits,
+              propertyCount: propertiesCount,
+              propertyIntent: JSON.stringify(propertyIntent),
+              entrySource: "onboarding",
+            }),
+          });
+        } catch {
+          // silent — dialog already opened, email failure is non-blocking
+        }
+      })();
     } else {
       try {
         sessionStorage.removeItem("tk_owner_onboarding_resume_step");
@@ -177,8 +198,13 @@ export default function Onboarding() {
                 const r = readAuthPendingRole() ?? ("owner" as Role);
                 if (await profileExistsAsync(ownerPhoneDigits, r)) {
                   toast({
-                    title: "An account already exists for this number.",
+                    title: "An account already exists for this number. Please log in instead.",
                     variant: "destructive",
+                    action: (
+                      <ToastAction altText="Log in" onClick={() => setLocation("/login")}>
+                        Log in
+                      </ToastAction>
+                    ),
                   });
                   return;
                 }
@@ -187,17 +213,19 @@ export default function Onboarding() {
                     ownerPhoneDigits,
                     r,
                     {
-                    name: ownerDetails.name,
-                    phone: ownerPhoneDigits,
-                    email: "",
-                    firm: "",
-                    bankHolderName: "",
-                    bankName: "",
-                    bankAccountNumber: "",
-                    bankIFSC: "",
-                    upiId: "",
-                    upiQrFileName: "",
-                  },
+                      name: ownerDetails.name,
+                      phone: ownerPhoneDigits,
+                      email: "",
+                      firm: "",
+                      bankHolderName: "",
+                      bankName: "",
+                      bankAccountNumber: "",
+                      bankIFSC: "",
+                      upiId: "",
+                      upiQrFileName: "",
+                      propertyCount: propertiesCount,
+                      propertyIntent: "",
+                    },
                     accessToken,
                   );
                 } catch (err) {
@@ -216,7 +244,13 @@ export default function Onboarding() {
             <OwnerStep2Intent
               propertyIntent={propertyIntent}
               setPropertyIntent={setPropertyIntent}
-              onNext={goNext}
+              onNext={() => {
+                saveOwnerProfile({
+                  ...getOwnerProfile(),
+                  propertyIntent: JSON.stringify(propertyIntent),
+                });
+                goNext();
+              }}
             />
           )}
           {step === 6 && role === "owner" && (

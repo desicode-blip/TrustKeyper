@@ -14,13 +14,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BrokerLayout from "@/components/BrokerLayout";
+import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/FlowStickyActionBar";
+import { FlowChipButton } from "@/components/FlowChipButton";
 import { AddPropertyProgressBar } from "@/components/AddPropertyProgressBar";
 import { useScrollToTopOnChange } from "@/hooks/useScrollToTopOnChange";
 import { getActiveSession } from "@/lib/auth";
+import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { addProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
-import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
+import { getItem, removeItem, setItem } from "@/lib/storageKeys";
 import { toast } from "@/hooks/use-toast";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -99,19 +102,7 @@ function ChipButton({
   selected: boolean;
   onClick: () => void;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`px-4 py-2 rounded-md border text-sm font-medium transition-colors ${
-        selected
-          ? "bg-primary/10 border-primary text-primary"
-          : "bg-white border-gray-300 text-gray-700 hover:border-primary/50"
-      }`}
-    >
-      {label}
-    </button>
-  );
+  return <FlowChipButton label={label} selected={selected} onClick={onClick} />;
 }
 
 function AmenityCheck({
@@ -137,12 +128,13 @@ function AmenityCheck({
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function AddProperty() {
+  const availableFromMin = todayLocalDateInputMin();
   const [, setLocation] = useLocation();
 
   const loadSavedData = () => {
     if (typeof window === "undefined") return null;
     try {
-      return JSON.parse(getSessionItem("add_property_data") ?? "null");
+      return JSON.parse(getItem("add_property_data") ?? "null");
     } catch {
       return null;
     }
@@ -200,7 +192,7 @@ export default function AddProperty() {
 
   const clearDraft = () => {
     try {
-      removeSessionItem("add_property_data");
+      removeItem("add_property_data");
     } catch {}
     setSubStep(0);
     setNickname("");
@@ -348,7 +340,7 @@ export default function AddProperty() {
     };
 
     try {
-      setSessionItem("add_property_data", JSON.stringify(data));
+      setItem("add_property_data", JSON.stringify(data));
       broadcastBrokerPendingFlowsUpdated();
     } catch {
       // ignore storage errors
@@ -469,7 +461,7 @@ export default function AddProperty() {
       status: "Active",
     });
     try {
-      removeSessionItem("add_property_data");
+      removeItem("add_property_data");
     } catch {
       // ignore
     }
@@ -885,6 +877,7 @@ export default function AddProperty() {
             <input
               ref={availableFromRef}
               type="date"
+              min={availableFromMin}
               value={availableFrom}
               onChange={(e) => setAvailableFrom(e.target.value)}
               className="flex-1 h-9 px-2 text-sm focus:outline-none bg-white appearance-none [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:w-0 [&::-webkit-calendar-picker-indicator]:h-0"
@@ -1010,7 +1003,7 @@ export default function AddProperty() {
       <AddPropertyProgressBar subStep={subStep} />
 
       {/* Card */}
-      <div className="max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-8 pb-32 sm:pb-8">
+      <div className={`max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-8 ${FLOW_STICKY_CONTENT_CLASS} sm:pb-8`}>
         {subStep === 0 && renderStep0()}
         {subStep === 1 && renderStep1()}
         {subStep === 2 && renderStep2()}
@@ -1032,16 +1025,16 @@ export default function AddProperty() {
       </div>
 
       {/* Continue / Submit — mobile sticky */}
-      <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <FlowStickyActionBar>
         <Button
           size="lg"
           onClick={handleContinue}
           disabled={!canContinue()}
-          className="w-full bg-primary hover:bg-primary/90"
+          className="w-full bg-primary hover:bg-primary/90 rounded-[4px]"
         >
           {subStep === 5 ? "Submit" : "Continue →"}
         </Button>
-      </div>
+      </FlowStickyActionBar>
 
       {/* Success overlay */}
       {showSuccess && (

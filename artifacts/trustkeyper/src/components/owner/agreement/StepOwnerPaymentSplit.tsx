@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { ChevronRight, User } from "lucide-react";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
+import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/FlowStickyActionBar";
 import type { AgreementParty } from "@/components/owner/agreement/StepOwnerParties";
 
 export type RentSplitMode = "percent" | "amount";
@@ -101,7 +102,7 @@ export function StepOwnerPaymentSplit({
   };
 
   return (
-    <div className="max-w-3xl w-full mx-auto">
+    <div className={`max-w-3xl w-full mx-auto ${FLOW_STICKY_CONTENT_CLASS}`}>
       <div className="text-center mb-8">
         <h2 className="text-xl font-semibold text-gray-900">Payment split between owners</h2>
         <p className="text-sm text-gray-500 mt-1">Who will receive the rent and how much?</p>
@@ -203,12 +204,12 @@ export function StepOwnerPaymentSplit({
           Continue <ChevronRight size={16} />
         </button>
       </div>
-      <div className="sm:hidden fixed bottom-14 left-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <FlowStickyActionBar>
         <button
           type="button"
           onClick={onContinue}
           disabled={!canContinue}
-          className={`flex items-center justify-center gap-2 w-full h-12 rounded-xl text-sm font-semibold transition-colors ${
+          className={`flex items-center justify-center gap-2 w-full h-10 rounded-[4px] text-sm font-semibold transition-colors ${
             canContinue
               ? "bg-primary text-white hover:bg-primary/90"
               : "bg-gray-300 text-white cursor-not-allowed"
@@ -216,7 +217,7 @@ export function StepOwnerPaymentSplit({
         >
           Continue <ChevronRight size={16} />
         </button>
-      </div>
+      </FlowStickyActionBar>
     </div>
   );
 }

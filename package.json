@@ -35,7 +35,7 @@
     "pg": "^8.20.0"
   },
   "devDependencies": {
-    "@esbuild/darwin-arm64": "^0.28.0",
+    "@esbuild/darwin-arm64": "^0.27.3",
     "@rollup/rollup-darwin-arm64": "^4.60.4",
     "@tailwindcss/oxide-win32-x64-msvc": "4.2.4",
     "@types/node": "catalog:",

@@ -3,8 +3,6 @@ import { useLocation } from "wouter";
 import {
   Plus,
   User,
-  Phone,
-  MessageCircle,
   ChevronDown,
   ChevronUp,
   Calendar,
@@ -12,10 +10,13 @@ import {
   Building2,
   Users as UsersIcon,
   Utensils,
+  Pencil,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
 import BrokerLayout from "@/components/BrokerLayout";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
-import { getTenants, timeAgo, type Tenant } from "@/lib/tenants";
+import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
+import { getBrokerTenantWhatsAppHref, getTenants, timeAgo, type Tenant } from "@/lib/tenants";
 
 function getInitial(name: string): string {
   return name.trim()[0]?.toUpperCase() ?? "?";
@@ -34,8 +35,9 @@ function formatDate(d?: string): string {
   }
 }
 
-function TenantCard({ t }: { t: Tenant }) {
+function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) {
   const [open, setOpen] = useState(false);
+  const whatsAppUrl = getBrokerTenantWhatsAppHref(t);
 
   const summaryChips: { icon: React.ReactNode; label: string }[] = [];
   if (t.who) summaryChips.push({ icon: <UsersIcon size={12} />, label: t.who });
@@ -58,28 +60,32 @@ function TenantCard({ t }: { t: Tenant }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5">
       <div className="flex items-start justify-between flex-wrap gap-3">
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-full bg-blue-50 text-primary flex items-center justify-center text-base font-semibold">
+        <div className="flex items-start gap-4 min-w-0 flex-1">
+          <div className="w-10 h-10 rounded-full bg-blue-50 text-primary flex items-center justify-center text-base font-semibold shrink-0">
             {getInitial(t.name)}
           </div>
-          <div>
-            <p className="font-semibold text-gray-900">{t.name}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold text-gray-900">{t.name}</p>
+              {t.detailsComplete ? (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Profile Complete
+                </span>
+              ) : null}
+            </div>
             <p className="text-sm text-gray-500">{t.phone}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {t.detailsComplete ? (
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Profile Complete
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-orange-50 text-orange-600 text-xs font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-              Onboarding Pending
-            </span>
-          )}
-        </div>
+        <a
+          href={whatsAppUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`WhatsApp ${t.name}`}
+          className="w-10 h-10 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0 hover:bg-[#20bd5a] transition-colors shadow-sm"
+        >
+          <FaWhatsapp className="w-5 h-5" aria-hidden />
+        </a>
       </div>
 
       {summaryChips.length > 0 && (
@@ -95,7 +101,7 @@ function TenantCard({ t }: { t: Tenant }) {
         </div>
       )}
 
-      {open && t.detailsComplete && (
+      {open && (
         <div className="mt-4 ml-14 rounded-lg border border-gray-100 bg-gray-50/60 p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <DetailRow label="Occupancy from" value={formatDate(t.occupancyFrom)} />
           <DetailRow label="Staying as" value={t.who ?? "—"} />
@@ -103,18 +109,18 @@ function TenantCard({ t }: { t: Tenant }) {
             <DetailRow label="Identifies as" value={t.identify.join(", ")} />
           )}
           <DetailRow label="Food preference" value={t.food ?? "—"} />
-          <DetailRow label="City" value={t.city ?? "—"} />
-          <DetailRow
-            label="Localities"
-            value={t.localities?.join(", ") ?? "—"}
-          />
-          <DetailRow label="Property type" value={t.propertyType ?? "—"} />
-          <DetailRow label="Sharing" value={t.sharing ?? "—"} />
-          {t.roommate && t.roommate.length > 0 && (
-            <DetailRow
-              label="Roommate preference"
-              value={t.roommate.join(", ")}
-            />
+          {t.detailsComplete ? (
+            <>
+              <DetailRow label="City" value={t.city ?? "—"} />
+              <DetailRow label="Localities" value={t.localities?.join(", ") ?? "—"} />
+              <DetailRow label="Property type" value={t.propertyType ?? "—"} />
+              <DetailRow label="Sharing" value={t.sharing ?? "—"} />
+              {t.roommate && t.roommate.length > 0 && (
+                <DetailRow label="Roommate preference" value={t.roommate.join(", ")} />
+              )}
+            </>
+          ) : (
+            <DetailRow label="Preferences" value="L2 details not added yet" />
           )}
         </div>
       )}
@@ -122,27 +128,26 @@ function TenantCard({ t }: { t: Tenant }) {
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 flex-wrap gap-3">
         <p className="text-xs text-gray-500">Added {timeAgo(t.createdAt)}</p>
         <div className="flex items-center gap-2 flex-wrap">
-          {t.detailsComplete && (
-            <button
-              onClick={() => setOpen((o) => !o)}
-              className="inline-flex items-center gap-2 h-8 px-3 rounded-md border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50"
-            >
-              {open ? (
-                <>
-                  Hide details <ChevronUp size={14} />
-                </>
-              ) : (
-                <>
-                  View details <ChevronDown size={14} />
-                </>
-              )}
-            </button>
-          )}
-          <button className="inline-flex items-center gap-2 h-8 px-3 rounded-md border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50">
-            <Phone size={14} /> Call
+          <button
+            onClick={() => setOpen((o) => !o)}
+            className="inline-flex items-center gap-2 h-9 px-3 rounded-[4px] border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            {open ? (
+              <>
+                Hide details <ChevronUp size={14} />
+              </>
+            ) : (
+              <>
+                View details <ChevronDown size={14} />
+              </>
+            )}
           </button>
-          <button className="inline-flex items-center gap-2 h-8 px-3 rounded-md border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50">
-            <MessageCircle size={14} /> WhatsApp
+          <button
+            type="button"
+            onClick={() => onEdit(t.id)}
+            className="inline-flex items-center gap-2 h-9 px-3 rounded-[4px] border border-primary text-primary text-xs font-semibold hover:bg-primary/5"
+          >
+            <Pencil size={14} /> Edit details
           </button>
         </div>
       </div>
@@ -167,7 +172,10 @@ export default function BrokerTenants() {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    setTenants(getTenants());
+    const refresh = () => setTenants(getTenants());
+    refresh();
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
   }, []);
 
   const counts = {
@@ -179,7 +187,6 @@ export default function BrokerTenants() {
   const tabs = [
     { id: "all", label: "All", count: counts.all },
     { id: "new", label: "New", count: counts.new },
-    { id: "invitation", label: "Invitation Sent", count: counts.invitation },
   ];
 
   const visibleTenants = tenants.filter((t) => {
@@ -195,12 +202,9 @@ export default function BrokerTenants() {
         <h1 className="text-2xl font-semibold text-gray-900">
           Tenant Leads <span className="text-gray-900">({counts.all})</span>
         </h1>
-        <button
-          onClick={() => setLocation("/broker/tenants/add")}
-          className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90"
-        >
+        <OwnerFlowButton onClick={() => setLocation("/broker/tenants/add")} className="w-full sm:w-fit">
           <Plus size={16} /> Register Tenant Lead
-        </button>
+        </OwnerFlowButton>
       </div>
 
       <FlowSegmentTabs
@@ -226,7 +230,11 @@ export default function BrokerTenants() {
       ) : (
         <div className="space-y-3">
           {visibleTenants.map((t) => (
-            <TenantCard key={t.id} t={t} />
+            <TenantCard
+              key={t.id}
+              t={t}
+              onEdit={(id) => setLocation(`/broker/tenants/add?edit=${id}`)}
+            />
           ))}
         </div>
       )}

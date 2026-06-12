@@ -11,6 +11,8 @@ import {
   type Role,
 } from "@/lib/auth";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
+import { handleOtpKeyDown } from "@/lib/otpInput";
+import { Spinner } from "@/components/ui/spinner";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -111,7 +113,6 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   const handleContinue = async () => {
     if (!isOtpComplete || verifying) return;
     setVerifying(true);
-    let accessToken: string | null = null;
     try {
       const verifyResult = await verifyPhoneOtp(phoneDigits, otp.join(""));
       if (verifyResult.error) {
@@ -121,7 +122,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
         });
         return;
       }
-      accessToken = verifyResult.accessToken;
+      const accessToken = verifyResult.accessToken;
       if (!accessToken) {
         toast({
           title: "Could not sign you in",
@@ -130,53 +131,52 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
         });
         return;
       }
-    } finally {
-      setVerifying(false);
-    }
 
-    const pending = sessionStorage.getItem("tk_pending_role") || "broker";
-    const role: Role = isAuthEntryRole(pending) ? pending : "broker";
-    if (await profileExistsAsync(phoneDigits, role)) {
-      toast({
-        title: "An account already exists for this number.",
-        variant: "destructive",
-      });
-      setOtp(createEmptyOtp());
-      return;
-    }
-    try {
+      const pending = sessionStorage.getItem("tk_pending_role") || "broker";
+      const role: Role = isAuthEntryRole(pending) ? pending : "broker";
+      if (await profileExistsAsync(phoneDigits, role)) {
+        toast({
+          title: "An account already exists for this number.",
+          variant: "destructive",
+        });
+        setOtp(createEmptyOtp());
+        return;
+      }
+
       await signUpSuccess(
         phoneDigits,
         role,
         {
-        name: fullName,
-        firm,
-        phone: phoneDigits,
-        email: "",
-        bankHolderName: "",
-        bankName: "",
-        bankAccountNumber: "",
-        bankIFSC: "",
-        upiId: "",
-        upiQrFileName: "",
-      },
+          name: fullName,
+          firm,
+          phone: phoneDigits,
+          email: "",
+          bankHolderName: "",
+          bankName: "",
+          bankAccountNumber: "",
+          bankIFSC: "",
+          upiId: "",
+          upiQrFileName: "",
+        },
         accessToken,
       );
+
+      if (stayLoggedIn) {
+        persistSessionToLocalStorage(phoneDigits, role);
+      } else {
+        clearRememberedSessionFromLocalStorage();
+      }
+      onComplete?.();
+      setLocation(dashboardRouteFor(role));
     } catch (err) {
       toast({
         title: "Could not create account",
         description: err instanceof Error ? err.message : "Please try again.",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setVerifying(false);
     }
-    if (stayLoggedIn) {
-      persistSessionToLocalStorage(phoneDigits, role);
-    } else {
-      clearRememberedSessionFromLocalStorage();
-    }
-    onComplete?.();
-    setLocation(dashboardRouteFor(role));
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -207,7 +207,14 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
       disabled={!isOtpComplete || verifying}
       className={`w-full ${authPrimaryButtonClass}`}
     >
-      Continue &rarr;
+      {verifying ? (
+        <>
+          <Spinner className="mr-2" />
+          Verifying...
+        </>
+      ) : (
+        <>Continue &rarr;</>
+      )}
     </Button>
   );
 
@@ -271,7 +278,16 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
             />
           </Box>
           {duplicateSignupPhone && !otpStage ? (
-            <p className="text-sm text-destructive">An account already exists for this number.</p>
+            <p className="text-sm text-destructive">
+              Account exists.{" "}
+              <button
+                type="button"
+                onClick={() => setLocation("/login")}
+                className="font-medium underline underline-offset-2 hover:text-destructive/80"
+              >
+                Log in instead?
+              </button>
+            </p>
           ) : (
             <p className="text-xs text-gray-500">We&apos;ll send an OTP to verify</p>
           )}
@@ -295,9 +311,14 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
                   id={`broker-otp-${i}`}
                   type="text"
                   inputMode="numeric"
+                  autoComplete="one-time-code"
+                  aria-label={`Digit ${i + 1} of 6`}
                   maxLength={1}
                   value={d}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
+                  onKeyDown={(e) =>
+                    handleOtpKeyDown(i, e, otp, setOtp, "broker-otp", () => void handleContinue())
+                  }
                   className={`w-full h-11 sm:h-12 text-center text-xl font-medium rounded-lg outline-none transition-colors
                     ${d ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
                 />

@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { ADMIN_PRIMARY, getAdminSession, isAdminPhone } from "@/lib/adminAuth";
 import { setActiveSession } from "@/lib/auth";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
+import { handleOtpKeyDown } from "@/lib/otpInput";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 
 type Phase = "phone" | "otp";
@@ -193,9 +194,14 @@ export default function AdminLogin() {
                     id={`admin-otp-${index}`}
                     type="text"
                     inputMode="numeric"
+                    autoComplete="one-time-code"
+                    aria-label={`Digit ${index + 1} of 6`}
                     maxLength={1}
                     value={digit}
                     onChange={(event) => handleOtpChange(index, event.target.value)}
+                    onKeyDown={(e) =>
+                      handleOtpKeyDown(index, e, otp, setOtp, "admin-otp", () => void handleVerifyOtp())
+                    }
                     className="h-12 w-12 rounded-lg border border-gray-200 text-center text-lg font-medium outline-none transition-colors focus:border-[#1B4F8A] focus:ring-2 focus:ring-[#1B4F8A]/20"
                     style={digit ? { borderColor: ADMIN_PRIMARY } : undefined}
                   />

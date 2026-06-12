@@ -14,10 +14,16 @@ export type PropertyType =
 export type Sharing = "Single" | "Double" | "Triple" | "Entire Property";
 export type Roommate = "Male" | "Female" | "Anyone";
 
+export interface TenantProfile {
+  aadhaar?: string;
+  pan?: string;
+}
+
 export interface Tenant {
   id: string;
   name: string;
   phone: string;
+  profile?: TenantProfile;
   occupancyFrom?: string;
   who?: TenantWho;
   identify?: Identify[];
@@ -27,7 +33,7 @@ export interface Tenant {
   propertyType?: PropertyType;
   sharing?: Sharing;
   roommate?: Roommate[];
-  status: "Onboarding Pending" | "Profile Complete";
+  status: "Lead Added" | "Profile Complete";
   invitationSent: boolean;
   detailsComplete: boolean;
   createdAt: number;
@@ -70,7 +76,7 @@ export function addTenant(
     ...rest,
     id: `t_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     createdAt: Date.now(),
-    status: detailsComplete ? "Profile Complete" : "Onboarding Pending",
+    status: detailsComplete ? "Profile Complete" : "Lead Added",
     invitationSent,
     detailsComplete,
   };
@@ -80,9 +86,44 @@ export function addTenant(
   return tenant;
 }
 
+export function getTenantById(id: string): Tenant | undefined {
+  return getTenants().find((t) => t.id === id);
+}
+
+export function updateTenant(
+  id: string,
+  patch: Partial<Omit<Tenant, "id" | "createdAt">>,
+): Tenant | null {
+  const list = getTenants();
+  const idx = list.findIndex((t) => t.id === id);
+  if (idx === -1) return null;
+  const next: Tenant = { ...list[idx], ...patch };
+  if ("detailsComplete" in patch) {
+    next.status = next.detailsComplete ? "Profile Complete" : "Lead Added";
+  }
+  list[idx] = next;
+  persistTenantList(list);
+  return next;
+}
+
 function phoneLast10(phone: string): string {
   const d = phone.replace(/\D/g, "");
   return d.slice(-10);
+}
+
+/** Match tenant by last 10 digits of contact phone. */
+export function findTenantByContact(contact: string): Tenant | undefined {
+  const digits = phoneLast10(contact);
+  if (digits.length !== 10) return undefined;
+  return getTenants().find((t) => phoneLast10(t.phone) === digits);
+}
+
+export function resolveTenantKyc(contact: string): { aadhaar: string; pan: string } {
+  const tenant = findTenantByContact(contact);
+  return {
+    aadhaar: tenant?.profile?.aadhaar?.trim() ?? "",
+    pan: tenant?.profile?.pan?.trim() ?? "",
+  };
 }
 
 /** Upsert tenant by phone when added from agreement flow so they appear under Tenants. */
@@ -158,3 +199,13 @@ export const CITY_LOCALITIES: Record<string, string[]> = {
   Pune: ["Hinjewadi", "Kothrud", "Baner", "Viman Nagar", "Wakad", "Kharadi"],
   Noida: ["Sector 62", "Sector 18", "Sector 78", "Sector 137", "Sector 50"],
 };
+
+export function buildBrokerTenantWhatsAppMessage(tenant: Pick<Tenant, "name">): string {
+  return `Hello ${tenant.name.trim() || "there"},\n\nThis is your broker from TrustKeyper. Please let me know if you have any questions about your rental search.\n\nSent via TrustKeyper.`;
+}
+
+export function getBrokerTenantWhatsAppHref(tenant: Pick<Tenant, "name" | "phone">): string {
+  const digits = tenant.phone.replace(/\D/g, "").slice(-10);
+  if (digits.length !== 10) return "https://wa.me/";
+  return `https://wa.me/91${digits}?text=${encodeURIComponent(buildBrokerTenantWhatsAppMessage(tenant))}`;
+}

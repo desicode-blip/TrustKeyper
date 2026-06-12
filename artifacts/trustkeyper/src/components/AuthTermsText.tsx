@@ -5,7 +5,12 @@ export function AuthTermsText({ className = "" }: { className?: string }) {
   return (
     <p className={`text-sm text-gray-600 mt-4 text-center ${className}`}>
       By continuing, you agree to TrustKeyper{" "}
-      <a href="#" className="text-primary font-medium hover:underline">
+      <a
+        href="https://trustkeyper.com/terms-and-conditions"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary font-medium hover:underline"
+      >
         Terms and Conditions
       </a>
     </p>
