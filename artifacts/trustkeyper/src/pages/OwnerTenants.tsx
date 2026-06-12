@@ -7,7 +7,9 @@ import { InviteTenantsModal } from "@/components/owner/InviteTenantsModal";
 import { OwnerPageEmpty } from "@/components/owner/OwnerPageEmpty";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
+import { pullAccountFromCloud } from "@/lib/cloudSync";
 import { getProperties, type Property } from "@/lib/properties";
+import { getActiveSession } from "@/lib/storageKeys";
 import {
   countRecordedInvites,
   deleteOwnerInvite,
@@ -307,12 +309,20 @@ export default function OwnerTenants() {
     setInquiries(getPropertyShareInquiries());
   }, []);
 
-  useEffect(() => {
+  const reloadFromCloud = useCallback(async () => {
+    const session = getActiveSession();
+    if (session?.role === "owner") {
+      await pullAccountFromCloud(session.phone, "owner");
+    }
     reload();
   }, [reload]);
 
   useEffect(() => {
-    const refresh = () => reload();
+    void reloadFromCloud();
+  }, [reloadFromCloud]);
+
+  useEffect(() => {
+    const refresh = () => void reloadFromCloud();
     window.addEventListener("storage", refresh);
     window.addEventListener("focus", refresh);
     window.addEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
@@ -323,7 +333,7 @@ export default function OwnerTenants() {
       window.removeEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
       window.removeEventListener(OWNER_INQUIRIES_UPDATED_EVENT, refresh);
     };
-  }, [reload]);
+  }, [reloadFromCloud]);
 
   const invitesByProperty = useMemo(() => {
     const map = new Map<string, OwnerTenantInvite[]>();
