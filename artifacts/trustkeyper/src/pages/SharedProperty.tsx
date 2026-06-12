@@ -1,16 +1,17 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRoute } from "wouter";
-import { Building2, CheckCircle2, X } from "lucide-react";
+import { Building2, CheckCircle2, Loader2, X } from "lucide-react";
 import { TrustKeyperLogo } from "@/components/brand";
 import { Button } from "@/components/ui/button";
-import { PropertyPublicCard, PropertyPublicCardSkeleton } from "@/components/tenant/PropertyPublicCard";
+import { PropertyPublicCard } from "@/components/tenant/PropertyPublicCard";
 import { TenantPropertyVerification } from "@/components/tenant/TenantPropertyVerification";
-import { getProperties, getPropertyTitle, type Property } from "@/lib/properties";
+import { getPropertyTitle, type Property } from "@/lib/properties";
+import { createPropertyShareInquiry } from "@/lib/ownerTenants";
 import {
-  createPropertyShareInquiry,
-  getPropertyInviteLabel,
-  recordPropertyNotInterested,
-} from "@/lib/ownerTenants";
+  fetchSharedProperty,
+  getPropertyShareLabel,
+  submitPropertyShareInquiry,
+} from "@/lib/publicPropertyShare";
 import {
   getTenantShareResponse,
   getTenantShareSession,
@@ -31,6 +32,15 @@ function isPropertyShareable(property: Property): boolean {
   return property.status === "Active";
 }
 
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-[#F5F7FA] flex flex-col items-center justify-center p-6">
+      <Loader2 size={32} className="animate-spin text-primary mb-4" />
+      <p className="text-sm text-gray-500">Loading…</p>
+    </div>
+  );
+}
+
 export default function SharedProperty() {
   const [, params] = useRoute("/share/property/:id");
   const propertyId = params?.id ?? "";
@@ -42,14 +52,14 @@ export default function SharedProperty() {
   const [ctaLoading, setCtaLoading] = useState(false);
   const [ctaError, setCtaError] = useState<string | null>(null);
 
-  const bootstrap = useCallback(() => {
+  const bootstrap = useCallback(async () => {
     if (!propertyId) {
       setPhase("not_found");
       return;
     }
 
     setPhase("loading");
-    const found = getProperties().find((p) => p.id === propertyId) ?? null;
+    const found = await fetchSharedProperty(propertyId);
 
     if (!found) {
       setProperty(null);
@@ -83,7 +93,7 @@ export default function SharedProperty() {
   }, [propertyId]);
 
   useEffect(() => {
-    bootstrap();
+    void bootstrap();
   }, [bootstrap]);
 
   const handleVerified = (verified: TenantShareSession) => {
@@ -102,13 +112,23 @@ export default function SharedProperty() {
     setCtaError(null);
     setCtaLoading(true);
     try {
-      const label = getPropertyInviteLabel(property);
-      createPropertyShareInquiry({
+      const label = getPropertyShareLabel(property);
+      const apiResult = await submitPropertyShareInquiry({
+        propertyId: property.id,
         name: session.name,
         phone: session.phone,
-        propertyId: property.id,
         propertyLabel: label,
       });
+
+      if (!apiResult.ok) {
+        createPropertyShareInquiry({
+          name: session.name,
+          phone: session.phone,
+          propertyId: property.id,
+          propertyLabel: label,
+        });
+      }
+
       setTenantShareResponse(property.id, "interested");
       setResponse("interested");
       setPhase("interest_success");
@@ -124,11 +144,6 @@ export default function SharedProperty() {
     setCtaError(null);
     setCtaLoading(true);
     try {
-      recordPropertyNotInterested({
-        name: session.name,
-        phone: session.phone,
-        propertyId: property.id,
-      });
       setTenantShareResponse(property.id, "not_interested");
       setResponse("not_interested");
       setPhase("not_interested_thanks");
@@ -149,7 +164,7 @@ export default function SharedProperty() {
   );
 
   if (phase === "loading") {
-    return pageShell(<PropertyPublicCardSkeleton />);
+    return <LoadingScreen />;
   }
 
   if (phase === "not_found") {
@@ -174,15 +189,26 @@ export default function SharedProperty() {
     );
   }
 
+  if (phase === "verify" && property) {
+    return (
+      <div className="min-h-screen bg-[#F5F7FA] relative">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+          <div className="min-h-screen blur-sm opacity-40 scale-[1.02]">
+            {pageShell(
+              <div className="space-y-4 pt-8">
+                <div className="h-64 rounded-xl bg-gray-200" />
+                <div className="h-40 rounded-xl bg-white border border-gray-200" />
+              </div>,
+            )}
+          </div>
+        </div>
+        <TenantPropertyVerification propertyId={property.id} onVerified={handleVerified} />
+      </div>
+    );
+  }
+
   return (
     <>
-      {phase === "verify" && property ? (
-        <TenantPropertyVerification
-          propertyId={property.id}
-          onVerified={handleVerified}
-        />
-      ) : null}
-
       {(phase === "property" ||
         phase === "interest_success" ||
         phase === "not_interested_thanks") &&
