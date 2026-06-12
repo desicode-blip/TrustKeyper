@@ -205,7 +205,7 @@ export default function LoginDirect() {
         )}
 
         {phase !== "role" && loginRole && (
-          <div className="mb-8 border-b border-gray-200 pb-4 shrink-0 text-center lg:text-left">
+          <div className="auth-step-heading mb-8 border-b border-gray-200 pb-4 shrink-0 text-center lg:text-left">
             <h1 className="text-3xl font-semibold text-gray-900">
               Login to TrustKeyper as {roleDisplayLabel(loginRole)}
             </h1>

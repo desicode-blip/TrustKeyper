@@ -81,7 +81,7 @@ export default function OwnerStep2Intent({
         })}
       </Box>
 
-      <AuthSignupScreenFooter cta={cta} showTerms={false} persistRole="owner" />
+      <AuthSignupScreenFooter cta={cta} showTerms={false} linkType="none" persistRole="owner" />
     </Box>
   );
 }

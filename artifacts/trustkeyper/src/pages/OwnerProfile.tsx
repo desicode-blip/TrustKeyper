@@ -28,6 +28,7 @@ import {
   type OwnerDocumentKind,
   type OwnerProfile,
 } from "@/lib/ownerProfile";
+import { getFileTypeError, isValidAccountNumber, isValidIFSC } from "@/lib/fileValidation";
 
 const BANK_NAMES = [
   "State Bank of India", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak Mahindra Bank",
@@ -315,6 +316,14 @@ export default function OwnerProfile() {
       toast({ title: "Incomplete bank details", description: "Fill all required bank fields.", variant: "destructive" });
       return;
     }
+    if (!isValidAccountNumber(draftBank.bankAccountNumber)) {
+      toast({ title: "Invalid account number", description: "Account number must be 9–18 digits.", variant: "destructive" });
+      return;
+    }
+    if (!isValidIFSC(draftBank.bankIFSC)) {
+      toast({ title: "Invalid IFSC code", description: "Invalid IFSC code (e.g. HDFC0001234).", variant: "destructive" });
+      return;
+    }
     saveOwnerProfileBank({
       holderName: draftBank.bankHolderName,
       bankName: draftBank.bankName,
@@ -344,9 +353,23 @@ export default function OwnerProfile() {
   };
 
   const handleDocUpload = (kind: OwnerDocumentKind, file: File) => {
-    saveOwnerProfileDocument(kind, file);
-    setProfile(getOwnerProfile());
-    toast({ title: "Document uploaded", description: `${kind === "aadhaar" ? "Aadhaar" : "PAN"} card saved to your profile.` });
+    const error = getFileTypeError(file);
+    if (error) {
+      toast({ title: "Invalid file", description: error, variant: "destructive" });
+      return;
+    }
+    saveOwnerProfileDocument(kind, file, {
+      onSuccess: () => {
+        setProfile(getOwnerProfile());
+        toast({
+          title: "Document uploaded",
+          description: `${kind === "aadhaar" ? "Aadhaar" : "PAN"} card saved to your profile.`,
+        });
+      },
+      onError: (message) => {
+        toast({ title: "Could not save document", description: message, variant: "destructive" });
+      },
+    });
   };
 
   const handleDocDelete = (kind: OwnerDocumentKind) => {
@@ -498,10 +521,16 @@ export default function OwnerProfile() {
                   <div>
                     <FieldLabel required>Account Number</FieldLabel>
                     <TextInput value={draftBank.bankAccountNumber} onChange={(v) => setDraftBank((d) => ({ ...d, bankAccountNumber: v }))} placeholder="Enter account number" />
+                    {draftBank.bankAccountNumber && !isValidAccountNumber(draftBank.bankAccountNumber) ? (
+                      <p className="text-xs text-red-500 mt-1">Account number must be 9–18 digits</p>
+                    ) : null}
                   </div>
                   <div>
                     <FieldLabel required>IFSC Code</FieldLabel>
                     <TextInput value={draftBank.bankIFSC} onChange={(v) => setDraftBank((d) => ({ ...d, bankIFSC: v.toUpperCase() }))} placeholder="e.g. SBIN0001234" />
+                    {draftBank.bankIFSC && !isValidIFSC(draftBank.bankIFSC) ? (
+                      <p className="text-xs text-red-500 mt-1">Invalid IFSC code (e.g. HDFC0001234)</p>
+                    ) : null}
                   </div>
                 </div>
               ) : profile.bankName ? (

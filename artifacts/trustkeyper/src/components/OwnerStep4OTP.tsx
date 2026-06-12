@@ -12,12 +12,14 @@ import {
 } from "@/components/auth/authStyles";
 import { toast } from "@/hooks/use-toast";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
+import { handleOtpKeyDown } from "@/lib/otpInput";
+import { Spinner } from "@/components/ui/spinner";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 
 interface OwnerStep4OTPProps {
   phone: string;
   details: { name: string; phone: string };
-  onNext: (accessToken: string) => void;
+  onNext: (accessToken: string) => Promise<void>;
 }
 
 export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPProps) {
@@ -81,7 +83,7 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
         });
         return;
       }
-      onNext(accessToken);
+      await onNext(accessToken);
     } finally {
       setVerifying(false);
     }
@@ -94,7 +96,14 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
       disabled={!isComplete || verifying}
       className={authPrimaryButtonClass}
     >
-      Continue &rarr;
+      {verifying ? (
+        <>
+          <Spinner className="mr-2" />
+          Verifying...
+        </>
+      ) : (
+        <>Continue &rarr;</>
+      )}
     </Button>
   );
 
@@ -119,9 +128,14 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
               id={`owner-otp-${i}`}
               type="text"
               inputMode="numeric"
+              autoComplete="one-time-code"
+              aria-label={`Digit ${i + 1} of 6`}
               maxLength={1}
               value={digit}
               onChange={(e) => handleChange(i, e.target.value)}
+              onKeyDown={(e) =>
+                handleOtpKeyDown(i, e, otp, setOtp, "owner-otp", () => void handleContinue())
+              }
               className={`w-full h-11 sm:h-12 text-center text-xl font-medium rounded-lg outline-none transition-colors
                 ${digit ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
             />
@@ -143,7 +157,7 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
         </p>
       </div>
 
-      <AuthSignupScreenFooter cta={cta} showTerms={false} persistRole="owner" />
+      <AuthSignupScreenFooter cta={cta} showTerms={false} linkType="none" persistRole="owner" />
     </div>
   );
 }

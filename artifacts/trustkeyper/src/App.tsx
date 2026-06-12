@@ -39,6 +39,8 @@ import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminProperties from "@/pages/admin/AdminProperties";
 import AdminFeedback from "@/pages/admin/AdminFeedback";
 import NotFound from "@/pages/not-found";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
 import { createAdminQueryClient } from "@/hooks/useAdminData";
 
 const queryClient = createAdminQueryClient();
@@ -69,6 +71,8 @@ function Router() {
     <Switch>
       <Route path="/share/property/:id" component={SharedProperty} />
       <Route path="/login" component={Login} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/privacy" component={Privacy} />
       {/* Role-card login — not linked in UI; enable navigation when needed */}
       <Route path="/Logindirect" component={LoginDirect} />
       <Route path="/" component={Onboarding} />

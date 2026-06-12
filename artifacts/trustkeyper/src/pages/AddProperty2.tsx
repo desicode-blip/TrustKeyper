@@ -21,9 +21,10 @@ import { AddPropertyProgressBar } from "@/components/AddPropertyProgressBar";
 import { useScrollToTopOnChange } from "@/hooks/useScrollToTopOnChange";
 import { toast } from "@/hooks/use-toast";
 import { getActiveSession } from "@/lib/auth";
+import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
 import { addProperty } from "@/lib/properties";
-import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
+import { getItem, getSessionItem, removeItem, removeSessionItem, setItem, setSessionItem } from "@/lib/storageKeys";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -122,12 +123,13 @@ function SkipBanner({ onSkip }: { onSkip: () => void }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AddProperty2() {
+  const availableFromMin = todayLocalDateInputMin();
   const [, setLocation] = useLocation();
 
   const loadSavedData = () => {
     if (typeof window === "undefined") return null;
     try {
-      return JSON.parse(getSessionItem("add_property_data") ?? "null");
+      return JSON.parse(getItem("add_property_data") ?? "null");
     } catch {
       return null;
     }
@@ -185,7 +187,7 @@ export default function AddProperty2() {
 
   const clearDraft = () => {
     try {
-      removeSessionItem("add_property_data");
+      removeItem("add_property_data");
     } catch {}
     setSubStep(0);
     setNickname("");
@@ -336,7 +338,7 @@ export default function AddProperty2() {
     };
 
     try {
-      setSessionItem("add_property_data", JSON.stringify(data));
+      setItem("add_property_data", JSON.stringify(data));
       broadcastBrokerPendingFlowsUpdated();
     } catch {
       // ignore storage failure
@@ -449,7 +451,7 @@ export default function AddProperty2() {
     });
     try {
       setSessionItem("agreement_pending_property", newProp.id);
-      removeSessionItem("add_property_data");
+      removeItem("add_property_data");
       broadcastBrokerPendingFlowsUpdated();
     } catch {}
     setShowSuccess(true);
@@ -529,7 +531,7 @@ export default function AddProperty2() {
           <h3 className="text-base font-semibold text-gray-900 pb-3 border-b border-gray-100">Property Owner Details</h3>
         </div>
         <div>
-          <FieldLabel required>Your Name</FieldLabel>
+          <FieldLabel required>Owner&apos;s Name</FieldLabel>
           <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="" />
         </div>
         <div>
@@ -739,6 +741,7 @@ export default function AddProperty2() {
             <input
               ref={availableFromRef}
               type="date"
+              min={availableFromMin}
               value={availableFrom}
               onChange={(e) => setAvailableFrom(e.target.value)}
               className="flex-1 h-9 px-2 text-sm focus:outline-none bg-white appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:w-0 [&::-webkit-calendar-picker-indicator]:h-0"

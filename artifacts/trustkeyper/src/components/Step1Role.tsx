@@ -36,10 +36,6 @@ export default function Step1Role({
         onChange={(r) => setRole(r)}
       />
 
-      <p className="text-gray-500 text-sm text-center lg:text-left mb-3 mt-4">
-        This will help us personalize your journey
-      </p>
-
       {/* Always render the footer so the sticky CTA bar is visible on mobile even before selection */}
       <AuthSignupScreenFooter
         cta={cta}

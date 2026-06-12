@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import OwnerLayout from "@/components/OwnerLayout";
 import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/FlowStickyActionBar";
 import { FlowClearButton } from "@/components/owner/FlowClearButton";
+import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { addProperty } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
@@ -216,6 +217,7 @@ function SkipBanner({ onSkip }: { onSkip: () => void }) {
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function OwnerAddProperty2() {
+  const availableFromMin = todayLocalDateInputMin();
   const [, setLocation] = useLocation();
   const [subStep, setSubStep] = useState(0);
 
@@ -745,7 +747,7 @@ export default function OwnerAddProperty2() {
             <span className="px-3 text-gray-400 h-10 flex items-center">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </span>
-            <input type="date" value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} className="flex-1 h-10 px-2 text-[13px] text-gray-600 focus:outline-none bg-white w-full" />
+            <input type="date" min={availableFromMin} value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} className="flex-1 h-10 px-2 text-[13px] text-gray-600 focus:outline-none bg-white w-full" />
           </div>
         </div>
       </div>

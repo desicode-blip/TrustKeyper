@@ -223,17 +223,17 @@ const resolvedPropertyLabel =
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 mt-6">
+            <OwnerFlowButton type="button" className="flex-1 sm:order-2" onClick={submit}>
+              Log Maintenance
+            </OwnerFlowButton>
             <Button
               type="button"
               variant="outline"
-              className="flex-1 h-10 rounded-[4px] text-sm font-semibold"
+              className="flex-1 h-10 rounded-[4px] text-sm font-semibold sm:order-1"
               onClick={onClose}
             >
               Cancel
             </Button>
-            <OwnerFlowButton type="button" className="flex-1 sm:flex-1" onClick={submit}>
-              Log Maintenance
-            </OwnerFlowButton>
           </div>
         </div>
       </div>

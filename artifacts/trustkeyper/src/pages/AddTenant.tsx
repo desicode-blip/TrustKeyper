@@ -16,6 +16,7 @@ import {
   FlowStickyActionBar,
 } from "@/components/FlowStickyActionBar";
 import { Input } from "@/components/ui/input";
+import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -354,7 +355,7 @@ export default function AddTenant() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="t-name" className="text-gray-700">
-                    Your Name <span className="text-destructive">*</span>
+                    Tenant&apos;s Full Name <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="t-name"
@@ -399,6 +400,7 @@ export default function AddTenant() {
                 <Input
                   id="t-occ"
                   type="date"
+                  min={todayLocalDateInputMin()}
                   value={occupancyFrom}
                   onChange={(e) => setOccupancyFrom(e.target.value)}
                 />

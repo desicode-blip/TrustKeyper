@@ -14,10 +14,16 @@ export type PropertyType =
 export type Sharing = "Single" | "Double" | "Triple" | "Entire Property";
 export type Roommate = "Male" | "Female" | "Anyone";
 
+export interface TenantProfile {
+  aadhaar?: string;
+  pan?: string;
+}
+
 export interface Tenant {
   id: string;
   name: string;
   phone: string;
+  profile?: TenantProfile;
   occupancyFrom?: string;
   who?: TenantWho;
   identify?: Identify[];
@@ -103,6 +109,21 @@ export function updateTenant(
 function phoneLast10(phone: string): string {
   const d = phone.replace(/\D/g, "");
   return d.slice(-10);
+}
+
+/** Match tenant by last 10 digits of contact phone. */
+export function findTenantByContact(contact: string): Tenant | undefined {
+  const digits = phoneLast10(contact);
+  if (digits.length !== 10) return undefined;
+  return getTenants().find((t) => phoneLast10(t.phone) === digits);
+}
+
+export function resolveTenantKyc(contact: string): { aadhaar: string; pan: string } {
+  const tenant = findTenantByContact(contact);
+  return {
+    aadhaar: tenant?.profile?.aadhaar?.trim() ?? "",
+    pan: tenant?.profile?.pan?.trim() ?? "",
+  };
 }
 
 /** Upsert tenant by phone when added from agreement flow so they appear under Tenants. */
