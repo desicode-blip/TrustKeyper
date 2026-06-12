@@ -15,6 +15,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BrokerLayout from "@/components/BrokerLayout";
+import { FlowDateInput } from "@/components/flow/FlowDateInput";
+import { FlowNativeSelect } from "@/components/flow/FlowNativeSelect";
 import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/FlowStickyActionBar";
 import { FlowChipButton } from "@/components/FlowChipButton";
 import { AddPropertyProgressBar } from "@/components/AddPropertyProgressBar";
@@ -69,23 +71,24 @@ function FieldLabel({ children, required }: { children: React.ReactNode; require
   );
 }
 
-function SelectField({ value, onChange, options, placeholder }: {
-  value: string; onChange: (v: string) => void; options: string[]; placeholder?: string;
+function SelectField({
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  placeholder?: string;
 }) {
   return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`w-full h-9 rounded-md border border-input bg-white px-3 pr-8 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
-          value ? "text-gray-900" : "text-[#6C849D]/40"
-        }`}
-      >
-        {placeholder && <option value="">{placeholder}</option>}
-        {options.map((o) => <option key={o} value={o}>{o}</option>)}
-      </select>
-      <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-    </div>
+    <FlowNativeSelect
+      value={value}
+      onChange={onChange}
+      options={options}
+      placeholder={placeholder}
+    />
   );
 }
 
@@ -183,7 +186,6 @@ export default function AddProperty2() {
   const [imageUrls, setImageUrls] = useState<string[]>(savedData?.imageUrls ?? []);
   const [showSuccess, setShowSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const availableFromRef = useRef<HTMLInputElement>(null);
 
   const clearDraft = () => {
     try {
@@ -226,10 +228,6 @@ export default function AddProperty2() {
     broadcastBrokerPendingFlowsUpdated();
   };
 
-  const openDatePicker = () => {
-    availableFromRef.current?.showPicker?.();
-    availableFromRef.current?.focus();
-  };
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -731,22 +729,11 @@ export default function AddProperty2() {
         </div>
         <div>
           <FieldLabel required>Available From</FieldLabel>
-          <div
-            className="flex items-center border border-input rounded-md overflow-hidden cursor-text"
-            onClick={openDatePicker}
-          >
-            <span className="px-3 text-primary h-9 flex items-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </span>
-            <input
-              ref={availableFromRef}
-              type="date"
-              min={availableFromMin}
-              value={availableFrom}
-              onChange={(e) => setAvailableFrom(e.target.value)}
-              className="flex-1 h-9 px-2 text-sm focus:outline-none bg-white appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:w-0 [&::-webkit-calendar-picker-indicator]:h-0"
-            />
-          </div>
+          <FlowDateInput
+            min={availableFromMin}
+            value={availableFrom}
+            onChange={setAvailableFrom}
+          />
         </div>
       </div>
     </div>

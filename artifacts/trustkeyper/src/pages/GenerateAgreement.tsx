@@ -47,6 +47,7 @@ import {
 import { broadcastBrokerPendingFlowsUpdated, clearAgreementDraftStorage } from "@/lib/brokerPendingFlows";
 import { queueCloudSync } from "@/lib/cloudSync";
 import { getItem, getSessionItem, removeSessionItem, setItem, setSessionItem } from "@/lib/storageKeys";
+import { FlowDateInput } from "@/components/flow/FlowDateInput";
 import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { getProperties, getPropertyTitle, updateProperty, type Property } from "@/lib/properties";
 import { ensureTenantFromAgreement, getTenants, resolveTenantKyc, type Tenant } from "@/lib/tenants";
@@ -186,6 +187,18 @@ function TextInput({
 }: {
   value: string; onChange: (v: string) => void; placeholder?: string; type?: string; className?: string; min?: string;
 }) {
+  if (type === "date") {
+    return (
+      <FlowDateInput
+        value={value}
+        onChange={onChange}
+        min={min}
+        className={className}
+        variant="broker"
+      />
+    );
+  }
+
   return (
     <input
       type={type}
@@ -207,7 +220,7 @@ function SelectInput({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={`w-full h-10 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white ${className}`}
+      className={`w-full h-10 px-3 rounded-lg border border-gray-300 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white ${!value ? "text-gray-400" : ""} ${className}`}
     >
       {children}
     </select>
@@ -838,7 +851,7 @@ function BankModal({
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Bank Name*</label>
                   <div className="relative">
-                    <select value={bankName} onChange={(e) => setBankName(e.target.value)} className="w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm appearance-none focus:outline-none focus:border-primary bg-white">
+                    <select value={bankName} onChange={(e) => setBankName(e.target.value)} className={`w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm text-gray-900 appearance-none focus:outline-none focus:border-primary bg-white ${!bankName ? "text-gray-400" : ""}`}>
                       <option value=""></option>
                       {BANK_NAMES.map((b) => <option key={b} value={b}>{b}</option>)}
                     </select>
@@ -1634,7 +1647,7 @@ function Step5Brokerage({
                     <select
                       value={bankName}
                       onChange={(e) => setBankName(e.target.value)}
-                      className="w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white"
+                      className={`w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm text-gray-900 appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white ${!bankName ? "text-gray-400" : ""}`}
                     >
                       <option value=""></option>
                       {BANK_NAMES.map((b) => <option key={b} value={b}>{b}</option>)}

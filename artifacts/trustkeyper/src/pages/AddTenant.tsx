@@ -11,6 +11,7 @@ import {
 import BrokerLayout from "@/components/BrokerLayout";
 import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 import { FlowChipButton } from "@/components/FlowChipButton";
+import { FlowDateInput } from "@/components/flow/FlowDateInput";
 import {
   FLOW_STICKY_CONTENT_CLASS,
   FlowStickyActionBar,
@@ -397,12 +398,11 @@ export default function AddTenant() {
                 <Label htmlFor="t-occ" className="text-gray-700">
                   Occupancy From <span className="text-destructive">*</span>
                 </Label>
-                <Input
+                <FlowDateInput
                   id="t-occ"
-                  type="date"
                   min={todayLocalDateInputMin()}
                   value={occupancyFrom}
-                  onChange={(e) => setOccupancyFrom(e.target.value)}
+                  onChange={setOccupancyFrom}
                 />
               </div>
 
