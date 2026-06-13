@@ -262,7 +262,7 @@ export default function BrokerSettings() {
                       <select
                         value={draftBank.bankName}
                         onChange={(e) => setDraftBank((d) => ({ ...d, bankName: e.target.value }))}
-                        className="w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white"
+                        className={`w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm text-gray-900 appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white ${!draftBank.bankName ? "text-gray-400" : ""}`}
                       >
                         <option value=""></option>
                         {BANK_NAMES.map((b) => <option key={b} value={b}>{b}</option>)}

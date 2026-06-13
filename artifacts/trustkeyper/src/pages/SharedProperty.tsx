@@ -1,136 +1,272 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useRoute } from "wouter";
-import { Building2, MapPin, BedDouble, Bath, Calendar, IndianRupee } from "lucide-react";
+import { Building2, Loader2 } from "lucide-react";
 import { TrustKeyperLogo } from "@/components/brand";
-import { getProperties, getPropertyTitle, type Property } from "@/lib/properties";
+import { Button } from "@/components/ui/button";
+import { PropertyPublicCard, PropertyPublicCardSkeleton } from "@/components/tenant/PropertyPublicCard";
+import { SharedPropertyLandingBackdrop } from "@/components/tenant/SharedPropertyLandingBackdrop";
+import { TenantPropertyVerification } from "@/components/tenant/TenantPropertyVerification";
+import { toast } from "@/hooks/use-toast";
+import { getPropertyTitle, type Property } from "@/lib/properties";
+import { createPropertyShareInquiry } from "@/lib/ownerTenants";
+import {
+  fetchSharedProperty,
+  getPropertyShareLabel,
+  submitPropertyShareInquiry,
+  type SharedPropertyPayload,
+} from "@/lib/publicPropertyShare";
+import type { PropertyShareSource } from "@/lib/propertyShareView";
+import {
+  getTenantShareResponse,
+  getTenantShareSession,
+  setTenantShareResponse,
+  type TenantShareSession,
+} from "@/lib/tenantShareSession";
 
-function formatRent(v?: string): string {
-  if (!v) return "—";
-  return `₹${Number(v).toLocaleString("en-IN")}/mo`;
+type PagePhase =
+  | "loading"
+  | "not_found"
+  | "unavailable"
+  | "verify"
+  | "property"
+  | "not_interested_thanks";
+
+function isPropertyShareable(property: Property): boolean {
+  return property.status === "Active";
+}
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-[#F5F7FA] flex flex-col items-center justify-center p-6">
+      <Loader2 size={32} className="animate-spin text-primary mb-4" />
+      <p className="text-sm text-gray-500">Loading property link…</p>
+    </div>
+  );
 }
 
 export default function SharedProperty() {
   const [, params] = useRoute("/share/property/:id");
-  const [property, setProperty] = useState<Property | null>(null);
+  const propertyId = params?.id ?? "";
+
+  const [phase, setPhase] = useState<PagePhase>("loading");
+  const [sharePayload, setSharePayload] = useState<SharedPropertyPayload | null>(null);
+  const [session, setSession] = useState<TenantShareSession | null>(null);
+  const [response, setResponse] = useState<ReturnType<typeof getTenantShareResponse>>(null);
+  const [ctaLoading, setCtaLoading] = useState(false);
+  const [ctaError, setCtaError] = useState<string | null>(null);
+  const [cardLoading, setCardLoading] = useState(false);
+
+  const property = sharePayload?.property ?? null;
+  const sharedBy: PropertyShareSource = sharePayload?.sharedBy ?? "owner";
+  const maskOwnerDetails = sharePayload?.maskOwnerDetails ?? false;
+
+  const bootstrap = useCallback(async () => {
+    if (!propertyId) {
+      setPhase("not_found");
+      return;
+    }
+
+    setPhase("loading");
+    const payload = await fetchSharedProperty(propertyId);
+
+    if (!payload?.property) {
+      setSharePayload(null);
+      setPhase("not_found");
+      return;
+    }
+
+    if (!isPropertyShareable(payload.property)) {
+      setSharePayload(payload);
+      setPhase("unavailable");
+      return;
+    }
+
+    setSharePayload(payload);
+    const savedSession = getTenantShareSession(propertyId);
+    const savedResponse = getTenantShareResponse(propertyId);
+    setSession(savedSession);
+    setResponse(savedResponse);
+
+    if (!savedSession) {
+      setPhase("verify");
+      return;
+    }
+
+    if (savedResponse === "not_interested") {
+      setPhase("property");
+      return;
+    }
+
+    setPhase("property");
+  }, [propertyId]);
 
   useEffect(() => {
-    if (!params?.id) return;
-    const found = getProperties().find((p) => p.id === params.id) ?? null;
-    setProperty(found);
-  }, [params?.id]);
+    void bootstrap();
+  }, [bootstrap]);
 
-  if (!property) {
+  const handleVerified = (verified: TenantShareSession) => {
+    setCardLoading(true);
+    setSession(verified);
+    const savedResponse = getTenantShareResponse(propertyId);
+    setResponse(savedResponse);
+    window.setTimeout(() => {
+      setCardLoading(false);
+      setPhase("property");
+    }, 400);
+  };
+
+  const handleInterested = async () => {
+    if (!property || !session) return;
+    setCtaError(null);
+    setCtaLoading(true);
+    try {
+      const label = getPropertyShareLabel(property);
+      const apiResult = await submitPropertyShareInquiry({
+        propertyId: property.id,
+        name: session.name,
+        phone: session.phone,
+        propertyLabel: label,
+        sharedBy,
+      });
+
+      let isDuplicate = apiResult.isDuplicate;
+      if (!apiResult.ok) {
+        const local = createPropertyShareInquiry({
+          name: session.name,
+          phone: session.phone,
+          propertyId: property.id,
+          propertyLabel: label,
+          sharedBy,
+        });
+        isDuplicate = local.isDuplicate;
+      }
+
+      setTenantShareResponse(property.id, "interested");
+      setResponse("interested");
+      toast({
+        title: isDuplicate ? "Already submitted" : "Interest shared",
+        description: isDuplicate
+          ? "You have already expressed interest in this property."
+          : "Your interest has been shared successfully.",
+      });
+    } catch {
+      setCtaError("Something went wrong. Please check your connection and try again.");
+    } finally {
+      setCtaLoading(false);
+    }
+  };
+
+  const handleNotInterested = () => {
+    if (!property || !session) return;
+    setCtaError(null);
+    setCtaLoading(true);
+    try {
+      setTenantShareResponse(property.id, "not_interested");
+      setResponse("not_interested");
+      setPhase("not_interested_thanks");
+    } catch {
+      setCtaError("Something went wrong. Please try again.");
+    } finally {
+      setCtaLoading(false);
+    }
+  };
+
+  const pageShell = (children: React.ReactNode) => (
+    <div className="min-h-screen bg-[#F5F7FA]">
+      <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-center px-4 sticky top-0 z-10">
+        <TrustKeyperLogo variant="brand" size="header" />
+      </header>
+      <main className="max-w-lg mx-auto p-4 pb-8">{children}</main>
+    </div>
+  );
+
+  if (phase === "loading") {
+    return <LoadingScreen />;
+  }
+
+  if (phase === "not_found") {
     return (
       <div className="min-h-screen bg-[#F5F7FA] flex flex-col items-center justify-center p-6 text-center">
         <Building2 size={40} className="text-gray-300 mb-3" />
         <p className="text-gray-600 font-medium">Property not found</p>
-        <p className="text-sm text-gray-400 mt-1">This link may be outdated or invalid.</p>
+        <p className="text-sm text-gray-400 mt-1 max-w-sm">
+          This link may be invalid, expired, or the property may have been removed.
+        </p>
       </div>
     );
   }
 
-  const title = getPropertyTitle(property);
-  const images = property.images ?? [];
-  const type =
-    property.propertyType === "Other"
-      ? property.propertyTypeOther || "Property"
-      : property.propertyType;
+  if (phase === "unavailable") {
+    return (
+      <div className="min-h-screen bg-[#F5F7FA] flex flex-col items-center justify-center p-6 text-center">
+        <Building2 size={40} className="text-gray-300 mb-3" />
+        <p className="text-gray-600 font-medium">This property is no longer available</p>
+        <p className="text-sm text-gray-400 mt-1 max-w-sm">
+          {property ? getPropertyTitle(property) : "The listing"} may have been rented or is no longer
+          accepting inquiries.
+        </p>
+      </div>
+    );
+  }
+
+  if (phase === "verify" && property) {
+    return (
+      <div className="relative min-h-screen overflow-hidden">
+        <div className="absolute inset-0 blur-md scale-[1.02] pointer-events-none select-none" aria-hidden>
+          <SharedPropertyLandingBackdrop />
+        </div>
+        <div className="absolute inset-0 bg-black/45 pointer-events-none" aria-hidden />
+        <TenantPropertyVerification
+          propertyId={property.id}
+          onVerified={handleVerified}
+          onCancel={() => window.history.back()}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA]">
-      <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-center px-4">
-        <TrustKeyperLogo variant="brand" size="header" />
-      </header>
+    <>
+      {(phase === "property" || phase === "not_interested_thanks") && property && session
+        ? pageShell(
+            <>
+              {ctaError ? (
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {ctaError}
+                </div>
+              ) : null}
+              {cardLoading ? (
+                <PropertyPublicCardSkeleton />
+              ) : (
+                <PropertyPublicCard
+                  property={property}
+                  maskOwnerDetails={maskOwnerDetails}
+                  response={response}
+                  ctaLoading={ctaLoading}
+                  onInterested={() => void handleInterested()}
+                  onNotInterested={handleNotInterested}
+                />
+              )}
+              <p className="text-center text-xs text-gray-400 mt-6">Shared via TrustKeyper</p>
+            </>,
+          )
+        : null}
 
-      <main className="max-w-3xl mx-auto p-4 sm:p-8 space-y-5">
-        <div className="rounded-xl overflow-hidden bg-gray-100 aspect-[16/10]">
-          {images[0] ? (
-            <img src={images[0]} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-300">
-              <Building2 size={48} />
-            </div>
-          )}
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
-            <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-              <MapPin size={14} />
-              {[property.area, property.city].filter(Boolean).join(", ") || "—"}
-            </p>
+      {phase === "not_interested_thanks" && !ctaLoading ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8 text-center animate-in fade-in zoom-in-95 duration-200">
+            <p className="text-lg font-semibold text-gray-900 mb-2">Thank you for your response.</p>
+            <p className="text-sm text-gray-500 mb-6">We&apos;ve recorded your preference.</p>
+            <Button
+              type="button"
+              className="w-full h-11 rounded-[4px] font-semibold"
+              onClick={() => setPhase("property")}
+            >
+              Continue
+            </Button>
           </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-            <div className="rounded-lg bg-gray-50 p-3">
-              <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-                <IndianRupee size={12} /> Rent
-              </p>
-              <p className="font-semibold text-gray-900">{formatRent(property.monthlyRent)}</p>
-            </div>
-            <div className="rounded-lg bg-gray-50 p-3">
-              <p className="text-xs text-gray-500 mb-1">Type</p>
-              <p className="font-semibold text-gray-900">{type || "—"}</p>
-            </div>
-            <div className="rounded-lg bg-gray-50 p-3">
-              <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-                <BedDouble size={12} /> Beds
-              </p>
-              <p className="font-semibold text-gray-900">{property.bedrooms || property.unitSize || "—"}</p>
-            </div>
-            <div className="rounded-lg bg-gray-50 p-3">
-              <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-                <Calendar size={12} /> Available
-              </p>
-              <p className="font-semibold text-gray-900">
-                {property.availableFrom
-                  ? new Date(property.availableFrom).toLocaleDateString("en-IN")
-                  : "Immediately"}
-              </p>
-            </div>
-          </div>
-
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <div>
-              <dt className="text-gray-500">Furnishing</dt>
-              <dd className="font-medium text-gray-900">{property.furnishing || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">Built-up area</dt>
-              <dd className="font-medium text-gray-900">
-                {property.builtUpArea
-                  ? `${property.builtUpArea} ${property.builtUpUnits || ""}`.trim()
-                  : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">Deposit</dt>
-              <dd className="font-medium text-gray-900">
-                {property.securityDeposit
-                  ? `₹${Number(property.securityDeposit).toLocaleString("en-IN")}`
-                  : "—"}
-              </dd>
-            </div>
-            <div className="flex items-start gap-1">
-              <Bath size={14} className="text-gray-400 mt-0.5 shrink-0" />
-              <div>
-                <dt className="text-gray-500">Bathrooms</dt>
-                <dd className="font-medium text-gray-900">{property.bathrooms || "—"}</dd>
-              </div>
-            </div>
-          </dl>
-
-          {property.address ? (
-            <div className="pt-3 border-t border-gray-100">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Address</p>
-              <p className="text-sm text-gray-700">{property.address}</p>
-            </div>
-          ) : null}
         </div>
-
-        <p className="text-center text-xs text-gray-400 pb-6">Shared via TrustKeyper</p>
-      </main>
-    </div>
+      ) : null}
+    </>
   );
 }
