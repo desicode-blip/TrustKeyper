@@ -1,10 +1,17 @@
 import React, { useState, useRef, useEffect } from "react";
 import BrokerLayout from "@/components/BrokerLayout";
+import { PaymentMethodOrDivider, ProfileSectionHeader } from "@/components/profile/ProfileSectionHeader";
 import { getBrokerProfile, saveBrokerProfile } from "@/lib/brokerProfile";
 import type { BrokerProfile } from "@/lib/brokerProfile";
 import {
-  User, Building2, Phone, Mail, CreditCard, Landmark, QrCode, Check, Pencil,
-  Save, X, ChevronDown, Upload, Trash2, AlertTriangle,
+  hasProfileBankDetails,
+  hasProfileUpiDetails,
+} from "@/lib/ownerProfile";
+import { isValidUpiId, sanitizeUpiInput } from "@/lib/upi";
+import { toast } from "@/hooks/use-toast";
+import {
+  User, Building2, Phone, Mail, CreditCard, Landmark, QrCode, Check,
+  ChevronDown, Upload, Trash2, AlertTriangle,
 } from "lucide-react";
 
 const BANK_NAMES = [
@@ -40,49 +47,6 @@ function TextInput({
   );
 }
 
-function SectionHeader({ icon: Icon, title, onEdit, onSave, onCancel, onDelete, editing, saved }: {
-  icon: React.ElementType; title: string;
-  onEdit: () => void; onSave: () => void; onCancel: () => void; onDelete?: () => void;
-  editing: boolean; saved: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50">
-      <div className="flex items-center gap-2">
-        <Icon size={15} className="text-primary" />
-        <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">{title}</p>
-        {saved && !editing && (
-          <span className="flex items-center gap-1 text-[10px] text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full">
-            <Check size={10} /> Saved
-          </span>
-        )}
-      </div>
-      <div className="flex items-center gap-2">
-        {editing ? (
-          <>
-            <button onClick={onSave} className="flex items-center gap-1 text-xs text-white bg-primary px-2.5 py-1 rounded-lg font-medium hover:bg-primary/90 transition-colors">
-              <Save size={11} /> Save
-            </button>
-            <button onClick={onCancel} className="flex items-center gap-1 text-xs text-gray-600 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors">
-              <X size={11} /> Cancel
-            </button>
-          </>
-        ) : (
-          <>
-            {saved && onDelete && (
-              <button onClick={onDelete} className="flex items-center gap-1 text-xs text-red-500 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">
-                <Trash2 size={11} /> Delete
-              </button>
-            )}
-            <button onClick={onEdit} className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
-              <Pencil size={11} /> Edit
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export default function BrokerSettings() {
   const [profile, setProfile] = useState<BrokerProfile>(getBrokerProfile);
 
@@ -91,14 +55,9 @@ export default function BrokerSettings() {
   const [editingUPI, setEditingUPI] = useState(false);
 
   const [savedPersonal, setSavedPersonal] = useState(() => !!(getBrokerProfile().name));
-  const [savedBank, setSavedBank] = useState(() => {
-    const p = getBrokerProfile();
-    return !!(p.bankName && p.bankAccountNumber && p.bankIFSC);
-  });
-  const [savedUPI, setSavedUPI] = useState(() => {
-    const p = getBrokerProfile();
-    return !!(p.upiId || p.upiQrFileName);
-  });
+  const [savedBank, setSavedBank] = useState(() => hasProfileBankDetails(getBrokerProfile()));
+  const [savedUPI, setSavedUPI] = useState(() => hasProfileUpiDetails(getBrokerProfile()));
+  const savedPayment = savedBank || savedUPI;
 
   const [draftPersonal, setDraftPersonal] = useState<Pick<BrokerProfile, "name" | "firm" | "phone" | "email">>({
     name: profile.name, firm: profile.firm, phone: profile.phone, email: profile.email,
@@ -133,7 +92,7 @@ export default function BrokerSettings() {
     const updated = { ...profile, ...draftBank };
     setProfile(updated); saveBrokerProfile(updated);
     setEditingBank(false);
-    setSavedBank(!!(draftBank.bankName && draftBank.bankAccountNumber && draftBank.bankIFSC));
+    setSavedBank(hasProfileBankDetails(draftBank));
   };
   const cancelBank = () => {
     setDraftBank({ bankHolderName: profile.bankHolderName, bankName: profile.bankName, bankAccountNumber: profile.bankAccountNumber, bankIFSC: profile.bankIFSC });
@@ -141,10 +100,21 @@ export default function BrokerSettings() {
   };
 
   const saveUPI = () => {
-    const updated = { ...profile, ...draftUPI };
-    setProfile(updated); saveBrokerProfile(updated);
+    const upiId = draftUPI.upiId.trim();
+    const hasQr = !!draftUPI.upiQrFileName?.trim();
+    if (!upiId && !hasQr) {
+      toast({ title: "UPI details required", description: "Enter a valid UPI ID or upload a QR code.", variant: "destructive" });
+      return;
+    }
+    if (upiId && !isValidUpiId(upiId)) {
+      toast({ title: "Invalid UPI ID", description: "Enter a valid UPI ID (e.g. name@bank).", variant: "destructive" });
+      return;
+    }
+    const updated = { ...profile, ...draftUPI, upiId };
+    setProfile(updated);
+    saveBrokerProfile(updated);
     setEditingUPI(false);
-    setSavedUPI(!!(draftUPI.upiId || draftUPI.upiQrFileName));
+    setSavedUPI(hasProfileUpiDetails(updated));
   };
   const cancelUPI = () => {
     setDraftUPI({ upiId: profile.upiId, upiQrFileName: profile.upiQrFileName });
@@ -178,7 +148,7 @@ export default function BrokerSettings() {
         <div className="space-y-4">
           {/* ── Personal Information ── */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <SectionHeader
+            <ProfileSectionHeader
               icon={User} title="Personal Information"
               editing={editingPersonal} saved={savedPersonal}
               onEdit={() => setEditingPersonal(true)}
@@ -225,24 +195,24 @@ export default function BrokerSettings() {
             </div>
           </div>
 
-          {/* ── Bank details amber banner ── */}
-          {!savedBank && (
+          {!savedPayment && (
             <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
               <div className="mt-0.5 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shrink-0">
                 <span className="text-white text-xs font-semibold">!</span>
               </div>
               <div>
-                <p className="text-sm font-semibold text-amber-800">Add your bank details</p>
+                <p className="text-sm font-semibold text-amber-800">Add payment details</p>
                 <p className="text-xs text-amber-700 mt-0.5">
-                  Save your bank or UPI details once and they'll be auto-filled every time you generate a rental agreement.
+                  Save your bank or UPI details once and they&apos;ll be auto-filled every time you generate a rental agreement.
                 </p>
               </div>
             </div>
           )}
 
+          <div className="space-y-0">
           {/* ── Bank Account ── */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <SectionHeader
+            <ProfileSectionHeader
               icon={Landmark} title="Bank Account Details"
               editing={editingBank} saved={savedBank}
               onEdit={() => setEditingBank(true)}
@@ -311,9 +281,11 @@ export default function BrokerSettings() {
             </div>
           </div>
 
+          <PaymentMethodOrDivider />
+
           {/* ── UPI Details ── */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <SectionHeader
+            <ProfileSectionHeader
               icon={QrCode} title="UPI Details"
               editing={editingUPI} saved={savedUPI}
               onEdit={() => setEditingUPI(true)}
@@ -325,7 +297,7 @@ export default function BrokerSettings() {
                 <div className="space-y-4">
                   <div>
                     <FieldLabel>UPI ID</FieldLabel>
-                    <TextInput value={draftUPI.upiId} onChange={(v) => setDraftUPI((d) => ({ ...d, upiId: v }))} placeholder="yourname@bank" />
+                    <TextInput value={draftUPI.upiId} onChange={(v) => setDraftUPI((d) => ({ ...d, upiId: sanitizeUpiInput(v) }))} placeholder="yourname@bank" />
                   </div>
                   <p className="text-xs text-gray-400 text-center font-medium">OR</p>
                   <div>
@@ -378,6 +350,7 @@ export default function BrokerSettings() {
                 </div>
               )}
             </div>
+          </div>
           </div>
         </div>
       </div>
