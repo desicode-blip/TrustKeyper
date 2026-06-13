@@ -1,28 +1,35 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, Send, Trash2, Users, Utensils } from "lucide-react";
+import { ChevronLeft, MessageCircle, Send, Trash2, Users, Utensils } from "lucide-react";
 import { FaLinkedin, FaWhatsapp } from "react-icons/fa";
 import { Link } from "wouter";
 import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
 import { InviteTenantsModal } from "@/components/owner/InviteTenantsModal";
 import { OwnerPageEmpty } from "@/components/owner/OwnerPageEmpty";
+import { PropertyInquiryRow } from "@/components/property/PropertyInquiryRow";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
+import { pullAccountFromCloud } from "@/lib/cloudSync";
 import { getProperties, type Property } from "@/lib/properties";
+import { getActiveSession } from "@/lib/storageKeys";
 import {
   countRecordedInvites,
   deleteOwnerInvite,
   formatMemberContact,
   getOwnerInvites,
+  getPropertyShareInquiries,
   getRecordedInviteStatus,
   getWhatsAppInviteHref,
   isInviteFromInquiry,
+  OWNER_INQUIRIES_UPDATED_EVENT,
   OWNER_INVITES_UPDATED_EVENT,
   updateOwnerInviteStatus,
+  type OwnerTenantInquiry,
   type OwnerTenantInvite,
   type RecordedInviteStatus,
 } from "@/lib/ownerTenants";
 
 const TABS = [
+  { id: "inquiries", label: "Inquiries" },
   { id: "invites", label: "Invites" },
   { id: "active", label: "Active Tenants" },
 ] as const;
@@ -194,9 +201,10 @@ function PropertyInvitesCard({
 
 export default function OwnerTenants() {
   const ownerName = getOwnerName();
-  const [activeTab, setActiveTab] = useState<TenantTab>("invites");
+  const [activeTab, setActiveTab] = useState<TenantTab>("inquiries");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [invites, setInvites] = useState<OwnerTenantInvite[]>([]);
+  const [inquiries, setInquiries] = useState<OwnerTenantInquiry[]>([]);
 
   const ownerProperties = useMemo(() => {
     return filterOwnerProperties(getProperties(), ownerName);
@@ -204,23 +212,34 @@ export default function OwnerTenants() {
 
   const reload = useCallback(() => {
     setInvites(getOwnerInvites());
+    setInquiries(getPropertyShareInquiries());
   }, []);
 
-  useEffect(() => {
+  const reloadFromCloud = useCallback(async () => {
+    const session = getActiveSession();
+    if (session?.role === "owner") {
+      await pullAccountFromCloud(session.phone, "owner");
+    }
     reload();
   }, [reload]);
 
   useEffect(() => {
-    const refresh = () => reload();
+    void reloadFromCloud();
+  }, [reloadFromCloud]);
+
+  useEffect(() => {
+    const refresh = () => void reloadFromCloud();
     window.addEventListener("storage", refresh);
     window.addEventListener("focus", refresh);
     window.addEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
+    window.addEventListener(OWNER_INQUIRIES_UPDATED_EVENT, refresh);
     return () => {
       window.removeEventListener("storage", refresh);
       window.removeEventListener("focus", refresh);
       window.removeEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
+      window.removeEventListener(OWNER_INQUIRIES_UPDATED_EVENT, refresh);
     };
-  }, [reload]);
+  }, [reloadFromCloud]);
 
   const invitesByProperty = useMemo(() => {
     const map = new Map<string, OwnerTenantInvite[]>();
@@ -235,6 +254,7 @@ export default function OwnerTenants() {
   const { accepted } = useMemo(() => countRecordedInvites(invites), [invites]);
 
   const tabLabel = (id: TenantTab) => {
+    if (id === "inquiries") return `Inquiries (${inquiries.length})`;
     if (id === "invites") return `Invites (${invites.length})`;
     return `Active Tenants (${accepted})`;
   };
@@ -261,6 +281,30 @@ export default function OwnerTenants() {
           className="mb-6"
           options={TABS.map((t) => ({ value: t.id, label: tabLabel(t.id) }))}
         />
+
+        {activeTab === "inquiries" && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">Inquiries</h2>
+            {inquiries.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                {inquiries.map((inq) => (
+                  <PropertyInquiryRow
+                    key={inq.id}
+                    inquiry={inq}
+                    recipientRole="owner"
+                    onUpdate={reload}
+                  />
+                ))}
+              </div>
+            ) : (
+              <OwnerPageEmpty
+                icon={MessageCircle}
+                title="No inquiries yet"
+                description="When tenants express interest via your shared property link, they will appear here."
+              />
+            )}
+          </div>
+        )}
 
         {activeTab === "invites" && (
           <div className="space-y-6">

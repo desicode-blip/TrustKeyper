@@ -20,6 +20,10 @@
       "destination": "/api/invitations?invitePath=$1"
     },
     {
+      "source": "/api/share/property/(.*)",
+      "destination": "/api/share-property?sharePath=property/$1"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

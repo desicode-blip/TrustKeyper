@@ -1,8 +1,9 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Copy, Share2, X } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import type { Property } from "@/lib/properties";
 import { getPropertyTitle } from "@/lib/properties";
+import { publishPropertyShare } from "@/lib/publicPropertyShare";
 import {
   buildPropertyShareMessage,
   getPropertyShareUrl,
@@ -31,6 +32,11 @@ export function SharePropertyModal({
   const shareText = useMemo(() => buildPropertyShareMessage(property), [property]);
   const shareUrl = useMemo(() => getPropertyShareUrl(property.id), [property.id]);
   const whatsAppHref = useMemo(() => getPropertyShareWhatsAppHref(property), [property]);
+
+  useEffect(() => {
+    if (!open) return;
+    void publishPropertyShare(property);
+  }, [open, property]);
 
   if (!open) return null;
 
