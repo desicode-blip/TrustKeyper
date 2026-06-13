@@ -21,7 +21,8 @@
     "typecheck:api": "tsc -p tsconfig.api.json",
     "typecheck:deploy": "pnpm run check:drizzle-singleton && pnpm run typecheck:libs && pnpm run typecheck:api && pnpm -r --filter \"./artifacts/**\" --if-present run typecheck",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:deploy && pnpm --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:deploy && pnpm --filter \"./scripts\" --if-present run typecheck",
+    "test:run": "pnpm --filter @workspace/trustkeyper run test:run"
   },
   "private": true,
   "dependencies": {

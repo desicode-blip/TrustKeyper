@@ -10,6 +10,9 @@ import { syncAuthHeaders } from "./syncSession";
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
+/** Prefix for per-property public share snapshots (`property_share_<propertyId>`). */
+export const PROPERTY_SHARE_KEY_PREFIX = "property_share_";
+
 /** Keys synced to the server so the same phone works on every device. */
 export const CLOUD_SYNC_KEYS = [
   "profile",
@@ -21,6 +24,10 @@ export const CLOUD_SYNC_KEYS = [
   "add_property_data",
   "owner_tenant_inquiries",
   "broker_property_inquiries",
+  "owner_property_documents",
+  "owner_property_maintenance",
+  "owner_tenant_invites",
+  "tenant_property_declines",
 ] as const;
 
 export type CloudSyncKey = (typeof CLOUD_SYNC_KEYS)[number];
@@ -29,6 +36,60 @@ const pushTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function accountUrl(phone: string, role: string, suffix = ""): string {
   return `${API_BASE}/sync/accounts/${normalizePhoneDigits(phone)}/${role}${suffix}`;
+}
+
+/** Builds the localStorage data key for a property share snapshot. */
+export function propertyShareDataKey(propertyId: string): string {
+  return `${PROPERTY_SHARE_KEY_PREFIX}${propertyId}`;
+}
+
+type StorageLike = Pick<Storage, "length" | "key" | "getItem">;
+
+/**
+ * Collects dynamic `property_share_<id>` entries for bulk push.
+ * Scans storage for keys matching the account prefix so orphaned snapshots are included.
+ */
+export function collectPropertyShareEntries(
+  phone: string,
+  role: string,
+  store: StorageLike,
+): Record<string, string> {
+  const p = normalizePhoneDigits(phone);
+  const keyPrefix = `${storageKey(p, role, PROPERTY_SHARE_KEY_PREFIX)}`;
+  const entries: Record<string, string> = {};
+
+  for (let i = 0; i < store.length; i++) {
+    const fullKey = store.key(i);
+    if (!fullKey?.startsWith(keyPrefix)) continue;
+    const dataKey = fullKey.slice(`tk_${p}_${role}_`.length);
+    if (!dataKey.startsWith(PROPERTY_SHARE_KEY_PREFIX)) continue;
+    const value = store.getItem(fullKey);
+    if (value) entries[dataKey] = value;
+  }
+
+  return entries;
+}
+
+/** Merges static CLOUD_SYNC_KEYS and dynamic property share snapshots for bulk upload. */
+export function collectBulkSyncEntries(
+  phone: string,
+  role: Role,
+  store: StorageLike,
+): Record<string, string> {
+  const p = normalizePhoneDigits(phone);
+  const entries: Record<string, string> = {};
+
+  for (const key of CLOUD_SYNC_KEYS) {
+    const raw = store.getItem(storageKey(p, role, key));
+    if (raw) entries[key] = raw;
+  }
+
+  const shareEntries = collectPropertyShareEntries(p, role, store);
+  for (const [key, value] of Object.entries(shareEntries)) {
+    entries[key] = value;
+  }
+
+  return entries;
 }
 
 export async function cloudAccountExists(phone: string, role: Role): Promise<boolean> {
@@ -112,12 +173,11 @@ export async function pushLocalKeysToCloud(
   role: Role,
   accessToken?: string,
 ): Promise<boolean> {
-  const p = normalizePhoneDigits(phone);
-  const entries: Record<string, string> = {};
-  for (const key of CLOUD_SYNC_KEYS) {
-    const raw = localStorage.getItem(storageKey(p, role, key));
-    if (raw) entries[key] = raw;
-  }
+  const entries =
+    typeof localStorage !== "undefined"
+      ? collectBulkSyncEntries(phone, role, localStorage)
+      : {};
+
   if (Object.keys(entries).length === 0) return true;
   try {
     const headers = await syncAuthHeaders("application/json", accessToken);

@@ -7,6 +7,7 @@ const ROLES = ["broker", "owner", "tenant", "manager"] as const;
 const EXTRA_DATA_TYPES = [
   "owner_tenant_inquiries",
   "owner_tenant_invites",
+  "tenant_property_declines",
   "owner_property_maintenance",
   "owner_property_documents",
   "add_tenant_draft",
