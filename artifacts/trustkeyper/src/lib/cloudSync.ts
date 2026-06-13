@@ -19,8 +19,6 @@ export const CLOUD_SYNC_KEYS = [
   "agreement_draft",
   "onboarding_data",
   "add_property_data",
-  "owner_tenant_inquiries",
-  "broker_property_inquiries",
 ] as const;
 
 export type CloudSyncKey = (typeof CLOUD_SYNC_KEYS)[number];
