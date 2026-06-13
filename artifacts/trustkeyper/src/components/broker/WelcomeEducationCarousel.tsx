@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { FilePlus2, Plus, UserPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, FilePlus2, Plus, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const SLIDE_MS = 8000;
+/** Auto-advance interval for welcome education slides (8 seconds). */
+export const WELCOME_CAROUSEL_SLIDE_MS = 8000;
+const SLIDE_MS = WELCOME_CAROUSEL_SLIDE_MS;
 
 type Slide = {
   id: string;
@@ -75,6 +77,14 @@ export function WelcomeEducationCarousel({
     [scheduleAdvance],
   );
 
+  const goPrev = useCallback(() => {
+    goTo((index - 1 + slides.length) % slides.length);
+  }, [goTo, index, slides.length]);
+
+  const goNext = useCallback(() => {
+    goTo((index + 1) % slides.length);
+  }, [goTo, index, slides.length]);
+
   useEffect(() => {
     scheduleAdvance();
     return () => {
@@ -99,11 +109,28 @@ export function WelcomeEducationCarousel({
         </div>
 
         <div className="relative min-h-[280px] p-6">
+          <button
+            type="button"
+            onClick={goPrev}
+            aria-label="Previous slide"
+            className="absolute left-2 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-600 shadow-sm transition-colors hover:border-primary/30 hover:text-primary"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={goNext}
+            aria-label="Next slide"
+            className="absolute right-2 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-600 shadow-sm transition-colors hover:border-primary/30 hover:text-primary"
+          >
+            <ChevronRight size={18} />
+          </button>
+
           {slides.map((s, i) => (
             <article
               key={s.id}
               className={cn(
-                "absolute inset-0 flex flex-col p-6 pt-5 transition-all duration-500 ease-out",
+                "absolute inset-0 flex flex-col p-6 pt-5 px-12 transition-all duration-500 ease-out",
                 i === index
                   ? "opacity-100 translate-x-0 pointer-events-auto z-10"
                   : i < index
