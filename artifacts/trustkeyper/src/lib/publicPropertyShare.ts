@@ -1,7 +1,7 @@
 import type { Property } from "@/lib/properties";
 import { getProperties } from "@/lib/properties";
 import { getActiveSession } from "@/lib/storageKeys";
-import { pushAccountKeyToCloud } from "@/lib/cloudSync";
+import { propertyShareDataKey, pushAccountKeyToCloud } from "@/lib/cloudSync";
 import { getPropertyInviteLabel } from "@/lib/ownerTenants";
 import {
   resolveShareSource,
@@ -19,7 +19,7 @@ export type SharedPropertyPayload = {
 };
 
 function shareSnapshotKey(propertyId: string): string {
-  return `property_share_${propertyId}`;
+  return propertyShareDataKey(propertyId);
 }
 
 export async function fetchSharedProperty(propertyId: string): Promise<SharedPropertyPayload | null> {

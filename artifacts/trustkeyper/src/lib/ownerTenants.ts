@@ -287,6 +287,7 @@ export function recordPropertyNotInterested(input: {
     const payload = JSON.stringify(list.slice(0, 200));
     setSessionItem(DECLINES_KEY, payload);
     setItem(DECLINES_KEY, payload);
+    queueCloudSync(DECLINES_KEY, payload);
   } catch {
     /* ignore */
   }

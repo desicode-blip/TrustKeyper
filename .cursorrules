@@ -9,7 +9,7 @@ You are working on TrustKeyper, a property management platform for NRI and remot
 - **Live app:** app.trustkeyper.com
 - **Stack:** React 19 + Vite 7 + TypeScript + Tailwind 4, Vercel serverless, Supabase PostgreSQL, Drizzle ORM, pnpm monorepo
 - **Team:** Sumit (product + engineering), Meena (developer)
-- **Repo:** meena-boop/Trustkeyper
+- **Repo:** desicode-blip/TrustKeyper
 
 Read ARCHITECTURE.md, CONTRIBUTING.md, and TESTING.md before starting any task. They are the source of truth.
 
