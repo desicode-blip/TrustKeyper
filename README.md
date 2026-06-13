@@ -1,162 +1,226 @@
 # TrustKeyper
 
-Property rental management prototype for **owners** and **brokers**: onboarding, listings, tenants, agreements, and cloud sync across devices.
+Property management platform for NRI and remote owners of Indian residential property. Owners manage tenants, rent, documents, and maintenance — entirely remotely.
 
-**Production:** [app.trustkeyper.com](https://app.trustkeyper.com)
+**Live app:** [app.trustkeyper.com](https://app.trustkeyper.com)
 
 ---
 
-## Architecture
+## Stack
 
-| Layer | Location | Notes |
-|--------|-----------|--------|
-| Frontend (Vite + React) | `artifacts/trustkeyper/` | SPA; phone OTP via Supabase Auth |
-| Vercel serverless API | `api/` | `/api/healthz`, `/api/sync/*` (Postgres on Vercel) |
-| Local Express API | `artifacts/api-server/` | Dev only; proxies from Vite |
-| Shared libs | `lib/db`, `lib/sync-store`, `lib/auth-server` | Drizzle + PGlite locally; JWT verify on sync |
-| Auth | Supabase (Twilio SMS) | Anon key in browser; no service role in frontend |
+| Layer | Technology |
+|---|---|
+| Frontend | React 19 + Vite 7 + TypeScript + Tailwind 4 |
+| Routing | Wouter |
+| Backend | Vercel serverless functions (`api/`) |
+| Local dev server | Express (`artifacts/api-server/`) |
+| Database | Supabase PostgreSQL + Drizzle ORM |
+| Auth | Supabase Phone OTP (Vonage SMS) |
+| Email | Resend |
+| Session recording | Microsoft Clarity |
+| Monorepo | pnpm workspaces |
+| CI/CD | GitHub Actions → Vercel |
+
+---
+
+## Monorepo Structure
 
 ```
-Browser ──► Supabase Auth (OTP) ──► JWT on protected sync calls
-       └──► /api/sync/... ──► Postgres (user_data, RLS enabled) or mock store
+/
+├── api/                        # Vercel serverless functions (production)
+│   ├── sync.ts                 # Data sync endpoints
+│   ├── invitations.ts          # Tenant invitation endpoints
+│   ├── feedback.ts             # Feedback + Gemini analysis
+│   ├── managed-interest.ts     # Managed plan interest email
+│   └── admin/                  # Admin-only endpoints
+├── artifacts/
+│   ├── trustkeyper/            # Main SPA (React + Vite)
+│   │   └── src/
+│   │       ├── pages/          # Route-level page components
+│   │       ├── components/     # Shared UI components
+│   │       └── lib/            # Auth, sync, storage utilities
+│   └── api-server/             # Express server (local dev mirror)
+├── lib/
+│   ├── db/                     # Drizzle schema + migrations
+│   ├── auth-server/            # JWT verification helpers
+│   ├── sync-store/             # Storage backend abstraction
+│   └── invitations-store/      # Invitation persistence
+└── supabase/
+    └── migrations/             # SQL migration files
 ```
-
-**Monorepo:** pnpm workspaces. Vercel **Root Directory** must be the repo root (`.`).
 
 ---
 
 ## Prerequisites
 
-- **Node.js** 22+
-- **pnpm** 11 (`corepack enable` or `npm i -g pnpm`)
-- For real SMS OTP: [Supabase](https://supabase.com) project with Phone auth + Twilio
+- Node.js 22+
+- pnpm 11.0.8 (`npm install -g pnpm@11.0.8`)
+- A Supabase project (for auth — phone OTP)
 
 ---
 
-## Quick start (local)
+## Local Development Setup
+
+### 1. Clone and install
 
 ```bash
+git clone https://github.com/meena-boop/Trustkeyper.git
+cd Trustkeyper
 pnpm install
+```
+
+### 2. Configure environment
+
+```bash
 cp .env.example .env
 ```
 
-**Frontend + embedded DB (simplest):**
-
-```bash
-pnpm run dev:local
-```
-
-Opens the Vite app (default port from `PORT` in `.env`, often 5173). API runs on `8080` and is proxied at `/api`.
-
-**Supabase OTP in dev** — create `artifacts/trustkeyper/.env.local`:
+Open `.env` and fill in:
 
 ```env
-VITE_SUPABASE_URL=https://<project>.supabase.co
-VITE_SUPABASE_ANON_KEY=<anon-or-publishable-key>
+# Database — leave as "local" for PGLite (no Docker needed)
+DATABASE_URL=local
+PGLITE_DATA_DIR=../../.data/pglite
+
+# Server
+PORT=8080
+
+# Supabase (server-side JWT verification)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+
+# Admin phone numbers (comma-separated, 10 digits, no +91)
+ADMIN_PHONES=9999999999
 ```
 
-For **local sync JWT checks** (optional), add the same values to root `.env` as `SUPABASE_URL` and `SUPABASE_ANON_KEY`, or set `SYNC_AUTH_DISABLED=1` to skip server auth in mock mode.
+Create `artifacts/trustkeyper/.env.local` for Vite:
 
-**Docker Postgres instead of PGlite:**
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_ADMIN_PHONES=9999999999
+VITE_API_URL=http://localhost:8080
+```
+
+### 3. Start development
 
 ```bash
+# Recommended: PGLite (no Docker, data persists in .data/)
+pnpm run dev:local
+
+# Alternative: Docker Postgres
+pnpm run db:up
 pnpm run dev:local:docker
 ```
 
-Set `DATABASE_URL` in `.env` per `.env.example`.
+This starts:
+- Frontend at `http://localhost:5173`
+- API server at `http://localhost:8080`
 
 ---
 
-## Environment variables
+## Environment Variables Reference
 
-| Variable | Where | Purpose |
-|----------|--------|---------|
-| `DATABASE_URL` | Root `.env` / Vercel | `local` / PGlite path, or Postgres URL (pooler in prod) |
-| `USE_MOCK_DB` | Root | Force in-memory mock API (demos) |
-| `VITE_SUPABASE_URL` | Vercel + `.env.local` | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Vercel + `.env.local` | Public anon key only — never service role |
-| `SUPABASE_URL` | Root `.env` / Vercel | Same project URL — server JWT verification |
-| `SUPABASE_ANON_KEY` | Root `.env` / Vercel | Anon key for `auth.getUser()` on sync routes |
-| `SYNC_AUTH_DISABLED` | Root | `1` = skip sync JWT (local mock only) |
-| `PORT` / `API_PORT` | Root | Local API port (default 8080) |
+### Server-side (`.env`)
 
-See [.env.example](.env.example) and [docs/vercel-prototype-database.md](docs/vercel-prototype-database.md) for mock-mode behavior.
+| Variable | Required | Description |
+|---|---|---|
+| `DATABASE_URL` | Yes | `local` for PGLite, or a PostgreSQL connection string |
+| `PGLITE_DATA_DIR` | If local | Path for PGLite data files |
+| `PORT` / `API_PORT` | Yes | API server port (default 8080) |
+| `SUPABASE_URL` | Yes | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Yes | Supabase anon key (for JWT verification) |
+| `ADMIN_PHONES` | Yes | Comma-separated 10-digit admin phone numbers |
+| `RESEND_API_KEY` | For email | Resend API key |
+| `FEEDBACK_FROM_EMAIL` | For email | Sender address for feedback notifications |
+| `FEEDBACK_NOTIFY_EMAIL` | For email | Recipient for feedback notifications |
+| `GEMINI_API_KEY` | For AI | Gemini API key for feedback analysis |
+| `INVITE_EXPIRY_DAYS` | Optional | Days before invitation expires (default: 7) |
+| `SYNC_AUTH_DISABLED` | Dev only | Set to `1` to skip JWT checks locally |
+
+### Frontend (`.env.local`)
+
+| Variable | Required | Description |
+|---|---|---|
+| `VITE_SUPABASE_URL` | Yes | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Yes | Supabase anon key |
+| `VITE_ADMIN_PHONES` | Yes | Comma-separated admin phone numbers |
+| `VITE_API_URL` | Dev only | API base URL (proxied in production) |
 
 ---
 
-## Scripts
-
-| Command | Description |
-|---------|-------------|
-| `pnpm run dev:local` | PGlite init + API + frontend |
-| `pnpm run dev:web` | Frontend only |
-| `pnpm run dev:api` | Express API only |
-| `pnpm run typecheck:deploy` | CI/Vercel-safe typecheck (libs, `api/`, artifacts) |
-| `pnpm run build:deploy` | Production build (frontend + api-server bundle) |
-| `pnpm run db:push` | Ensure local `user_data` table (PGlite) |
-| `pnpm run seed:prototype` | Seed file-based prototype store |
-
----
-
-## Deploying to Vercel
-
-1. Connect the GitHub repo; set **Root Directory** to `.` (repository root).
-2. Production env:
-   - `DATABASE_URL` — Supabase **transaction pooler** URL (SSL)
-   - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (frontend)
-   - `SUPABASE_URL`, `SUPABASE_ANON_KEY` (server — same values, for sync JWT)
-3. Apply RLS on Supabase once: run [supabase/migrations/20250529120000_user_data_rls.sql](supabase/migrations/20250529120000_user_data_rls.sql) in the SQL editor.
-4. `vercel.json` runs `typecheck:deploy` + Vite build; rewrites `/api/sync/*` to the catch-all handler.
-
-**Smoke tests after deploy:**
+## Available Scripts
 
 ```bash
-curl -sS https://app.trustkeyper.com/api/healthz
-curl -sS "https://app.trustkeyper.com/api/sync/accounts/9999999999/owner/exists"
+# Development
+pnpm run dev:local          # Start full stack with PGLite
+pnpm run dev:local:docker   # Start full stack with Docker Postgres
+pnpm run dev:web            # Frontend only
+pnpm run dev:api            # API server only
+
+# Type checking
+pnpm run typecheck          # Check everything
+pnpm run typecheck:deploy   # Check only what deploys to Vercel
+
+# Database
+pnpm run db:push            # Apply schema to local DB
+pnpm run db:up              # Start Docker Postgres
+pnpm run db:down            # Stop Docker Postgres
+
+# Build
+pnpm run build:deploy       # Production build (mirrors Vercel)
+
+# Testing
+pnpm run test               # Run all unit + component tests (Vitest)
+pnpm run test:e2e           # Run E2E tests (Playwright) against staging
+pnpm run test:coverage      # Run tests with coverage report
 ```
 
 ---
 
-## Project layout
+## Branching and Release Process
 
-```
-api/                    # Vercel serverless (sync, healthz)
-artifacts/
-  trustkeyper/          # Main React app
-  api-server/           # Local Express server
-lib/
-  auth-server/          # Supabase JWT verification for sync API
-  db/                   # Drizzle schema + queries
-  sync-store/           # Cloud sync abstraction (mock / postgres / blob)
-docs/                   # Deployment, security, database notes
-supabase/migrations/    # Postgres migrations (RLS, etc.)
-```
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full workflow.
+
+Short version:
+- Work on `feature/*` or `fix/*` branches
+- PRs target `staging` first
+- `staging` → `main` is a deliberate release decision
+
+**Never push directly to `main`.**
 
 ---
 
-## CI
+## Database Schema
 
-GitHub Actions (`.github/workflows/ci.yml`) on `main` and PRs:
+The database uses a hybrid approach:
 
-- `pnpm install --frozen-lockfile`
-- `pnpm run typecheck:deploy`
-- `pnpm run build:deploy`
+- `user_data` — key/value blob store for all user data (profile, properties, tenants, agreements, maintenance). Primary key: `(phone, role, data_key)`.
+- `tenant_invitations` — normalised relational table for invitation lifecycle management.
+- `feedback` — feedback submissions with optional AI analysis.
 
----
-
-## Security
-
-- **OTP:** Supabase phone auth (Twilio) on login and signup.
-- **Sync API:** Protected read/write routes require `Authorization: Bearer <jwt>`; JWT phone must match URL. Public `/exists` and `/roles` for pre-OTP UX.
-- **Postgres:** RLS enabled on `user_data`; no anon/authenticated policies.
-- **Secrets:** Anon key in browser only; `DATABASE_URL` and service role never in `VITE_*`.
-
-Full model: [docs/security.md](docs/security.md). Hardening notes: [docs/deployment-hardening.md](docs/deployment-hardening.md).
-
-**Still recommended for scale:** rate limiting on public routes, audit logging, optional `auth_user_id` column when moving beyond phone-as-key.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for full schema details.
 
 ---
 
-## License
+## Deployment
 
-MIT
+Deployments are handled automatically by Vercel:
+
+| Branch | Environment | URL |
+|---|---|---|
+| `main` | Production | app.trustkeyper.com |
+| `staging` | Staging | staging.app.trustkeyper.com |
+| Any PR | Preview | auto-generated Vercel URL |
+
+Production deploys require all CI checks to pass and a PR approval.
+
+---
+
+## Admin Portal
+
+Available at `/admin/login`. Access requires:
+1. A phone number listed in `ADMIN_PHONES` / `VITE_ADMIN_PHONES`
+2. OTP verification via the same Supabase auth flow
+
+The admin portal shows platform stats, all users, all properties, and all feedback.

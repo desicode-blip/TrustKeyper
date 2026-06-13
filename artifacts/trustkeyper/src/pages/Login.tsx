@@ -33,6 +33,7 @@ import { clearActiveSessionBackup } from "@/lib/initAppStorage";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 import { handleOtpKeyDown } from "@/lib/otpInput";
 import { Spinner } from "@/components/ui/spinner";
+import { OtpVerifyReadyHint, useOtpVerifyReady } from "@/lib/otpVerifyReady";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 
 type Phase = "phone" | "otp";
@@ -48,6 +49,7 @@ export default function Login() {
   const [accountKnown, setAccountKnown] = useState<boolean | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const { verifyReady, startVerifyReady, isVerifyReady } = useOtpVerifyReady();
 
   useEffect(() => {
     const remembered = restoreRememberedSessionFromLocalStorage();
@@ -104,7 +106,7 @@ export default function Login() {
   };
 
   const finishLogin = async () => {
-    if (!loginRole) return;
+    if (!loginRole || !isVerifyReady) return;
     setLoggingIn(true);
     try {
       const exists = await profileExistsAsync(phoneDigits, loginRole);
@@ -162,6 +164,7 @@ export default function Login() {
     }
     setCountdown(10);
     setOtp(createEmptyOtp());
+    startVerifyReady();
   };
 
   const requestOtpCta = (
@@ -182,6 +185,7 @@ export default function Login() {
           }
           setCountdown(10);
           setOtp(createEmptyOtp());
+          startVerifyReady();
           setPhase("otp");
         })();
       }}
@@ -194,7 +198,7 @@ export default function Login() {
   const continueLoginCta = (
     <Button
       size="lg"
-      disabled={!isOtpComplete || loggingIn}
+      disabled={!isOtpComplete || loggingIn || !isVerifyReady}
       onClick={() => void finishLogin()}
       className={authPrimaryButtonClass}
     >
@@ -284,7 +288,9 @@ export default function Login() {
                   value={digit}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
                   onKeyDown={(e) =>
-                    handleOtpKeyDown(i, e, otp, setOtp, "login-otp", () => void finishLogin())
+                    handleOtpKeyDown(i, e, otp, setOtp, "login-otp", () => {
+                      if (isVerifyReady) void finishLogin();
+                    })
                   }
                   className={`w-full h-11 sm:h-12 text-center text-xl font-medium rounded-lg outline-none transition-colors
                     ${digit ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
@@ -324,7 +330,12 @@ export default function Login() {
             </p>
 
             <AuthSignupScreenFooter
-              cta={continueLoginCta}
+              cta={
+                <>
+                  {continueLoginCta}
+                  <OtpVerifyReadyHint seconds={verifyReady} />
+                </>
+              }
               showTerms={false}
               linkType="signup"
               persistRole={loginRole}

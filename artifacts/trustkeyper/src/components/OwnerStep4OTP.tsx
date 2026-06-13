@@ -14,6 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 import { handleOtpKeyDown } from "@/lib/otpInput";
 import { Spinner } from "@/components/ui/spinner";
+import { OtpVerifyReadyHint, useOtpVerifyReady } from "@/lib/otpVerifyReady";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 
 interface OwnerStep4OTPProps {
@@ -26,6 +27,11 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(10);
   const [verifying, setVerifying] = useState(false);
+  const { verifyReady, startVerifyReady, isVerifyReady } = useOtpVerifyReady();
+
+  useEffect(() => {
+    startVerifyReady();
+  }, [startVerifyReady]);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -58,10 +64,11 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
     }
     setCountdown(10);
     setOtp(createEmptyOtp());
+    startVerifyReady();
   };
 
   const handleContinue = async () => {
-    if (!isComplete || verifying) return;
+    if (!isComplete || verifying || !isVerifyReady) return;
     setVerifying(true);
     try {
       const { error: verifyError, accessToken } = await verifyPhoneOtp(
@@ -93,7 +100,7 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
     <Button
       size="lg"
       onClick={() => void handleContinue()}
-      disabled={!isComplete || verifying}
+      disabled={!isComplete || verifying || !isVerifyReady}
       className={authPrimaryButtonClass}
     >
       {verifying ? (
@@ -134,7 +141,9 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
               value={digit}
               onChange={(e) => handleChange(i, e.target.value)}
               onKeyDown={(e) =>
-                handleOtpKeyDown(i, e, otp, setOtp, "owner-otp", () => void handleContinue())
+                handleOtpKeyDown(i, e, otp, setOtp, "owner-otp", () => {
+                  if (isVerifyReady) void handleContinue();
+                })
               }
               className={`w-full h-11 sm:h-12 text-center text-xl font-medium rounded-lg outline-none transition-colors
                 ${digit ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
@@ -157,7 +166,17 @@ export default function OwnerStep4OTP({ phone, details, onNext }: OwnerStep4OTPP
         </p>
       </div>
 
-      <AuthSignupScreenFooter cta={cta} showTerms={false} linkType="none" persistRole="owner" />
+      <AuthSignupScreenFooter
+        cta={
+          <>
+            {cta}
+            <OtpVerifyReadyHint seconds={verifyReady} />
+          </>
+        }
+        showTerms={false}
+        linkType="none"
+        persistRole="owner"
+      />
     </div>
   );
 }

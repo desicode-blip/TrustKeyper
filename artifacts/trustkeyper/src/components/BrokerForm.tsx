@@ -13,6 +13,7 @@ import {
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 import { handleOtpKeyDown } from "@/lib/otpInput";
 import { Spinner } from "@/components/ui/spinner";
+import { OtpVerifyReadyHint, useOtpVerifyReady } from "@/lib/otpVerifyReady";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -44,6 +45,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
   const [verifying, setVerifying] = useState(false);
   const [stayLoggedIn, setStayLoggedIn] = useState(false);
   const [, setLocation] = useLocation();
+  const { verifyReady, startVerifyReady, isVerifyReady } = useOtpVerifyReady();
 
   const phoneDigits = phone.replace(/\D/g, "").slice(0, 10);
   const pendingRole = sessionStorage.getItem("tk_pending_role") || "broker";
@@ -89,6 +91,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
       setOtp(createEmptyOtp());
       setOtpStage(true);
       setCountdown(12);
+      startVerifyReady();
     } finally {
       setSendingOtp(false);
     }
@@ -106,12 +109,13 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
     }
     setCountdown(12);
     setOtp(createEmptyOtp());
+    startVerifyReady();
   };
 
   const isOtpComplete = otp.every((d) => d !== "");
 
   const handleContinue = async () => {
-    if (!isOtpComplete || verifying) return;
+    if (!isOtpComplete || verifying || !isVerifyReady) return;
     setVerifying(true);
     try {
       const verifyResult = await verifyPhoneOtp(phoneDigits, otp.join(""));
@@ -204,7 +208,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
     <Button
       size="lg"
       onClick={() => void handleContinue()}
-      disabled={!isOtpComplete || verifying}
+      disabled={!isOtpComplete || verifying || !isVerifyReady}
       className={`w-full ${authPrimaryButtonClass}`}
     >
       {verifying ? (
@@ -317,7 +321,9 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
                   value={d}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
                   onKeyDown={(e) =>
-                    handleOtpKeyDown(i, e, otp, setOtp, "broker-otp", () => void handleContinue())
+                    handleOtpKeyDown(i, e, otp, setOtp, "broker-otp", () => {
+                      if (isVerifyReady) void handleContinue();
+                    })
                   }
                   className={`w-full h-11 sm:h-12 text-center text-xl font-medium rounded-lg outline-none transition-colors
                     ${d ? authOtpDigitFilledClass : authOtpDigitEmptyClass}`}
@@ -357,7 +363,16 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
             </p>
           </Box>
 
-          <AuthSignupScreenFooter cta={continueCta} showTerms={false} persistRole="broker" />
+          <AuthSignupScreenFooter
+            cta={
+              <>
+                {continueCta}
+                <OtpVerifyReadyHint seconds={verifyReady} />
+              </>
+            }
+            showTerms={false}
+            persistRole="broker"
+          />
         </>
       )}
     </Box>

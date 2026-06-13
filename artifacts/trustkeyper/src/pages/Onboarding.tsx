@@ -96,6 +96,7 @@ export default function Onboarding() {
           variant: "destructive",
         });
       }
+      // OwnerStep4OTP starts verify-ready countdown on mount (OTP just sent here).
     })();
 
     return () => {
