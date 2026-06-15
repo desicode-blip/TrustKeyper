@@ -64,7 +64,7 @@ Property management platform for NRI and remote owners of Indian residential pro
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/meena-boop/Trustkeyper.git
+git clone https://github.com/desicode-blip/TrustKeyper.git
 cd Trustkeyper
 pnpm install
 ```
@@ -171,8 +171,9 @@ pnpm run db:down            # Stop Docker Postgres
 pnpm run build:deploy       # Production build (mirrors Vercel)
 
 # Testing
-pnpm run test               # Run all unit + component tests (Vitest)
-pnpm run test:e2e           # Run E2E tests (Playwright) against staging
+pnpm run test:run           # Run unit + component tests (Vitest, single run — use in CI)
+pnpm run test               # Same tests in watch mode
+# E2E via Playwright is planned but not yet set up — see TESTING.md
 pnpm run test:coverage      # Run tests with coverage report
 ```
 
