@@ -221,19 +221,11 @@ test('owner can sign up and reach dashboard', async ({ page }) => {
 
 ### Running E2E tests
 
-```bash
-# Requires staging environment to be running
-STAGING_URL=https://staging.app.trustkeyper.com pnpm run test:e2e
-
-# Or against local dev
-pnpm run test:e2e:local
-```
+E2E testing via Playwright is **planned but not yet set up** — there is no `pnpm run test:e2e` script yet. When added, tests will run against staging (or local dev) using `STAGING_URL`. See the example spec above for the intended structure.
 
 ### E2E in CI
 
-E2E tests run automatically when a PR is opened from `staging` → `main`. They must pass before the release is allowed.
-
-They do NOT run on every PR to `staging` — that would be too slow. They are the gate before production.
+Playwright E2E in CI is planned as the gate before `staging` → `main` promotion. It is not wired up yet.
 
 ---
 
