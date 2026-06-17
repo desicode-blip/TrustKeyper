@@ -7,6 +7,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
+import { BrokerFlowButton } from "@/components/broker/BrokerFlowButton";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import { getTenants, timeAgo } from "@/lib/tenants";
@@ -218,18 +219,38 @@ function TableRow({ deal }: { deal: Deal }) {
       </td>
       <td className="px-4 py-4">
         <div className="flex items-center gap-2">
-          <button className="w-8 h-8 rounded-lg flex items-center justify-center text-primary bg-blue-50 hover:bg-primary hover:text-white transition-colors" title="View">
+          <BrokerFlowButton
+            type="button"
+            flowVariant="sm-outline"
+            className="h-8 min-h-8 w-8 min-w-8 px-0"
+            title="View"
+            aria-label="View deal"
+          >
             <Eye size={14} />
-          </button>
+          </BrokerFlowButton>
           {deal.tenantContact && (
-            <a href={`tel:${deal.tenantContact}`} className="w-8 h-8 rounded-lg flex items-center justify-center text-primary bg-blue-50 hover:bg-primary hover:text-white transition-colors" title="Call">
-              <Phone size={14} />
-            </a>
+            <BrokerFlowButton
+              asChild
+              flowVariant="sm-outline"
+              className="h-8 min-h-8 w-8 min-w-8 px-0"
+              title="Call"
+              aria-label="Call tenant"
+            >
+              <a href={`tel:${deal.tenantContact}`}>
+                <Phone size={14} />
+              </a>
+            </BrokerFlowButton>
           )}
           {!deal.tenantContact && (
-            <button className="w-8 h-8 rounded-lg flex items-center justify-center text-primary bg-blue-50 hover:bg-primary hover:text-white transition-colors" title="Call">
+            <BrokerFlowButton
+              type="button"
+              flowVariant="sm-outline"
+              className="h-8 min-h-8 w-8 min-w-8 px-0"
+              title="Call"
+              aria-label="Call unavailable"
+            >
               <Phone size={14} />
-            </button>
+            </BrokerFlowButton>
           )}
         </div>
       </td>
@@ -346,12 +367,14 @@ export default function BrokerDeals() {
               { value: "table", label: "Table" },
             ]}
           />
-          <button
+          <BrokerFlowButton
+            type="button"
+            flowVariant="sm-primary"
             onClick={() => setLocation("/broker/agreements/generate")}
-            className="inline-flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-lg bg-primary text-white text-xs sm:text-sm font-semibold hover:bg-primary/90 transition-colors"
+            className="px-3 sm:px-4 text-xs sm:text-sm"
           >
             <Plus size={14} /> <span className="hidden sm:inline">Generate Rent Agreement</span><span className="sm:hidden">Agreement</span>
-          </button>
+          </BrokerFlowButton>
         </div>
       </div>
       {/* ── Earnings banner ── */}
