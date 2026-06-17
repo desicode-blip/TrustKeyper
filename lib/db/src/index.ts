@@ -2,6 +2,7 @@ export { closeDb, ensureDbReady, getDb, isEmbeddedLocalDb, pgliteDataDir } from 
 export * from "./schema/index.js";
 export {
   queryAccountData,
+  queryEntryByDataKey,
   queryRolesWithProfileForPhone,
   upsertAccountDataKey,
 } from "./userDataQueries.js";

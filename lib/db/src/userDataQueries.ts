@@ -48,3 +48,22 @@ export async function queryRolesWithProfileForPhone(phone: string): Promise<stri
 
   return [...new Set(rows.map((r) => r.role))];
 }
+
+export async function queryEntryByDataKey(
+  dataKey: string,
+): Promise<{ phone: string; role: string; value: string } | null> {
+  const db = getDb();
+  if (!db) return null;
+
+  const rows = await db
+    .select({
+      phone: userDataTable.phone,
+      role: userDataTable.role,
+      value: userDataTable.value,
+    })
+    .from(userDataTable)
+    .where(eq(userDataTable.dataKey, dataKey))
+    .limit(1);
+
+  return rows[0] ?? null;
+}

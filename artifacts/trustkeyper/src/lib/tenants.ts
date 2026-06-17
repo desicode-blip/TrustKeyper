@@ -19,11 +19,22 @@ export interface TenantProfile {
   pan?: string;
 }
 
+export type LeadStatus =
+  | "New Lead"
+  | "Contacted"
+  | "Property Shared"
+  | "Site Visit Scheduled"
+  | "Converted"
+  | "Closed";
+
+export type TenantLeadSource = "manual" | "broker_onboarding_link" | "property_share";
+
 export interface Tenant {
   id: string;
   name: string;
   phone: string;
   profile?: TenantProfile;
+  linkedinUrl?: string;
   occupancyFrom?: string;
   who?: TenantWho;
   identify?: Identify[];
@@ -36,6 +47,10 @@ export interface Tenant {
   status: "Lead Added" | "Profile Complete";
   invitationSent: boolean;
   detailsComplete: boolean;
+  leadStatus?: LeadStatus;
+  source?: TenantLeadSource;
+  onboardingToken?: string;
+  submittedAt?: number;
   createdAt: number;
 }
 
