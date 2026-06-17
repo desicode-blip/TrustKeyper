@@ -101,6 +101,19 @@ export function updateProperty(id: string, changes: Partial<Omit<Property, "id" 
   }
 }
 
+/** Derive bedroom count from BHK / RK selection captured in step 1. */
+export function deriveBedroomsFromUnitSize(
+  unitSize: string,
+  unitSizeOther?: string,
+): string {
+  const source =
+    unitSize === "Other" ? (unitSizeOther ?? "").trim() : unitSize.trim();
+  const bhkMatch = source.match(/^(\d+)\s*BHK/i);
+  if (bhkMatch) return bhkMatch[1];
+  if (/^1\s*RK/i.test(source)) return "1";
+  return "";
+}
+
 export function getPropertyTitle(p: Property): string {
   const type = p.propertyType === "Other" ? (p.propertyTypeOther || "Property") : p.propertyType;
   const size = p.unitSize === "Other" ? (p.unitSizeOther || "") : p.unitSize;

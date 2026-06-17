@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import BrokerLayout, { getBrokerName } from "@/components/BrokerLayout";
 import { BrokerDashboardHeaderActions, WelcomeEducationCarousel } from "@/components/broker";
+import { BrokerFlowButton } from "@/components/broker/BrokerFlowButton";
 import BrokerPendingFlowBanners from "@/components/BrokerPendingFlowBanners";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import { getTenants, timeAgo } from "@/lib/tenants";
@@ -381,9 +382,9 @@ function ActiveDashboard({
       <div>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900 tracking-tight">Deals Pipeline</h2>
-          <button onClick={onViewDeals} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gray-50 text-sm text-gray-700 font-semibold hover:bg-gray-100 transition-colors">
+          <BrokerFlowButton type="button" flowVariant="sm-ghost" onClick={onViewDeals} className="px-4">
             View All Deals <ChevronRight size={16} />
-          </button>
+          </BrokerFlowButton>
         </div>
 
         {/* 3-column Kanban board */}
@@ -424,12 +425,14 @@ function ActiveDashboard({
 
                 {/* View more */}
                 {remaining > 0 && (
-                  <button
+                  <BrokerFlowButton
+                    type="button"
+                    flowVariant="sm-outline"
                     onClick={onViewDeals}
-                    className="py-3 rounded-xl border-2 border-dashed border-gray-200 text-sm text-gray-500 font-semibold hover:border-primary/30 hover:text-primary transition-colors bg-white/50 hover:bg-white"
+                    className="w-full border-2 border-dashed border-gray-200 text-gray-500 hover:border-primary/30 hover:text-primary bg-white/50 hover:bg-white"
                   >
                     View {remaining} more deal{remaining !== 1 ? "s" : ""}
-                  </button>
+                  </BrokerFlowButton>
                 )}
               </div>
             );

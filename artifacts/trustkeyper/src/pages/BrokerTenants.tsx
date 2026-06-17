@@ -16,7 +16,7 @@ import {
 import { FaWhatsapp } from "react-icons/fa";
 import BrokerLayout from "@/components/BrokerLayout";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
-import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
+import { BrokerFlowButton } from "@/components/broker/BrokerFlowButton";
 import { OwnerPageEmpty } from "@/components/owner/OwnerPageEmpty";
 import { PropertyInquiryRow } from "@/components/property/PropertyInquiryRow";
 import { pullAccountFromCloud } from "@/lib/cloudSync";
@@ -146,9 +146,10 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 flex-wrap gap-3">
         <p className="text-xs text-gray-500">Added {timeAgo(t.createdAt)}</p>
         <div className="flex items-center gap-2 flex-wrap">
-          <button
+          <BrokerFlowButton
+            type="button"
+            flowVariant="sm-ghost"
             onClick={() => setOpen((o) => !o)}
-            className="inline-flex items-center gap-2 h-9 px-3 rounded-[4px] border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50"
           >
             {open ? (
               <>
@@ -159,14 +160,14 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
                 View details <ChevronDown size={14} />
               </>
             )}
-          </button>
-          <button
+          </BrokerFlowButton>
+          <BrokerFlowButton
             type="button"
+            flowVariant="sm-outline"
             onClick={() => onEdit(t.id)}
-            className="inline-flex items-center gap-2 h-9 px-3 rounded-[4px] border border-primary text-primary text-xs font-semibold hover:bg-primary/5"
           >
             <Pencil size={14} /> Edit details
-          </button>
+          </BrokerFlowButton>
         </div>
       </div>
     </div>
@@ -237,9 +238,9 @@ export default function BrokerTenants() {
     <BrokerLayout>
       <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">Tenant Leads</h1>
-        <OwnerFlowButton onClick={() => setLocation("/broker/tenants/add")} className="w-full sm:w-fit">
+        <BrokerFlowButton onClick={() => setLocation("/broker/tenants/add")} className="w-full sm:w-fit">
           <Plus size={16} /> Register Tenant Lead
-        </OwnerFlowButton>
+        </BrokerFlowButton>
       </div>
 
       <FlowSegmentTabs
