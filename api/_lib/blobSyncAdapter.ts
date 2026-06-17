@@ -377,11 +377,11 @@ async function adaptAgreements(phone: string, role: string, value: string): Prom
         id,
         phone,
         role,
-        optionalStr(item.propertyId),
+        null, // FK backfilled after full migration.
         str(item.propertyTitle),
         str(item.ownerName),
         str(item.ownerContact),
-        optionalStr(item.tenantId),
+        null, // FK backfilled after full migration.
         str(item.tenantName),
         str(item.tenantContact),
         optionalStr(item.tenantAadhaar),
@@ -526,12 +526,17 @@ async function adaptInvites(phone: string, role: string, value: string): Promise
   }
 }
 
+export type AdaptBlobWriteResult =
+  | { status: "ok" }
+  | { status: "skipped" }
+  | { status: "error"; message: string };
+
 export async function adaptBlobWrite(
   phone: string,
   role: string,
   dataKey: string,
   value: string,
-): Promise<void> {
+): Promise<AdaptBlobWriteResult> {
   try {
     switch (dataKey) {
       case "profile":
@@ -554,9 +559,12 @@ export async function adaptBlobWrite(
         await adaptInvites(phone, role, value);
         break;
       default:
-        return;
+        return { status: "skipped" };
     }
+    return { status: "ok" };
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error("[blobSyncAdapter] adaptBlobWrite failed", { phone, role, dataKey, err });
+    return { status: "error", message };
   }
 }
