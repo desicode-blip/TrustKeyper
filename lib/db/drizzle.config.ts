@@ -15,8 +15,17 @@ function resolveDbUrl(): string {
   return raw;
 }
 
+const schemaDir = path.join(configDir, "./src/schema");
+
 export default defineConfig({
-  schema: [path.join(configDir, "./src/schema/userData.ts")],
+  schema: [
+    path.join(schemaDir, "userData.ts"),
+    path.join(schemaDir, "profiles.ts"),
+    path.join(schemaDir, "properties.ts"),
+    path.join(schemaDir, "agreements.ts"),
+    path.join(schemaDir, "operations.ts"),
+    path.join(schemaDir, "payments.ts"),
+  ],
   dialect: "postgresql",
   dbCredentials: {
     url: resolveDbUrl(),
