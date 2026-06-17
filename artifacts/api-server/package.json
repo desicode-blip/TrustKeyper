@@ -15,6 +15,7 @@
     "@workspace/db": "workspace:*",
     "@workspace/invitations-store": "workspace:*",
     "@workspace/sync-store": "workspace:*",
+    "@vercel/node": "^5.3.0",
     "@electric-sql/pglite": "^0.3.14",
     "cookie-parser": "^1.4.7",
     "cors": "^2",

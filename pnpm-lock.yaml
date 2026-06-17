@@ -216,6 +216,9 @@ importers:
       '@electric-sql/pglite':
         specifier: ^0.3.14
         version: 0.3.16
+      '@vercel/node':
+        specifier: ^5.3.0
+        version: 5.8.1(rollup@4.60.3)
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod

@@ -26,7 +26,13 @@ import {
   type OwnerTenantInquiry,
 } from "@/lib/ownerTenants";
 import { getActiveSession } from "@/lib/storageKeys";
-import { getBrokerTenantWhatsAppHref, getTenants, timeAgo, type Tenant } from "@/lib/tenants";
+import {
+  getBrokerTenantWhatsAppHref,
+  getTenants,
+  timeAgo,
+  type LeadStatus,
+  type Tenant,
+} from "@/lib/tenants";
 
 const TABS = [
   { id: "inquiries", label: "Inquiries" },
@@ -51,6 +57,11 @@ function formatDate(d?: string): string {
   } catch {
     return d;
   }
+}
+
+function leadStatusLabel(t: Tenant): LeadStatus {
+  if (t.leadStatus) return t.leadStatus;
+  return t.invitationSent ? "New Lead" : "New Lead";
 }
 
 function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) {
@@ -85,6 +96,9 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <p className="font-semibold text-gray-900">{t.name}</p>
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 text-primary text-xs font-medium">
+                {leadStatusLabel(t)}
+              </span>
               {t.detailsComplete ? (
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -122,6 +136,8 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
       {open && (
         <div className="mt-4 ml-14 rounded-lg border border-gray-100 bg-gray-50/60 p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <DetailRow label="Occupancy from" value={formatDate(t.occupancyFrom)} />
+          <DetailRow label="Budget" value="—" />
+          {t.linkedinUrl ? <DetailRow label="LinkedIn" value={t.linkedinUrl} /> : null}
           <DetailRow label="Staying as" value={t.who ?? "—"} />
           {t.identify && t.identify.length > 0 && (
             <DetailRow label="Identifies as" value={t.identify.join(", ")} />
@@ -144,7 +160,11 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
       )}
 
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 flex-wrap gap-3">
-        <p className="text-xs text-gray-500">Added {timeAgo(t.createdAt)}</p>
+        <p className="text-xs text-gray-500">
+          {t.submittedAt
+            ? `Submitted ${formatDate(new Date(t.submittedAt).toISOString())}`
+            : `Added ${timeAgo(t.createdAt)}`}
+        </p>
         <div className="flex items-center gap-2 flex-wrap">
           <BrokerFlowButton
             type="button"
@@ -218,7 +238,7 @@ export default function BrokerTenants() {
 
   const counts = {
     all: tenants.length,
-    new: tenants.filter((t) => !t.invitationSent).length,
+    new: tenants.filter((t) => leadStatusLabel(t) === "New Lead").length,
     inquiries: inquiries.length,
   };
 
@@ -230,7 +250,7 @@ export default function BrokerTenants() {
 
   const visibleTenants = tenants.filter((t) => {
     if (active === "all") return true;
-    if (active === "new") return !t.invitationSent;
+    if (active === "new") return leadStatusLabel(t) === "New Lead";
     return false;
   });
 
@@ -238,9 +258,18 @@ export default function BrokerTenants() {
     <BrokerLayout>
       <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">Tenant Leads</h1>
-        <BrokerFlowButton onClick={() => setLocation("/broker/tenants/add")} className="w-full sm:w-fit">
-          <Plus size={16} /> Register Tenant Lead
-        </BrokerFlowButton>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <BrokerFlowButton
+            flowVariant="outline"
+            onClick={() => setLocation("/broker/tenants/invite")}
+            className="w-full sm:w-fit"
+          >
+            <Plus size={16} /> Send Onboarding Link
+          </BrokerFlowButton>
+          <BrokerFlowButton onClick={() => setLocation("/broker/tenants/add")} className="w-full sm:w-fit">
+            <Plus size={16} /> Register Tenant Lead
+          </BrokerFlowButton>
+        </div>
       </div>
 
       <FlowSegmentTabs

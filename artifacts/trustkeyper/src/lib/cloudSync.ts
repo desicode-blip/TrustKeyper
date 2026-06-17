@@ -13,6 +13,9 @@ const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/
 /** Prefix for per-property public share snapshots (`property_share_<propertyId>`). */
 export const PROPERTY_SHARE_KEY_PREFIX = "property_share_";
 
+/** Prefix for broker tenant onboarding token snapshots (`broker_tenant_onboard_<token>`). */
+export const BROKER_ONBOARD_TOKEN_PREFIX = "broker_tenant_onboard_";
+
 /** Keys synced to the server so the same phone works on every device. */
 export const CLOUD_SYNC_KEYS = [
   "profile",
@@ -28,6 +31,7 @@ export const CLOUD_SYNC_KEYS = [
   "owner_property_maintenance",
   "owner_tenant_invites",
   "tenant_property_declines",
+  "broker_tenant_onboarding_invites",
 ] as const;
 
 export type CloudSyncKey = (typeof CLOUD_SYNC_KEYS)[number];
@@ -70,6 +74,28 @@ export function collectPropertyShareEntries(
   return entries;
 }
 
+/** Collects dynamic `broker_tenant_onboard_<token>` entries for bulk push. */
+export function collectBrokerOnboardTokenEntries(
+  phone: string,
+  role: string,
+  store: StorageLike,
+): Record<string, string> {
+  const p = normalizePhoneDigits(phone);
+  const keyPrefix = `${storageKey(p, role, BROKER_ONBOARD_TOKEN_PREFIX)}`;
+  const entries: Record<string, string> = {};
+
+  for (let i = 0; i < store.length; i++) {
+    const fullKey = store.key(i);
+    if (!fullKey?.startsWith(keyPrefix)) continue;
+    const dataKey = fullKey.slice(`tk_${p}_${role}_`.length);
+    if (!dataKey.startsWith(BROKER_ONBOARD_TOKEN_PREFIX)) continue;
+    const value = store.getItem(fullKey);
+    if (value) entries[dataKey] = value;
+  }
+
+  return entries;
+}
+
 /** Merges static CLOUD_SYNC_KEYS and dynamic property share snapshots for bulk upload. */
 export function collectBulkSyncEntries(
   phone: string,
@@ -86,6 +112,11 @@ export function collectBulkSyncEntries(
 
   const shareEntries = collectPropertyShareEntries(p, role, store);
   for (const [key, value] of Object.entries(shareEntries)) {
+    entries[key] = value;
+  }
+
+  const onboardEntries = collectBrokerOnboardTokenEntries(p, role, store);
+  for (const [key, value] of Object.entries(onboardEntries)) {
     entries[key] = value;
   }
 

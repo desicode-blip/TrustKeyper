@@ -44,6 +44,7 @@ async function loadDbHelpers() {
 
     dbHelpersCache = {
       queryAccountData: dbMod.queryAccountData,
+      queryEntryByDataKey: dbMod.queryEntryByDataKey,
       queryRolesWithProfileForPhone: dbMod.queryRolesWithProfileForPhone,
       upsertAccountDataKey: dbMod.upsertAccountDataKey,
       getDb: clientMod.getDb,
@@ -208,4 +209,44 @@ export async function getRolesForPhone(phone: string): Promise<string[]> {
     if (data.profile) roles.push(key.split(":")[1] ?? "");
   }
   return roles.filter(Boolean);
+}
+
+export async function findEntryByDataKey(
+  dataKey: string,
+): Promise<{ phone: string; role: string; value: string } | null> {
+  if (isMockDbEnabled()) {
+    const mock = await readMockStore();
+    for (const [id, data] of Object.entries(mock) as [string, Record<string, string>][]) {
+      const value = data[dataKey];
+      if (!value) continue;
+      const [phone, role] = id.split(":");
+      if (!phone || !role) continue;
+      return { phone, role, value };
+    }
+    return null;
+  }
+
+  const db = await loadDbHelpers();
+  if (db.getDb && db.getDb()) {
+    try {
+      if (db.ensureDbReady) await db.ensureDbReady();
+      if (db.queryEntryByDataKey) {
+        const row = await db.queryEntryByDataKey(dataKey);
+        if (row) return row;
+      }
+    } catch {
+      /* fall through to file / blob store */
+    }
+  }
+
+  const store = await readFileStore();
+  for (const [id, data] of Object.entries(store) as [string, Record<string, string>][]) {
+    const value = data[dataKey];
+    if (!value) continue;
+    const [phone, role] = id.split(":");
+    if (!phone || !role) continue;
+    return { phone, role, value };
+  }
+
+  return null;
 }

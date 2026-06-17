@@ -24,6 +24,10 @@
       "destination": "/api/share-property?sharePath=property/$1"
     },
     {
+      "source": "/api/broker-tenant-onboard/(.*)",
+      "destination": "/api/broker-tenant-onboard?onboardPath=$1"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
