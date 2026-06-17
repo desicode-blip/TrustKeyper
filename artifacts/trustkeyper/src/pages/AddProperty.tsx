@@ -22,7 +22,7 @@ import { AddPropertyProgressBar } from "@/components/AddPropertyProgressBar";
 import { useScrollToTopOnChange } from "@/hooks/useScrollToTopOnChange";
 import { getActiveSession } from "@/lib/auth";
 import { todayLocalDateInputMin } from "@/lib/dateInput";
-import { addProperty } from "@/lib/properties";
+import { addProperty, deriveBedroomsFromUnitSize } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
 import { getItem, removeItem, setItem } from "@/lib/storageKeys";
@@ -35,7 +35,6 @@ const UNIT_SIZES = ["1 RK", "1 BHK", "2 BHK", "3 BHK", "4 BHK", "Other"];
 const FURNISHING_OPTIONS = ["Unfurnished", "Semi Furnished", "Fully Furnished"];
 const UNIT_OPTIONS = ["sq ft", "sq m", "sq yards"];
 const FLOORS_OPTIONS = Array.from({ length: 30 }, (_, i) => String(i + 1));
-const BEDROOM_OPTIONS = Array.from({ length: 10 }, (_, i) => String(i + 1));
 const BATHROOM_OPTIONS = Array.from({ length: 8 }, (_, i) => String(i + 1));
 const BALCONY_OPTIONS = ["0", "1", "2", "3", "4", "5+"];
 const FLOOR_LEVEL_OPTIONS = [
@@ -160,7 +159,6 @@ export default function AddProperty() {
   const [builtUpArea, setBuiltUpArea] = useState(savedData?.builtUpArea ?? "");
   const [builtUpUnits, setBuiltUpUnits] = useState(savedData?.builtUpUnits ?? "sq ft");
   const [totalFloors, setTotalFloors] = useState(savedData?.totalFloors ?? "");
-  const [bedrooms, setBedrooms] = useState(savedData?.bedrooms ?? "");
   const [bathrooms, setBathrooms] = useState(savedData?.bathrooms ?? "");
   const [balconies, setBalconies] = useState(savedData?.balconies ?? "");
   const [floorLevel, setFloorLevel] = useState(savedData?.floorLevel ?? "");
@@ -206,7 +204,6 @@ export default function AddProperty() {
     setBuiltUpArea("");
     setBuiltUpUnits("sq ft");
     setTotalFloors("");
-    setBedrooms("");
     setBathrooms("");
     setBalconies("");
     setFloorLevel("");
@@ -312,7 +309,6 @@ export default function AddProperty() {
       builtUpArea,
       builtUpUnits,
       totalFloors,
-      bedrooms,
       bathrooms,
       balconies,
       floorLevel,
@@ -354,7 +350,6 @@ export default function AddProperty() {
     builtUpArea,
     builtUpUnits,
     totalFloors,
-    bedrooms,
     bathrooms,
     balconies,
     floorLevel,
@@ -394,7 +389,7 @@ export default function AddProperty() {
       return typeOk && sizeOk && furnishing !== "";
     }
     if (subStep === 2) {
-      return !!(builtUpArea && builtUpUnits && totalFloors && bedrooms && bathrooms && balconies && floorLevel && mainDoorDirection);
+      return !!(builtUpArea && builtUpUnits && totalFloors && bathrooms && balconies && floorLevel && mainDoorDirection);
     }
     if (subStep === 3) return true;
     if (subStep === 4) {
@@ -434,7 +429,7 @@ export default function AddProperty() {
       builtUpArea,
       builtUpUnits,
       totalFloors,
-      bedrooms,
+      bedrooms: deriveBedroomsFromUnitSize(unitSize, unitSizeOther),
       bathrooms,
       balconies,
       floorLevel,
@@ -681,21 +676,15 @@ export default function AddProperty() {
             />
           </div>
           <div>
-            <FieldLabel required>Bedrooms</FieldLabel>
-            <SelectField value={bedrooms} onChange={setBedrooms} options={BEDROOM_OPTIONS} placeholder="Select" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
             <FieldLabel required>Bathrooms</FieldLabel>
             <SelectField value={bathrooms} onChange={setBathrooms} options={BATHROOM_OPTIONS} placeholder="Select" />
           </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <FieldLabel required>Balconies</FieldLabel>
             <SelectField value={balconies} onChange={setBalconies} options={BALCONY_OPTIONS} placeholder="Select" />
           </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
           <div>
             <FieldLabel required>Floor Level</FieldLabel>
             <Input
@@ -705,6 +694,8 @@ export default function AddProperty() {
               type="text"
             />
           </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <FieldLabel required>Facing</FieldLabel>
             <SelectField value={mainDoorDirection} onChange={setMainDoorDirection} options={DIRECTION_OPTIONS} placeholder="Select" />

@@ -19,7 +19,7 @@ import { FlowNativeSelect } from "@/components/flow/FlowNativeSelect";
 import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/FlowStickyActionBar";
 import { FlowClearButton } from "@/components/owner/FlowClearButton";
 import { todayLocalDateInputMin } from "@/lib/dateInput";
-import { addProperty } from "@/lib/properties";
+import { addProperty, deriveBedroomsFromUnitSize } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
 
@@ -29,7 +29,6 @@ const UNIT_SIZES = ["1 RK", "1 BHK", "2 BHK", "3 BHK", "4 BHK", "Other"];
 const FURNISHING_OPTIONS = ["Unfurnished", "Semi Furnished", "Fully Furnished"];
 const UNIT_OPTIONS = ["sq ft", "sq m", "sq yards"];
 const FLOORS_OPTIONS = Array.from({ length: 30 }, (_, i) => String(i + 1));
-const BEDROOM_OPTIONS = Array.from({ length: 10 }, (_, i) => String(i + 1));
 const BATHROOM_OPTIONS = Array.from({ length: 8 }, (_, i) => String(i + 1));
 const BALCONY_OPTIONS = ["0", "1", "2", "3", "4", "5+"];
 const FLOOR_LEVEL_OPTIONS = [
@@ -239,7 +238,6 @@ export default function OwnerAddProperty2() {
   const [builtUpArea, setBuiltUpArea] = useState("");
   const [builtUpUnits, setBuiltUpUnits] = useState("sq ft");
   const [totalFloors, setTotalFloors] = useState("");
-  const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
   const [balconies, setBalconies] = useState("");
   const [floorLevel, setFloorLevel] = useState("");
@@ -288,7 +286,6 @@ export default function OwnerAddProperty2() {
         setBuiltUpArea(data.builtUpArea || "");
         setBuiltUpUnits(data.builtUpUnits || "sq ft");
         setTotalFloors(data.totalFloors || "");
-        setBedrooms(data.bedrooms || "");
         setBathrooms(data.bathrooms || "");
         setBalconies(data.balconies || "");
         setFloorLevel(data.floorLevel || "");
@@ -315,7 +312,7 @@ export default function OwnerAddProperty2() {
       nickname, address, area, city, pincode, country,
       ownerName, ownerContact,
       propertyType, propertyTypeOther, unitSize, unitSizeOther, furnishing,
-      builtUpArea, builtUpUnits, totalFloors, bedrooms, bathrooms, balconies, floorLevel, mainDoorDirection,
+      builtUpArea, builtUpUnits, totalFloors, bathrooms, balconies, floorLevel, mainDoorDirection,
       amenities, amenityOtherChecked, amenityOtherText,
       tenantsPreferred, monthlyRent, rentNegotiable, maintenanceIncluded, monthlyMaintenance, securityDeposit, availableFrom,
       subStep,
@@ -325,7 +322,7 @@ export default function OwnerAddProperty2() {
     nickname, address, area, city, pincode, country, ownerName, ownerContact,
     nickname, address, area, city, pincode, country,
     propertyType, propertyTypeOther, unitSize, unitSizeOther, furnishing,
-    builtUpArea, builtUpUnits, totalFloors, bedrooms, bathrooms, balconies, floorLevel, mainDoorDirection,
+    builtUpArea, builtUpUnits, totalFloors, bathrooms, balconies, floorLevel, mainDoorDirection,
     amenities, amenityOtherChecked, amenityOtherText,
     tenantsPreferred, monthlyRent, rentNegotiable, maintenanceIncluded, monthlyMaintenance, securityDeposit, availableFrom,
     subStep
@@ -420,7 +417,7 @@ export default function OwnerAddProperty2() {
       return typeOk && sizeOk && furnishing !== "";
     }
     if (subStep === 2) {
-      return !!(builtUpArea && builtUpUnits && totalFloors && bedrooms && bathrooms && balconies && floorLevel && mainDoorDirection);
+      return !!(builtUpArea && builtUpUnits && totalFloors && bathrooms && balconies && floorLevel && mainDoorDirection);
     }
     if (subStep === 3) return true; // Amenities optional
     if (subStep === 4) {
@@ -444,7 +441,9 @@ export default function OwnerAddProperty2() {
       nickname, address, area, city, pincode, country,
       ownerName, ownerContact,
       propertyType, propertyTypeOther, unitSize, unitSizeOther, furnishing,
-      builtUpArea, builtUpUnits, totalFloors, bedrooms, bathrooms, balconies, floorLevel, mainDoorDirection,
+      builtUpArea, builtUpUnits, totalFloors,
+      bedrooms: deriveBedroomsFromUnitSize(unitSize, unitSizeOther),
+      bathrooms, balconies, floorLevel, mainDoorDirection,
       amenities: finalAmenities, tenantsPreferred, monthlyRent, rentNegotiable, maintenanceIncluded, monthlyMaintenance, securityDeposit, availableFrom,
       images: imageUrls, imageCount: imageUrls.length,
     };
@@ -615,10 +614,6 @@ export default function OwnerAddProperty2() {
         <div>
           <FieldLabel required>Total Floors</FieldLabel>
           <Input placeholder="Type here" value={totalFloors} onChange={(e) => setTotalFloors(e.target.value)} type="number" className="h-10 rounded-sm border-gray-200 focus:border-primary/50" />
-        </div>
-        <div>
-          <FieldLabel required>Bedrooms</FieldLabel>
-          <SelectField value={bedrooms} onChange={setBedrooms} options={BEDROOM_OPTIONS} placeholder="Select" />
         </div>
         <div>
           <FieldLabel required>Bathrooms</FieldLabel>
@@ -838,7 +833,6 @@ export default function OwnerAddProperty2() {
     setBuiltUpArea("");
     setBuiltUpUnits("sq ft");
     setTotalFloors("");
-    setBedrooms("");
     setBathrooms("");
     setBalconies("");
     setFloorLevel("");

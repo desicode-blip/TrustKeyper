@@ -25,7 +25,7 @@ import { toast } from "@/hooks/use-toast";
 import { getActiveSession } from "@/lib/auth";
 import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
-import { addProperty } from "@/lib/properties";
+import { addProperty, deriveBedroomsFromUnitSize } from "@/lib/properties";
 import { getItem, getSessionItem, removeItem, removeSessionItem, setItem, setSessionItem } from "@/lib/storageKeys";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 
@@ -36,7 +36,6 @@ const UNIT_SIZES = ["1 RK", "1 BHK", "2 BHK", "3 BHK", "4 BHK", "Other"];
 const FURNISHING_OPTIONS = ["Unfurnished", "Semi Furnished", "Fully Furnished"];
 const UNIT_OPTIONS = ["sq ft", "sq m", "sq yards"];
 const FLOORS_OPTIONS = Array.from({ length: 30 }, (_, i) => String(i + 1));
-const BEDROOM_OPTIONS = Array.from({ length: 10 }, (_, i) => String(i + 1));
 const BATHROOM_OPTIONS = Array.from({ length: 8 }, (_, i) => String(i + 1));
 const BALCONY_OPTIONS = ["0", "1", "2", "3", "4", "5+"];
 const FLOOR_LEVEL_OPTIONS = [
@@ -162,7 +161,6 @@ export default function AddProperty2() {
   const [builtUpArea, setBuiltUpArea] = useState(savedData?.builtUpArea ?? "");
   const [builtUpUnits, setBuiltUpUnits] = useState(savedData?.builtUpUnits ?? "sq ft");
   const [totalFloors, setTotalFloors] = useState(savedData?.totalFloors ?? "");
-  const [bedrooms, setBedrooms] = useState(savedData?.bedrooms ?? "");
   const [bathrooms, setBathrooms] = useState(savedData?.bathrooms ?? "");
   const [balconies, setBalconies] = useState(savedData?.balconies ?? "");
   const [floorLevel, setFloorLevel] = useState(savedData?.floorLevel ?? "");
@@ -208,7 +206,6 @@ export default function AddProperty2() {
     setBuiltUpArea("");
     setBuiltUpUnits("sq ft");
     setTotalFloors("");
-    setBedrooms("");
     setBathrooms("");
     setBalconies("");
     setFloorLevel("");
@@ -317,7 +314,6 @@ export default function AddProperty2() {
       builtUpArea,
       builtUpUnits,
       totalFloors,
-      bedrooms,
       bathrooms,
       balconies,
       floorLevel,
@@ -359,7 +355,6 @@ export default function AddProperty2() {
     builtUpArea,
     builtUpUnits,
     totalFloors,
-    bedrooms,
     bathrooms,
     balconies,
     floorLevel,
@@ -388,7 +383,7 @@ export default function AddProperty2() {
       return typeOk && sizeOk && furnishing !== "";
     }
     if (subStep === 2) {
-      return !!(builtUpArea && builtUpUnits && totalFloors && bedrooms && bathrooms && balconies && floorLevel && mainDoorDirection);
+      return !!(builtUpArea && builtUpUnits && totalFloors && bathrooms && balconies && floorLevel && mainDoorDirection);
     }
     if (subStep === 3) return true;
     if (subStep === 4) {
@@ -429,7 +424,7 @@ export default function AddProperty2() {
       builtUpArea,
       builtUpUnits,
       totalFloors,
-      bedrooms,
+      bedrooms: deriveBedroomsFromUnitSize(unitSize, unitSizeOther),
       bathrooms,
       balconies,
       floorLevel,
@@ -614,25 +609,21 @@ export default function AddProperty2() {
             <Input value={totalFloors} onChange={(e) => setTotalFloors(e.target.value)} placeholder="e.g. 10" type="text" />
           </div>
           <div>
-            <FieldLabel>Bedrooms</FieldLabel>
-            <SelectField value={bedrooms} onChange={setBedrooms} options={BEDROOM_OPTIONS} placeholder="Select" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
             <FieldLabel>Bathrooms</FieldLabel>
             <SelectField value={bathrooms} onChange={setBathrooms} options={BATHROOM_OPTIONS} placeholder="Select" />
           </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <FieldLabel>Balconies</FieldLabel>
             <SelectField value={balconies} onChange={setBalconies} options={BALCONY_OPTIONS} placeholder="Select" />
           </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
           <div>
             <FieldLabel>Floor Level</FieldLabel>
             <Input value={floorLevel} onChange={(e) => setFloorLevel(e.target.value)} placeholder="e.g. 3rd" type="text" />
           </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <FieldLabel>Facing</FieldLabel>
             <SelectField value={mainDoorDirection} onChange={setMainDoorDirection} options={DIRECTION_OPTIONS} placeholder="Select" />

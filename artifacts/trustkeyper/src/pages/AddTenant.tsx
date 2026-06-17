@@ -9,7 +9,7 @@ import {
   X,
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
-import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
+import { BrokerFlowButton } from "@/components/broker/BrokerFlowButton";
 import { FlowChipButton } from "@/components/FlowChipButton";
 import { FlowDateInput } from "@/components/flow/FlowDateInput";
 import {
@@ -470,14 +470,14 @@ export default function AddTenant() {
 
             {/* Step 1 CTA — desktop */}
             <div className="hidden sm:flex justify-center mt-8">
-              <OwnerFlowButton
+              <BrokerFlowButton
                 type="button"
                 onClick={handleStep1Continue}
                 disabled={!step1Valid}
                 className="sm:min-w-[160px]"
               >
                 Continue <ArrowRight size={16} />
-              </OwnerFlowButton>
+              </BrokerFlowButton>
             </div>
           </>
         )}
@@ -635,22 +635,22 @@ export default function AddTenant() {
 
             {/* Step 2 CTA — desktop */}
             <div className="hidden sm:flex justify-center gap-3 mt-6">
-              <OwnerFlowButton
+              <BrokerFlowButton
                 type="button"
                 flowVariant="outline"
                 onClick={handleSkipSave}
                 className="sm:min-w-[160px]"
               >
                 Skip and Save details
-              </OwnerFlowButton>
-              <OwnerFlowButton
+              </BrokerFlowButton>
+              <BrokerFlowButton
                 type="button"
                 onClick={handleSaveDetails}
                 disabled={!step2Valid}
                 className="sm:min-w-[160px]"
               >
                 Save Details
-              </OwnerFlowButton>
+              </BrokerFlowButton>
             </div>
           </>
         )}
@@ -658,34 +658,34 @@ export default function AddTenant() {
 
       {step === 1 && (
         <FlowStickyActionBar>
-          <OwnerFlowButton
+          <BrokerFlowButton
             type="button"
             onClick={handleStep1Continue}
             disabled={!step1Valid}
             className="w-full"
           >
             Continue <ArrowRight size={16} />
-          </OwnerFlowButton>
+          </BrokerFlowButton>
         </FlowStickyActionBar>
       )}
       {step === 2 && (
         <FlowStickyActionBar innerClassName="flex gap-3">
-          <OwnerFlowButton
+          <BrokerFlowButton
             type="button"
             flowVariant="outline"
             onClick={handleSkipSave}
             className="flex-1"
           >
             Skip
-          </OwnerFlowButton>
-          <OwnerFlowButton
+          </BrokerFlowButton>
+          <BrokerFlowButton
             type="button"
             onClick={handleSaveDetails}
             disabled={!step2Valid}
             className="flex-1"
           >
             Save Details
-          </OwnerFlowButton>
+          </BrokerFlowButton>
         </FlowStickyActionBar>
       )}
 
@@ -709,7 +709,7 @@ export default function AddTenant() {
               The tenant details have been saved successfully.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <OwnerFlowButton
+              <BrokerFlowButton
                 type="button"
                 flowVariant="outline"
                 onClick={() => {
@@ -718,8 +718,8 @@ export default function AddTenant() {
                 }}
               >
                 Skip for now
-              </OwnerFlowButton>
-              <OwnerFlowButton
+              </BrokerFlowButton>
+              <BrokerFlowButton
                 type="button"
                 onClick={() => {
                   setSuccessOpen(false);
@@ -728,7 +728,7 @@ export default function AddTenant() {
               >
                 <FileText size={16} />
                 Generate Agreement
-              </OwnerFlowButton>
+              </BrokerFlowButton>
             </div>
           </div>
         </DialogContent>

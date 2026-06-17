@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Plus, Building2, Eye, Heart, Phone, KeyRound } from "lucide-react";
 import { useLocation } from "wouter";
 import BrokerLayout from "@/components/BrokerLayout";
+import { BrokerFlowButton } from "@/components/broker/BrokerFlowButton";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import {
   getProperties,
@@ -123,26 +124,28 @@ function PropertyCard({
         {/* CTAs */}
         <div className="flex flex-col gap-2 pt-2 mt-auto">
           <div className="flex gap-2 w-full min-w-0">
-            <button
+            <BrokerFlowButton
               type="button"
+              flowVariant="sm-primary"
               onClick={(event) => {
                 event.stopPropagation();
                 onViewDetails(property.id);
               }}
-              className="flex-1 min-w-0 h-9 px-3 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors"
+              className="flex-1 min-w-0"
             >
               View Details
-            </button>
-            <button
+            </BrokerFlowButton>
+            <BrokerFlowButton
               type="button"
+              flowVariant="sm-ghost"
               onClick={(event) => {
                 event.stopPropagation();
                 onEditProperty(property.id);
               }}
-              className="flex-1 min-w-0 h-9 px-3 rounded-lg border border-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-50 transition-colors"
+              className="flex-1 min-w-0"
             >
               Edit
-            </button>
+            </BrokerFlowButton>
           </div>
           {property.status !== "Rented" && (
             <button
@@ -200,12 +203,9 @@ export default function BrokerProperties() {
         <h1 className="text-2xl font-semibold text-gray-900">
           My Properties ({counts.all})
         </h1>
-        <button
-          onClick={() => setLocation("/broker/properties/add")}
-          className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90"
-        >
+        <BrokerFlowButton onClick={() => setLocation("/broker/properties/add")} className="w-full sm:w-fit">
           <Plus size={16} /> Add Property
-        </button>
+        </BrokerFlowButton>
       </div>
 
       <FlowSegmentTabs
