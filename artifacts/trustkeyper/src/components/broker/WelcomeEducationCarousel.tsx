@@ -108,29 +108,13 @@ export function WelcomeEducationCarousel({
           />
         </div>
 
-        <div className="relative min-h-[280px] p-6">
-          <button
-            type="button"
-            onClick={goPrev}
-            aria-label="Previous slide"
-            className="absolute left-2 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-600 shadow-sm transition-colors hover:border-primary/30 hover:text-primary"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            type="button"
-            onClick={goNext}
-            aria-label="Next slide"
-            className="absolute right-2 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-600 shadow-sm transition-colors hover:border-primary/30 hover:text-primary"
-          >
-            <ChevronRight size={18} />
-          </button>
+        <div className="relative min-h-[280px] pb-16">
 
           {slides.map((s, i) => (
             <article
               key={s.id}
               className={cn(
-                "absolute inset-0 flex flex-col p-6 pt-5 px-12 transition-all duration-500 ease-out",
+                "absolute inset-x-0 top-0 bottom-14 flex flex-col p-6 pt-5 px-12 transition-all duration-500 ease-out",
                 i === index
                   ? "opacity-100 translate-x-0 pointer-events-auto z-10"
                   : i < index
@@ -166,6 +150,25 @@ export function WelcomeEducationCarousel({
               </button>
             </article>
           ))}
+
+          <div className="absolute bottom-3 left-0 right-0 z-20 flex items-center justify-between px-5">
+            <button
+              type="button"
+              onClick={goPrev}
+              aria-label="Previous slide"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:border-primary/30 hover:text-primary"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={goNext}
+              aria-label="Next slide"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:border-primary/30 hover:text-primary"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </div>
       </div>
 

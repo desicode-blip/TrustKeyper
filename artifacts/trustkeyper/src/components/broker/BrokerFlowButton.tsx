@@ -12,7 +12,7 @@ const variantClasses: Record<BrokerFlowButtonVariant, string> = {
   primary:
     "h-10 min-h-10 px-6 text-sm font-semibold rounded-[4px] gap-2 border-0 shadow-md shadow-primary/25",
   outline:
-    "h-10 min-h-10 px-6 text-sm font-semibold rounded-[4px] gap-2 bg-white border border-primary text-gray-700 hover:bg-primary/5",
+    "h-10 min-h-10 px-6 text-sm font-semibold rounded-[4px] gap-2 bg-white border border-primary text-primary hover:bg-primary/5",
   "sm-primary":
     "h-9 min-h-9 px-3 text-xs font-semibold rounded-[4px] gap-2 border-0 shadow-none",
   "sm-outline":
