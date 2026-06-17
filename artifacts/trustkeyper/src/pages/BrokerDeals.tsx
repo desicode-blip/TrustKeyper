@@ -219,38 +219,18 @@ function TableRow({ deal }: { deal: Deal }) {
       </td>
       <td className="px-4 py-4">
         <div className="flex items-center gap-2">
-          <BrokerFlowButton
-            type="button"
-            flowVariant="sm-outline"
-            className="h-8 min-h-8 w-8 min-w-8 px-0"
-            title="View"
-            aria-label="View deal"
-          >
+          <button className="w-8 h-8 rounded-lg flex items-center justify-center text-primary bg-blue-50 hover:bg-primary hover:text-white transition-colors" title="View">
             <Eye size={14} />
-          </BrokerFlowButton>
+          </button>
           {deal.tenantContact && (
-            <BrokerFlowButton
-              asChild
-              flowVariant="sm-outline"
-              className="h-8 min-h-8 w-8 min-w-8 px-0"
-              title="Call"
-              aria-label="Call tenant"
-            >
-              <a href={`tel:${deal.tenantContact}`}>
-                <Phone size={14} />
-              </a>
-            </BrokerFlowButton>
+            <a href={`tel:${deal.tenantContact}`} className="w-8 h-8 rounded-lg flex items-center justify-center text-primary bg-blue-50 hover:bg-primary hover:text-white transition-colors" title="Call">
+              <Phone size={14} />
+            </a>
           )}
           {!deal.tenantContact && (
-            <BrokerFlowButton
-              type="button"
-              flowVariant="sm-outline"
-              className="h-8 min-h-8 w-8 min-w-8 px-0"
-              title="Call"
-              aria-label="Call unavailable"
-            >
+            <button className="w-8 h-8 rounded-lg flex items-center justify-center text-primary bg-blue-50 hover:bg-primary hover:text-white transition-colors" title="Call">
               <Phone size={14} />
-            </BrokerFlowButton>
+            </button>
           )}
         </div>
       </td>
