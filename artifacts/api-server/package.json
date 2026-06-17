@@ -12,6 +12,7 @@
   "dependencies": {
     "@workspace/api-zod": "workspace:*",
     "@workspace/auth-server": "workspace:*",
+    "@workspace/broker-tenant-onboarding": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/invitations-store": "workspace:*",
     "@workspace/sync-store": "workspace:*",

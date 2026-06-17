@@ -20,6 +20,9 @@
     },
     {
       "path": "./lib/invitations-store"
+    },
+    {
+      "path": "./lib/broker-tenant-onboarding"
     }
   ]
 }

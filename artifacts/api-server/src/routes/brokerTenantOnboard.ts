@@ -1,6 +1,11 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { handleBrokerTenantOnboardRequest } from "../../../../api/_lib/brokerTenantOnboardHandler.js";
+import type {
+  OnboardRequest,
+  OnboardResponse,
+  OnboardStore,
+} from "@workspace/broker-tenant-onboarding";
+import { handleBrokerTenantOnboardRequest } from "@workspace/broker-tenant-onboarding";
+import * as syncStore from "@workspace/sync-store";
 
 const router: IRouter = Router();
 
@@ -11,37 +16,56 @@ function onboardPathFromReq(req: Request): string {
   return token;
 }
 
-function runHandler(req: Request, res: Response): void {
-  const onboardPath = onboardPathFromReq(req);
-  let statusCode = 200;
-
-  const vercelReq: VercelRequest = {
+function onboardRequest(req: Request, onboardPath: string): OnboardRequest {
+  return {
     method: req.method,
     query: { onboardPath },
     body: req.body,
-    headers: req.headers,
+    headers: req.headers as Record<string, string | string[] | undefined>,
   };
+}
 
-  const vercelRes: VercelResponse = {
+function onboardResponse(res: Response): OnboardResponse {
+  let statusCode = 200;
+  const adapted: OnboardResponse = {
     status(code: number) {
       statusCode = code;
-      return vercelRes;
+      res.status(code);
+      return adapted;
     },
     setHeader(name: string, value: string | string[]) {
       res.setHeader(name, value);
-      return vercelRes;
+      return adapted;
     },
     end(body: string) {
       res.status(statusCode).type("json").send(body);
     },
-  } as VercelResponse;
+  };
+  return adapted;
+}
 
-  void handleBrokerTenantOnboardRequest(vercelReq, vercelRes).catch((err: unknown) => {
-    res.status(500).json({
-      error: "Broker tenant onboard function failed",
-      detail: err instanceof Error ? err.message : String(err),
+async function loadOnboardStore(): Promise<OnboardStore> {
+  return syncStore;
+}
+
+function runHandler(req: Request, res: Response): void {
+  const onboardPath = onboardPathFromReq(req);
+  if (!onboardPath) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  const adaptedReq = onboardRequest(req, onboardPath);
+  const adaptedRes = onboardResponse(res);
+
+  void loadOnboardStore()
+    .then((store) => handleBrokerTenantOnboardRequest(adaptedReq, adaptedRes, store))
+    .catch((err: unknown) => {
+      res.status(500).json({
+        error: "Broker tenant onboard function failed",
+        detail: err instanceof Error ? err.message : String(err),
+      });
     });
-  });
 }
 
 router.get("/broker-tenant-onboard/:token", runHandler);

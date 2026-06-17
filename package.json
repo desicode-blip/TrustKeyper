@@ -31,6 +31,7 @@
     "@vercel/blob": "^0.27.3",
     "@vercel/node": "^5.3.0",
     "@workspace/auth-server": "workspace:*",
+    "@workspace/broker-tenant-onboarding": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/invitations-store": "workspace:*",
     "@workspace/sync-store": "workspace:*",

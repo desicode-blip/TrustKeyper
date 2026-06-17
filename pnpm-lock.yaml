@@ -167,6 +167,9 @@ importers:
       '@workspace/auth-server':
         specifier: workspace:*
         version: link:lib/auth-server
+      '@workspace/broker-tenant-onboarding':
+        specifier: workspace:*
+        version: link:lib/broker-tenant-onboarding
       '@workspace/db':
         specifier: workspace:*
         version: link:lib/db
@@ -225,6 +228,9 @@ importers:
       '@workspace/auth-server':
         specifier: workspace:*
         version: link:../../lib/auth-server
+      '@workspace/broker-tenant-onboarding':
+        specifier: workspace:*
+        version: link:../../lib/broker-tenant-onboarding
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
@@ -704,6 +710,12 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.106.2
         version: 2.106.2
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.6.2
+
+  lib/broker-tenant-onboarding:
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
