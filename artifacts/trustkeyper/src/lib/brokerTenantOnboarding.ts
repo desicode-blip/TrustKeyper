@@ -117,9 +117,51 @@ export function buildBrokerTenantOnboardWhatsAppMessage(
     "",
     "Share your rental requirements with me through TrustKeyper so I can help you find properties that best match your needs.",
     "",
-    "Complete your profile here:",
     link,
   ].join("\n");
+}
+
+export function buildBrokerTenantOnboardShareMessage(
+  tenantName: string,
+  link: string,
+): string {
+  return buildBrokerTenantOnboardWhatsAppMessage(tenantName, link);
+}
+
+export function formatTenantPhoneDisplay(phone: string): string {
+  const digits = phone.replace(/\D/g, "").slice(-10);
+  return digits.length === 10 ? `+91 ${digits}` : phone;
+}
+
+export function getBrokerTenantOnboardEmailHref(
+  tenantName: string,
+  link: string,
+): string {
+  const subject = encodeURIComponent("Complete your rental requirements on TrustKeyper");
+  const body = encodeURIComponent(buildBrokerTenantOnboardShareMessage(tenantName, link));
+  return `mailto:?subject=${subject}&body=${body}`;
+}
+
+export function getBrokerTenantOnboardSmsHref(
+  tenantPhone: string,
+  tenantName: string,
+  link: string,
+): string {
+  const digits = phoneLast10(tenantPhone);
+  const body = encodeURIComponent(buildBrokerTenantOnboardShareMessage(tenantName, link));
+  if (digits.length === 10) {
+    return `sms:+91${digits}?body=${body}`;
+  }
+  return `sms:?body=${body}`;
+}
+
+export function getBrokerTenantOnboardTelegramHref(
+  tenantName: string,
+  link: string,
+): string {
+  const text = encodeURIComponent(buildBrokerTenantOnboardShareMessage(tenantName, link));
+  const url = encodeURIComponent(link);
+  return `https://t.me/share/url?url=${url}&text=${text}`;
 }
 
 export function getBrokerTenantOnboardWhatsAppHref(

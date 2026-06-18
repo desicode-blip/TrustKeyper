@@ -8,6 +8,7 @@ interface AuthPhoneFieldProps {
   id: string;
   value: string;
   onChange: (digits: string) => void;
+  onBlur?: () => void;
   disabled?: boolean;
   helperText?: string;
   errorText?: string | null;
@@ -17,6 +18,7 @@ export function AuthPhoneField({
   id,
   value,
   onChange,
+  onBlur,
   disabled = false,
   helperText = "We'll send an OTP to verify",
   errorText = null,
@@ -38,6 +40,7 @@ export function AuthPhoneField({
           placeholder="10-digit number"
           value={value}
           onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 10))}
+          onBlur={onBlur}
           disabled={disabled}
           aria-required="true"
           aria-describedby={errorText ? `${id}-error` : helperText ? `${id}-helper` : undefined}

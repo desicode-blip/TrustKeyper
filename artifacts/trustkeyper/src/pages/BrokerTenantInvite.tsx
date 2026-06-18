@@ -3,21 +3,35 @@ import { Link, useLocation } from "wouter";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
 import { BrokerFlowButton } from "@/components/broker/BrokerFlowButton";
+import { BrokerOnboardLinkSuccess } from "@/components/broker/BrokerOnboardLinkSuccess";
 import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import type { BrokerOnboardLinkPayload } from "@/lib/brokerOnboardShareActions";
 import {
   createBrokerTenantOnboardingInvite,
   findDuplicateTenantLead,
   findPendingInviteByPhone,
   getBrokerOnboardingInvites,
   isValidIndianMobile,
+  type CreateBrokerOnboardInviteResult,
 } from "@/lib/brokerTenantOnboarding";
+
+type BrokerOnboardInviteError = Extract<CreateBrokerOnboardInviteResult, { ok: false }>["error"];
+
+const INVITE_ERROR_MESSAGES: Record<BrokerOnboardInviteError, string> = {
+  invalid_name: "Enter tenant full name",
+  invalid_phone: "Enter a valid 10-digit mobile number",
+  duplicate_tenant: "A lead with this mobile number already exists.",
+  duplicate_invite: "An active onboarding link already exists for this number.",
+  no_session: "Please sign in as a broker to generate onboarding links.",
+};
 
 export default function BrokerTenantInvite() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [successPayload, setSuccessPayload] = useState<BrokerOnboardLinkPayload | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,7 +40,7 @@ export default function BrokerTenantInvite() {
 
   const nameValid = name.trim().length >= 2;
   const phoneValid = isValidIndianMobile(phone);
-  const canSubmit = nameValid && phoneValid && !loading;
+  const canSubmit = nameValid && phoneValid && !loading && !duplicateWarning;
 
   const nameError = touched.name && !nameValid ? "Enter tenant full name" : null;
   const phoneError =
@@ -37,13 +51,11 @@ export default function BrokerTenantInvite() {
       setDuplicateWarning(null);
       return;
     }
-    const existingTenant = findDuplicateTenantLead(phone);
-    if (existingTenant) {
+    if (findDuplicateTenantLead(phone)) {
       setDuplicateWarning("A lead with this mobile number already exists in your tenant list.");
       return;
     }
-    const pending = findPendingInviteByPhone(phone);
-    if (pending) {
+    if (findPendingInviteByPhone(phone)) {
       setDuplicateWarning("An active onboarding link was already sent to this mobile number.");
       return;
     }
@@ -58,27 +70,20 @@ export default function BrokerTenantInvite() {
     try {
       const result = await createBrokerTenantOnboardingInvite(name, phone);
       if (!result.ok) {
-        const messages: Record<string, string> = {
-          invalid_name: "Enter tenant full name",
-          invalid_phone: "Enter a valid 10-digit mobile number",
-          duplicate_tenant: "A lead with this mobile number already exists.",
-          duplicate_invite: "An active onboarding link already exists for this number.",
-          no_session: "Please sign in as a broker to send onboarding links.",
-        };
         toast({
-          title: "Could not send link",
-          description: messages[result.error],
+          title: "Could not generate link",
+          description: INVITE_ERROR_MESSAGES[result.error],
           variant: "destructive",
         });
         return;
       }
 
-      toast({
-        title: "Onboarding link created",
-        description: "Opening WhatsApp to share the link with your tenant.",
+      setSuccessPayload({
+        tenantName: result.invite.tenantName,
+        tenantPhone: result.invite.tenantPhone,
+        link: result.link,
+        token: result.invite.token,
       });
-      window.open(result.whatsAppHref, "_blank", "noopener,noreferrer");
-      setLocation("/broker/tenants");
     } finally {
       setLoading(false);
     }
@@ -87,6 +92,19 @@ export default function BrokerTenantInvite() {
   const pendingCount = getBrokerOnboardingInvites().filter(
     (inv) => inv.status === "pending" && inv.expiresAt > Date.now(),
   ).length;
+
+  if (successPayload) {
+    return (
+      <BrokerLayout>
+        <div className="max-w-xl mx-auto">
+          <BrokerOnboardLinkSuccess
+            {...successPayload}
+            onDone={() => setLocation("/broker/tenants")}
+          />
+        </div>
+      </BrokerLayout>
+    );
+  }
 
   return (
     <BrokerLayout>
@@ -123,6 +141,7 @@ export default function BrokerTenantInvite() {
               onBlur={() => setTouched((t) => ({ ...t, name: true }))}
               placeholder="Enter full name"
               className={nameError ? "border-destructive" : undefined}
+              aria-invalid={!!nameError}
             />
             {nameError ? <p className="text-xs text-destructive">{nameError}</p> : null}
           </div>
@@ -131,6 +150,8 @@ export default function BrokerTenantInvite() {
             id="invite-phone"
             value={phone}
             onChange={setPhone}
+            onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
+            helperText={undefined}
             errorText={phoneError}
           />
 
@@ -143,15 +164,15 @@ export default function BrokerTenantInvite() {
           <BrokerFlowButton
             type="button"
             className="w-full sm:w-fit"
-            disabled={!canSubmit || !!duplicateWarning}
+            disabled={!canSubmit}
             onClick={() => void handleSubmit()}
           >
             {loading ? (
               <>
-                <Loader2 size={16} className="animate-spin" /> Sending…
+                <Loader2 size={16} className="animate-spin" /> Generating…
               </>
             ) : (
-              "Send Onboarding Link"
+              "Generate Onboarding Link"
             )}
           </BrokerFlowButton>
         </div>
