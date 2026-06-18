@@ -3,18 +3,40 @@
  * Usage: pnpm run seed:onboard-link
  */
 import { createRequire } from "node:module";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+function loadEnvFile() {
+  const envPath = path.join(repoRoot, ".env");
+  if (!existsSync(envPath)) return;
+  for (const line of readFileSync(envPath, "utf8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const value = trimmed.slice(eq + 1).trim();
+    if (!(key in process.env)) process.env[key] = value;
+  }
+}
+
+loadEnvFile();
+
 const require = createRequire(path.join(repoRoot, "lib/db/package.json"));
 const { PGlite } = require("@electric-sql/pglite");
 
-const dataDir = process.env.PGLITE_DATA_DIR
-  ? path.isAbsolute(process.env.PGLITE_DATA_DIR)
-    ? process.env.PGLITE_DATA_DIR
-    : path.resolve(repoRoot, process.env.PGLITE_DATA_DIR)
-  : path.join(repoRoot, ".data", "pglite");
+const dataDir = (() => {
+  const defaultDir = path.join(repoRoot, ".data", "pglite");
+  const raw = process.env.PGLITE_DATA_DIR;
+  if (!raw) return defaultDir;
+  const resolved = path.isAbsolute(raw) ? raw : path.resolve(repoRoot, raw);
+  const withinRepo =
+    resolved === repoRoot || resolved.startsWith(`${repoRoot}${path.sep}`);
+  return withinRepo ? resolved : defaultDir;
+})();
 
 const BROKER_PHONE = "9876543211";
 const BROKER_NAME = "Demo Broker";
@@ -67,9 +89,10 @@ if (!verify.rows.length) {
   process.exit(1);
 }
 
-const webPort = process.env.VITE_PORT ?? process.env.WEB_PORT ?? "5173";
-const apiPort = process.env.API_PORT ?? "8080";
-const link = `http://localhost:${webPort}/onboard/tenant/${TOKEN}`;
+const webPort = process.env.WEB_PORT ?? process.env.VITE_PORT ?? "5173";
+const apiPort = process.env.API_PORT ?? process.env.PORT ?? "8080";
+const webOrigin = process.env.VITE_DEV_WEB_ORIGIN ?? `http://localhost:${webPort}`;
+const link = `${webOrigin.replace(/\/$/, "")}/onboard/tenant/${TOKEN}`;
 
 console.log("");
 console.log("Local broker tenant onboarding link:");
@@ -79,5 +102,8 @@ console.log("Prefilled tenant:", TENANT_NAME, TENANT_PHONE);
 console.log("Originating broker:", BROKER_NAME, `(phone ${BROKER_PHONE})`);
 console.log("");
 console.log("Start dev stack:  pnpm run dev:local");
+console.log("  Web:  http://localhost:" + webPort);
+console.log("  API:  http://localhost:" + apiPort);
+console.log("Broker invite:    http://localhost:" + webPort + "/broker/tenants/invite");
 console.log("API check:        curl http://localhost:" + apiPort + "/api/broker-tenant-onboard/" + TOKEN);
 console.log("");

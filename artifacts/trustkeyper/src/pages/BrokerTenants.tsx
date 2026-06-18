@@ -60,8 +60,7 @@ function formatDate(d?: string): string {
 }
 
 function leadStatusLabel(t: Tenant): LeadStatus {
-  if (t.leadStatus) return t.leadStatus;
-  return t.invitationSent ? "New Lead" : "New Lead";
+  return t.leadStatus ?? "New Lead";
 }
 
 function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) {

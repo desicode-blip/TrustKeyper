@@ -26,6 +26,7 @@ describe("buildBrokerTenantOnboardWhatsAppMessage", () => {
     expect(message).toContain("Hi Meena,");
     expect(message).toContain("https://app.trustkeyper.com/onboard/tenant/bt_abc");
     expect(message).toContain("TrustKeyper");
+    expect(message).not.toContain("Complete your profile here:");
   });
 });
 
