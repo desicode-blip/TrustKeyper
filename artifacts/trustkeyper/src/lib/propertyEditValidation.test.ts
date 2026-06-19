@@ -4,6 +4,7 @@ import {
   propertyToEditPayload,
   validateBrokerPropertyEditDraft,
   validateOwnerPropertyEditPayload,
+  validateOwnerPropertyEditPayloadForSubStep,
   type OwnerPropertyEditPayload,
 } from "./propertyEditValidation";
 import type { Property } from "@/lib/properties";
@@ -62,6 +63,28 @@ describe("validateBrokerPropertyEditDraft", () => {
     });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.message).toContain("rent");
+  });
+});
+
+describe("validateOwnerPropertyEditPayloadForSubStep", () => {
+  it("validates step 0 without requiring images", () => {
+    const payload = baseOwnerPayload();
+    payload.images = [];
+    expect(validateOwnerPropertyEditPayloadForSubStep(0, payload).ok).toBe(true);
+  });
+
+  it("rejects step 5 when images are missing", () => {
+    const payload = baseOwnerPayload();
+    payload.images = [];
+    const result = validateOwnerPropertyEditPayloadForSubStep(5, payload);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.step).toBe(5);
+  });
+
+  it("accepts optional amenities on step 3", () => {
+    const payload = baseOwnerPayload();
+    payload.amenities = [];
+    expect(validateOwnerPropertyEditPayloadForSubStep(3, payload).ok).toBe(true);
   });
 });
 

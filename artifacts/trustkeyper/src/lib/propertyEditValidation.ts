@@ -111,7 +111,7 @@ function isValidPhone(contact: string): boolean {
   return digits.length >= 10 && digits.length <= 12;
 }
 
-export function validateOwnerPropertyEditPayload(
+function validateOwnerPropertyDetailsStep(
   payload: OwnerPropertyEditPayload,
 ): ValidationResult {
   if (!payload.address.trim()) {
@@ -132,7 +132,12 @@ export function validateOwnerPropertyEditPayload(
   if (!isValidPhone(payload.ownerContact)) {
     return { ok: false, message: "Enter a valid owner phone number.", step: 0 };
   }
+  return { ok: true };
+}
 
+function validateOwnerPropertyTypeStep(
+  payload: OwnerPropertyEditPayload,
+): ValidationResult {
   const typeOk =
     payload.propertyType !== "" &&
     (payload.propertyType !== "Other" || payload.propertyTypeOther.trim() !== "");
@@ -149,7 +154,12 @@ export function validateOwnerPropertyEditPayload(
   if (!payload.furnishing.trim()) {
     return { ok: false, message: "Select furnishing.", step: 1 };
   }
+  return { ok: true };
+}
 
+function validateOwnerPropertyDimensionsStep(
+  payload: OwnerPropertyEditPayload,
+): ValidationResult {
   if (
     !payload.builtUpArea.trim() ||
     !payload.builtUpUnits.trim() ||
@@ -161,7 +171,12 @@ export function validateOwnerPropertyEditPayload(
   ) {
     return { ok: false, message: "Complete all dimension fields.", step: 2 };
   }
+  return { ok: true };
+}
 
+function validateOwnerPropertyRentalStep(
+  payload: OwnerPropertyEditPayload,
+): ValidationResult {
   if (payload.tenantsPreferred.length === 0) {
     return { ok: false, message: "Select at least one tenant preference.", step: 4 };
   }
@@ -182,11 +197,45 @@ export function validateOwnerPropertyEditPayload(
   if (!payload.availableFrom.trim()) {
     return { ok: false, message: "Available from date is required.", step: 4 };
   }
+  return { ok: true };
+}
 
+function validateOwnerPropertyImagesStep(
+  payload: OwnerPropertyEditPayload,
+): ValidationResult {
   if (payload.images.length === 0) {
     return { ok: false, message: "Upload at least one property image.", step: 5 };
   }
+  return { ok: true };
+}
 
+/** Validates only the fields shown on the current owner edit wizard sub-step. */
+export function validateOwnerPropertyEditPayloadForSubStep(
+  subStep: number,
+  payload: OwnerPropertyEditPayload,
+): ValidationResult {
+  if (subStep === 0) return validateOwnerPropertyDetailsStep(payload);
+  if (subStep === 1) return validateOwnerPropertyTypeStep(payload);
+  if (subStep === 2) return validateOwnerPropertyDimensionsStep(payload);
+  if (subStep === 3) return { ok: true };
+  if (subStep === 4) return validateOwnerPropertyRentalStep(payload);
+  if (subStep === 5) return validateOwnerPropertyImagesStep(payload);
+  return { ok: true };
+}
+
+export function validateOwnerPropertyEditPayload(
+  payload: OwnerPropertyEditPayload,
+): ValidationResult {
+  const steps = [
+    validateOwnerPropertyDetailsStep(payload),
+    validateOwnerPropertyTypeStep(payload),
+    validateOwnerPropertyDimensionsStep(payload),
+    validateOwnerPropertyRentalStep(payload),
+    validateOwnerPropertyImagesStep(payload),
+  ];
+  for (const result of steps) {
+    if (!result.ok) return result;
+  }
   return { ok: true };
 }
 

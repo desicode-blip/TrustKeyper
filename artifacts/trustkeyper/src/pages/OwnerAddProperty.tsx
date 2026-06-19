@@ -24,7 +24,7 @@ import { addProperty, deriveBedroomsFromUnitSize, getProperties, updateProperty,
 import {
   editPayloadsEqual,
   propertyToEditPayload,
-  validateOwnerPropertyEditPayload,
+  validateOwnerPropertyEditPayloadForSubStep,
   type OwnerPropertyEditPayload,
 } from "@/lib/propertyEditValidation";
 import { useToast } from "@/hooks/use-toast";
@@ -672,16 +672,24 @@ export default function OwnerAddProperty() {
     setAmenityOtherText("");
   }, [editBaseline]);
 
+  const ownerPropertyCardPath = editingPropertyId
+    ? `/owner/properties/${editingPropertyId}`
+    : "/owner/properties";
+
+  const advanceAfterEditSave = () => {
+    if (subStep < 5) {
+      setSubStep((s) => s + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    setLocation(ownerPropertyCardPath);
+  };
+
   const handleSaveEdit = async () => {
     if (!editingPropertyId || isSaving) return;
 
-    if (!hasUnsavedEditChanges) {
-      toast({ description: "No changes to save." });
-      return;
-    }
-
     const payload = buildEditPayload();
-    const validation = validateOwnerPropertyEditPayload(payload);
+    const validation = validateOwnerPropertyEditPayloadForSubStep(subStep, payload);
     if (!validation.ok) {
       toast({
         title: "Could not save",
@@ -692,12 +700,18 @@ export default function OwnerAddProperty() {
       return;
     }
 
+    if (!hasUnsavedEditChanges) {
+      advanceAfterEditSave();
+      return;
+    }
+
     setIsSaving(true);
     try {
       updateProperty(editingPropertyId, payload);
       const updated = getProperties().find((p) => p.id === editingPropertyId);
       if (updated) setEditBaseline(updated);
       toast({ description: "Property details updated successfully." });
+      advanceAfterEditSave();
     } catch {
       toast({
         title: "Save failed",
@@ -712,11 +726,12 @@ export default function OwnerAddProperty() {
   const applyDiscardEdit = () => {
     restoreEditBaseline();
     setDiscardDialogOpen(false);
+    setLocation(ownerPropertyCardPath);
   };
 
   const handleDiscardEditRequest = () => {
     if (!hasUnsavedEditChanges) {
-      applyDiscardEdit();
+      setLocation(ownerPropertyCardPath);
       return;
     }
     setDiscardDialogOpen(true);
@@ -1086,17 +1101,17 @@ export default function OwnerAddProperty() {
 
   const handleBack = () => {
     if (subStep > 0) setSubStep((s) => s - 1);
-    else {
-      if (entrySource === "onboarding") {
-        try {
-          sessionStorage.setItem("tk_owner_onboarding_resume_step", "plan");
-        } catch {
-          /* ignore */
-        }
-        setLocation("/");
-      } else {
-        setLocation("/owner/properties");
+    else if (editingPropertyId) {
+      setLocation(`/owner/properties/${editingPropertyId}`);
+    } else if (entrySource === "onboarding") {
+      try {
+        sessionStorage.setItem("tk_owner_onboarding_resume_step", "plan");
+      } catch {
+        /* ignore */
       }
+      setLocation("/");
+    } else {
+      setLocation("/owner/properties");
     }
   };
 
@@ -1162,7 +1177,9 @@ export default function OwnerAddProperty() {
             {subStep === 0
               ? entrySource === "onboarding"
                 ? "Back to Choose Plan"
-                : "Back to Properties"
+                : editingPropertyId
+                  ? "Back to Property"
+                  : "Back to Properties"
               : "Back"}
           </button>
           {!editingPropertyId ? (
