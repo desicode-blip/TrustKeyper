@@ -6,17 +6,21 @@ export function PropertyEditSaveDiscardBar({
   onSave,
   onDiscard,
   saving = false,
+  align = "end",
   className,
 }: {
   onSave: () => void;
   onDiscard: () => void;
   saving?: boolean;
+  /** `center` matches the centered Continue CTA slot in property edit flows. */
+  align?: "center" | "end";
   className?: string;
 }) {
   return (
     <div
       className={cn(
-        "flex flex-col-reverse sm:flex-row sm:justify-end gap-3 w-full",
+        "flex flex-col-reverse sm:flex-row gap-3 w-full",
+        align === "center" ? "sm:justify-center" : "sm:justify-end",
         className,
       )}
     >
