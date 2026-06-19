@@ -35,10 +35,19 @@ import {
   SquareDashedBottom,
 } from "lucide-react";
 import { getProperties, updateProperty, type Property } from "@/lib/properties";
+import {
+  brokerDraftsEqual,
+  PROPERTIES_UPDATED_EVENT,
+  validateBrokerPropertyEditDraft,
+  type BrokerPropertyEditDraft,
+} from "@/lib/propertyEditValidation";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import BrokerLayout from "@/components/BrokerLayout";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
+import { FlowStickyActionBar } from "@/components/FlowStickyActionBar";
+import { DiscardChangesDialog } from "@/components/property/DiscardChangesDialog";
+import { PropertyEditSaveDiscardBar } from "@/components/property/PropertyEditSaveDiscardBar";
 import { SharePropertyModal } from "@/components/owner/SharePropertyModal";
 import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 
@@ -593,6 +602,8 @@ export default function PropertyDetails() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
   // Form states
@@ -600,12 +611,37 @@ export default function PropertyDetails() {
   const [draftRent, setDraftRent] = useState("");
   const [draftArea, setDraftArea] = useState("");
   const [draftCity, setDraftCity] = useState("");
+  const [savedDraft, setSavedDraft] = useState<BrokerPropertyEditDraft>({
+    nickname: "",
+    monthlyRent: "",
+    area: "",
+    city: "",
+  });
+
+  const currentDraft = useMemo(
+    (): BrokerPropertyEditDraft => ({
+      nickname: draftNickname,
+      monthlyRent: draftRent,
+      area: draftArea,
+      city: draftCity,
+    }),
+    [draftNickname, draftRent, draftArea, draftCity],
+  );
+
+  const hasUnsavedChanges = !brokerDraftsEqual(currentDraft, savedDraft);
 
   const syncDraftsFromProperty = (value: Property) => {
-    setDraftNickname(value.nickname || "");
-    setDraftRent(value.monthlyRent || "");
-    setDraftArea(value.area || "");
-    setDraftCity(value.city || "");
+    const draft: BrokerPropertyEditDraft = {
+      nickname: value.nickname || "",
+      monthlyRent: value.monthlyRent || "",
+      area: value.area || "",
+      city: value.city || "",
+    };
+    setDraftNickname(draft.nickname);
+    setDraftRent(draft.monthlyRent);
+    setDraftArea(draft.area);
+    setDraftCity(draft.city);
+    setSavedDraft(draft);
   };
 
   useEffect(() => {
@@ -618,36 +654,100 @@ export default function PropertyDetails() {
   }, [id]);
 
   useEffect(() => {
+    const refresh = () => {
+      if (!id) return;
+      const found = getProperties().find((p) => p.id === id);
+      if (found) {
+        setProperty(found);
+        if (!isEditing) syncDraftsFromProperty(found);
+      }
+    };
+    window.addEventListener(PROPERTIES_UPDATED_EVENT, refresh);
+    return () => window.removeEventListener(PROPERTIES_UPDATED_EVENT, refresh);
+  }, [id, isEditing]);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("edit") === "true") {
       setIsEditing(true);
     }
   }, []);
 
-  const handleSave = () => {
-    if (!property) return;
-    updateProperty(property.id, {
-      nickname: draftNickname,
-      monthlyRent: draftRent,
-      area: draftArea,
-      city: draftCity,
-    });
-    toast({ description: "Property updated successfully!" });
-    setIsEditing(false);
-    // Update local state
-    setProperty({
-      ...property,
-      nickname: draftNickname,
-      monthlyRent: draftRent,
-      area: draftArea,
-      city: draftCity,
-    });
+  const handleSave = async () => {
+    if (!property || isSaving) return;
+
+    if (!hasUnsavedChanges) {
+      toast({ description: "No changes to save." });
+      return;
+    }
+
+    const validation = validateBrokerPropertyEditDraft(currentDraft);
+    if (!validation.ok) {
+      toast({
+        title: "Could not save",
+        description: validation.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      updateProperty(property.id, {
+        nickname: draftNickname,
+        monthlyRent: draftRent,
+        area: draftArea,
+        city: draftCity,
+      });
+      const updated: Property = {
+        ...property,
+        nickname: draftNickname,
+        monthlyRent: draftRent,
+        area: draftArea,
+        city: draftCity,
+      };
+      setProperty(updated);
+      setSavedDraft(currentDraft);
+      toast({ description: "Property details updated successfully." });
+      setIsEditing(false);
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("edit") === "true") {
+        params.delete("edit");
+        const query = params.toString();
+        const next = query ? `?${query}` : "";
+        window.history.replaceState(null, "", `${window.location.pathname}${next}`);
+      }
+    } catch {
+      toast({
+        title: "Save failed",
+        description: "Could not save property changes. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDiscard = () => {
+  const applyDiscard = () => {
     if (!property) return;
     syncDraftsFromProperty(property);
     setIsEditing(false);
+    setDiscardDialogOpen(false);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("edit") === "true") {
+      params.delete("edit");
+      const query = params.toString();
+      const next = query ? `?${query}` : "";
+      window.history.replaceState(null, "", `${window.location.pathname}${next}`);
+    }
+  };
+
+  const handleDiscardRequest = () => {
+    if (!hasUnsavedChanges) {
+      applyDiscard();
+      return;
+    }
+    setDiscardDialogOpen(true);
   };
 
   if (!property) {
@@ -686,7 +786,7 @@ export default function PropertyDetails() {
 
   return (
     <BrokerLayout>
-      <div>
+      <div className={isEditing ? "pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] sm:pb-0" : undefined}>
         <div className="flex items-center justify-between mb-5">
           <button
             onClick={() => setLocation("/broker/properties")}
@@ -732,20 +832,27 @@ export default function PropertyDetails() {
 
             <div className="mt-4">
               {isEditing ? (
-                <EditForm
-                  onSave={handleSave}
-                  onCancel={handleDiscard}
-                  drafts={{
-                    nickname: draftNickname,
-                    setNickname: setDraftNickname,
-                    rent: draftRent,
-                    setRent: setDraftRent,
-                    area: draftArea,
-                    setArea: setDraftArea,
-                    city: draftCity,
-                    setCity: setDraftCity,
-                  }}
-                />
+                <>
+                  <EditForm
+                    drafts={{
+                      nickname: draftNickname,
+                      setNickname: setDraftNickname,
+                      rent: draftRent,
+                      setRent: setDraftRent,
+                      area: draftArea,
+                      setArea: setDraftArea,
+                      city: draftCity,
+                      setCity: setDraftCity,
+                    }}
+                  />
+                  <div className="hidden sm:block mt-6">
+                    <PropertyEditSaveDiscardBar
+                      onSave={() => void handleSave()}
+                      onDiscard={handleDiscardRequest}
+                      saving={isSaving}
+                    />
+                  </div>
+                </>
               ) : (
                 <>
                   {activeTab === "overview" && <OverviewTab property={property} />}
@@ -771,18 +878,41 @@ export default function PropertyDetails() {
       </div>
 
       <SharePropertyModal property={property} open={shareOpen} onClose={() => setShareOpen(false)} />
+
+      {isEditing ? (
+        <FlowStickyActionBar>
+          <PropertyEditSaveDiscardBar
+            onSave={() => void handleSave()}
+            onDiscard={handleDiscardRequest}
+            saving={isSaving}
+          />
+        </FlowStickyActionBar>
+      ) : null}
+
+      <DiscardChangesDialog
+        open={discardDialogOpen}
+        onOpenChange={setDiscardDialogOpen}
+        onConfirm={applyDiscard}
+      />
     </BrokerLayout>
   );
 }
 
-function EditForm({ 
-  onSave, 
-  onCancel,
-  drafts: { nickname, setNickname, rent, setRent, area, setArea, city, setCity }
-}: { 
-  onSave: () => void; 
-  onCancel: () => void;
-  drafts: any;
+interface EditFormDrafts {
+  nickname: string;
+  setNickname: (value: string) => void;
+  rent: string;
+  setRent: (value: string) => void;
+  area: string;
+  setArea: (value: string) => void;
+  city: string;
+  setCity: (value: string) => void;
+}
+
+function EditForm({
+  drafts: { nickname, setNickname, rent, setRent, area, setArea, city, setCity },
+}: {
+  drafts: EditFormDrafts;
 }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
@@ -825,20 +955,6 @@ function EditForm({
             />
           </div>
         </div>
-      </div>
-      <div className="flex items-center justify-end gap-3 mt-8 pt-6 border-t border-gray-100">
-        <button
-          onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900"
-        >
-          Discard Changes
-        </button>
-        <button
-          onClick={onSave}
-          className="px-6 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          Save Changes
-        </button>
       </div>
     </div>
   );

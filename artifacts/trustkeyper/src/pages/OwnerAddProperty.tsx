@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
   Home,
@@ -18,7 +18,16 @@ import { FlowDateInput } from "@/components/flow/FlowDateInput";
 import { FlowNativeSelect } from "@/components/flow/FlowNativeSelect";
 import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/FlowStickyActionBar";
 import { FlowClearButton } from "@/components/owner/FlowClearButton";
-import { addProperty, deriveBedroomsFromUnitSize, getProperties, updateProperty } from "@/lib/properties";
+import { DiscardChangesDialog } from "@/components/property/DiscardChangesDialog";
+import { PropertyEditSaveDiscardBar } from "@/components/property/PropertyEditSaveDiscardBar";
+import { addProperty, deriveBedroomsFromUnitSize, getProperties, updateProperty, type Property } from "@/lib/properties";
+import {
+  editPayloadsEqual,
+  propertyToEditPayload,
+  validateOwnerPropertyEditPayload,
+  type OwnerPropertyEditPayload,
+} from "@/lib/propertyEditValidation";
+import { useToast } from "@/hooks/use-toast";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { getOwnerProfile } from "@/lib/ownerProfile";
@@ -262,8 +271,12 @@ function loadPropertyIntoForm(
 export default function OwnerAddProperty() {
   const availableFromMin = todayLocalDateInputMin();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [entrySource, setEntrySource] = useState<"dashboard" | "onboarding">("dashboard");
   const [editingPropertyId, setEditingPropertyId] = useState<string | null>(null);
+  const [editBaseline, setEditBaseline] = useState<Property | null>(null);
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [subStep, setSubStep] = useState(0);
 
   // Sub-step 0 – Property Details
@@ -339,6 +352,7 @@ export default function OwnerAddProperty() {
       const existing = getProperties().find((x) => x.id === editId);
       if (existing) {
         setEditingPropertyId(editId);
+        setEditBaseline(existing);
         loadPropertyIntoForm(existing, {
           setNickname, setAddress, setArea, setCity, setPincode, setCountry,
           setOwnerName, setOwnerContact,
@@ -510,7 +524,174 @@ export default function OwnerAddProperty() {
     return imageUrls.length > 0;
   };
 
+  const buildEditPayload = useCallback((): OwnerPropertyEditPayload => {
+    const finalAmenities = [...amenities];
+    if (amenityOtherChecked && amenityOtherText.trim() !== "") {
+      finalAmenities.push(amenityOtherText.trim());
+    }
+
+    return {
+      nickname,
+      address,
+      area,
+      city,
+      pincode,
+      country,
+      ownerName,
+      ownerContact,
+      propertyType,
+      propertyTypeOther,
+      unitSize,
+      unitSizeOther,
+      furnishing,
+      builtUpArea,
+      builtUpUnits,
+      totalFloors,
+      bathrooms,
+      balconies,
+      floorLevel,
+      mainDoorDirection,
+      amenities: finalAmenities,
+      tenantsPreferred,
+      monthlyRent,
+      rentNegotiable,
+      maintenanceIncluded,
+      monthlyMaintenance,
+      securityDeposit,
+      availableFrom,
+      images: imageUrls,
+      imageCount: imageUrls.length,
+      bedrooms: deriveBedroomsFromUnitSize(unitSize, unitSizeOther),
+    };
+  }, [
+    amenities,
+    amenityOtherChecked,
+    amenityOtherText,
+    availableFrom,
+    area,
+    address,
+    balconies,
+    bathrooms,
+    builtUpArea,
+    builtUpUnits,
+    city,
+    country,
+    floorLevel,
+    furnishing,
+    imageUrls,
+    maintenanceIncluded,
+    monthlyMaintenance,
+    monthlyRent,
+    nickname,
+    ownerContact,
+    ownerName,
+    pincode,
+    propertyType,
+    propertyTypeOther,
+    rentNegotiable,
+    securityDeposit,
+    tenantsPreferred,
+    totalFloors,
+    unitSize,
+    unitSizeOther,
+    mainDoorDirection,
+  ]);
+
+  const hasUnsavedEditChanges = useMemo(() => {
+    if (!editBaseline) return false;
+    return !editPayloadsEqual(buildEditPayload(), propertyToEditPayload(editBaseline));
+  }, [buildEditPayload, editBaseline]);
+
+  const restoreEditBaseline = useCallback(() => {
+    if (!editBaseline) return;
+    loadPropertyIntoForm(editBaseline, {
+      setNickname,
+      setAddress,
+      setArea,
+      setCity,
+      setPincode,
+      setCountry,
+      setOwnerName,
+      setOwnerContact,
+      setPropertyType,
+      setPropertyTypeOther,
+      setUnitSize,
+      setUnitSizeOther,
+      setFurnishing,
+      setBuiltUpArea,
+      setBuiltUpUnits,
+      setTotalFloors,
+      setBathrooms,
+      setBalconies,
+      setFloorLevel,
+      setMainDoorDirection,
+      setAmenities,
+      setTenantsPreferred,
+      setMonthlyRent,
+      setRentNegotiable,
+      setMaintenanceIncluded,
+      setMonthlyMaintenance,
+      setSecurityDeposit,
+      setAvailableFrom,
+      setImageUrls,
+    });
+    setAmenityOtherChecked(false);
+    setAmenityOtherText("");
+  }, [editBaseline]);
+
+  const handleSaveEdit = async () => {
+    if (!editingPropertyId || isSaving) return;
+
+    if (!hasUnsavedEditChanges) {
+      toast({ description: "No changes to save." });
+      return;
+    }
+
+    const payload = buildEditPayload();
+    const validation = validateOwnerPropertyEditPayload(payload);
+    if (!validation.ok) {
+      toast({
+        title: "Could not save",
+        description: validation.message,
+        variant: "destructive",
+      });
+      if (validation.step !== undefined) setSubStep(validation.step);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      updateProperty(editingPropertyId, payload);
+      const updated = getProperties().find((p) => p.id === editingPropertyId);
+      if (updated) setEditBaseline(updated);
+      toast({ description: "Property details updated successfully." });
+    } catch {
+      toast({
+        title: "Save failed",
+        description: "Could not save property changes. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const applyDiscardEdit = () => {
+    restoreEditBaseline();
+    setDiscardDialogOpen(false);
+  };
+
+  const handleDiscardEditRequest = () => {
+    if (!hasUnsavedEditChanges) {
+      applyDiscardEdit();
+      return;
+    }
+    setDiscardDialogOpen(true);
+  };
+
   const handleSubmit = () => {
+    if (editingPropertyId) return;
+
     const finalAmenities = [...amenities];
     if (amenityOtherChecked && amenityOtherText.trim() !== "") {
       finalAmenities.push(amenityOtherText.trim());
@@ -526,16 +707,6 @@ export default function OwnerAddProperty() {
       amenities: finalAmenities, tenantsPreferred, monthlyRent, rentNegotiable, maintenanceIncluded, monthlyMaintenance, securityDeposit, availableFrom,
       images: imageUrls, imageCount: imageUrls.length,
     };
-
-    if (editingPropertyId) {
-      updateProperty(editingPropertyId, payload);
-      setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        setLocation(`/owner/properties/${editingPropertyId}`);
-      }, 1500);
-      return;
-    }
 
     addProperty({
       ...payload,
@@ -560,8 +731,10 @@ export default function OwnerAddProperty() {
   const handleContinue = () => {
     if (subStep < 5) {
       setSubStep((s) => s + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    if (!editingPropertyId) {
       handleSubmit();
     }
   };
@@ -974,12 +1147,29 @@ export default function OwnerAddProperty() {
           {subStep === 4 && renderStep4()}
           {subStep === 5 && renderStep5()}
 
-          {/* Desktop Continue */}
-          <div className="mt-10 hidden sm:flex justify-center mb-10">
-            <Button size="lg" onClick={handleContinue} disabled={!canContinue()} className="w-32 bg-primary hover:bg-primary/90 rounded-sm">
-              {subStep === 5 ? "Submit" : "Continue \u2192"}
-            </Button>
-          </div>
+          {/* Desktop Continue / edit actions */}
+          {editingPropertyId ? (
+            <div className="mt-10 hidden sm:block mb-6">
+              <PropertyEditSaveDiscardBar
+                onSave={() => void handleSaveEdit()}
+                onDiscard={handleDiscardEditRequest}
+                saving={isSaving}
+              />
+            </div>
+          ) : null}
+
+          {!(editingPropertyId && subStep === 5) ? (
+            <div className="mt-10 hidden sm:flex justify-center mb-10">
+              <Button
+                size="lg"
+                onClick={handleContinue}
+                disabled={!canContinue()}
+                className="w-32 bg-primary hover:bg-primary/90 rounded-sm"
+              >
+                {subStep === 5 ? "Submit" : "Continue \u2192"}
+              </Button>
+            </div>
+          ) : null}
 
           {/* Let us help you Banner */}
           <div className="w-full bg-white rounded-xl border border-gray-200 p-5 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 mt-12 shadow-sm">
@@ -1020,13 +1210,33 @@ export default function OwnerAddProperty() {
           </div>
         </div>
 
-        {/* Sticky Mobile Continue */}
-        <FlowStickyActionBar>
-          <Button size="lg" onClick={handleContinue} disabled={!canContinue()} className="w-full bg-primary hover:bg-primary/90 rounded-[4px]">
-            {subStep === 5 ? "Submit" : "Continue \u2192"}
-          </Button>
-        </FlowStickyActionBar>
+        {editingPropertyId ? (
+          <FlowStickyActionBar>
+            <PropertyEditSaveDiscardBar
+              onSave={() => void handleSaveEdit()}
+              onDiscard={handleDiscardEditRequest}
+              saving={isSaving}
+            />
+          </FlowStickyActionBar>
+        ) : (
+          <FlowStickyActionBar>
+            <Button
+              size="lg"
+              onClick={handleContinue}
+              disabled={!canContinue()}
+              className="w-full bg-primary hover:bg-primary/90 rounded-[4px]"
+            >
+              {subStep === 5 ? "Submit" : "Continue \u2192"}
+            </Button>
+          </FlowStickyActionBar>
+        )}
       </div>
+
+      <DiscardChangesDialog
+        open={discardDialogOpen}
+        onOpenChange={setDiscardDialogOpen}
+        onConfirm={applyDiscardEdit}
+      />
 
       {/* Success Modal */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>

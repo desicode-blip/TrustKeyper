@@ -22,6 +22,7 @@ import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { SharePropertyModal } from "@/components/owner/SharePropertyModal";
 import { RaiseComplaintModal } from "@/components/owner/RaiseComplaintModal";
 import { getProperties, getPropertyTitle, type Property } from "@/lib/properties";
+import { PROPERTIES_UPDATED_EVENT } from "@/lib/propertyEditValidation";
 import {
   formatDocumentSize,
   getPropertyDocuments,
@@ -145,6 +146,16 @@ export default function OwnerPropertyDetails() {
       refreshTickets();
     }
   }, [params?.id, refreshDocuments, refreshTickets]);
+
+  useEffect(() => {
+    const refreshProperty = () => {
+      if (!params?.id) return;
+      const p = getProperties().find((x) => x.id === params.id);
+      if (p) setProperty(p);
+    };
+    window.addEventListener(PROPERTIES_UPDATED_EVENT, refreshProperty);
+    return () => window.removeEventListener(PROPERTIES_UPDATED_EVENT, refreshProperty);
+  }, [params?.id]);
 
   useEffect(() => {
     const onChange = () => refreshTickets();
