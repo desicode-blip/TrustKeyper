@@ -18,12 +18,13 @@ import { FlowDateInput } from "@/components/flow/FlowDateInput";
 import { FlowNativeSelect } from "@/components/flow/FlowNativeSelect";
 import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/FlowStickyActionBar";
 import { FlowClearButton } from "@/components/owner/FlowClearButton";
-import { DiscardChangesDialog } from "@/components/property/DiscardChangesDialog";
 import { PropertyEditSaveDiscardBar } from "@/components/property/PropertyEditSaveDiscardBar";
 import { addProperty, deriveBedroomsFromUnitSize, getProperties, updateProperty, type Property } from "@/lib/properties";
+import { appendPropertyImagesFromFiles } from "@/lib/propertyMedia";
 import {
   editPayloadsEqual,
   propertyToEditPayload,
+  validateOwnerPropertyEditPayload,
   validateOwnerPropertyEditPayloadForSubStep,
   type OwnerPropertyEditPayload,
 } from "@/lib/propertyEditValidation";
@@ -308,8 +309,9 @@ export default function OwnerAddProperty() {
   const [entrySource, setEntrySource] = useState<"dashboard" | "onboarding">("dashboard");
   const [editingPropertyId, setEditingPropertyId] = useState<string | null>(null);
   const [editBaseline, setEditBaseline] = useState<Property | null>(null);
-  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingImageUploads, setPendingImageUploads] = useState(0);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   const [subStep, setSubStep] = useState(0);
 
   // Sub-step 0 – Property Details
@@ -469,22 +471,29 @@ export default function OwnerAddProperty() {
       prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
     );
 
-  const handleFiles = useCallback((files: FileList | null) => {
-    if (!files) return;
-    const remaining = 5 - imageUrls.length;
-    const toAdd = Array.from(files).slice(0, remaining);
-    toAdd.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        if (dataUrl) setImageUrls((prev) => [...prev, dataUrl]);
-      };
-      reader.readAsDataURL(file);
-    });
-  }, [imageUrls]);
+  const handleFiles = useCallback(async (files: FileList | null) => {
+    if (!files || pendingImageUploads > 0) return;
+
+    setImageUploadError(null);
+    setPendingImageUploads(files.length);
+
+    try {
+      const result = await appendPropertyImagesFromFiles(files, imageUrls);
+      setImageUrls(result.images);
+
+      if (result.failedCount > 0) {
+        setImageUploadError("Some photos could not be uploaded. Try again with image files only.");
+      } else if (result.skippedDuplicateCount > 0 && result.addedCount === 0) {
+        setImageUploadError("That photo is already in your gallery.");
+      }
+    } finally {
+      setPendingImageUploads(0);
+    }
+  }, [imageUrls, pendingImageUploads]);
 
   const removeImage = (idx: number) => {
     setImageUrls((prev) => prev.filter((_, i) => i !== idx));
+    setImageUploadError(null);
   };
 
   const parseAddressDetails = (value: string) => {
@@ -635,43 +644,6 @@ export default function OwnerAddProperty() {
     return !editPayloadsEqual(buildEditPayload(), propertyToEditPayload(editBaseline));
   }, [buildEditPayload, editBaseline]);
 
-  const restoreEditBaseline = useCallback(() => {
-    if (!editBaseline) return;
-    loadPropertyIntoForm(editBaseline, {
-      setNickname,
-      setAddress,
-      setArea,
-      setCity,
-      setPincode,
-      setCountry,
-      setOwnerName,
-      setOwnerContact,
-      setPropertyType,
-      setPropertyTypeOther,
-      setUnitSize,
-      setUnitSizeOther,
-      setFurnishing,
-      setBuiltUpArea,
-      setBuiltUpUnits,
-      setTotalFloors,
-      setBathrooms,
-      setBalconies,
-      setFloorLevel,
-      setMainDoorDirection,
-      setAmenities,
-      setTenantsPreferred,
-      setMonthlyRent,
-      setRentNegotiable,
-      setMaintenanceIncluded,
-      setMonthlyMaintenance,
-      setSecurityDeposit,
-      setAvailableFrom,
-      setImageUrls,
-    });
-    setAmenityOtherChecked(false);
-    setAmenityOtherText("");
-  }, [editBaseline]);
-
   const ownerPropertyCardPath = editingPropertyId
     ? `/owner/properties/${editingPropertyId}`
     : "/owner/properties";
@@ -685,8 +657,39 @@ export default function OwnerAddProperty() {
     setLocation(ownerPropertyCardPath);
   };
 
+  const persistEditChangesSilently = (): boolean => {
+    if (!editingPropertyId || !hasUnsavedEditChanges || pendingImageUploads > 0) {
+      return false;
+    }
+
+    const payload = buildEditPayload();
+    const validation = validateOwnerPropertyEditPayload(payload);
+    if (!validation.ok) return false;
+
+    const saved = updateProperty(editingPropertyId, payload);
+    if (!saved) return false;
+
+    const updated = getProperties().find((p) => p.id === editingPropertyId);
+    if (updated) setEditBaseline(updated);
+    return true;
+  };
+
+  const exitEditToPropertyCard = () => {
+    persistEditChangesSilently();
+    setLocation(ownerPropertyCardPath);
+  };
+
   const handleSaveEdit = async () => {
-    if (!editingPropertyId || isSaving) return;
+    if (!editingPropertyId || isSaving || pendingImageUploads > 0) {
+      if (pendingImageUploads > 0) {
+        toast({
+          title: "Photos still uploading",
+          description: "Wait for uploads to finish before saving.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
 
     const payload = buildEditPayload();
     const validation = validateOwnerPropertyEditPayloadForSubStep(subStep, payload);
@@ -707,7 +710,16 @@ export default function OwnerAddProperty() {
 
     setIsSaving(true);
     try {
-      updateProperty(editingPropertyId, payload);
+      const saved = updateProperty(editingPropertyId, payload);
+      if (!saved) {
+        toast({
+          title: "Save failed",
+          description: "Could not save property changes. Your photos may be too large — try fewer images.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const updated = getProperties().find((p) => p.id === editingPropertyId);
       if (updated) setEditBaseline(updated);
       toast({ description: "Property details updated successfully." });
@@ -723,18 +735,8 @@ export default function OwnerAddProperty() {
     }
   };
 
-  const applyDiscardEdit = () => {
-    restoreEditBaseline();
-    setDiscardDialogOpen(false);
-    setLocation(ownerPropertyCardPath);
-  };
-
   const handleDiscardEditRequest = () => {
-    if (!hasUnsavedEditChanges) {
-      setLocation(ownerPropertyCardPath);
-      return;
-    }
-    setDiscardDialogOpen(true);
+    exitEditToPropertyCard();
   };
 
   const handleSubmit = () => {
@@ -1075,8 +1077,15 @@ export default function OwnerAddProperty() {
           </ul>
         </div>
 
+        {pendingImageUploads > 0 ? (
+          <p className="text-sm text-gray-600">Uploading photos…</p>
+        ) : null}
+        {imageUploadError ? (
+          <p className="text-sm text-destructive">{imageUploadError}</p>
+        ) : null}
+
         {imageUrls.length === 0 ? (
-          <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full border-2 border-dashed border-primary/40 rounded-xl bg-blue-50/40 flex flex-col items-center justify-center py-10 gap-3 hover:bg-blue-50 transition-colors" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}>
+          <button type="button" disabled={pendingImageUploads > 0} onClick={() => fileInputRef.current?.click()} className="w-full border-2 border-dashed border-primary/40 rounded-xl bg-blue-50/40 flex flex-col items-center justify-center py-10 gap-3 hover:bg-blue-50 transition-colors disabled:opacity-60" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); void handleFiles(e.dataTransfer.files); }}>
             <ImageIcon size={32} className="text-primary" />
             <p className="text-sm text-gray-700">Drag a <span className="text-primary font-medium">Image</span> to Upload</p>
             <Button size="sm" variant="outline" className="border-primary text-primary" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>Select photos</Button>
@@ -1084,7 +1093,7 @@ export default function OwnerAddProperty() {
         ) : (
           <div className="grid grid-cols-3 gap-3">
             {imageUrls.length < 5 && (
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square border-2 border-dashed border-primary/40 rounded-lg bg-blue-50/40 flex items-center justify-center hover:bg-blue-50 transition-colors"><Plus size={24} className="text-primary" /></button>
+              <button type="button" disabled={pendingImageUploads > 0} onClick={() => fileInputRef.current?.click()} className="aspect-square border-2 border-dashed border-primary/40 rounded-lg bg-blue-50/40 flex items-center justify-center hover:bg-blue-50 transition-colors disabled:opacity-60"><Plus size={24} className="text-primary" /></button>
             )}
             {imageUrls.map((url, i) => (
               <div key={i} className="relative aspect-square rounded-lg overflow-hidden">
@@ -1094,7 +1103,17 @@ export default function OwnerAddProperty() {
             ))}
           </div>
         )}
-        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            void handleFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
       </div>
     </div>
   );
@@ -1102,7 +1121,7 @@ export default function OwnerAddProperty() {
   const handleBack = () => {
     if (subStep > 0) setSubStep((s) => s - 1);
     else if (editingPropertyId) {
-      setLocation(`/owner/properties/${editingPropertyId}`);
+      exitEditToPropertyCard();
     } else if (entrySource === "onboarding") {
       try {
         sessionStorage.setItem("tk_owner_onboarding_resume_step", "plan");
@@ -1211,7 +1230,7 @@ export default function OwnerAddProperty() {
                 align="center"
                 onSave={() => void handleSaveEdit()}
                 onDiscard={handleDiscardEditRequest}
-                saving={isSaving}
+                saving={isSaving || pendingImageUploads > 0}
               />
             ) : (
               <Button
@@ -1269,7 +1288,7 @@ export default function OwnerAddProperty() {
             <PropertyEditSaveDiscardBar
               onSave={() => void handleSaveEdit()}
               onDiscard={handleDiscardEditRequest}
-              saving={isSaving}
+              saving={isSaving || pendingImageUploads > 0}
             />
           </FlowStickyActionBar>
         ) : (
@@ -1285,12 +1304,6 @@ export default function OwnerAddProperty() {
           </FlowStickyActionBar>
         )}
       </div>
-
-      <DiscardChangesDialog
-        open={discardDialogOpen}
-        onOpenChange={setDiscardDialogOpen}
-        onConfirm={applyDiscardEdit}
-      />
 
       {/* Success Modal */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
