@@ -10,6 +10,11 @@ import {
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
 import { BrokerFlowButton } from "@/components/broker/BrokerFlowButton";
+import { BrokerOnboardLinkSuccess } from "@/components/broker/BrokerOnboardLinkSuccess";
+import {
+  AddManuallySectionHeader,
+  BrokerOnboardLinkGeneratorCard,
+} from "@/components/broker/BrokerOnboardLinkGeneratorCard";
 import { FlowChipButton } from "@/components/FlowChipButton";
 import { FlowDateInput } from "@/components/flow/FlowDateInput";
 import {
@@ -41,6 +46,7 @@ import {
   type Roommate,
 } from "@/lib/tenants";
 import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
+import type { BrokerOnboardLinkPayload } from "@/lib/brokerOnboardShareActions";
 
 type Step = 1 | 2;
 
@@ -86,6 +92,8 @@ export default function AddTenant() {
 
   // Success modal
   const [successOpen, setSuccessOpen] = useState(false);
+  const [onboardSuccessPayload, setOnboardSuccessPayload] =
+    useState<BrokerOnboardLinkPayload | null>(null);
 
   useEffect(() => {
     if (!editId || typeof window === "undefined") return;
@@ -304,6 +312,25 @@ export default function AddTenant() {
     (l) => !localities.includes(l),
   );
 
+  if (onboardSuccessPayload && !editId) {
+    return (
+      <BrokerLayout>
+        <div className="max-w-xl mx-auto">
+          <Link
+            href="/broker/tenants"
+            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6"
+          >
+            <ArrowLeft size={16} /> Back to Tenants
+          </Link>
+          <BrokerOnboardLinkSuccess
+            {...onboardSuccessPayload}
+            onDone={() => setLocation("/broker/tenants")}
+          />
+        </div>
+      </BrokerLayout>
+    );
+  }
+
   return (
     <BrokerLayout>
       <div className={`max-w-3xl mx-auto ${FLOW_STICKY_CONTENT_CLASS}`}>
@@ -349,8 +376,18 @@ export default function AddTenant() {
 
         {step === 1 && (
           <>
-            <h2 className="text-base font-semibold text-gray-900 mb-1">Tenant details</h2>
-            <p className="text-sm text-gray-500 mb-4">Add the tenant&apos;s basic information manually.</p>
+            {!editId ? <BrokerOnboardLinkGeneratorCard onSuccess={setOnboardSuccessPayload} /> : null}
+
+            {!editId ? <AddManuallySectionHeader /> : null}
+
+            {editId ? (
+              <>
+                <h2 className="text-base font-semibold text-gray-900 mb-1">Tenant details</h2>
+                <p className="text-sm text-gray-500 mb-4">
+                  Update the tenant&apos;s basic information.
+                </p>
+              </>
+            ) : null}
 
             <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

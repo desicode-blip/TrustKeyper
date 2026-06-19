@@ -257,18 +257,9 @@ export default function BrokerTenants() {
     <BrokerLayout>
       <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">Tenant Leads</h1>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <BrokerFlowButton
-            flowVariant="outline"
-            onClick={() => setLocation("/broker/tenants/invite")}
-            className="w-full sm:w-fit"
-          >
-            <Plus size={16} /> Send Onboarding Link
-          </BrokerFlowButton>
-          <BrokerFlowButton onClick={() => setLocation("/broker/tenants/add")} className="w-full sm:w-fit">
-            <Plus size={16} /> Register Tenant Lead
-          </BrokerFlowButton>
-        </div>
+        <BrokerFlowButton onClick={() => setLocation("/broker/tenants/add")} className="w-full sm:w-fit">
+          <Plus size={16} /> Add Tenant
+        </BrokerFlowButton>
       </div>
 
       <FlowSegmentTabs

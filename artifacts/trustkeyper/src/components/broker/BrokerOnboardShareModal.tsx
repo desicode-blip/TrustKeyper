@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
-import { Copy, Mail, MessageSquare, Share2, X } from "lucide-react";
-import { FaTelegram, FaWhatsapp } from "react-icons/fa";
+import { Copy, Share2, X } from "lucide-react";
+import { FaCommentSms, FaTelegram, FaWhatsapp } from "react-icons/fa6";
+import { SiGmail } from "react-icons/si";
 import { toast } from "@/hooks/use-toast";
 import { trackBrokerOnboardEvent } from "@/lib/brokerOnboardAnalytics";
 import {
@@ -104,7 +105,7 @@ export function BrokerOnboardShareModal({
     {
       id: "email",
       label: "Email",
-      icon: <Mail size={20} aria-hidden />,
+      icon: <SiGmail className="w-5 h-5" aria-hidden />,
       className: "bg-white border border-gray-200 text-gray-800 hover:bg-gray-50",
       onClick: () => {
         trackBrokerOnboardEvent("email_shared", shareContext);
@@ -126,7 +127,7 @@ export function BrokerOnboardShareModal({
     {
       id: "sms",
       label: "SMS",
-      icon: <MessageSquare size={20} aria-hidden />,
+      icon: <FaCommentSms className="w-5 h-5" aria-hidden />,
       className: "bg-white border border-gray-200 text-gray-800 hover:bg-gray-50",
       onClick: () => {
         trackBrokerOnboardEvent("sms_shared", shareContext);
