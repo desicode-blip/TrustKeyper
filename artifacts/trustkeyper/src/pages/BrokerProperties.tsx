@@ -11,6 +11,7 @@ import {
   type Property,
   type PropertyStatus,
 } from "@/lib/properties";
+import { PROPERTIES_UPDATED_EVENT } from "@/lib/propertyEditValidation";
 import { timeAgo } from "@/lib/tenants";
 
 const TAB_IDS: { id: "all" | PropertyStatus; label: string }[] = [
@@ -178,6 +179,8 @@ export default function BrokerProperties() {
 
   useEffect(() => {
     refresh();
+    window.addEventListener(PROPERTIES_UPDATED_EVENT, refresh);
+    return () => window.removeEventListener(PROPERTIES_UPDATED_EVENT, refresh);
   }, []);
 
   const handleMarkRented = (id: string) => {
