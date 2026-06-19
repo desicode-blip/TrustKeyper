@@ -845,8 +845,9 @@ export default function PropertyDetails() {
                       setCity: setDraftCity,
                     }}
                   />
-                  <div className="hidden sm:block mt-6">
+                  <div className="mt-10 hidden sm:flex justify-center">
                     <PropertyEditSaveDiscardBar
+                      align="center"
                       onSave={() => void handleSave()}
                       onDiscard={handleDiscardRequest}
                       saving={isSaving}

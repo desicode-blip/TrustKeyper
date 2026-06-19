@@ -63,8 +63,16 @@ const AMENITIES_RIGHT = [
   "Air Conditioning", "Basketball Court", "Spa", "Uncovered Car Parking Space",
 ];
 
+const MAJOR_STEP_FIRST_SUBSTEP = [0, 4, 5] as const;
+
 // ─── Progress Bar ─────────────────────────────────────────────────────────────
-function ProgressBar({ subStep }: { subStep: number }) {
+function ProgressBar({
+  subStep,
+  onMajorStepSelect,
+}: {
+  subStep: number;
+  onMajorStepSelect?: (subStep: number) => void;
+}) {
   const steps = [
     { label: "Property Details", Icon: Home },
     { label: "Rental Details", Icon: Wallet },
@@ -90,29 +98,54 @@ function ProgressBar({ subStep }: { subStep: number }) {
         const done = majorStep > i;
         const active = majorStep === i;
         const Icon = s.Icon;
+        const stepContent = (
+          <>
+            <Icon
+              size={22}
+              className={active || done ? "text-primary mb-1" : "text-gray-400 mb-1"}
+            />
+            <span
+              className={`text-[10px] md:text-[11px] font-medium mb-2 text-center leading-tight ${
+                active || done ? "text-gray-700" : "text-gray-400"
+              }`}
+            >
+              {s.label}
+            </span>
+            <div
+              className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold transition-colors z-10 ${
+                done || active
+                  ? "bg-primary text-white ring-4 ring-[#F5F7FA]"
+                  : "bg-white border-2 border-gray-300 text-gray-400 ring-4 ring-[#F5F7FA]"
+              }`}
+            >
+              {done ? <Check size={14} /> : i + 1}
+            </div>
+          </>
+        );
+
         return (
           <React.Fragment key={i}>
             <div className="flex flex-col items-center w-28 md:w-32 shrink-0">
-              <Icon
-                size={22}
-                className={active || done ? "text-primary mb-1" : "text-gray-400 mb-1"}
-              />
-              <span
-                className={`text-[10px] md:text-[11px] font-medium mb-2 text-center leading-tight ${
-                  active || done ? "text-gray-700" : "text-gray-400"
-                }`}
-              >
-                {s.label}
-              </span>
-              <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold transition-colors z-10 ${
-                  done || active
-                    ? "bg-primary text-white ring-4 ring-[#F5F7FA]"
-                    : "bg-white border-2 border-gray-300 text-gray-400 ring-4 ring-[#F5F7FA]"
-                }`}
-              >
-                {done ? <Check size={14} /> : i + 1}
-              </div>
+              {onMajorStepSelect ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const firstSubStep = MAJOR_STEP_FIRST_SUBSTEP[i];
+                    const targetSubStep =
+                      majorStep === i && i === 0 && subStep < 3
+                        ? subStep + 1
+                        : firstSubStep;
+                    onMajorStepSelect(targetSubStep);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="flex flex-col items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  aria-label={`Go to ${s.label}`}
+                >
+                  {stepContent}
+                </button>
+              ) : (
+                stepContent
+              )}
             </div>
             {i < steps.length - 1 && (
               <div className="flex-1 mt-[52px] -mx-4 md:-mx-2 bg-gray-200 h-[2px] relative rounded-full">
@@ -1137,7 +1170,14 @@ export default function OwnerAddProperty() {
           ) : null}
         </div>
 
-        <ProgressBar subStep={subStep} />
+        <ProgressBar
+          subStep={subStep}
+          onMajorStepSelect={
+            editingPropertyId
+              ? (targetSubStep) => setSubStep(targetSubStep)
+              : undefined
+          }
+        />
 
         <div className="bg-white rounded-lg shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] p-6 sm:p-8 md:p-14 mx-auto max-w-[850px] mb-12 mt-6">
           {subStep === 0 && renderStep0()}
@@ -1148,18 +1188,15 @@ export default function OwnerAddProperty() {
           {subStep === 5 && renderStep5()}
 
           {/* Desktop Continue / edit actions */}
-          {editingPropertyId ? (
-            <div className="mt-10 hidden sm:block mb-6">
+          <div className="mt-10 hidden sm:flex justify-center mb-10">
+            {editingPropertyId ? (
               <PropertyEditSaveDiscardBar
+                align="center"
                 onSave={() => void handleSaveEdit()}
                 onDiscard={handleDiscardEditRequest}
                 saving={isSaving}
               />
-            </div>
-          ) : null}
-
-          {!(editingPropertyId && subStep === 5) ? (
-            <div className="mt-10 hidden sm:flex justify-center mb-10">
+            ) : (
               <Button
                 size="lg"
                 onClick={handleContinue}
@@ -1168,8 +1205,8 @@ export default function OwnerAddProperty() {
               >
                 {subStep === 5 ? "Submit" : "Continue \u2192"}
               </Button>
-            </div>
-          ) : null}
+            )}
+          </div>
 
           {/* Let us help you Banner */}
           <div className="w-full bg-white rounded-xl border border-gray-200 p-5 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 mt-12 shadow-sm">
