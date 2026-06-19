@@ -2,7 +2,14 @@ import type { LeadStatus } from "./tenants";
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
-export type BrokerOnboardInviteStatus = "pending" | "submitted" | "expired";
+export type BrokerOnboardInviteStatus =
+  | "pending"
+  | "onboarding_pending"
+  | "onboarding_started"
+  | "submitted"
+  | "requirements_submitted"
+  | "converted"
+  | "expired";
 
 export type BrokerOnboardInvitePayload = {
   tenantName: string;

@@ -324,7 +324,7 @@ export default function AddTenant() {
           </Link>
           <BrokerOnboardLinkSuccess
             {...onboardSuccessPayload}
-            onDone={() => setLocation("/broker/tenants")}
+            onDone={() => setLocation("/broker/tenants?tab=invites")}
           />
         </div>
       </BrokerLayout>

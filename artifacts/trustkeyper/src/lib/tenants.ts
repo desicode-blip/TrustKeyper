@@ -1,3 +1,4 @@
+import { markInviteConverted } from "./brokerTenantOnboarding";
 import { queueCloudSync } from "./cloudSync";
 import { getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
 
@@ -118,6 +119,9 @@ export function updateTenant(
   }
   list[idx] = next;
   persistTenantList(list);
+  if (patch.leadStatus === "Converted" && next.onboardingToken) {
+    markInviteConverted(next.onboardingToken);
+  }
   return next;
 }
 

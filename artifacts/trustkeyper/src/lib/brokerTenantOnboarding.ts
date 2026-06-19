@@ -1,13 +1,26 @@
 import { queueCloudSync, pushAccountKeyToCloud, BROKER_ONBOARD_TOKEN_PREFIX } from "./cloudSync";
+import {
+  BROKER_ONBOARDING_INVITES_UPDATED_EVENT,
+  isActiveInviteStatus,
+  normalizeStoredInviteStatus,
+  notifyBrokerInvitesUpdated,
+  resolveInviteStatus,
+  type BrokerOnboardInviteStatus,
+  type StoredBrokerOnboardInviteStatus,
+} from "./brokerTenantInviteStatus";
 import { getActiveSession, getItem, setItem } from "./storageKeys";
 import { findTenantByContact, getTenants, type Tenant } from "./tenants";
 
-export { BROKER_ONBOARD_TOKEN_PREFIX };
+export { BROKER_ONBOARD_TOKEN_PREFIX, BROKER_ONBOARDING_INVITES_UPDATED_EVENT };
+export {
+  INVITE_STATUS_LABELS,
+  inviteStatusBadgeClass,
+  type BrokerOnboardInviteStatus,
+} from "./brokerTenantInviteStatus";
+
 export const BROKER_ONBOARDING_INVITES_KEY = "broker_tenant_onboarding_invites";
 
 export const BROKER_ONBOARD_EXPIRY_DAYS = 14;
-
-export type BrokerOnboardInviteStatus = "pending" | "submitted" | "expired";
 
 export interface BrokerTenantOnboardingInvite {
   id: string;
@@ -16,10 +29,14 @@ export interface BrokerTenantOnboardingInvite {
   tenantPhone: string;
   brokerPhone: string;
   brokerName: string;
-  status: BrokerOnboardInviteStatus;
+  inviteLink: string;
+  status: StoredBrokerOnboardInviteStatus;
   createdAt: number;
   expiresAt: number;
+  startedAt?: number;
   submittedAt?: number;
+  convertedAt?: number;
+  deletedAt?: number;
 }
 
 export interface BrokerOnboardTokenSnapshot {
@@ -28,10 +45,13 @@ export interface BrokerOnboardTokenSnapshot {
   tenantPhone: string;
   brokerPhone: string;
   brokerName: string;
-  status: BrokerOnboardInviteStatus;
+  inviteLink?: string;
+  status: StoredBrokerOnboardInviteStatus;
   createdAt: number;
   expiresAt: number;
+  startedAt?: number;
   submittedAt?: number;
+  convertedAt?: number;
 }
 
 function phoneLast10(phone: string): string {
@@ -43,11 +63,23 @@ function formatPhoneE164(phone: string): string {
   return digits.length === 10 ? `+91${digits}` : phone.trim();
 }
 
+function normalizeInviteRecord(
+  invite: BrokerTenantOnboardingInvite,
+): BrokerTenantOnboardingInvite {
+  const inviteLink = invite.inviteLink || getTenantOnboardUrl(invite.token);
+  return {
+    ...invite,
+    inviteLink,
+    status: normalizeStoredInviteStatus(invite.status),
+  };
+}
+
 function readInvites(): BrokerTenantOnboardingInvite[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = getItem(BROKER_ONBOARDING_INVITES_KEY);
-    return raw ? (JSON.parse(raw) as BrokerTenantOnboardingInvite[]) : [];
+    const list = raw ? (JSON.parse(raw) as BrokerTenantOnboardingInvite[]) : [];
+    return list.map(normalizeInviteRecord);
   } catch {
     return [];
   }
@@ -57,6 +89,7 @@ function persistInvites(list: BrokerTenantOnboardingInvite[]): void {
   const payload = JSON.stringify(list);
   setItem(BROKER_ONBOARDING_INVITES_KEY, payload);
   queueCloudSync(BROKER_ONBOARDING_INVITES_KEY, payload);
+  notifyBrokerInvitesUpdated();
 }
 
 function onboardTokenKey(token: string): string {
@@ -70,11 +103,35 @@ function snapshotFromInvite(invite: BrokerTenantOnboardingInvite): BrokerOnboard
     tenantPhone: invite.tenantPhone,
     brokerPhone: invite.brokerPhone,
     brokerName: invite.brokerName,
+    inviteLink: invite.inviteLink,
     status: invite.status,
     createdAt: invite.createdAt,
     expiresAt: invite.expiresAt,
+    startedAt: invite.startedAt,
     submittedAt: invite.submittedAt,
+    convertedAt: invite.convertedAt,
   };
+}
+
+function updateInviteByToken(
+  token: string,
+  updater: (invite: BrokerTenantOnboardingInvite) => BrokerTenantOnboardingInvite,
+): BrokerTenantOnboardingInvite | null {
+  const list = readInvites();
+  const idx = list.findIndex((inv) => inv.token === token && !inv.deletedAt);
+  if (idx === -1) return null;
+  const next = updater(list[idx]);
+  list[idx] = next;
+  persistInvites(list);
+
+  const session = getActiveSession();
+  if (session?.role === "broker") {
+    const tokenPayload = JSON.stringify(snapshotFromInvite(next));
+    setItem(onboardTokenKey(token), tokenPayload);
+    void pushAccountKeyToCloud(session.phone, "broker", onboardTokenKey(token), tokenPayload);
+  }
+
+  return next;
 }
 
 export function isValidIndianMobile(phone: string): boolean {
@@ -82,17 +139,43 @@ export function isValidIndianMobile(phone: string): boolean {
 }
 
 export function getBrokerOnboardingInvites(): BrokerTenantOnboardingInvite[] {
-  return readInvites();
+  return readInvites().filter((inv) => !inv.deletedAt);
+}
+
+export function getBrokerOnboardingInvitesForBroker(
+  brokerPhone: string,
+): BrokerTenantOnboardingInvite[] {
+  const digits = phoneLast10(brokerPhone);
+  return getBrokerOnboardingInvites()
+    .filter((inv) => phoneLast10(inv.brokerPhone) === digits)
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export function getBrokerOnboardingInviteByToken(
+  token: string,
+): BrokerTenantOnboardingInvite | undefined {
+  return getBrokerOnboardingInvites().find((inv) => inv.token === token);
+}
+
+export function getInviteResolvedStatus(
+  invite: BrokerTenantOnboardingInvite,
+): BrokerOnboardInviteStatus {
+  return resolveInviteStatus(invite.status, invite.expiresAt, invite.deletedAt);
+}
+
+export function countActiveBrokerInvites(brokerPhone: string): number {
+  return getBrokerOnboardingInvitesForBroker(brokerPhone).filter((inv) =>
+    isActiveInviteStatus(getInviteResolvedStatus(inv)),
+  ).length;
 }
 
 export function findPendingInviteByPhone(phone: string): BrokerTenantOnboardingInvite | undefined {
   const digits = phoneLast10(phone);
-  return readInvites().find(
-    (inv) =>
-      phoneLast10(inv.tenantPhone) === digits &&
-      inv.status === "pending" &&
-      inv.expiresAt > Date.now(),
-  );
+  return getBrokerOnboardingInvites().find((inv) => {
+    if (phoneLast10(inv.tenantPhone) !== digits) return false;
+    const status = getInviteResolvedStatus(inv);
+    return isActiveInviteStatus(status);
+  });
 }
 
 export function findDuplicateTenantLead(phone: string): Tenant | undefined {
@@ -131,6 +214,14 @@ export function buildBrokerTenantOnboardShareMessage(
 export function formatTenantPhoneDisplay(phone: string): string {
   const digits = phone.replace(/\D/g, "").slice(-10);
   return digits.length === 10 ? `+91 ${digits}` : phone;
+}
+
+export function formatInviteDate(ts: number): string {
+  return new Date(ts).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export function getBrokerTenantOnboardEmailHref(
@@ -213,14 +304,17 @@ export async function createBrokerTenantOnboardingInvite(
     session.phone;
 
   const now = Date.now();
+  const token = generateToken();
+  const link = getTenantOnboardUrl(token);
   const invite: BrokerTenantOnboardingInvite = {
     id: `btoi_${now}_${Math.random().toString(36).slice(2, 7)}`,
-    token: generateToken(),
+    token,
     tenantName: name,
     tenantPhone: phone,
     brokerPhone: session.phone,
     brokerName: brokerName.trim() || "Your broker",
-    status: "pending",
+    inviteLink: link,
+    status: "onboarding_pending",
     createdAt: now,
     expiresAt: now + BROKER_ONBOARD_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
   };
@@ -231,9 +325,13 @@ export async function createBrokerTenantOnboardingInvite(
 
   const tokenPayload = JSON.stringify(snapshotFromInvite(invite));
   setItem(onboardTokenKey(invite.token), tokenPayload);
-  void pushAccountKeyToCloud(session.phone, "broker", onboardTokenKey(invite.token), tokenPayload);
+  void pushAccountKeyToCloud(
+    session.phone,
+    "broker",
+    onboardTokenKey(invite.token),
+    tokenPayload,
+  );
 
-  const link = getTenantOnboardUrl(invite.token);
   return {
     ok: true,
     invite,
@@ -242,14 +340,41 @@ export async function createBrokerTenantOnboardingInvite(
   };
 }
 
+export function markInviteStartedLocally(token: string): void {
+  updateInviteByToken(token, (invite) => {
+    const resolved = getInviteResolvedStatus(invite);
+    if (!isActiveInviteStatus(resolved) || resolved === "onboarding_started") {
+      return invite;
+    }
+    return {
+      ...invite,
+      status: "onboarding_started",
+      startedAt: invite.startedAt ?? Date.now(),
+    };
+  });
+}
+
 export function markInviteSubmittedLocally(token: string): void {
-  const list = readInvites();
-  const idx = list.findIndex((inv) => inv.token === token);
-  if (idx === -1) return;
-  list[idx] = {
-    ...list[idx],
-    status: "submitted",
+  updateInviteByToken(token, (invite) => ({
+    ...invite,
+    status: "requirements_submitted",
     submittedAt: Date.now(),
-  };
+  }));
+}
+
+export function markInviteConverted(token: string): void {
+  updateInviteByToken(token, (invite) => ({
+    ...invite,
+    status: "converted",
+    convertedAt: Date.now(),
+  }));
+}
+
+export function softDeleteBrokerInvite(inviteId: string): boolean {
+  const list = readInvites();
+  const idx = list.findIndex((inv) => inv.id === inviteId);
+  if (idx === -1) return false;
+  list[idx] = { ...list[idx], deletedAt: Date.now() };
   persistInvites(list);
+  return true;
 }
