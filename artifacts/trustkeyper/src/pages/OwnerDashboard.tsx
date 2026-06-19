@@ -5,6 +5,7 @@ import OwnerLayout, { getOwnerName } from "@/components/OwnerLayout";
 import { OwnerPropertyCard } from "@/components/owner/OwnerPropertyCard";
 import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 import { getProperties, getPropertyTitle, type Property } from "@/lib/properties";
+import { PROPERTIES_UPDATED_EVENT } from "@/lib/propertyEditValidation";
 import { getItem } from "@/lib/storageKeys";
 import BrokerPendingFlowBanners from "@/components/BrokerPendingFlowBanners";
 
@@ -74,9 +75,11 @@ export default function OwnerDashboard() {
     refresh();
     window.addEventListener("storage", refresh);
     window.addEventListener("focus", refresh);
+    window.addEventListener(PROPERTIES_UPDATED_EVENT, refresh);
     return () => {
       window.removeEventListener("storage", refresh);
       window.removeEventListener("focus", refresh);
+      window.removeEventListener(PROPERTIES_UPDATED_EVENT, refresh);
     };
   }, [ownerName]);
 

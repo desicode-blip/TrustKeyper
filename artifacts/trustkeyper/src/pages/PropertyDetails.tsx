@@ -46,7 +46,6 @@ import { useToast } from "@/hooks/use-toast";
 import BrokerLayout from "@/components/BrokerLayout";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { FlowStickyActionBar } from "@/components/FlowStickyActionBar";
-import { DiscardChangesDialog } from "@/components/property/DiscardChangesDialog";
 import { PropertyEditSaveDiscardBar } from "@/components/property/PropertyEditSaveDiscardBar";
 import { SharePropertyModal } from "@/components/owner/SharePropertyModal";
 import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
@@ -602,7 +601,6 @@ export default function PropertyDetails() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
@@ -673,11 +671,53 @@ export default function PropertyDetails() {
     }
   }, []);
 
+  const clearEditQueryParam = () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("edit") === "true") {
+      params.delete("edit");
+      const query = params.toString();
+      const next = query ? `?${query}` : "";
+      window.history.replaceState(null, "", `${window.location.pathname}${next}`);
+    }
+  };
+
+  const persistBrokerChangesSilently = (): boolean => {
+    if (!property || !hasUnsavedChanges) return false;
+
+    const validation = validateBrokerPropertyEditDraft(currentDraft);
+    if (!validation.ok) return false;
+
+    const saved = updateProperty(property.id, {
+      nickname: draftNickname,
+      monthlyRent: draftRent,
+      area: draftArea,
+      city: draftCity,
+    });
+    if (!saved) return false;
+
+    const updated: Property = {
+      ...property,
+      nickname: draftNickname,
+      monthlyRent: draftRent,
+      area: draftArea,
+      city: draftCity,
+    };
+    setProperty(updated);
+    setSavedDraft(currentDraft);
+    return true;
+  };
+
+  const exitEditMode = () => {
+    persistBrokerChangesSilently();
+    setIsEditing(false);
+    clearEditQueryParam();
+  };
+
   const handleSave = async () => {
     if (!property || isSaving) return;
 
     if (!hasUnsavedChanges) {
-      toast({ description: "No changes to save." });
+      exitEditMode();
       return;
     }
 
@@ -693,12 +733,21 @@ export default function PropertyDetails() {
 
     setIsSaving(true);
     try {
-      updateProperty(property.id, {
+      const saved = updateProperty(property.id, {
         nickname: draftNickname,
         monthlyRent: draftRent,
         area: draftArea,
         city: draftCity,
       });
+      if (!saved) {
+        toast({
+          title: "Save failed",
+          description: "Could not save property changes. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const updated: Property = {
         ...property,
         nickname: draftNickname,
@@ -710,13 +759,7 @@ export default function PropertyDetails() {
       setSavedDraft(currentDraft);
       toast({ description: "Property details updated successfully." });
       setIsEditing(false);
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("edit") === "true") {
-        params.delete("edit");
-        const query = params.toString();
-        const next = query ? `?${query}` : "";
-        window.history.replaceState(null, "", `${window.location.pathname}${next}`);
-      }
+      clearEditQueryParam();
     } catch {
       toast({
         title: "Save failed",
@@ -728,26 +771,8 @@ export default function PropertyDetails() {
     }
   };
 
-  const applyDiscard = () => {
-    if (!property) return;
-    syncDraftsFromProperty(property);
-    setIsEditing(false);
-    setDiscardDialogOpen(false);
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("edit") === "true") {
-      params.delete("edit");
-      const query = params.toString();
-      const next = query ? `?${query}` : "";
-      window.history.replaceState(null, "", `${window.location.pathname}${next}`);
-    }
-  };
-
   const handleDiscardRequest = () => {
-    if (!hasUnsavedChanges) {
-      applyDiscard();
-      return;
-    }
-    setDiscardDialogOpen(true);
+    exitEditMode();
   };
 
   if (!property) {
@@ -789,10 +814,16 @@ export default function PropertyDetails() {
       <div className={isEditing ? "pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] sm:pb-0" : undefined}>
         <div className="flex items-center justify-between mb-5">
           <button
-            onClick={() => setLocation("/broker/properties")}
+            onClick={() => {
+              if (isEditing) {
+                exitEditMode();
+                return;
+              }
+              setLocation("/broker/properties");
+            }}
             className="flex items-center gap-1.5 text-sm text-gray-600 font-medium hover:text-primary transition-colors"
           >
-            <ArrowLeft size={15} /> Back to Properties
+            <ArrowLeft size={15} /> {isEditing ? "Back to Property" : "Back to Properties"}
           </button>
           {!isEditing && (
             <button
@@ -889,12 +920,6 @@ export default function PropertyDetails() {
           />
         </FlowStickyActionBar>
       ) : null}
-
-      <DiscardChangesDialog
-        open={discardDialogOpen}
-        onOpenChange={setDiscardDialogOpen}
-        onConfirm={applyDiscard}
-      />
     </BrokerLayout>
   );
 }

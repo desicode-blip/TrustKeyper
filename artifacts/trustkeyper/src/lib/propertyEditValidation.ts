@@ -1,4 +1,5 @@
 import type { Property } from "@/lib/properties";
+import { propertyImagesEqual } from "./propertyMedia";
 
 export const PROPERTIES_UPDATED_EVENT = "trustkeyper:properties-updated";
 
@@ -243,7 +244,12 @@ export function editPayloadsEqual(
   a: OwnerPropertyEditPayload,
   b: OwnerPropertyEditPayload,
 ): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+  if (!propertyImagesEqual(a.images, b.images)) return false;
+  if (a.imageCount !== b.imageCount) return false;
+
+  const { images: _aImages, imageCount: _aCount, ...aRest } = a;
+  const { images: _bImages, imageCount: _bCount, ...bRest } = b;
+  return JSON.stringify(aRest) === JSON.stringify(bRest);
 }
 
 export function brokerDraftsEqual(
