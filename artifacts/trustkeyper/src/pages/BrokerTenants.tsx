@@ -24,8 +24,15 @@ import { pullAccountFromCloud } from "@/lib/cloudSync";
 import {
   BROKER_ONBOARDING_INVITES_UPDATED_EVENT,
   getBrokerOnboardingInvitesForBroker,
+  getInviteResolvedStatus,
   type BrokerTenantOnboardingInvite,
 } from "@/lib/brokerTenantOnboarding";
+import { isActiveInviteStatus } from "@/lib/brokerTenantInviteStatus";
+import {
+  formatMoveInDisplay,
+  formatOccupancyDisplay,
+  formatPropertyTypeDisplay,
+} from "@/lib/tenantOnboardRequirements";
 import {
   BROKER_INQUIRIES_UPDATED_EVENT,
   getBrokerPropertyShareInquiries,
@@ -75,12 +82,16 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
   const whatsAppUrl = getBrokerTenantWhatsAppHref(t);
 
   const summaryChips: { icon: React.ReactNode; label: string }[] = [];
-  if (t.who) summaryChips.push({ icon: <UsersIcon size={12} />, label: t.who });
+  if (t.who)
+    summaryChips.push({
+      icon: <UsersIcon size={12} />,
+      label: formatOccupancyDisplay(t.who, t.whoOther),
+    });
   if (t.food) summaryChips.push({ icon: <Utensils size={12} />, label: t.food });
   if (t.occupancyFrom)
     summaryChips.push({
       icon: <Calendar size={12} />,
-      label: `From ${formatDate(t.occupancyFrom)}`,
+      label: formatMoveInDisplay(t.occupancyFrom),
     });
   if (t.localities?.length)
     summaryChips.push({
@@ -90,7 +101,10 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
       }`,
     });
   if (t.propertyType)
-    summaryChips.push({ icon: <Building2 size={12} />, label: t.propertyType });
+    summaryChips.push({
+      icon: <Building2 size={12} />,
+      label: formatPropertyTypeDisplay(t.propertyType, t.propertyTypeOther),
+    });
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5">
@@ -141,19 +155,22 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
 
       {open && (
         <div className="mt-4 ml-14 rounded-lg border border-gray-100 bg-gray-50/60 p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <DetailRow label="Occupancy from" value={formatDate(t.occupancyFrom)} />
+          <DetailRow label="Move-in timeline" value={formatMoveInDisplay(t.occupancyFrom)} />
           <DetailRow label="Budget" value="—" />
           {t.linkedinUrl ? <DetailRow label="LinkedIn" value={t.linkedinUrl} /> : null}
-          <DetailRow label="Staying as" value={t.who ?? "—"} />
+          <DetailRow label="Staying as" value={formatOccupancyDisplay(t.who, t.whoOther)} />
           {t.identify && t.identify.length > 0 && (
-            <DetailRow label="Identifies as" value={t.identify.join(", ")} />
+            <DetailRow label="Gender" value={t.identify.join(", ")} />
           )}
           <DetailRow label="Food preference" value={t.food ?? "—"} />
           {t.detailsComplete ? (
             <>
               <DetailRow label="City" value={t.city ?? "—"} />
               <DetailRow label="Localities" value={t.localities?.join(", ") ?? "—"} />
-              <DetailRow label="Property type" value={t.propertyType ?? "—"} />
+              <DetailRow
+                label="Property type"
+                value={formatPropertyTypeDisplay(t.propertyType, t.propertyTypeOther)}
+              />
               <DetailRow label="Sharing" value={t.sharing ?? "—"} />
               {t.roommate && t.roommate.length > 0 && (
                 <DetailRow label="Roommate preference" value={t.roommate.join(", ")} />
@@ -232,7 +249,9 @@ export default function BrokerTenants() {
     setInquiries(getBrokerPropertyShareInquiries());
     setInvites(
       session?.role === "broker"
-        ? getBrokerOnboardingInvitesForBroker(session.phone)
+        ? getBrokerOnboardingInvitesForBroker(session.phone).filter((inv) =>
+            isActiveInviteStatus(getInviteResolvedStatus(inv)),
+          )
         : [],
     );
   }, []);

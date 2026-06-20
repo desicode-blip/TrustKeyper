@@ -103,14 +103,36 @@ export default function AddTenant() {
     setName(tenant.name);
     setPhone(tenant.phone.replace(/\D/g, "").slice(-10));
     setOccupancyFrom(tenant.occupancyFrom ?? "");
-    setWho(tenant.who ?? "");
-    setIdentify(tenant.identify ?? []);
-    setFood(tenant.food ?? "");
+    setWho(tenant.who === "Family" || tenant.who === "Bachelor" ? tenant.who : "");
+    setIdentify(
+      (tenant.identify ?? []).filter((value): value is Identify => value === "Male" || value === "Female"),
+    );
+    setFood(tenant.food === "Veg" || tenant.food === "Non-Veg" ? tenant.food : "");
     setCity(tenant.city ?? "Hyderabad");
     setLocalities(tenant.localities ?? []);
-    setPropertyType(tenant.propertyType ?? "");
-    setSharing(tenant.sharing ?? "");
-    setRoommate(tenant.roommate ?? []);
+    setPropertyType(
+      tenant.propertyType === "Apartment" ||
+        tenant.propertyType === "House" ||
+        tenant.propertyType === "Studio" ||
+        tenant.propertyType === "Villa" ||
+        tenant.propertyType === "PG/Hostel" ||
+        tenant.propertyType === "Other"
+        ? tenant.propertyType
+        : "",
+    );
+    setSharing(
+      tenant.sharing === "Single" ||
+        tenant.sharing === "Double" ||
+        tenant.sharing === "Triple" ||
+        tenant.sharing === "Entire Property"
+        ? tenant.sharing
+        : "",
+    );
+    setRoommate(
+      (tenant.roommate ?? []).filter(
+        (value): value is Roommate => value === "Male" || value === "Female" || value === "Anyone",
+      ),
+    );
     setStep(tenant.detailsComplete ? 2 : 1);
   }, [editId]);
 
