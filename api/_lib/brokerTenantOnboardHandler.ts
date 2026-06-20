@@ -68,11 +68,12 @@ async function loadOnboardStore(): Promise<OnboardStore> {
     };
   }
 
-  if (process.env.VERCEL === "1") {
-    throw new Error("DATABASE_URL is not configured for broker tenant onboarding");
-  }
-
-  return import("@workspace/sync-store");
+  const syncStore = await import("@workspace/sync-store");
+  return {
+    findEntryByDataKey: syncStore.findEntryByDataKey,
+    getAccountData: syncStore.getAccountData,
+    setAccountDataKey: syncStore.setAccountDataKey,
+  };
 }
 
 function requestAuthorization(req: VercelRequest): string | undefined {
