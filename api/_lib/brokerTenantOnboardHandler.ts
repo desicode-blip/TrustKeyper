@@ -87,6 +87,8 @@ function requestOrigin(req: VercelRequest): string {
   const protoHeader = req.headers["x-forwarded-proto"] ?? "https";
   const proto = Array.isArray(protoHeader) ? protoHeader[0] : protoHeader;
   if (host) return `${proto}://${host}`;
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) return `https://${vercelUrl.replace(/^https?:\/\//, "")}`;
   return "https://app.trustkeyper.com";
 }
 

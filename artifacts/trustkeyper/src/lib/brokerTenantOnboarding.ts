@@ -274,7 +274,18 @@ function generateToken(): string {
 
 export type CreateBrokerOnboardInviteResult =
   | { ok: true; invite: BrokerTenantOnboardingInvite; link: string; whatsAppHref: string }
-  | { ok: false; error: "invalid_name" | "invalid_phone" | "duplicate_tenant" | "duplicate_invite" | "no_session" };
+  | {
+      ok: false;
+      error:
+        | "invalid_name"
+        | "invalid_phone"
+        | "duplicate_tenant"
+        | "duplicate_invite"
+        | "no_session"
+        | "unauthorized"
+        | "server_error"
+        | "network";
+    };
 
 export async function createBrokerTenantOnboardingInvite(
   tenantName: string,
@@ -330,7 +341,11 @@ export async function createBrokerTenantOnboardingInvite(
     return { ok: false, error: serverResult.error };
   }
 
-  return createBrokerTenantOnboardingInviteLocally(name, phone, session, brokerName);
+  if (import.meta.env.DEV) {
+    return createBrokerTenantOnboardingInviteLocally(name, phone, session, brokerName);
+  }
+
+  return { ok: false, error: "server_error" };
 }
 
 function applyServerInviteLocally(invite: BrokerTenantOnboardingInvite): void {
