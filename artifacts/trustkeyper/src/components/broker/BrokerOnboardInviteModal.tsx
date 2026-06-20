@@ -90,7 +90,6 @@ export function BrokerOnboardInviteModal({
         return;
       }
 
-      toast({ description: "Onboarding link generated successfully." });
       onSuccess({
         tenantName: result.invite.tenantName,
         tenantPhone: result.invite.tenantPhone,
