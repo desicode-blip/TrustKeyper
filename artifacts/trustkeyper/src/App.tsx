@@ -14,6 +14,7 @@ import BrokerProperties from "@/pages/BrokerProperties";
 import BrokerTenants from "@/pages/BrokerTenants";
 import BrokerTenantInvite from "@/pages/BrokerTenantInvite";
 import TenantBrokerOnboarding from "@/pages/TenantBrokerOnboarding";
+import TenantOnboardLegacyRedirect from "@/pages/TenantOnboardLegacyRedirect";
 import BrokerDeals from "@/pages/BrokerDeals";
 import BrokerCommission from "@/pages/BrokerCommission";
 import BrokerDocuments from "@/pages/BrokerDocuments";
@@ -72,6 +73,7 @@ function Router() {
     <>
     <Switch>
       <Route path="/share/property/:id" component={SharedProperty} />
+      <Route path="/tenant/onboard/:token" component={TenantOnboardLegacyRedirect} />
       <Route path="/onboard/tenant/:token" component={TenantBrokerOnboarding} />
       <Route path="/login" component={Login} />
       <Route path="/terms" component={Terms} />

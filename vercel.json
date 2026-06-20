@@ -8,6 +8,9 @@
     },
     "api/feedback.ts": {
       "maxDuration": 30
+    },
+    "api/broker-tenant-onboard.ts": {
+      "maxDuration": 30
     }
   },
   "rewrites": [

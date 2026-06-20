@@ -419,6 +419,156 @@ function validateSubmitBody(body: SubmitBody): string | null {
   return null;
 }
 
+const BROKER_ONBOARD_EXPIRY_DAYS = 14;
+const BROKER_ONBOARDING_INVITES_KEY = "broker_tenant_onboarding_invites";
+
+function generateOnboardToken(): string {
+  return `bt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function isActiveInviteStatusForRegister(status: BrokerOnboardInviteStatus): boolean {
+  return status === "onboarding_pending" || status === "onboarding_started";
+}
+
+function resolveInviteStatusForRegister(
+  storedStatus: string,
+  expiresAt: number,
+): BrokerOnboardInviteStatus {
+  if (storedStatus === "pending" || storedStatus === "onboarding_pending") {
+    return "onboarding_pending";
+  }
+  if (storedStatus === "onboarding_started") return "onboarding_started";
+  if (storedStatus === "submitted" || storedStatus === "requirements_submitted") {
+    return "requirements_submitted";
+  }
+  if (storedStatus === "converted") return "converted";
+  if (expiresAt <= Date.now()) return "expired";
+  return "expired";
+}
+
+export type RegisterBrokerOnboardInviteInput = {
+  brokerPhone: string;
+  brokerName: string;
+  tenantName: string;
+  tenantPhone: string;
+  origin: string;
+};
+
+export type RegisterBrokerOnboardInviteError =
+  | "invalid_name"
+  | "invalid_phone"
+  | "duplicate_tenant"
+  | "duplicate_invite";
+
+export type RegisterBrokerOnboardInviteResult =
+  | {
+      ok: true;
+      invite: BrokerTenantOnboardingInvite & { inviteLink: string };
+    }
+  | { ok: false; error: RegisterBrokerOnboardInviteError };
+
+export async function registerBrokerOnboardingInvite(
+  store: OnboardStore,
+  input: RegisterBrokerOnboardInviteInput,
+): Promise<RegisterBrokerOnboardInviteResult> {
+  const name = input.tenantName.trim();
+  const phoneDigits = phoneLast10(input.tenantPhone);
+  const brokerPhone = phoneLast10(input.brokerPhone);
+
+  if (name.length < 2) return { ok: false, error: "invalid_name" };
+  if (phoneDigits.length !== 10) return { ok: false, error: "invalid_phone" };
+
+  const data = await store.getAccountData(brokerPhone, "broker");
+
+  const tenantsRaw = data.tenants;
+  if (tenantsRaw) {
+    try {
+      const tenants = JSON.parse(tenantsRaw) as StoredTenant[];
+      if (
+        Array.isArray(tenants) &&
+        tenants.some((row) => phoneLast10(row.phone) === phoneDigits)
+      ) {
+        return { ok: false, error: "duplicate_tenant" };
+      }
+    } catch {
+      /* ignore malformed tenants blob */
+    }
+  }
+
+  type InviteRow = BrokerOnboardTokenSnapshot & { id: string; inviteLink?: string; deletedAt?: number };
+  let invites: InviteRow[] = [];
+  const invitesRaw = data[BROKER_ONBOARDING_INVITES_KEY];
+  if (invitesRaw) {
+    try {
+      const parsed = JSON.parse(invitesRaw) as InviteRow[];
+      if (Array.isArray(parsed)) invites = parsed;
+    } catch {
+      invites = [];
+    }
+  }
+
+  const hasPendingInvite = invites.some((inv) => {
+    if (inv.deletedAt) return false;
+    if (phoneLast10(inv.tenantPhone) !== phoneDigits) return false;
+    const status = resolveInviteStatusForRegister(inv.status, inv.expiresAt);
+    return isActiveInviteStatusForRegister(status);
+  });
+  if (hasPendingInvite) return { ok: false, error: "duplicate_invite" };
+
+  const now = Date.now();
+  const token = generateOnboardToken();
+  const tenantPhone = `+91${phoneDigits}`;
+  const origin = input.origin.replace(/\/$/, "");
+  const inviteLink = `${origin}/onboard/tenant/${token}`;
+
+  const invite: InviteRow = {
+    id: `btoi_${now}_${Math.random().toString(36).slice(2, 7)}`,
+    token,
+    tenantName: name,
+    tenantPhone,
+    brokerPhone: input.brokerPhone,
+    brokerName: input.brokerName.trim() || "Your broker",
+    inviteLink,
+    status: "onboarding_pending",
+    createdAt: now,
+    expiresAt: now + BROKER_ONBOARD_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+  };
+
+  const snapshot: BrokerOnboardTokenSnapshot = {
+    token: invite.token,
+    tenantName: invite.tenantName,
+    tenantPhone: invite.tenantPhone,
+    brokerPhone: invite.brokerPhone,
+    brokerName: invite.brokerName,
+    inviteLink,
+    status: "onboarding_pending",
+    createdAt: invite.createdAt,
+    expiresAt: invite.expiresAt,
+  };
+
+  invites.unshift(invite);
+  await store.setAccountDataKey(
+    brokerPhone,
+    "broker",
+    BROKER_ONBOARDING_INVITES_KEY,
+    JSON.stringify(invites),
+  );
+  await store.setAccountDataKey(
+    brokerPhone,
+    "broker",
+    tokenDataKey(token),
+    JSON.stringify(snapshot),
+  );
+
+  return {
+    ok: true,
+    invite: {
+      ...invite,
+      inviteLink,
+    },
+  };
+}
+
 export async function handleBrokerTenantOnboardRequest(
   req: OnboardRequest,
   res: OnboardResponse,

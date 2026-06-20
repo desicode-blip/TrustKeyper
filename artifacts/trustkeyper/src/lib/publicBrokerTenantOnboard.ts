@@ -1,4 +1,14 @@
 import type { LeadStatus } from "./tenants";
+import { syncAuthHeaders } from "./syncSession";
+import { normalizePhoneDigits } from "./storageKeys";
+import type { BrokerTenantOnboardingInvite } from "./brokerTenantOnboarding";
+
+type RegisterInviteError =
+  | "invalid_name"
+  | "invalid_phone"
+  | "duplicate_tenant"
+  | "duplicate_invite"
+  | "network";
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
@@ -49,10 +59,15 @@ export async function fetchBrokerOnboardInvite(
       headers: { Accept: "application/json" },
     });
     if (!res.ok) {
-      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      const json = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+      const message =
+        json.error ??
+        (res.status === 404
+          ? "This onboarding link is not available yet. Ask your broker to resend the invite."
+          : "Could not load onboarding link");
       return {
         payload: null,
-        error: json.error ?? "Could not load onboarding link",
+        error: json.detail ? `${message} (${json.detail})` : message,
         status: res.status,
       };
     }
@@ -103,3 +118,53 @@ export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   Converted: "Converted",
   Closed: "Closed",
 };
+
+const REGISTER_ERROR_CODES: Record<string, RegisterInviteError> = {
+  invalid_name: "invalid_name",
+  invalid_phone: "invalid_phone",
+  duplicate_tenant: "duplicate_tenant",
+  duplicate_invite: "duplicate_invite",
+};
+
+export async function registerBrokerOnboardingInviteOnServer(
+  brokerPhone: string,
+  tenantName: string,
+  tenantPhone: string,
+  brokerName: string,
+): Promise<
+  | { ok: true; invite: BrokerTenantOnboardingInvite }
+  | { ok: false; error: RegisterInviteError }
+> {
+  try {
+    const headers = await syncAuthHeaders("application/json");
+    if (!headers) return { ok: false, error: "network" };
+
+    const phone = normalizePhoneDigits(brokerPhone);
+    const res = await fetch(
+      `${API_BASE}/broker-tenant-onboard/create/${encodeURIComponent(phone)}`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ tenantName, tenantPhone, brokerName }),
+      },
+    );
+
+    const json = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      invite?: BrokerTenantOnboardingInvite;
+      error?: string;
+      code?: string;
+    };
+
+    if (!res.ok) {
+      const code = json.code && REGISTER_ERROR_CODES[json.code] ? REGISTER_ERROR_CODES[json.code] : null;
+      if (code) return { ok: false, error: code };
+      return { ok: false, error: "network" };
+    }
+
+    if (!json.invite) return { ok: false, error: "network" };
+    return { ok: true, invite: json.invite };
+  } catch {
+    return { ok: false, error: "network" };
+  }
+}
