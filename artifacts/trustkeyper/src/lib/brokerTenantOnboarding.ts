@@ -303,6 +303,52 @@ export async function createBrokerTenantOnboardingInvite(
     (typeof window !== "undefined" && getItem("name")) ||
     session.phone;
 
+  const serverResult = await (
+    await import("./publicBrokerTenantOnboard")
+  ).registerBrokerOnboardingInviteOnServer(
+    session.phone,
+    name,
+    phone,
+    brokerName.trim() || "Your broker",
+  );
+
+  if (serverResult.ok) {
+    applyServerInviteLocally(serverResult.invite);
+    return {
+      ok: true,
+      invite: serverResult.invite,
+      link: serverResult.invite.inviteLink,
+      whatsAppHref: getBrokerTenantOnboardWhatsAppHref(
+        phone,
+        name,
+        serverResult.invite.inviteLink,
+      ),
+    };
+  }
+
+  if (serverResult.error !== "network") {
+    return { ok: false, error: serverResult.error };
+  }
+
+  return createBrokerTenantOnboardingInviteLocally(name, phone, session, brokerName);
+}
+
+function applyServerInviteLocally(invite: BrokerTenantOnboardingInvite): void {
+  const normalized = normalizeInviteRecord(invite);
+  const list = readInvites().filter((row) => row.token !== normalized.token);
+  list.unshift(normalized);
+  persistInvites(list);
+
+  const tokenPayload = JSON.stringify(snapshotFromInvite(normalized));
+  setItem(onboardTokenKey(normalized.token), tokenPayload);
+}
+
+function createBrokerTenantOnboardingInviteLocally(
+  name: string,
+  phone: string,
+  session: { phone: string; role: string },
+  brokerName: string,
+): CreateBrokerOnboardInviteResult {
   const now = Date.now();
   const token = generateToken();
   const link = getTenantOnboardUrl(token);
@@ -325,11 +371,12 @@ export async function createBrokerTenantOnboardingInvite(
 
   const tokenPayload = JSON.stringify(snapshotFromInvite(invite));
   setItem(onboardTokenKey(invite.token), tokenPayload);
+  void pushAccountKeyToCloud(session.phone, "broker", onboardTokenKey(invite.token), tokenPayload);
   void pushAccountKeyToCloud(
     session.phone,
     "broker",
-    onboardTokenKey(invite.token),
-    tokenPayload,
+    BROKER_ONBOARDING_INVITES_KEY,
+    JSON.stringify(list),
   );
 
   return {
