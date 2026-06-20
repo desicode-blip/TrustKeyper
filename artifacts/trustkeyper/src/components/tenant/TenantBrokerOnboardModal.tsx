@@ -49,6 +49,8 @@ export function TenantBrokerOnboardModal({
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(0);
   const [verifying, setVerifying] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
+  const [touched, setTouched] = useState({ name: false, phone: false });
   const { verifyReady, startVerifyReady, isVerifyReady } = useOtpVerifyReady();
 
   const phoneDigits = phone.replace(/\D/g, "").slice(-10);
@@ -56,6 +58,10 @@ export function TenantBrokerOnboardModal({
   const phoneValid = phoneDigits.length === 10;
   const canSendOtp = nameValid && phoneValid && agreed && !sendingOtp;
   const otpComplete = otp.every((digit) => digit !== "");
+
+  const nameError = touched.name && !nameValid ? "Enter your full name" : null;
+  const phoneError =
+    touched.phone && !phoneValid ? "Enter a valid 10-digit mobile number" : null;
 
   useEffect(() => {
     if (phase !== "otp") return;
@@ -72,6 +78,7 @@ export function TenantBrokerOnboardModal({
     if (phase === "welcome") {
       setOtp(createEmptyOtp());
       setCountdown(0);
+      setResendError(null);
     }
   }, [phase]);
 
@@ -86,8 +93,12 @@ export function TenantBrokerOnboardModal({
   };
 
   const handleResend = async () => {
+    setResendError(null);
     const err = await sendPhoneOtp(phoneDigits);
-    if (err) return;
+    if (err) {
+      setResendError(err);
+      return;
+    }
     setCountdown(10);
     setOtp(createEmptyOtp());
     startVerifyReady();
@@ -109,6 +120,7 @@ export function TenantBrokerOnboardModal({
   };
 
   const handleSendOtpClick = async () => {
+    setTouched({ name: true, phone: true });
     if (!canSendOtp) return;
     const sent = await onSendOtp();
     if (!sent) return;
@@ -120,7 +132,7 @@ export function TenantBrokerOnboardModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 fade-in duration-300"
+        className="bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-md relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 fade-in duration-300"
         role="dialog"
         aria-modal="true"
         aria-labelledby="tenant-onboard-modal-title"
@@ -129,64 +141,64 @@ export function TenantBrokerOnboardModal({
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200"
             aria-label="Close"
           >
-            <X size={20} />
+            <X size={16} />
           </button>
         ) : null}
 
         {phase === "account_success" ? (
           <div className="p-8 text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
-              <CheckCircle2 className="w-9 h-9 text-emerald-500" />
+            <div className="mx-auto w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-8 h-8 text-emerald-500" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Account Created Successfully</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Account Verified</h2>
             <p className="text-sm text-gray-500 mb-6">
               Let&apos;s capture your rental preferences so your broker can find the right property.
             </p>
-            <Button
-              type="button"
-              className={authPrimaryButtonClass}
-              onClick={onAccountSuccessDone}
-            >
+            <Button type="button" className={authPrimaryButtonClass} onClick={onAccountSuccessDone}>
               Continue
             </Button>
           </div>
         ) : (
           <div className="p-6 sm:p-8">
-            <h2
-              id="tenant-onboard-modal-title"
-              className="text-xl font-semibold text-gray-900 text-center mb-1"
-            >
-              Welcome to TrustKeyper
-            </h2>
-            <p className="text-sm text-gray-500 text-center mb-6">
-              {phase === "welcome"
-                ? "Let's understand your rental requirements so we can help you find the right property."
-                : "Please share details to understand your rental preferences."}
-            </p>
+            <div className="border-b border-gray-100 pb-5 mb-5 pr-8">
+              <h2 id="tenant-onboard-modal-title" className="text-lg font-semibold text-gray-900 mb-1">
+                Welcome to TrustKeyper
+              </h2>
+              <p className="text-sm text-gray-500">
+                Help us understand your rental requirements so we can find properties that best match
+                your needs.
+              </p>
+            </div>
 
             <div className="space-y-4 mb-6">
               <div className="space-y-2">
                 <Label htmlFor="tenant-onboard-name" className="text-gray-700">
-                  Full Name
+                  Your Name
                 </Label>
                 <Input
                   id="tenant-onboard-name"
                   value={name}
                   onChange={(e) => onNameChange(e.target.value)}
+                  onBlur={() => setTouched((t) => ({ ...t, name: true }))}
                   readOnly={phase === "otp"}
+                  placeholder="Enter your name"
                   className={cn("h-10", phase === "otp" && "bg-gray-50")}
+                  aria-invalid={!!nameError}
                 />
+                {nameError ? <p className="text-xs text-destructive">{nameError}</p> : null}
               </div>
               <AuthPhoneField
                 id="tenant-onboard-phone"
+                label="Email/Phone Number"
                 value={phone}
                 onChange={onPhoneChange}
+                onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
                 disabled={phase === "otp"}
                 helperText={undefined}
-                errorText={sendOtpError}
+                errorText={phoneError ?? sendOtpError}
               />
 
               {phase === "otp" ? (
@@ -229,6 +241,9 @@ export function TenantBrokerOnboardModal({
                       </button>
                     )}
                   </p>
+                  {resendError ? (
+                    <p className="text-xs text-center text-destructive">{resendError}</p>
+                  ) : null}
                   {verifyOtpError ? (
                     <p className="text-xs text-center text-destructive">{verifyOtpError}</p>
                   ) : null}
@@ -256,7 +271,7 @@ export function TenantBrokerOnboardModal({
                     <Loader2 size={16} className="animate-spin mr-2" /> Sending OTP…
                   </>
                 ) : (
-                  "Send OTP"
+                  "Request OTP"
                 )}
               </Button>
             ) : (

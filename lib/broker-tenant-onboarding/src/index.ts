@@ -52,11 +52,13 @@ type StoredTenant = {
   linkedinUrl?: string;
   occupancyFrom?: string;
   who?: string;
+  whoOther?: string;
   identify?: string[];
   food?: string;
   city?: string;
   localities?: string[];
   propertyType?: string;
+  propertyTypeOther?: string;
   sharing?: string;
   roommate?: string[];
   status: "Lead Added" | "Profile Complete";
@@ -75,15 +77,78 @@ type SubmitBody = {
   linkedinUrl?: string;
   occupancyFrom?: string;
   who?: string;
+  whoOther?: string;
   identify?: string[];
   food?: string;
   city?: string;
   localities?: string[];
   propertyType?: string;
+  propertyTypeOther?: string;
   sharing?: string;
   roommate?: string[];
   detailsComplete?: boolean;
 };
+
+const MOVE_IN_TIMELINES = new Set([
+  "Immediately",
+  "Within 15 Days",
+  "Within 1 Month",
+  "Flexible",
+]);
+
+const OCCUPANCY_TYPES = new Set([
+  "Bachelor",
+  "Family",
+  "Couple",
+  "Working Professionals",
+  "Students",
+  "Other",
+]);
+
+const FOOD_PREFERENCES = new Set(["Vegetarian", "Non Vegetarian", "Any", "Veg", "Non-Veg"]);
+
+const SHARING_PREFERENCES = new Set([
+  "Single Occupancy",
+  "Double Sharing",
+  "Triple Sharing",
+  "No Preference",
+  "Single",
+  "Double",
+  "Triple",
+  "Entire Property",
+]);
+
+const PROPERTY_TYPES = new Set([
+  "Apartment",
+  "Independent House",
+  "Villa",
+  "Studio",
+  "PG",
+  "Shared Accommodation",
+  "Other",
+  "House",
+  "PG/Hostel",
+]);
+
+function requiresBachelorGender(who: string): boolean {
+  return who === "Bachelor";
+}
+
+function requiresOccupancyOther(who: string): boolean {
+  return who === "Other";
+}
+
+function requiresRoommateGender(sharing: string): boolean {
+  return sharing === "Double Sharing" || sharing === "Triple Sharing" || sharing === "Double" || sharing === "Triple";
+}
+
+function requiresPropertyTypeOther(propertyType: string): boolean {
+  return propertyType === "Other";
+}
+
+function isIsoDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
 
 function onboardPathSegments(req: OnboardRequest): string[] {
   const raw = req.query.onboardPath ?? req.query.path;
@@ -280,11 +345,13 @@ async function appendBrokerTenantLead(
     linkedinUrl: body.linkedinUrl?.trim() || undefined,
     occupancyFrom: body.occupancyFrom,
     who: body.who,
+    whoOther: body.whoOther?.trim() || undefined,
     identify: body.identify,
     food: body.food,
     city: body.city,
     localities: body.localities,
     propertyType: body.propertyType,
+    propertyTypeOther: body.propertyTypeOther?.trim() || undefined,
     sharing: body.sharing,
     roommate: body.roommate,
     status: detailsComplete ? "Profile Complete" : "Lead Added",
@@ -308,22 +375,45 @@ function validateSubmitBody(body: SubmitBody): string | null {
   if (name.length < 2) return "Name is required";
   if (phone.length !== 10) return "Valid phone number is required";
   if (!(body.linkedinUrl ?? "").trim()) return "LinkedIn profile is required";
-  if (!(body.occupancyFrom ?? "").trim()) return "Occupancy date is required";
-  if (body.who !== "Family" && body.who !== "Bachelor") return "Staying preference is required";
-  if (body.food !== "Veg" && body.food !== "Non-Veg") return "Food preference is required";
-  if (body.who === "Bachelor" && (!body.identify || body.identify.length === 0)) {
-    return "Identification is required for bachelors";
+
+  const timeline = (body.occupancyFrom ?? "").trim();
+  if (!timeline) return "Move-in timeline is required";
+  if (!MOVE_IN_TIMELINES.has(timeline) && !isIsoDate(timeline)) {
+    return "Move-in timeline is required";
   }
-  if (body.detailsComplete) {
+
+  const who = (body.who ?? "").trim();
+  if (!OCCUPANCY_TYPES.has(who)) return "Occupancy type is required";
+  if (requiresOccupancyOther(who) && !(body.whoOther ?? "").trim()) {
+    return "Please describe who will be staying";
+  }
+  if (requiresBachelorGender(who)) {
+    const gender = body.identify?.[0];
+    if (gender !== "Male" && gender !== "Female") {
+      return "Gender is required for bachelors";
+    }
+  }
+
+  const food = (body.food ?? "").trim();
+  if (!FOOD_PREFERENCES.has(food)) return "Food preference is required";
+
+  if (body.detailsComplete !== false) {
     if (!body.city?.trim()) return "City is required";
-    if (!body.localities || body.localities.length === 0) return "At least one locality is required";
-    if (!body.propertyType?.trim()) return "Property type is required";
-    if (!body.sharing?.trim()) return "Sharing preference is required";
-    if (
-      body.sharing !== "Entire Property" &&
-      (!body.roommate || body.roommate.length === 0)
-    ) {
-      return "Roommate preference is required";
+    if (!body.localities || body.localities.length === 0) {
+      return "At least one locality is required";
+    }
+    const propertyType = (body.propertyType ?? "").trim();
+    if (!PROPERTY_TYPES.has(propertyType)) return "Property type is required";
+    if (requiresPropertyTypeOther(propertyType) && !(body.propertyTypeOther ?? "").trim()) {
+      return "Please specify the property type";
+    }
+    const sharing = (body.sharing ?? "").trim();
+    if (!SHARING_PREFERENCES.has(sharing)) return "Sharing preference is required";
+    if (requiresRoommateGender(sharing)) {
+      const roommate = body.roommate?.[0];
+      if (roommate !== "Male" && roommate !== "Female" && roommate !== "Anyone") {
+        return "Preferred roommate gender is required";
+      }
     }
   }
   return null;
@@ -407,9 +497,8 @@ export async function handleBrokerTenantOnboardRequest(
     }
 
     const submitPhone = phoneLast10(body.phone ?? "");
-    const invitePhone = phoneLast10(record.snapshot.tenantPhone);
-    if (submitPhone !== invitePhone) {
-      json(res, 400, { error: "Phone number does not match the invitation" });
+    if (submitPhone.length !== 10) {
+      json(res, 400, { error: "Valid phone number is required" });
       return;
     }
 

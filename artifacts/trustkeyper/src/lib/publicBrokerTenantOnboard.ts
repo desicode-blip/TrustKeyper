@@ -24,14 +24,16 @@ export type TenantOnboardSubmitPayload = {
   phone: string;
   linkedinUrl: string;
   occupancyFrom: string;
-  who: "Family" | "Bachelor";
-  identify?: ("Male" | "Female")[];
-  food: "Veg" | "Non-Veg";
-  city?: string;
-  localities?: string[];
-  propertyType?: string;
-  sharing?: string;
-  roommate?: ("Male" | "Female" | "Anyone")[];
+  who: string;
+  whoOther?: string;
+  identify?: string[];
+  food: string;
+  city: string;
+  localities: string[];
+  propertyType: string;
+  propertyTypeOther?: string;
+  sharing: string;
+  roommate?: string[];
   detailsComplete: boolean;
 };
 
