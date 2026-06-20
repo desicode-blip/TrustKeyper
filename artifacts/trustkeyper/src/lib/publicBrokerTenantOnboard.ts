@@ -135,7 +135,7 @@ export async function registerBrokerOnboardingInviteOnServer(
   brokerName: string,
 ): Promise<
   | { ok: true; invite: BrokerTenantOnboardingInvite }
-  | { ok: false; error: RegisterInviteError }
+  | { ok: false; error: RegisterInviteError; detail?: string }
 > {
   try {
     const headers = await syncAuthHeaders("application/json");
@@ -156,14 +156,18 @@ export async function registerBrokerOnboardingInviteOnServer(
       invite?: BrokerTenantOnboardingInvite;
       error?: string;
       code?: string;
+      detail?: string;
     };
 
     if (!res.ok) {
       const code = json.code && REGISTER_ERROR_CODES[json.code] ? REGISTER_ERROR_CODES[json.code] : null;
-      if (code) return { ok: false, error: code };
-      if (res.status === 401 || res.status === 403) return { ok: false, error: "unauthorized" };
-      if (res.status >= 500) return { ok: false, error: "server_error" };
-      return { ok: false, error: "network" };
+      const detail = typeof json.detail === "string" ? json.detail : undefined;
+      if (code) return { ok: false, error: code, detail };
+      if (res.status === 401 || res.status === 403) {
+        return { ok: false, error: "unauthorized", detail };
+      }
+      if (res.status >= 500) return { ok: false, error: "server_error", detail };
+      return { ok: false, error: "network", detail };
     }
 
     if (!json.invite) return { ok: false, error: "network" };

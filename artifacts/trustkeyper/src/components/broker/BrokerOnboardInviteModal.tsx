@@ -86,9 +86,12 @@ export function BrokerOnboardInviteModal({
     try {
       const result = await createBrokerTenantOnboardingInvite(name, phone);
       if (!result.ok) {
+        const description = result.detail
+          ? `${INVITE_ERROR_MESSAGES[result.error]} (${result.detail})`
+          : INVITE_ERROR_MESSAGES[result.error];
         toast({
           title: "Could not generate link",
-          description: INVITE_ERROR_MESSAGES[result.error],
+          description,
           variant: "destructive",
         });
         return;

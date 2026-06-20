@@ -285,6 +285,7 @@ export type CreateBrokerOnboardInviteResult =
         | "unauthorized"
         | "server_error"
         | "network";
+      detail?: string;
     };
 
 export async function createBrokerTenantOnboardingInvite(
@@ -338,14 +339,14 @@ export async function createBrokerTenantOnboardingInvite(
   }
 
   if (serverResult.error !== "network") {
-    return { ok: false, error: serverResult.error };
+    return { ok: false, error: serverResult.error, detail: serverResult.detail };
   }
 
   if (import.meta.env.DEV) {
     return createBrokerTenantOnboardingInviteLocally(name, phone, session, brokerName);
   }
 
-  return { ok: false, error: "server_error" };
+  return { ok: false, error: "server_error", detail: serverResult.detail };
 }
 
 function applyServerInviteLocally(invite: BrokerTenantOnboardingInvite): void {
