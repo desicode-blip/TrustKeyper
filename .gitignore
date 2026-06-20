@@ -55,4 +55,5 @@ Thumbs.db
 # Local env (secrets)
 .env
 .env.local
+.env.test-sandbox
 **/.env.local
