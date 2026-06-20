@@ -32,9 +32,13 @@ export function BrokerOnboardShareModal({
   tenantPhone,
   link,
   token,
+  overlayClassName = "z-50",
+  showCopyOption = true,
 }: BrokerOnboardLinkPayload & {
   open: boolean;
   onClose: () => void;
+  overlayClassName?: string;
+  showCopyOption?: boolean;
 }) {
   const shareContext: BrokerOnboardShareContext = useMemo(
     () => ({ tenantPhone, token }),
@@ -137,23 +141,27 @@ export function BrokerOnboardShareModal({
     },
     {
       id: "native",
-      label: "Device share",
+      label: "Native Share",
       icon: <Share2 size={20} aria-hidden />,
       className: "bg-white border border-gray-200 text-gray-800 hover:bg-gray-50",
       onClick: () => void handleNativeShare(),
     },
-    {
-      id: "copy",
-      label: "Copy link",
-      icon: <Copy size={20} aria-hidden />,
-      className: "bg-white border border-gray-200 text-gray-800 hover:bg-gray-50",
-      onClick: () => void handleCopyLink(),
-    },
+    ...(showCopyOption
+      ? [
+          {
+            id: "copy",
+            label: "Copy link",
+            icon: <Copy size={20} aria-hidden />,
+            className: "bg-white border border-gray-200 text-gray-800 hover:bg-gray-50",
+            onClick: () => void handleCopyLink(),
+          } satisfies ShareOption,
+        ]
+      : []),
   ];
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4"
+      className={`fixed inset-0 flex items-end sm:items-center justify-center bg-black/40 p-4 ${overlayClassName}`}
       role="presentation"
       onClick={onClose}
       onKeyDown={(event) => {
@@ -177,7 +185,7 @@ export function BrokerOnboardShareModal({
         </button>
         <div className="p-6 pt-8">
           <h3 id="broker-onboard-share-title" className="text-lg font-semibold text-gray-900 mb-1">
-            Share via
+            Share Via
           </h3>
           <p className="text-sm text-gray-500 mb-5">
             Choose how you want to send the onboarding link to {tenantName}.

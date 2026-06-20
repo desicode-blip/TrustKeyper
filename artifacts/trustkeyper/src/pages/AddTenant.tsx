@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
 import { BrokerFlowButton } from "@/components/broker/BrokerFlowButton";
-import { BrokerOnboardLinkSuccess } from "@/components/broker/BrokerOnboardLinkSuccess";
+import { BrokerOnboardInvitationCreatedModal } from "@/components/broker/BrokerOnboardInvitationCreatedModal";
 import {
   AddManuallySectionHeader,
   BrokerOnboardLinkGeneratorCard,
@@ -92,7 +92,7 @@ export default function AddTenant() {
 
   // Success modal
   const [successOpen, setSuccessOpen] = useState(false);
-  const [onboardSuccessPayload, setOnboardSuccessPayload] =
+  const [invitationCreatedPayload, setInvitationCreatedPayload] =
     useState<BrokerOnboardLinkPayload | null>(null);
 
   useEffect(() => {
@@ -312,25 +312,6 @@ export default function AddTenant() {
     (l) => !localities.includes(l),
   );
 
-  if (onboardSuccessPayload && !editId) {
-    return (
-      <BrokerLayout>
-        <div className="max-w-xl mx-auto">
-          <Link
-            href="/broker/tenants"
-            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6"
-          >
-            <ArrowLeft size={16} /> Back to Tenants
-          </Link>
-          <BrokerOnboardLinkSuccess
-            {...onboardSuccessPayload}
-            onDone={() => setLocation("/broker/tenants?tab=invites")}
-          />
-        </div>
-      </BrokerLayout>
-    );
-  }
-
   return (
     <BrokerLayout>
       <div className={`max-w-3xl mx-auto ${FLOW_STICKY_CONTENT_CLASS}`}>
@@ -376,7 +357,9 @@ export default function AddTenant() {
 
         {step === 1 && (
           <>
-            {!editId ? <BrokerOnboardLinkGeneratorCard onSuccess={setOnboardSuccessPayload} /> : null}
+            {!editId ? (
+              <BrokerOnboardLinkGeneratorCard onSuccess={setInvitationCreatedPayload} />
+            ) : null}
 
             {!editId ? <AddManuallySectionHeader /> : null}
 
@@ -770,6 +753,14 @@ export default function AddTenant() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {invitationCreatedPayload && !editId ? (
+        <BrokerOnboardInvitationCreatedModal
+          open
+          {...invitationCreatedPayload}
+          onClose={() => setInvitationCreatedPayload(null)}
+        />
+      ) : null}
     </BrokerLayout>
   );
 }

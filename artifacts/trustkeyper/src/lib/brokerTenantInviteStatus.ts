@@ -56,7 +56,7 @@ export const INVITE_STATUS_LABELS: Record<BrokerOnboardInviteStatus, string> = {
   onboarding_pending: "Onboarding Pending",
   onboarding_started: "Onboarding Started",
   requirements_submitted: "Requirements Submitted",
-  converted: "Converted To Tenant",
+  converted: "Active Tenant",
   expired: "Expired",
 };
 
