@@ -19,7 +19,14 @@ export type OnboardStore = {
   setAccountDataKey: (phone: string, role: string, dataKey: string, value: string) => Promise<void>;
 };
 
-type BrokerOnboardInviteStatus = "pending" | "submitted" | "expired";
+type BrokerOnboardInviteStatus =
+  | "pending"
+  | "onboarding_pending"
+  | "onboarding_started"
+  | "submitted"
+  | "requirements_submitted"
+  | "converted"
+  | "expired";
 
 type BrokerOnboardTokenSnapshot = {
   token: string;
@@ -27,10 +34,13 @@ type BrokerOnboardTokenSnapshot = {
   tenantPhone: string;
   brokerPhone: string;
   brokerName: string;
+  inviteLink?: string;
   status: BrokerOnboardInviteStatus;
   createdAt: number;
   expiresAt: number;
+  startedAt?: number;
   submittedAt?: number;
+  convertedAt?: number;
 };
 
 type BrokerTenantOnboardingInvite = BrokerOnboardTokenSnapshot & { id: string };
@@ -108,9 +118,77 @@ export function readJsonBody(req: OnboardRequest): unknown {
 }
 
 function resolveInviteStatus(snapshot: BrokerOnboardTokenSnapshot): BrokerOnboardInviteStatus {
-  if (snapshot.status === "submitted") return "submitted";
+  if (snapshot.status === "submitted" || snapshot.status === "requirements_submitted") {
+    return "requirements_submitted";
+  }
+  if (snapshot.status === "converted") return "converted";
   if (snapshot.expiresAt <= Date.now()) return "expired";
+  if (snapshot.status === "onboarding_started") return "onboarding_started";
+  if (snapshot.status === "onboarding_pending" || snapshot.status === "pending") {
+    return "onboarding_pending";
+  }
   return snapshot.status;
+}
+
+function isSubmittedStatus(status: BrokerOnboardInviteStatus): boolean {
+  return status === "submitted" || status === "requirements_submitted";
+}
+
+async function updateInviteListStatus(
+  store: OnboardStore,
+  brokerPhone: string,
+  token: string,
+  patch: Partial<BrokerTenantOnboardingInvite>,
+): Promise<void> {
+  const data = await store.getAccountData(brokerPhone, "broker");
+  const raw = data["broker_tenant_onboarding_invites"];
+  if (!raw) return;
+  try {
+    const list = JSON.parse(raw) as BrokerTenantOnboardingInvite[];
+    if (!Array.isArray(list)) return;
+    const updated = list.map((inv) => (inv.token === token ? { ...inv, ...patch } : inv));
+    await store.setAccountDataKey(
+      brokerPhone,
+      "broker",
+      "broker_tenant_onboarding_invites",
+      JSON.stringify(updated),
+    );
+  } catch {
+    /* ignore malformed invites list */
+  }
+}
+
+async function markInviteStarted(
+  store: OnboardStore,
+  brokerPhone: string,
+  token: string,
+  snapshot: BrokerOnboardTokenSnapshot,
+): Promise<BrokerOnboardTokenSnapshot> {
+  if (
+    snapshot.status === "onboarding_started" ||
+    isSubmittedStatus(snapshot.status) ||
+    snapshot.status === "converted"
+  ) {
+    return snapshot;
+  }
+
+  const now = Date.now();
+  const nextSnapshot: BrokerOnboardTokenSnapshot = {
+    ...snapshot,
+    status: "onboarding_started",
+    startedAt: snapshot.startedAt ?? now,
+  };
+  await store.setAccountDataKey(
+    brokerPhone,
+    "broker",
+    tokenDataKey(token),
+    JSON.stringify(nextSnapshot),
+  );
+  await updateInviteListStatus(store, brokerPhone, token, {
+    status: "onboarding_started",
+    startedAt: nextSnapshot.startedAt,
+  });
+  return nextSnapshot;
 }
 
 async function loadTokenSnapshot(
@@ -141,7 +219,7 @@ async function markInviteSubmitted(
   const now = Date.now();
   const nextSnapshot: BrokerOnboardTokenSnapshot = {
     ...snapshot,
-    status: "submitted",
+    status: "requirements_submitted",
     submittedAt: now,
   };
   await store.setAccountDataKey(
@@ -159,7 +237,7 @@ async function markInviteSubmitted(
     if (!Array.isArray(list)) return;
     const updated = list.map((inv) =>
       inv.token === token
-        ? { ...inv, status: "submitted" as const, submittedAt: now }
+        ? { ...inv, status: "requirements_submitted" as const, submittedAt: now }
         : inv,
     );
     await store.setAccountDataKey(
@@ -275,22 +353,28 @@ export async function handleBrokerTenantOnboardRequest(
       return;
     }
 
-    const status = resolveInviteStatus(record.snapshot);
+    let snapshot = record.snapshot;
+    let status = resolveInviteStatus(snapshot);
     if (status === "expired") {
       json(res, 410, {
         error: "This onboarding link has expired",
-        brokerName: record.snapshot.brokerName,
+        brokerName: snapshot.brokerName,
         status,
       });
       return;
     }
 
+    if (status === "onboarding_pending") {
+      snapshot = await markInviteStarted(store, record.brokerPhone, token, snapshot);
+      status = resolveInviteStatus(snapshot);
+    }
+
     json(res, 200, {
-      tenantName: record.snapshot.tenantName,
-      tenantPhone: record.snapshot.tenantPhone,
-      brokerName: record.snapshot.brokerName,
+      tenantName: snapshot.tenantName,
+      tenantPhone: snapshot.tenantPhone,
+      brokerName: snapshot.brokerName,
       status,
-      expiresAt: record.snapshot.expiresAt,
+      expiresAt: snapshot.expiresAt,
     });
     return;
   }
@@ -329,7 +413,7 @@ export async function handleBrokerTenantOnboardRequest(
       return;
     }
 
-    if (status === "submitted") {
+    if (isSubmittedStatus(status)) {
       const { tenant } = await appendBrokerTenantLead(store, record.brokerPhone, token, body);
       json(res, 200, {
         ok: true,

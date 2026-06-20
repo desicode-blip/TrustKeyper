@@ -8,7 +8,7 @@ import {
   type TenantOnboardModalPhase,
 } from "@/components/tenant/TenantBrokerOnboardModal";
 import { TenantOnboardRequirementFlow } from "@/components/tenant/TenantOnboardRequirementFlow";
-import { markInviteSubmittedLocally } from "@/lib/brokerTenantOnboarding";
+import { markInviteStartedLocally, markInviteSubmittedLocally } from "@/lib/brokerTenantOnboarding";
 import { fetchBrokerOnboardInvite } from "@/lib/publicBrokerTenantOnboard";
 import { sendPhoneOtp } from "@/lib/phoneOtp";
 import {
@@ -68,12 +68,14 @@ export default function TenantBrokerOnboarding() {
       return;
     }
 
-    if (payload.status === "submitted") {
+    if (payload.status === "submitted" || payload.status === "requirements_submitted") {
       clearTenantBrokerOnboardSession(token);
       setPagePhase("already_submitted");
       setBrokerName(payload.brokerName);
       return;
     }
+
+    markInviteStartedLocally(token);
 
     const existingSession = getTenantBrokerOnboardSession(token);
     if (existingSession) {
