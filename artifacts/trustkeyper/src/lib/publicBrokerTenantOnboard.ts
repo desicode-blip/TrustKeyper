@@ -8,6 +8,8 @@ type RegisterInviteError =
   | "invalid_phone"
   | "duplicate_tenant"
   | "duplicate_invite"
+  | "unauthorized"
+  | "server_error"
   | "network";
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
@@ -159,6 +161,8 @@ export async function registerBrokerOnboardingInviteOnServer(
     if (!res.ok) {
       const code = json.code && REGISTER_ERROR_CODES[json.code] ? REGISTER_ERROR_CODES[json.code] : null;
       if (code) return { ok: false, error: code };
+      if (res.status === 401 || res.status === 403) return { ok: false, error: "unauthorized" };
+      if (res.status >= 500) return { ok: false, error: "server_error" };
       return { ok: false, error: "network" };
     }
 

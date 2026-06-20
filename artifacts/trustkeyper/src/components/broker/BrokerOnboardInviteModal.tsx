@@ -22,6 +22,10 @@ const INVITE_ERROR_MESSAGES: Record<BrokerOnboardInviteError, string> = {
   duplicate_tenant: "A lead with this mobile number already exists.",
   duplicate_invite: "An active onboarding link already exists for this number.",
   no_session: "Please sign in as a broker to generate onboarding links.",
+  unauthorized: "Your session expired. Sign in again and retry.",
+  server_error:
+    "Could not register this link on the server. Try again in a moment — do not share a link until generation succeeds.",
+  network: "Network error. Check your connection and try again.",
 };
 
 export function BrokerOnboardInviteModal({
