@@ -190,36 +190,7 @@ async function upsertRecipientKyc(params: {
   bankAccountNumber?: string;
   bankIfsc?: string;
   bankHolderName?: string;
-  fillBankOnlyIfMissing?: boolean;
 }): Promise<void> {
-  if (params.fillBankOnlyIfMissing) {
-    await getPool().query(
-      `INSERT INTO payment_recipient_kyc (
-         phone, role, legal_name, email, pan, registered_address,
-         business_category, business_subcategory, business_type,
-         bank_account_number, bank_ifsc, bank_holder_name,
-         created_at, updated_at
-       ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'housing', 'real_estate_agents', 'individual', $7, $8, $9, NOW(), NOW())
-       ON CONFLICT (phone, role) DO UPDATE SET
-         bank_account_number = COALESCE(payment_recipient_kyc.bank_account_number, EXCLUDED.bank_account_number),
-         bank_ifsc = COALESCE(payment_recipient_kyc.bank_ifsc, EXCLUDED.bank_ifsc),
-         bank_holder_name = COALESCE(payment_recipient_kyc.bank_holder_name, EXCLUDED.bank_holder_name),
-         updated_at = NOW()`,
-      [
-        params.phone,
-        params.role,
-        params.legalName,
-        params.email,
-        params.pan,
-        JSON.stringify(params.registeredAddress),
-        params.bankAccountNumber ?? null,
-        params.bankIfsc ?? null,
-        params.bankHolderName ?? null,
-      ],
-    );
-    return;
-  }
-
   await getPool().query(
     `INSERT INTO payment_recipient_kyc (
        phone, role, legal_name, email, pan, registered_address,
@@ -530,7 +501,6 @@ export async function handlePaymentOnboardCompleteRequest(
         bankAccountNumber: body.bankAccountNumber,
         bankIfsc: body.bankIfsc,
         bankHolderName: body.bankBeneficiaryName,
-        fillBankOnlyIfMissing: true,
       });
     } catch (err) {
       console.error("Razorpay products.edit failed", {
