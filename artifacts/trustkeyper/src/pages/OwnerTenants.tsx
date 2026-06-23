@@ -31,13 +31,10 @@ import {
   documentUploadStatusLabel,
   TENANT_DOCUMENT_STATUS_UPDATED_EVENT,
 } from "@/lib/tenantDocumentUploadStatus";
-import { fetchRequesterDocumentUploadInvites } from "@/lib/agreementDocumentUpload";
-import {
-  AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT,
-  findDocumentUploadInviteByToken,
-} from "@/lib/agreementDocumentUploadStore";
+import { fetchRequesterDocumentUploadDetail, fetchRequesterDocumentUploadInvites } from "@/lib/agreementDocumentUpload";
+import { AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT } from "@/lib/agreementDocumentUploadStore";
 import { TenantSubmittedDocumentsModal } from "@/components/agreement/TenantSubmittedDocumentsModal";
-import type { RequesterDocumentUploadInviteView } from "@workspace/tenant-document-upload";
+import type { DocumentUploadInviteForUi } from "@/lib/agreementDocumentUploadSanitize";
 
 const TABS = [
   { id: "inquiries", label: "Inquiries" },
@@ -97,7 +94,7 @@ function InvitedTenantRow({
   invite: OwnerTenantInvite;
   onUpdate: () => void;
 }) {
-  const [viewInvite, setViewInvite] = useState<RequesterDocumentUploadInviteView | null>(null);
+  const [viewInvite, setViewInvite] = useState<DocumentUploadInviteForUi | null>(null);
   const fromInquiry = isInviteFromInquiry(invite);
   const recorded = getRecordedInviteStatus(invite);
   const whatsAppUrl = getWhatsAppInviteHref(invite);
@@ -169,15 +166,8 @@ function InvitedTenantRow({
           <button
             type="button"
             onClick={() => {
-              const cached = findDocumentUploadInviteByToken(invite.documentUploadToken ?? "");
-              if (cached) {
-                setViewInvite(cached);
-                return;
-              }
-              void fetchRequesterDocumentUploadInvites().then((result) => {
-                if (!result.ok) return;
-                const row = result.invites.find((item) => item.token === invite.documentUploadToken);
-                if (row) setViewInvite(row);
+              void fetchRequesterDocumentUploadDetail(invite.documentUploadToken ?? "").then((detail) => {
+                if (detail.ok) setViewInvite(detail.invite);
               });
             }}
             className="h-10 px-3 rounded-[4px] text-sm font-semibold border border-primary/40 text-primary bg-white hover:bg-primary/5 transition-colors col-span-2 sm:col-span-1"

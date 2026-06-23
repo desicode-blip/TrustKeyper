@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   appendPropertyImagesFromFiles,
+  dataUrlByteLength,
   normalizePropertyImages,
+  preparePropertyImagesForStorage,
   propertyImagesEqual,
 } from "./propertyMedia";
 
@@ -26,5 +28,21 @@ describe("appendPropertyImagesFromFiles", () => {
     const result = await appendPropertyImagesFromFiles([textFile], ["existing"]);
     expect(result.images).toEqual(["existing"]);
     expect(result.failedCount).toBe(1);
+  });
+});
+
+describe("dataUrlByteLength", () => {
+  it("estimates decoded bytes from base64 payload", () => {
+    const dataUrl = "data:image/png;base64,QUJD";
+    expect(dataUrlByteLength(dataUrl)).toBe(3);
+  });
+});
+
+describe("preparePropertyImagesForStorage", () => {
+  it("returns normalized images in node test environment", async () => {
+    const images = ["data:image/jpeg;base64,abc", "data:image/jpeg;base64,def"];
+    const prepared = await preparePropertyImagesForStorage(images);
+    expect(prepared.imageCount).toBe(2);
+    expect(prepared.images).toHaveLength(2);
   });
 });

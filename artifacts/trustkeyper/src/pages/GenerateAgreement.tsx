@@ -95,7 +95,7 @@ import {
   applyReceivedInviteToAgreementDocs,
   TenantSubmittedDocumentsModal,
 } from "@/components/agreement/TenantSubmittedDocumentsModal";
-import type { RequesterDocumentUploadInviteView } from "@workspace/tenant-document-upload";
+import type { DocumentUploadInviteForUi, StoredDocumentUploadInvite } from "@/lib/agreementDocumentUploadSanitize";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1003,11 +1003,11 @@ function Step3Documents({
   const [shareOpen, setShareOpen] = useState(false);
   const [sharePayload, setSharePayload] = useState<AgreementDocUploadSharePayload | null>(null);
   const [sendingLink, setSendingLink] = useState(false);
-  const [viewInvite, setViewInvite] = useState<RequesterDocumentUploadInviteView | null>(null);
+  const [viewInvite, setViewInvite] = useState<DocumentUploadInviteForUi | null>(null);
 
   const phoneLast10 = (phone: string) => phone.replace(/\D/g, "").slice(-10);
 
-  const applyReceivedInvites = useCallback((invites: RequesterDocumentUploadInviteView[]) => {
+  const applyReceivedInvites = useCallback((invites: DocumentUploadInviteForUi[]) => {
     if (invites.length === 0) return;
     setPersons((prev) =>
       prev.map((person) => {
@@ -1189,7 +1189,7 @@ function Step3Documents({
   const allDoneForPerson = person?.docs.every((d) => d.status !== "pending");
   const allDone = persons.every((p) => p.docs.every((d) => d.status !== "pending"));
 
-  const resolvePersonInvite = (target: PersonState): RequesterDocumentUploadInviteView | null => {
+  const resolvePersonInvite = (target: PersonState): StoredDocumentUploadInvite | null => {
     if (target.documentUploadToken) {
       const byToken = findDocumentUploadInviteByToken(target.documentUploadToken);
       if (byToken) return byToken;

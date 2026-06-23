@@ -23,6 +23,7 @@ import { useScrollToTopOnChange } from "@/hooks/useScrollToTopOnChange";
 import { getActiveSession } from "@/lib/auth";
 import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { addProperty, deriveBedroomsFromUnitSize } from "@/lib/properties";
+import { appendPropertyImagesFromFiles, preparePropertyImagesForStorage } from "@/lib/propertyMedia";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
 import { getItem, removeItem, setItem } from "@/lib/storageKeys";
@@ -178,8 +179,11 @@ export default function AddProperty() {
   const [securityDeposit, setSecurityDeposit] = useState(savedData?.securityDeposit ?? "");
   const [availableFrom, setAvailableFrom] = useState(savedData?.availableFrom ?? "");
 
-  // Sub-step 5 – Images
+  // Sub-step 5 – Images (kept in memory only — not written to draft storage)
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [pendingImageUploads, setPendingImageUploads] = useState(0);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -219,6 +223,7 @@ export default function AddProperty() {
     setSecurityDeposit("");
     setAvailableFrom("");
     setImageUrls([]);
+    setImageUploadError(null);
     setShowSuccess(false);
     broadcastBrokerPendingFlowsUpdated();
   };
@@ -236,21 +241,28 @@ export default function AddProperty() {
       prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
     );
 
-  const handleFiles = useCallback((files: FileList | null) => {
-    if (!files) return;
-    const remaining = 5 - imageUrls.length;
-    const toAdd = Array.from(files).slice(0, remaining);
-    toAdd.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        if (dataUrl) setImageUrls((prev) => [...prev, dataUrl]);
-      };
-      reader.readAsDataURL(file);
-    });
-  }, [imageUrls]);
+  const handleFiles = useCallback(async (files: FileList | null) => {
+    if (!files || pendingImageUploads > 0) return;
+
+    setImageUploadError(null);
+    setPendingImageUploads(files.length);
+
+    try {
+      const result = await appendPropertyImagesFromFiles(files, imageUrls);
+      setImageUrls(result.images);
+
+      if (result.failedCount > 0) {
+        setImageUploadError("Some photos could not be uploaded. Try again with image files only.");
+      } else if (result.skippedDuplicateCount > 0 && result.addedCount === 0) {
+        setImageUploadError("That photo is already in your gallery.");
+      }
+    } finally {
+      setPendingImageUploads(0);
+    }
+  }, [imageUrls, pendingImageUploads]);
 
   const removeImage = (idx: number) => {
+    setImageUploadError(null);
     setImageUrls((prev) => prev.filter((_, i) => i !== idx));
   };
 
@@ -323,7 +335,6 @@ export default function AddProperty() {
       monthlyMaintenance,
       securityDeposit,
       availableFrom,
-      imageUrls,
     };
 
     try {
@@ -364,7 +375,6 @@ export default function AddProperty() {
     monthlyMaintenance,
     securityDeposit,
     availableFrom,
-    imageUrls,
   ]);
 
   // ── Validation ────────────────────────────────────────────────────────────────
@@ -400,52 +410,68 @@ export default function AddProperty() {
 
   // ── Submit ────────────────────────────────────────────────────────────────────
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!getActiveSession()) {
       toast({ title: "Please sign in to save properties", variant: "destructive" });
       sessionStorage.setItem("tk_pending_role", "broker");
       setLocation("/login");
       return;
     }
+    if (isSaving || pendingImageUploads > 0) return;
+
     const finalAmenities = [...amenities];
     if (amenityOtherChecked && amenityOtherText.trim()) {
       finalAmenities.push(amenityOtherText.trim());
     }
 
-    addProperty({
-      nickname,
-      address,
-      area,
-      city,
-      pincode,
-      country,
-      ownerName,
-      ownerContact,
-      propertyType,
-      propertyTypeOther,
-      unitSize,
-      unitSizeOther,
-      furnishing,
-      builtUpArea,
-      builtUpUnits,
-      totalFloors,
-      bedrooms: deriveBedroomsFromUnitSize(unitSize, unitSizeOther),
-      bathrooms,
-      balconies,
-      floorLevel,
-      mainDoorDirection,
-      amenities: finalAmenities,
-      tenantsPreferred,
-      monthlyRent,
-      rentNegotiable,
-      maintenanceIncluded,
-      monthlyMaintenance,
-      securityDeposit,
-      availableFrom,
-      images: imageUrls,
-      imageCount: imageUrls.length,
-      status: "Active",
-    });
+    setIsSaving(true);
+    try {
+      const preparedImages = await preparePropertyImagesForStorage(imageUrls);
+      addProperty({
+        nickname,
+        address,
+        area,
+        city,
+        pincode,
+        country,
+        ownerName,
+        ownerContact,
+        propertyType,
+        propertyTypeOther,
+        unitSize,
+        unitSizeOther,
+        furnishing,
+        builtUpArea,
+        builtUpUnits,
+        totalFloors,
+        bedrooms: deriveBedroomsFromUnitSize(unitSize, unitSizeOther),
+        bathrooms,
+        balconies,
+        floorLevel,
+        mainDoorDirection,
+        amenities: finalAmenities,
+        tenantsPreferred,
+        monthlyRent,
+        rentNegotiable,
+        maintenanceIncluded,
+        monthlyMaintenance,
+        securityDeposit,
+        availableFrom,
+        images: preparedImages.images,
+        imageCount: preparedImages.imageCount,
+        status: "Active",
+        uploadedBy: "broker",
+      });
+    } catch {
+      toast({
+        title: "Could not save property",
+        description: "Storage may be full. Try fewer or smaller photos, then try again.",
+        variant: "destructive",
+      });
+      return;
+    } finally {
+      setIsSaving(false);
+    }
     try {
       removeItem("add_property_data");
     } catch {
@@ -477,7 +503,7 @@ export default function AddProperty() {
     if (subStep < 5) {
       setSubStep((s: number) => s + 1);
     } else {
-      handleSubmit();
+      void handleSubmit();
     }
   };
 
@@ -885,15 +911,23 @@ export default function AddProperty() {
           </ul>
         </div>
 
+        {pendingImageUploads > 0 ? (
+          <p className="text-sm text-gray-600">Uploading photos…</p>
+        ) : null}
+        {imageUploadError ? (
+          <p className="text-sm text-destructive">{imageUploadError}</p>
+        ) : null}
+
         {imageUrls.length === 0 ? (
           <button
             type="button"
+            disabled={pendingImageUploads > 0}
             onClick={() => fileInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-primary/40 rounded-xl bg-blue-50/40 flex flex-col items-center justify-center py-10 gap-3 hover:bg-blue-50 transition-colors"
+            className="w-full border-2 border-dashed border-primary/40 rounded-xl bg-blue-50/40 flex flex-col items-center justify-center py-10 gap-3 hover:bg-blue-50 transition-colors disabled:opacity-60"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
-              handleFiles(e.dataTransfer.files);
+              void handleFiles(e.dataTransfer.files);
             }}
           >
             <ImageIcon size={32} className="text-primary" />
@@ -917,8 +951,9 @@ export default function AddProperty() {
             {imageUrls.length < 5 && (
               <button
                 type="button"
+                disabled={pendingImageUploads > 0}
                 onClick={() => fileInputRef.current?.click()}
-                className="aspect-square border-2 border-dashed border-primary/40 rounded-lg bg-blue-50/40 flex items-center justify-center hover:bg-blue-50 transition-colors"
+                className="aspect-square border-2 border-dashed border-primary/40 rounded-lg bg-blue-50/40 flex items-center justify-center hover:bg-blue-50 transition-colors disabled:opacity-60"
               >
                 <Plus size={24} className="text-primary" />
               </button>
@@ -943,7 +978,10 @@ export default function AddProperty() {
           accept="image/*"
           multiple
           className="hidden"
-          onChange={(e) => handleFiles(e.target.files)}
+          onChange={(e) => {
+            void handleFiles(e.target.files);
+            e.target.value = "";
+          }}
         />
       </div>
     </div>
@@ -987,10 +1025,10 @@ export default function AddProperty() {
           <Button
             size="lg"
             onClick={handleContinue}
-            disabled={!canContinue()}
+            disabled={!canContinue() || isSaving || pendingImageUploads > 0}
             className="w-48 bg-primary hover:bg-primary/90"
           >
-            {subStep === 5 ? "Submit" : "Continue →"}
+            {isSaving ? "Saving…" : subStep === 5 ? "Submit" : "Continue →"}
           </Button>
         </div>
       </div>
@@ -1000,10 +1038,10 @@ export default function AddProperty() {
         <Button
           size="lg"
           onClick={handleContinue}
-          disabled={!canContinue()}
+          disabled={!canContinue() || isSaving || pendingImageUploads > 0}
           className="w-full bg-primary hover:bg-primary/90 rounded-[4px]"
         >
-          {subStep === 5 ? "Submit" : "Continue →"}
+          {isSaving ? "Saving…" : subStep === 5 ? "Submit" : "Continue →"}
         </Button>
       </FlowStickyActionBar>
 
