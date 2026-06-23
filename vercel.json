@@ -11,6 +11,9 @@
     },
     "api/broker-tenant-onboard.ts": {
       "maxDuration": 30
+    },
+    "api/payments-onboard.ts": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
