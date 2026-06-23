@@ -1,7 +1,7 @@
 import { queueCloudSync } from "./cloudSync";
 import { normalizePropertyImages } from "./propertyMedia";
 import { notifyPropertiesUpdated } from "./propertyEditValidation";
-import { getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
+import { activeKey, getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
 
 export type PropertyStatus = "Active" | "Draft" | "Rented";
 
@@ -60,8 +60,11 @@ const readProperties = (): Property[] => {
 const saveProperties = (list: Property[]): boolean => {
   try {
     const payload = JSON.stringify(list);
-    setItem("properties", payload);
-    setSessionItem("properties", payload);
+    const key = activeKey("properties");
+    if (!key) return false;
+    localStorage.setItem(key, payload);
+    sessionStorage.setItem(key, payload);
+    if (localStorage.getItem(key) !== payload) return false;
     queueCloudSync("properties", payload);
     notifyPropertiesUpdated();
     return true;

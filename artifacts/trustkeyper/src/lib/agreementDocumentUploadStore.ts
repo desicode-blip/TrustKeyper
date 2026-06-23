@@ -3,13 +3,16 @@ import {
   type RequesterDocumentUploadInviteView,
   type TenantDocumentUploadStatus,
 } from "@workspace/tenant-document-upload";
+import {
+  sanitizeDocumentUploadInviteForLocalStorage,
+  type StoredDocumentUploadInvite,
+} from "./agreementDocumentUploadSanitize";
 import { queueCloudSync } from "./cloudSync";
 import { getItem, setItem } from "./storageKeys";
 
 export { DOC_UPLOAD_INVITES_KEY as AGREEMENT_DOCUMENT_UPLOAD_INVITES_KEY };
+export { sanitizeDocumentUploadInviteForLocalStorage, type StoredDocumentUploadInvite } from "./agreementDocumentUploadSanitize";
 export const AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT = "tk-agreement-document-upload-updated";
-
-export type StoredDocumentUploadInvite = RequesterDocumentUploadInviteView;
 
 function phoneLast10(phone: string): string {
   return phone.replace(/\D/g, "").slice(-10);
@@ -19,18 +22,23 @@ function readInvites(): StoredDocumentUploadInvite[] {
   try {
     const raw = getItem(DOC_UPLOAD_INVITES_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as StoredDocumentUploadInvite[];
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed = JSON.parse(raw) as RequesterDocumentUploadInviteView[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(sanitizeDocumentUploadInviteForLocalStorage);
   } catch {
     return [];
   }
 }
 
 function persistInvites(invites: StoredDocumentUploadInvite[]): void {
-  const payload = JSON.stringify(invites);
-  setItem(DOC_UPLOAD_INVITES_KEY, payload);
-  queueCloudSync(DOC_UPLOAD_INVITES_KEY, payload);
-  window.dispatchEvent(new CustomEvent(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT));
+  try {
+    const payload = JSON.stringify(invites);
+    setItem(DOC_UPLOAD_INVITES_KEY, payload);
+    queueCloudSync(DOC_UPLOAD_INVITES_KEY, payload);
+    window.dispatchEvent(new CustomEvent(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT));
+  } catch {
+    /* Quota exceeded — never block other flows (e.g. add property). */
+  }
 }
 
 export function getStoredDocumentUploadInvites(): StoredDocumentUploadInvite[] {
@@ -46,26 +54,30 @@ export function findDocumentUploadInviteByTenantPhone(phone: string): StoredDocu
   return readInvites().find((invite) => phoneLast10(invite.tenantPhone) === digits);
 }
 
-export function upsertStoredDocumentUploadInvite(invite: StoredDocumentUploadInvite): void {
+export function upsertStoredDocumentUploadInvite(invite: RequesterDocumentUploadInviteView): void {
+  const sanitized = sanitizeDocumentUploadInviteForLocalStorage(invite);
   const invites = readInvites();
-  const idx = invites.findIndex((row) => row.token === invite.token);
+  const idx = invites.findIndex((row) => row.token === sanitized.token);
   if (idx === -1) {
-    persistInvites([invite, ...invites]);
+    persistInvites([sanitized, ...invites]);
     return;
   }
   const next = [...invites];
-  next[idx] = { ...next[idx], ...invite };
+  next[idx] = { ...next[idx], ...sanitized };
   persistInvites(next);
 }
 
-export function mergeStoredDocumentUploadInvites(serverInvites: StoredDocumentUploadInvite[]): void {
+export function mergeStoredDocumentUploadInvites(serverInvites: RequesterDocumentUploadInviteView[]): void {
   if (serverInvites.length === 0) return;
   const byToken = new Map(readInvites().map((invite) => [invite.token, invite]));
   for (const invite of serverInvites) {
-    const existing = byToken.get(invite.token);
-    byToken.set(invite.token, existing ? { ...existing, ...invite } : invite);
+    const sanitized = sanitizeDocumentUploadInviteForLocalStorage(invite);
+    const existing = byToken.get(sanitized.token);
+    byToken.set(sanitized.token, existing ? { ...existing, ...sanitized } : sanitized);
   }
-  const merged = [...byToken.values()].sort((a, b) => (b.submittedAt ?? b.linkSentAt ?? 0) - (a.submittedAt ?? a.linkSentAt ?? 0));
+  const merged = [...byToken.values()].sort(
+    (a, b) => (b.submittedAt ?? b.linkSentAt ?? 0) - (a.submittedAt ?? a.linkSentAt ?? 0),
+  );
   persistInvites(merged);
 }
 

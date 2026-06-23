@@ -47,13 +47,13 @@ import {
   type Tenant,
 } from "@/lib/tenants";
 import { documentUploadStatusLabel, TENANT_DOCUMENT_STATUS_UPDATED_EVENT } from "@/lib/tenantDocumentUploadStatus";
-import { fetchRequesterDocumentUploadInvites } from "@/lib/agreementDocumentUpload";
 import {
-  AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT,
-  findDocumentUploadInviteByToken,
-} from "@/lib/agreementDocumentUploadStore";
+  fetchRequesterDocumentUploadDetail,
+  fetchRequesterDocumentUploadInvites,
+} from "@/lib/agreementDocumentUpload";
+import { AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT } from "@/lib/agreementDocumentUploadStore";
 import { TenantSubmittedDocumentsModal } from "@/components/agreement/TenantSubmittedDocumentsModal";
-import type { RequesterDocumentUploadInviteView } from "@workspace/tenant-document-upload";
+import type { DocumentUploadInviteForUi } from "@/lib/agreementDocumentUploadSanitize";
 
 const TABS = [
   { id: "invites", label: "Invites" },
@@ -87,7 +87,7 @@ function leadStatusLabel(t: Tenant): LeadStatus {
 
 function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) {
   const [open, setOpen] = useState(false);
-  const [viewInvite, setViewInvite] = useState<RequesterDocumentUploadInviteView | null>(null);
+  const [viewInvite, setViewInvite] = useState<DocumentUploadInviteForUi | null>(null);
   const whatsAppUrl = getBrokerTenantWhatsAppHref(t);
 
   const summaryChips: { icon: React.ReactNode; label: string }[] = [];
@@ -215,15 +215,8 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
               type="button"
               flowVariant="sm-outline"
               onClick={() => {
-                const cached = findDocumentUploadInviteByToken(t.documentUploadToken ?? "");
-                if (cached) {
-                  setViewInvite(cached);
-                  return;
-                }
-                void fetchRequesterDocumentUploadInvites().then((result) => {
-                  if (!result.ok) return;
-                  const invite = result.invites.find((row) => row.token === t.documentUploadToken);
-                  if (invite) setViewInvite(invite);
+                void fetchRequesterDocumentUploadDetail(t.documentUploadToken ?? "").then((detail) => {
+                  if (detail.ok) setViewInvite(detail.invite);
                 });
               }}
             >

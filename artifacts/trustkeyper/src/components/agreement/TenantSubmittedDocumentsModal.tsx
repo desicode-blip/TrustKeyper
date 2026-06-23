@@ -1,6 +1,7 @@
 import React from "react";
 import { X, FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { DocumentUploadInviteForUi } from "@/lib/agreementDocumentUploadSanitize";
 import {
   documentLabel,
   isFileDocumentId,
@@ -27,7 +28,7 @@ export function TenantSubmittedDocumentsModal({
   invite,
   onClose,
 }: {
-  invite: RequesterDocumentUploadInviteView;
+  invite: DocumentUploadInviteForUi;
   onClose: () => void;
 }) {
   return (
@@ -111,7 +112,7 @@ export function TenantSubmittedDocumentsModal({
                     )}
                   </div>
                 </div>
-                {uploaded && file.dataUrl ? (
+                {uploaded && "dataUrl" in file && file.dataUrl ? (
                   <button
                     type="button"
                     onClick={() => openDataUrl(file.dataUrl, file.fileName)}
@@ -138,7 +139,7 @@ export function TenantSubmittedDocumentsModal({
 export function hasReceivedTenantDocuments(invite: RequesterDocumentUploadInviteView): boolean {
   const hasFile = invite.requestedDocumentIds.some((id) => {
     if (!isFileDocumentId(id)) return false;
-    return invite.documentStatuses[id] === "uploaded" && Boolean(invite.documents[id]?.dataUrl);
+    return invite.documentStatuses[id] === "uploaded";
   });
   const hasBank =
     invite.requestedDocumentIds.includes("bank") &&
@@ -165,7 +166,7 @@ export function applyReceivedInviteToAgreementDocs(
     uploadedAt?: number;
     dataUrl?: string;
   }>,
-  invite: RequesterDocumentUploadInviteView,
+  invite: DocumentUploadInviteForUi,
 ): typeof docs {
   const docIdMap: Record<AgreementDocId, ExtendedDocumentId> = {
     aadhaar: "aadhaar",
@@ -198,7 +199,7 @@ export function applyReceivedInviteToAgreementDocs(
       fileName: file.fileName,
       fileSize: file.fileSize,
       uploadedAt: file.uploadedAt,
-      dataUrl: file.dataUrl,
+      dataUrl: "dataUrl" in file ? file.dataUrl : doc.dataUrl,
     };
   });
 }

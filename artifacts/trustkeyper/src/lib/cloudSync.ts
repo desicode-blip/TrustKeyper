@@ -7,6 +7,7 @@ import {
   writeLocalForAccount,
 } from "./storageKeys";
 import { syncAuthHeaders } from "./syncSession";
+import { sanitizeDocumentUploadInviteForLocalStorage } from "./agreementDocumentUploadSanitize";
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
@@ -165,6 +166,22 @@ export function applyCloudDataToLocal(
 
   for (const [dataKey, value] of Object.entries(data)) {
     if (typeof value !== "string") continue;
+    if (dataKey === "agreement_document_upload_invites") {
+      try {
+        const invites = JSON.parse(value) as unknown[];
+        if (Array.isArray(invites)) {
+          const sanitized = invites.map((row) =>
+            sanitizeDocumentUploadInviteForLocalStorage(
+              row as Parameters<typeof sanitizeDocumentUploadInviteForLocalStorage>[0],
+            ),
+          );
+          writeLocalForAccount(p, role, dataKey, JSON.stringify(sanitized), mirror);
+          continue;
+        }
+      } catch {
+        /* fall through to raw write */
+      }
+    }
     writeLocalForAccount(p, role, dataKey, value, mirror);
   }
 
