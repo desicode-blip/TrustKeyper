@@ -132,7 +132,7 @@ export async function getRecipientConfig(
   return result.rows[0] ?? null;
 }
 
-async function getFullRecipientConfig(
+export async function getFullRecipientConfig(
   phone: string,
   role: string,
 ): Promise<FullRecipientConfigRow | null> {
@@ -359,6 +359,176 @@ export async function handlePaymentOnboardRequest(
   }
 }
 
+export type OnboardCompleteSuccess = {
+  ok: true;
+  accountId: string;
+  stakeholderId: string;
+  productId: string;
+  validationStatus: "submitted";
+  stepsRun: {
+    stakeholder: boolean;
+    product: boolean;
+    bank: boolean;
+  };
+};
+
+export type OnboardCompleteFailure =
+  | { ok: false; kind: "precondition"; error: string }
+  | {
+      ok: false;
+      kind: "razorpay";
+      step: "stakeholder" | "product" | "bank";
+      detail: string;
+    };
+
+export async function executePaymentOnboardComplete(
+  body: PaymentOnboardCompleteBody,
+): Promise<OnboardCompleteSuccess | OnboardCompleteFailure> {
+  const phone = body.phone;
+  const config = await getFullRecipientConfig(phone, body.role);
+  if (!config?.razorpay_linked_account_id) {
+    return {
+      ok: false,
+      kind: "precondition",
+      error: "Account not created yet — run onboarding step 1 first",
+    };
+  }
+
+  const linkedAccountId = config.razorpay_linked_account_id;
+  let stakeholderId = config.razorpay_stakeholder_id;
+  let productId = config.razorpay_product_id;
+  const ranStakeholder = !stakeholderId;
+  const ranProduct = !productId;
+  const residentialAddressJson = {
+    street: body.residentialAddress.street,
+    city: body.residentialAddress.city,
+    state: body.residentialAddress.state,
+    postalCode: body.residentialAddress.postalCode,
+    country: body.residentialAddress.country,
+  };
+
+  if (!stakeholderId) {
+    try {
+      const stakeholder = await getRazorpayClient().stakeholders.create(linkedAccountId, {
+        name: body.stakeholderName,
+        email: body.stakeholderEmail,
+        phone: { primary: phone },
+        kyc: { pan: body.pan },
+        relationship: { executive: true },
+        addresses: {
+          residential: {
+            street: body.residentialAddress.street,
+            city: body.residentialAddress.city,
+            state: body.residentialAddress.state,
+            postal_code: body.residentialAddress.postalCode,
+            country: body.residentialAddress.country,
+          },
+        },
+      });
+      stakeholderId = stakeholder.id;
+      await updateRecipientStakeholderId(phone, body.role, stakeholderId);
+      await upsertRecipientKyc({
+        phone,
+        role: body.role,
+        legalName: body.stakeholderName,
+        email: body.stakeholderEmail,
+        pan: body.pan,
+        registeredAddress: residentialAddressJson,
+        bankAccountNumber: body.bankAccountNumber,
+        bankIfsc: body.bankIfsc,
+        bankHolderName: body.bankBeneficiaryName,
+      });
+    } catch (err) {
+      console.error("Razorpay stakeholders.create failed", {
+        phone,
+        role: body.role,
+        linkedAccountId,
+        error: err as RazorpayErrorShape,
+      });
+      return {
+        ok: false,
+        kind: "razorpay",
+        step: "stakeholder",
+        detail: parseRazorpayError(err),
+      };
+    }
+  }
+
+  if (!productId) {
+    try {
+      const product = await getRazorpayClient().products.requestProductConfiguration(
+        linkedAccountId,
+        { product_name: "route" },
+      );
+      productId = product.id;
+      await updateRecipientProductId(phone, body.role, productId);
+    } catch (err) {
+      console.error("Razorpay products.requestProductConfiguration failed", {
+        phone,
+        role: body.role,
+        linkedAccountId,
+        error: err as RazorpayErrorShape,
+      });
+      return {
+        ok: false,
+        kind: "razorpay",
+        step: "product",
+        detail: parseRazorpayError(err),
+      };
+    }
+  }
+
+  try {
+    await getRazorpayClient().products.edit(linkedAccountId, productId, {
+      settlements: {
+        account_number: body.bankAccountNumber,
+        ifsc_code: body.bankIfsc,
+        beneficiary_name: body.bankBeneficiaryName,
+      },
+      tnc_accepted: true,
+    });
+    await markRecipientSubmitted(phone, body.role);
+    await upsertRecipientKyc({
+      phone,
+      role: body.role,
+      legalName: body.stakeholderName,
+      email: body.stakeholderEmail,
+      pan: body.pan,
+      registeredAddress: residentialAddressJson,
+      bankAccountNumber: body.bankAccountNumber,
+      bankIfsc: body.bankIfsc,
+      bankHolderName: body.bankBeneficiaryName,
+    });
+  } catch (err) {
+    console.error("Razorpay products.edit failed", {
+      phone,
+      role: body.role,
+      linkedAccountId,
+      productId,
+      error: err as RazorpayErrorShape,
+    });
+    return {
+      ok: false,
+      kind: "razorpay",
+      step: "bank",
+      detail: parseRazorpayError(err),
+    };
+  }
+
+  return {
+    ok: true,
+    accountId: linkedAccountId,
+    stakeholderId: stakeholderId!,
+    productId: productId!,
+    validationStatus: "submitted",
+    stepsRun: {
+      stakeholder: ranStakeholder,
+      product: ranProduct,
+      bank: true,
+    },
+  };
+}
+
 export async function handlePaymentOnboardCompleteRequest(
   req: VercelRequest,
   res: VercelResponse,
@@ -391,138 +561,25 @@ export async function handlePaymentOnboardCompleteRequest(
   }
 
   try {
-    const config = await getFullRecipientConfig(phone, body.role);
-    if (!config?.razorpay_linked_account_id) {
-      json(res, 409, {
-        error: "Account not created yet — run onboarding step 1 first",
-      });
-      return;
-    }
-
-    const linkedAccountId = config.razorpay_linked_account_id;
-    let stakeholderId = config.razorpay_stakeholder_id;
-    let productId = config.razorpay_product_id;
-    const residentialAddressJson = {
-      street: body.residentialAddress.street,
-      city: body.residentialAddress.city,
-      state: body.residentialAddress.state,
-      postalCode: body.residentialAddress.postalCode,
-      country: body.residentialAddress.country,
-    };
-
-    if (!stakeholderId) {
-      try {
-        const stakeholder = await getRazorpayClient().stakeholders.create(linkedAccountId, {
-          name: body.stakeholderName,
-          email: body.stakeholderEmail,
-          phone: { primary: phone },
-          kyc: { pan: body.pan },
-          relationship: { executive: true },
-          addresses: {
-            residential: {
-              street: body.residentialAddress.street,
-              city: body.residentialAddress.city,
-              state: body.residentialAddress.state,
-              postal_code: body.residentialAddress.postalCode,
-              country: body.residentialAddress.country,
-            },
-          },
-        });
-        stakeholderId = stakeholder.id;
-        await updateRecipientStakeholderId(phone, body.role, stakeholderId);
-        await upsertRecipientKyc({
-          phone,
-          role: body.role,
-          legalName: body.stakeholderName,
-          email: body.stakeholderEmail,
-          pan: body.pan,
-          registeredAddress: residentialAddressJson,
-          bankAccountNumber: body.bankAccountNumber,
-          bankIfsc: body.bankIfsc,
-          bankHolderName: body.bankBeneficiaryName,
-        });
-      } catch (err) {
-        console.error("Razorpay stakeholders.create failed", {
-          phone,
-          role: body.role,
-          linkedAccountId,
-          error: err as RazorpayErrorShape,
-        });
-        json(res, 502, {
-          error: "Onboarding step failed",
-          step: "stakeholder",
-          detail: parseRazorpayError(err),
-        });
+    const result = await executePaymentOnboardComplete(body);
+    if (!result.ok) {
+      if (result.kind === "precondition") {
+        json(res, 409, { error: result.error });
         return;
       }
-    }
-
-    if (!productId) {
-      try {
-        const product = await getRazorpayClient().products.requestProductConfiguration(
-          linkedAccountId,
-          { product_name: "route" },
-        );
-        productId = product.id;
-        await updateRecipientProductId(phone, body.role, productId);
-      } catch (err) {
-        console.error("Razorpay products.requestProductConfiguration failed", {
-          phone,
-          role: body.role,
-          linkedAccountId,
-          error: err as RazorpayErrorShape,
-        });
-        json(res, 502, {
-          error: "Onboarding step failed",
-          step: "product",
-          detail: parseRazorpayError(err),
-        });
-        return;
-      }
-    }
-
-    try {
-      await getRazorpayClient().products.edit(linkedAccountId, productId, {
-        settlements: {
-          account_number: body.bankAccountNumber,
-          ifsc_code: body.bankIfsc,
-          beneficiary_name: body.bankBeneficiaryName,
-        },
-        tnc_accepted: true,
-      });
-      await markRecipientSubmitted(phone, body.role);
-      await upsertRecipientKyc({
-        phone,
-        role: body.role,
-        legalName: body.stakeholderName,
-        email: body.stakeholderEmail,
-        pan: body.pan,
-        registeredAddress: residentialAddressJson,
-        bankAccountNumber: body.bankAccountNumber,
-        bankIfsc: body.bankIfsc,
-        bankHolderName: body.bankBeneficiaryName,
-      });
-    } catch (err) {
-      console.error("Razorpay products.edit failed", {
-        phone,
-        role: body.role,
-        linkedAccountId,
-        productId,
-        error: err as RazorpayErrorShape,
-      });
       json(res, 502, {
         error: "Onboarding step failed",
-        step: "bank",
-        detail: parseRazorpayError(err),
+        step: result.step,
+        detail: result.detail,
       });
       return;
     }
 
     json(res, 200, {
-      accountId: linkedAccountId,
-      stakeholderId,
-      productId,
-      validationStatus: "submitted",
+      accountId: result.accountId,
+      stakeholderId: result.stakeholderId,
+      productId: result.productId,
+      validationStatus: result.validationStatus,
       step: "onboarding_complete",
     });
   } catch (err) {
