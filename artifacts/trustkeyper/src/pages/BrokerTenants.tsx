@@ -46,6 +46,14 @@ import {
   type LeadStatus,
   type Tenant,
 } from "@/lib/tenants";
+import { documentUploadStatusLabel, TENANT_DOCUMENT_STATUS_UPDATED_EVENT } from "@/lib/tenantDocumentUploadStatus";
+import { fetchRequesterDocumentUploadInvites } from "@/lib/agreementDocumentUpload";
+import {
+  AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT,
+  findDocumentUploadInviteByToken,
+} from "@/lib/agreementDocumentUploadStore";
+import { TenantSubmittedDocumentsModal } from "@/components/agreement/TenantSubmittedDocumentsModal";
+import type { RequesterDocumentUploadInviteView } from "@workspace/tenant-document-upload";
 
 const TABS = [
   { id: "invites", label: "Invites" },
@@ -79,6 +87,7 @@ function leadStatusLabel(t: Tenant): LeadStatus {
 
 function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) {
   const [open, setOpen] = useState(false);
+  const [viewInvite, setViewInvite] = useState<RequesterDocumentUploadInviteView | null>(null);
   const whatsAppUrl = getBrokerTenantWhatsAppHref(t);
 
   const summaryChips: { icon: React.ReactNode; label: string }[] = [];
@@ -125,8 +134,18 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
                   Profile Complete
                 </span>
               ) : null}
+              {t.documentUploadStatus ? (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-violet-50 text-violet-700 text-xs font-medium">
+                  {documentUploadStatusLabel(t.documentUploadStatus)}
+                </span>
+              ) : null}
             </div>
             <p className="text-sm text-gray-500">{t.phone}</p>
+            {t.documentUploadSubmittedAt ? (
+              <p className="text-xs text-gray-500 mt-1">
+                Documents submitted {formatDate(new Date(t.documentUploadSubmittedAt).toISOString())}
+              </p>
+            ) : null}
           </div>
         </div>
         <a
@@ -189,6 +208,28 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
             : `Added ${timeAgo(t.createdAt)}`}
         </p>
         <div className="flex items-center gap-2 flex-wrap">
+          {t.documentUploadToken &&
+          (t.documentUploadStatus === "documents_submitted" ||
+            t.documentUploadStatus === "documents_in_progress") ? (
+            <BrokerFlowButton
+              type="button"
+              flowVariant="sm-outline"
+              onClick={() => {
+                const cached = findDocumentUploadInviteByToken(t.documentUploadToken ?? "");
+                if (cached) {
+                  setViewInvite(cached);
+                  return;
+                }
+                void fetchRequesterDocumentUploadInvites().then((result) => {
+                  if (!result.ok) return;
+                  const invite = result.invites.find((row) => row.token === t.documentUploadToken);
+                  if (invite) setViewInvite(invite);
+                });
+              }}
+            >
+              View tenant documents
+            </BrokerFlowButton>
+          ) : null}
           <BrokerFlowButton
             type="button"
             flowVariant="sm-ghost"
@@ -213,6 +254,10 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
           </BrokerFlowButton>
         </div>
       </div>
+
+      {viewInvite ? (
+        <TenantSubmittedDocumentsModal invite={viewInvite} onClose={() => setViewInvite(null)} />
+      ) : null}
     </div>
   );
 }
@@ -261,6 +306,7 @@ export default function BrokerTenants() {
     const session = getActiveSession();
     if (session?.role === "broker") {
       await pullAccountFromCloud(session.phone, "broker");
+      await fetchRequesterDocumentUploadInvites();
     }
     reload();
     setLoading(false);
@@ -275,10 +321,14 @@ export default function BrokerTenants() {
     window.addEventListener("focus", refresh);
     window.addEventListener(BROKER_INQUIRIES_UPDATED_EVENT, refresh);
     window.addEventListener(BROKER_ONBOARDING_INVITES_UPDATED_EVENT, refresh);
+    window.addEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, refresh);
+    window.addEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, refresh);
     return () => {
       window.removeEventListener("focus", refresh);
       window.removeEventListener(BROKER_INQUIRIES_UPDATED_EVENT, refresh);
       window.removeEventListener(BROKER_ONBOARDING_INVITES_UPDATED_EVENT, refresh);
+      window.removeEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, refresh);
+      window.removeEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, refresh);
     };
   }, [reloadFromCloud]);
 

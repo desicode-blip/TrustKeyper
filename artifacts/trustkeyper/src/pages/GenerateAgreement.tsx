@@ -74,29 +74,33 @@ import { isValidUpiId, sanitizeUpiInput } from "@/lib/upi";
 import { getFileTypeError, isValidAccountNumber, isValidIFSC } from "@/lib/fileValidation";
 import { toast as pushToast } from "@/hooks/use-toast";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
+import {
+  BankDetailsModal,
+  BANK_NAMES,
+  type BankDetailsData,
+} from "@/components/agreement/BankDetailsModal";
+import {
+  AgreementDocUploadShareModal,
+  type AgreementDocUploadSharePayload,
+} from "@/components/agreement/AgreementDocUploadShareModal";
+import { createAgreementDocumentUploadInvite, fetchRequesterDocumentUploadInvites } from "@/lib/agreementDocumentUpload";
+import {
+  AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT,
+  findDocumentUploadInviteByTenantPhone,
+  findDocumentUploadInviteByToken,
+  getStoredDocumentUploadInvites,
+} from "@/lib/agreementDocumentUploadStore";
+import { syncTenantDocumentUploadStatus, TENANT_DOCUMENT_STATUS_UPDATED_EVENT } from "@/lib/tenantDocumentUploadStatus";
+import {
+  applyReceivedInviteToAgreementDocs,
+  TenantSubmittedDocumentsModal,
+} from "@/components/agreement/TenantSubmittedDocumentsModal";
+import type { RequesterDocumentUploadInviteView } from "@workspace/tenant-document-upload";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
-type BankData =
-  | {
-      mode: "bank";
-      holderName: string;
-      bankName: string;
-      accountNumber: string;
-      ifscCode: string;
-      upiId?: string;
-      upiQrFileName?: string;
-    }
-  | {
-      mode: "upi";
-      holderName?: string;
-      bankName?: string;
-      accountNumber?: string;
-      ifscCode?: string;
-      upiId: string;
-      upiQrFileName?: string;
-    };
+type BankData = BankDetailsData;
 
 const STEPS: { id: Step; label: string; shortLabel: string; Icon: React.ElementType }[] = [
   { id: 1, label: "Property", shortLabel: "Property", Icon: Home },
@@ -752,20 +756,16 @@ interface DocState {
   fileName?: string;
   fileSize?: number;
   uploadedAt?: number;
+  dataUrl?: string;
 }
 
 interface PersonState {
   name: string;
   contact: string;
   personLabel: string;
+  documentUploadToken?: string;
   docs: DocState[];
 }
-
-const BANK_NAMES = [
-  "State Bank of India", "HDFC Bank", "ICICI Bank", "Axis Bank",
-  "Kotak Mahindra Bank", "Punjab National Bank", "Bank of Baroda",
-  "Canara Bank", "Union Bank of India", "IndusInd Bank", "Yes Bank",
-];
 
 function initPersonDocs(name: string, contact: string, label: string): PersonState {
   return {
@@ -782,182 +782,6 @@ function fmtFileSize(b: number) {
   return b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${(b / 1024).toFixed(1)} KB` : `${(b / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// ── Bank Details Modal ────────────────────────────────────────────────────────
-
-function BankModal({
-  onSave,
-  onClose,
-  prefillOwnerProfile = false,
-}: {
-  onSave: (d: BankData) => void;
-  onClose: () => void;
-  prefillOwnerProfile?: boolean;
-}) {
-  const saved = prefillOwnerProfile ? getOwnerProfile() : null;
-  const defaultTab: "bank" | "upi" =
-    saved?.upiId && !hasOwnerBankDetails() ? "upi" : "bank";
-  const [tab, setTab] = useState<"bank" | "upi">(defaultTab);
-  const [holderName, setHolderName] = useState(saved?.bankHolderName ?? "");
-  const [bankName, setBankName] = useState(saved?.bankName ?? "");
-  const [accountNumber, setAccountNumber] = useState(saved?.bankAccountNumber ?? "");
-  const [ifscCode, setIfscCode] = useState(saved?.bankIFSC ?? "");
-  const [upiId, setUpiId] = useState(saved?.upiId ?? "");
-  const qrRef = useRef<HTMLInputElement>(null);
-  const [qrFile, setQrFile] = useState(saved?.upiQrFileName ?? "");
-
-  const bankValid = !!(
-    holderName &&
-    bankName &&
-    accountNumber &&
-    ifscCode &&
-    isValidAccountNumber(accountNumber) &&
-    isValidIFSC(ifscCode)
-  );
-  const upiIdValid = isValidUpiId(upiId);
-  const upiValid = upiIdValid || !!qrFile;
-
-  return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md relative">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute top-4 right-4 w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
-        >
-          <X size={14} className="text-gray-600" />
-        </button>
-        <div className="px-6 pt-6 pb-2 border-b border-gray-100">
-          <h3 className="text-base font-semibold text-gray-900 text-center mb-5">Add Bank Details</h3>
-          <FlowSegmentTabs
-            value={tab}
-            onChange={(v) => setTab(v)}
-            options={[
-              { value: "bank", label: "Bank account" },
-              { value: "upi", label: "UPI" },
-            ]}
-            className="mx-auto"
-          />
-        </div>
-
-        <div className="px-6 py-5 space-y-4">
-          {tab === "bank" ? (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Account Holder Name*</label>
-                  <input value={holderName} onChange={(e) => setHolderName(e.target.value)} className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Bank Name*</label>
-                  <div className="relative">
-                    <select value={bankName} onChange={(e) => setBankName(e.target.value)} className={`w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm text-gray-900 appearance-none focus:outline-none focus:border-primary bg-white ${!bankName ? "text-gray-400" : ""}`}>
-                      <option value=""></option>
-                      {BANK_NAMES.map((b) => <option key={b} value={b}>{b}</option>)}
-                    </select>
-                    <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Account Number*</label>
-                  <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
-                  {accountNumber && !isValidAccountNumber(accountNumber) ? (
-                    <p className="text-xs text-red-500 mt-1">Account number must be 9–18 digits</p>
-                  ) : null}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">IFSC Code*</label>
-                  <input value={ifscCode} onChange={(e) => setIfscCode(e.target.value.toUpperCase())} placeholder="e.g. SBIN0001234" className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
-                  {ifscCode && !isValidIFSC(ifscCode) ? (
-                    <p className="text-xs text-red-500 mt-1">Invalid IFSC code (e.g. HDFC0001234)</p>
-                  ) : null}
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1 text-center">UPI ID</label>
-                <input
-                  value={upiId}
-                  onChange={(e) => setUpiId(sanitizeUpiInput(e.target.value))}
-                  placeholder="name@bank"
-                  inputMode="email"
-                  autoComplete="off"
-                  className={`w-full h-9 px-3 rounded-lg border text-sm focus:outline-none focus:ring-2 text-center ${
-                    upiId && !upiValid
-                      ? "border-red-300 focus:ring-red-200"
-                      : "border-primary focus:ring-primary/20"
-                  }`}
-                />
-                {upiId && !upiValid ? (
-                  <p className="text-xs text-red-500 text-center mt-1">Enter a valid UPI ID (e.g. name@bank)</p>
-                ) : null}
-              </div>
-              <p className="text-xs text-gray-400 text-center font-medium">OR</p>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1 text-center">Upload QR Code</label>
-                <button
-                  type="button"
-                  onClick={() => qrRef.current?.click()}
-                  className="w-full h-20 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5 hover:border-primary/50 hover:bg-gray-50 transition-colors"
-                >
-                  {qrFile ? (
-                    <>
-                      <Check size={18} className="text-green-500" />
-                      <span className="text-xs text-green-600 font-medium">QR uploaded: {qrFile}</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                        <Plus size={12} className="text-gray-600" />
-                      </div>
-                      <span className="text-xs text-gray-600">Upload QR Code</span>
-                      <span className="text-[10px] text-gray-400">(pdf, png, jpeg)</span>
-                    </>
-                  )}
-                </button>
-                <input
-                  ref={qrRef}
-                  type="file"
-                  accept=".pdf,.png,.jpeg,.jpg"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files?.[0]) setQrFile(e.target.files[0].name);
-                  }}
-                />
-              </div>
-            </>
-          )}
-
-          <button
-            onClick={() => {
-              if (tab === "bank" ? bankValid : upiValid) {
-                onSave({
-                  mode: tab,
-                  holderName,
-                  bankName,
-                  accountNumber,
-                  ifscCode,
-                  upiId,
-                  upiQrFileName: qrFile || undefined,
-                } as BankData);
-                if (prefillOwnerProfile && tab === "upi" && qrFile) {
-                  saveOwnerProfile({ ...getOwnerProfile(), upiQrFileName: qrFile });
-                }
-              }
-            }}
-            disabled={tab === "bank" ? !bankValid : !upiValid}
-            className={`flex items-center justify-center gap-2 w-full h-10 rounded-xl text-sm font-semibold transition-colors ${(tab === "bank" ? bankValid : upiValid) ? "bg-primary text-white hover:bg-primary/90" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
-          >
-            Continue <ChevronRight size={15} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Document Row ──────────────────────────────────────────────────────────────
 
 function DocRow({
@@ -967,6 +791,7 @@ function DocRow({
   onSendLink,
   onRemove,
   onAddDetails,
+  onView,
   hideSendLink = false,
 }: {
   doc: DocState;
@@ -975,6 +800,7 @@ function DocRow({
   onSendLink: () => void;
   onRemove: () => void;
   onAddDetails: () => void;
+  onView?: () => void;
   hideSendLink?: boolean;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -1002,7 +828,7 @@ function DocRow({
         )}
         {doc.status === "link_sent" && (
           <p className="text-xs text-gray-500 mt-0.5 break-words">
-            Waiting for {personName} to upload · <span className="text-blue-500">Link sent Just now</span>
+            Waiting for {personName} to upload · <span className="text-blue-500">Link sent</span>
           </p>
         )}
         {doc.status === "pending" && (
@@ -1014,7 +840,12 @@ function DocRow({
       <div className="flex items-center gap-2 shrink-0 flex-wrap sm:justify-end w-full sm:w-auto pt-1 sm:pt-0 border-t border-gray-100/80 sm:border-0 mt-1 sm:mt-0">
         {doc.status === "uploaded" && (
           <>
-            <button className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors">
+            <button
+              type="button"
+              onClick={onView}
+              disabled={!onView}
+              className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors disabled:opacity-40"
+            >
               <Eye size={12} /> View
             </button>
             <button type="button" onClick={onRemove} aria-label="Replace document" className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400"><RefreshCw size={13} /></button>
@@ -1132,12 +963,20 @@ function Step3Documents({
   onContinue,
   isOwnerFlow = false,
   initialPersons = [],
+  propertyId,
+  propertyLabel,
+  requesterName,
+  requesterRole,
 }: {
   allParties: Party[];
   ownerCount: number;
   onContinue: (result: { documentsComplete: boolean; persons: PersonState[] }) => void;
   isOwnerFlow?: boolean;
   initialPersons?: PersonState[];
+  propertyId?: string;
+  propertyLabel?: string;
+  requesterName: string;
+  requesterRole: "owner" | "broker";
 }) {
   const [persons, setPersons] = useState<PersonState[]>(() => {
     if (initialPersons && initialPersons.length > 0) return initialPersons;
@@ -1161,6 +1000,54 @@ function Step3Documents({
   const [personIdx, setPersonIdx] = useState(0);
   const [bankModal, setBankModal] = useState<{ pIdx: number; dIdx: number } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [sharePayload, setSharePayload] = useState<AgreementDocUploadSharePayload | null>(null);
+  const [sendingLink, setSendingLink] = useState(false);
+  const [viewInvite, setViewInvite] = useState<RequesterDocumentUploadInviteView | null>(null);
+
+  const phoneLast10 = (phone: string) => phone.replace(/\D/g, "").slice(-10);
+
+  const applyReceivedInvites = useCallback((invites: RequesterDocumentUploadInviteView[]) => {
+    if (invites.length === 0) return;
+    setPersons((prev) =>
+      prev.map((person) => {
+        const invite =
+          (person.documentUploadToken
+            ? invites.find((row) => row.token === person.documentUploadToken)
+            : undefined) ??
+          invites.find((row) => phoneLast10(row.tenantPhone) === phoneLast10(person.contact));
+        if (!invite) return person;
+        return {
+          ...person,
+          documentUploadToken: invite.token,
+          docs: applyReceivedInviteToAgreementDocs(person.docs, invite),
+        };
+      }),
+    );
+  }, []);
+
+  const refreshReceivedDocuments = useCallback(async () => {
+    const result = await fetchRequesterDocumentUploadInvites();
+    if (result.ok) {
+      applyReceivedInvites(result.invites);
+      return;
+    }
+    applyReceivedInvites(getStoredDocumentUploadInvites());
+  }, [applyReceivedInvites]);
+
+  useEffect(() => {
+    applyReceivedInvites(getStoredDocumentUploadInvites());
+    void refreshReceivedDocuments();
+    const interval = window.setInterval(() => void refreshReceivedDocuments(), 15000);
+    const onStatus = () => void refreshReceivedDocuments();
+    window.addEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onStatus);
+    window.addEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onStatus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onStatus);
+      window.removeEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onStatus);
+    };
+  }, [applyReceivedInvites, refreshReceivedDocuments]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -1187,8 +1074,71 @@ function Step3Documents({
     }
   };
 
-  const handleSendLink = (pIdx: number, dIdx: number) => {
-    updateDoc(pIdx, dIdx, { status: "link_sent" });
+  const openDocumentUploadShare = async (pIdx: number) => {
+    const target = persons[pIdx];
+    if (!target?.contact) {
+      pushToast({
+        title: "Tenant phone required",
+        description: "Add the tenant mobile number before sending an upload link.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingLink(true);
+    try {
+      const result = await createAgreementDocumentUploadInvite({
+        tenantName: target.name,
+        tenantPhone: target.contact,
+        requesterName,
+        requesterRole,
+        propertyId,
+        propertyLabel,
+      });
+
+      if (!result.ok) {
+        pushToast({
+          title: "Could not create upload link",
+          description:
+            result.error === "duplicate_invite"
+              ? "An active document upload link already exists for this tenant."
+              : result.detail ?? "Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setPersons((prev) =>
+        prev.map((p, pi) =>
+          pi !== pIdx
+            ? p
+            : {
+                ...p,
+                documentUploadToken: result.token,
+                docs: p.docs.map((d) =>
+                  d.status === "pending" ? { ...d, status: "link_sent" as DocStatus } : d,
+                ),
+              },
+        ),
+      );
+      syncTenantDocumentUploadStatus(target.contact, "document_request_sent", {
+        token: result.token,
+      });
+      setSharePayload({
+        tenantName: result.tenantName,
+        tenantPhone: result.tenantPhone,
+        link: result.inviteLink,
+        token: result.token,
+      });
+      setShareOpen(true);
+      showToast(`Upload link ready for ${target.name || "tenant"} ✓`);
+    } finally {
+      setSendingLink(false);
+    }
+  };
+
+  const handleSendLink = (pIdx: number, _dIdx: number) => {
+    void openDocumentUploadShare(pIdx);
   };
 
   const handleResetDoc = (pIdx: number, dIdx: number) => {
@@ -1201,13 +1151,7 @@ function Step3Documents({
   };
 
   const handleSendAllPending = (pIdx: number) => {
-    const person = persons[pIdx];
-    const pendingCount = person.docs.filter((d) => d.status === "pending").length;
-    if (pendingCount === 0) return;
-    setPersons((prev) => prev.map((p, pi) =>
-      pi !== pIdx ? p : { ...p, docs: p.docs.map((d) => d.status === "pending" ? { ...d, status: "link_sent" as DocStatus } : d) }
-    ));
-    showToast(`Upload links sent to ${person.name || "person"} for ${pendingCount} document${pendingCount > 1 ? "s" : ""} ✓`);
+    void openDocumentUploadShare(pIdx);
   };
 
   const handleBankSave = (data: BankData) => {
@@ -1240,9 +1184,32 @@ function Step3Documents({
   };
 
   const person = persons[personIdx];
+  const isTenantParty = personIdx >= ownerCount;
   const isLast = personIdx === persons.length - 1;
   const allDoneForPerson = person?.docs.every((d) => d.status !== "pending");
   const allDone = persons.every((p) => p.docs.every((d) => d.status !== "pending"));
+
+  const resolvePersonInvite = (target: PersonState): RequesterDocumentUploadInviteView | null => {
+    if (target.documentUploadToken) {
+      const byToken = findDocumentUploadInviteByToken(target.documentUploadToken);
+      if (byToken) return byToken;
+    }
+    return findDocumentUploadInviteByTenantPhone(target.contact) ?? null;
+  };
+
+  const handleViewDoc = (target: PersonState, doc: DocState) => {
+    if (doc.dataUrl && doc.fileName) {
+      const anchor = document.createElement("a");
+      anchor.href = doc.dataUrl;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      anchor.download = doc.fileName;
+      anchor.click();
+      return;
+    }
+    const invite = resolvePersonInvite(target);
+    if (invite) setViewInvite(invite);
+  };
 
   if (persons.length === 0) {
     return (
@@ -1257,7 +1224,7 @@ function Step3Documents({
     <div className="max-w-xl w-full">
       {/* Bank modal */}
       {bankModal && (
-        <BankModal
+        <BankDetailsModal
           key={`${bankModal.pIdx}-${bankModal.dIdx}`}
           prefillOwnerProfile={
             isOwnerFlow &&
@@ -1267,6 +1234,21 @@ function Step3Documents({
           onClose={() => setBankModal(null)}
         />
       )}
+
+      {sharePayload ? (
+        <AgreementDocUploadShareModal
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          tenantName={sharePayload.tenantName}
+          tenantPhone={sharePayload.tenantPhone}
+          link={sharePayload.link}
+          token={sharePayload.token}
+        />
+      ) : null}
+
+      {viewInvite ? (
+        <TenantSubmittedDocumentsModal invite={viewInvite} onClose={() => setViewInvite(null)} />
+      ) : null}
 
       {/* Toast */}
       {toast && (
@@ -1324,6 +1306,17 @@ function Step3Documents({
               </span>
             )}
           </div>
+          {isTenantParty && person.docs.some((d) => d.status === "pending") ? (
+            <button
+              type="button"
+              disabled={sendingLink}
+              onClick={() => handleSendAllPending(personIdx)}
+              className="mt-4 flex items-center justify-center gap-2 w-full h-10 rounded-xl border border-primary/40 text-sm font-medium text-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
+            >
+              <Link2 size={14} />
+              {sendingLink ? "Preparing link…" : "Send Link to Upload Documents"}
+            </button>
+          ) : null}
         </div>
 
         {/* Doc rows */}
@@ -1337,7 +1330,8 @@ function Step3Documents({
               onSendLink={() => handleSendLink(personIdx, dIdx)}
               onRemove={() => handleResetDoc(personIdx, dIdx)}
               onAddDetails={() => setBankModal({ pIdx: personIdx, dIdx })}
-              hideSendLink
+              onView={() => handleViewDoc(person, doc)}
+              hideSendLink={!isTenantParty || isOwnerPrimarySelf(personIdx, person, isOwnerFlow)}
             />
           ))}
         </div>
@@ -2550,6 +2544,14 @@ export default function GenerateAgreement() {
           ownerCount={ownerCount}
           isOwnerFlow={isOwnerFlow}
           initialPersons={documentPersons}
+          propertyId={selectedProperty?.id}
+          propertyLabel={selectedProperty ? getPropertyTitle(selectedProperty) : undefined}
+          requesterName={
+            isOwnerFlow
+              ? ownerDisplayName || ownerName
+              : (getBrokerProfile().name?.trim() || ownerName || "Your broker")
+          }
+          requesterRole={isOwnerFlow ? "owner" : "broker"}
           onContinue={(result) => {
             setDocumentsComplete(result.documentsComplete);
             setDocumentPersons(result.persons);
