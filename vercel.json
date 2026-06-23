@@ -17,6 +17,9 @@
     },
     "api/payments-onboard-complete.ts": {
       "maxDuration": 30
+    },
+    "api/razorpay-webhook.ts": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
