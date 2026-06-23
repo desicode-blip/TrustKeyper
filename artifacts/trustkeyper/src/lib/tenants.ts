@@ -1,3 +1,4 @@
+import type { TenantDocumentUploadStatus } from "@workspace/tenant-document-upload";
 import { markInviteConverted } from "./brokerTenantOnboarding";
 import { queueCloudSync } from "./cloudSync";
 import { registerTenantLeadPhoneClaimLocally } from "./tenantPhoneRules";
@@ -55,6 +56,9 @@ export interface Tenant {
   source?: TenantLeadSource;
   onboardingToken?: string;
   submittedAt?: number;
+  documentUploadStatus?: TenantDocumentUploadStatus;
+  documentUploadToken?: string;
+  documentUploadSubmittedAt?: number;
   createdAt: number;
 }
 

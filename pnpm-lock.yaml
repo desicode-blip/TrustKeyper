@@ -179,6 +179,9 @@ importers:
       '@workspace/sync-store':
         specifier: workspace:*
         version: link:lib/sync-store
+      '@workspace/tenant-document-upload':
+        specifier: workspace:*
+        version: link:lib/tenant-document-upload
       pg:
         specifier: ^8.20.0
         version: 8.20.0
@@ -611,6 +614,9 @@ importers:
       '@workspace/api-client-react':
         specifier: workspace:*
         version: link:../../lib/api-client-react
+      '@workspace/tenant-document-upload':
+        specifier: workspace:*
+        version: link:../../lib/tenant-document-upload
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -789,6 +795,15 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.6.0
+
+  lib/tenant-document-upload:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.6.2
+      typescript:
+        specifier: ~5.9.2
+        version: 5.9.3
 
   scripts:
     devDependencies:
