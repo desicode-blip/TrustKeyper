@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm run typecheck:deploy && pnpm --filter @workspace/trustkeyper run build",
+  "buildCommand": "pnpm run typecheck:deploy && pnpm --filter @workspace/broker-tenant-onboarding run build && pnpm --filter @workspace/trustkeyper run build",
   "outputDirectory": "artifacts/trustkeyper/dist",
   "installCommand": "pnpm install",
   "functions": {

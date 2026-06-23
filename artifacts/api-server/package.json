@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm run build && node --enable-source-maps ./dist/index.mjs",
+    "prebuild": "pnpm --filter @workspace/broker-tenant-onboarding run build",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
