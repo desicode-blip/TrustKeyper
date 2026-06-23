@@ -32,6 +32,8 @@ const onboardBodySchema = z.object({
 
 type OnboardBody = z.infer<typeof onboardBodySchema>;
 
+export type PaymentOnboardBody = OnboardBody;
+
 type RecipientConfigRow = {
   razorpay_linked_account_id: string | null;
   validation_status: string;
@@ -52,7 +54,7 @@ function requestAuthorization(req: VercelRequest): string | undefined {
   return header;
 }
 
-function razorpayReferenceId(phone: string, role: string): string {
+export function razorpayReferenceId(phone: string, role: string): string {
   return `tk-${phone}-${role}`;
 }
 
@@ -63,7 +65,7 @@ function parseRazorpayError(err: unknown): string {
   return "Unknown Razorpay error";
 }
 
-async function getRecipientConfig(
+export async function getRecipientConfig(
   phone: string,
   role: string,
 ): Promise<RecipientConfigRow | null> {
@@ -76,7 +78,7 @@ async function getRecipientConfig(
   return result.rows[0] ?? null;
 }
 
-async function upsertRecipientAccount(params: {
+export async function upsertRecipientAccount(params: {
   phone: string;
   role: string;
   accountId: string;
@@ -101,7 +103,7 @@ async function upsertRecipientAccount(params: {
   );
 }
 
-function buildRazorpayAccountPayload(body: OnboardBody, referenceId: string) {
+export function buildRazorpayAccountPayload(body: OnboardBody, referenceId: string) {
   const { registeredAddress: addr } = body;
   return {
     email: body.email,
