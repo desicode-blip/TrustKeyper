@@ -14,6 +14,9 @@
     },
     "api/payments-onboard.ts": {
       "maxDuration": 30
+    },
+    "api/payments-onboard-complete.ts": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
