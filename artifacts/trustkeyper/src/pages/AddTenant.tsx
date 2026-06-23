@@ -45,6 +45,10 @@ import {
   type Sharing,
   type Roommate,
 } from "@/lib/tenants";
+import {
+  getTenantPhoneConflict,
+  tenantPhoneConflictMessage,
+} from "@/lib/tenantPhoneRules";
 import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
 import type { BrokerOnboardLinkPayload } from "@/lib/brokerOnboardShareActions";
 
@@ -89,6 +93,7 @@ export default function AddTenant() {
   const [sharing, setSharing] = useState<Sharing | "">("");
   const [roommate, setRoommate] = useState<Roommate[]>([]);
   const [localityInput, setLocalityInput] = useState("");
+  const [phoneConflictWarning, setPhoneConflictWarning] = useState<string | null>(null);
 
   // Success modal
   const [successOpen, setSuccessOpen] = useState(false);
@@ -235,12 +240,31 @@ export default function AddTenant() {
       phone.trim().length !== 10 ||
       !occupancyFrom ||
       !who ||
-      !food
+      !food ||
+      phoneConflictWarning
     )
       return false;
     if (who === "Bachelor" && identify.length === 0) return false;
     return true;
-  }, [name, phone, occupancyFrom, who, identify, food]);
+  }, [name, phone, occupancyFrom, who, identify, food, phoneConflictWarning]);
+
+  useEffect(() => {
+    if (phone.trim().length !== 10) {
+      setPhoneConflictWarning(null);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const conflict = await getTenantPhoneConflict(phone, { excludeTenantId: editId ?? undefined });
+      if (cancelled) return;
+      setPhoneConflictWarning(conflict ? tenantPhoneConflictMessage(conflict) : null);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [phone, editId]);
 
   const step2Valid = useMemo(() => {
     if (localities.length === 0) return false;
@@ -255,7 +279,27 @@ export default function AddTenant() {
     setStep(2);
   };
 
-  const persistTenant = (complete: boolean) => {
+  const persistTenant = async (complete: boolean) => {
+    if (!editId) {
+      const conflict = await getTenantPhoneConflict(phone);
+      if (conflict) {
+        toast({
+          description: tenantPhoneConflictMessage(conflict),
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      const conflict = await getTenantPhoneConflict(phone, { excludeTenantId: editId });
+      if (conflict) {
+        toast({
+          description: tenantPhoneConflictMessage(conflict),
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     draftPausedRef.current = true;
     const payload = {
       name,
@@ -275,7 +319,7 @@ export default function AddTenant() {
     if (editId) {
       updateTenant(editId, payload);
     } else {
-      addTenant(payload);
+      addTenant({ ...payload, source: "manual" });
     }
 
     try {
@@ -296,11 +340,11 @@ export default function AddTenant() {
 
   const handleSaveDetails = () => {
     if (!step2Valid) return;
-    persistTenant(true);
+    void persistTenant(true);
   };
 
   const handleSkipSave = () => {
-    persistTenant(false);
+    void persistTenant(false);
   };
 
   const toggleIdentify = (v: Identify) => {
@@ -433,6 +477,9 @@ export default function AddTenant() {
                       className="flex-1"
                     />
                   </div>
+                  {phoneConflictWarning ? (
+                    <p className="text-sm text-destructive">{phoneConflictWarning}</p>
+                  ) : null}
                 </div>
               </div>
 

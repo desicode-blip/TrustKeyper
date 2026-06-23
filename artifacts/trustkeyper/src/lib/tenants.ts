@@ -1,5 +1,6 @@
 import { markInviteConverted } from "./brokerTenantOnboarding";
 import { queueCloudSync } from "./cloudSync";
+import { registerTenantLeadPhoneClaimLocally } from "./tenantPhoneRules";
 import { getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
 
 export type TenantWho = "Family" | "Bachelor";
@@ -101,6 +102,10 @@ export function addTenant(
   const list = getTenants();
   list.unshift(tenant);
   persistTenantList(list);
+  const leadSource = rest.source ?? "manual";
+  if (leadSource === "manual") {
+    registerTenantLeadPhoneClaimLocally(tenant, "manual");
+  }
   return tenant;
 }
 

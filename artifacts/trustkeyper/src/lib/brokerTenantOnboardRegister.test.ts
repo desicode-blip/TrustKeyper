@@ -95,6 +95,48 @@ describe("registerBrokerOnboardingInvite", () => {
 
     expect(second.ok).toBe(false);
     if (second.ok) return;
-    expect(second.error).toBe("duplicate_invite");
+    expect(second.error).toBe("duplicate_tenant");
+  });
+
+  it("rejects invite when phone already has a tenant account", async () => {
+    const { store } = createMemoryOnboardStore();
+    store.accountHasProfile = async (phone, role) => phone === "8367849588" && role === "tenant";
+
+    const result = await registerBrokerOnboardingInvite(store, {
+      brokerPhone: "9876543210",
+      brokerName: "Demo Broker",
+      tenantName: "Meena Kumari",
+      tenantPhone: "8367849588",
+      origin: "https://staging.app.trustkeyper.com",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe("duplicate_tenant_account");
+  });
+
+  it("rejects invite when another broker already claimed the tenant phone", async () => {
+    const { store } = createMemoryOnboardStore();
+
+    const first = await registerBrokerOnboardingInvite(store, {
+      brokerPhone: "9876543210",
+      brokerName: "Broker A",
+      tenantName: "Meena Kumari",
+      tenantPhone: "8367849588",
+      origin: "https://staging.app.trustkeyper.com",
+    });
+    expect(first.ok).toBe(true);
+
+    const second = await registerBrokerOnboardingInvite(store, {
+      brokerPhone: "9123456789",
+      brokerName: "Broker B",
+      tenantName: "Meena Kumari",
+      tenantPhone: "8367849588",
+      origin: "https://staging.app.trustkeyper.com",
+    });
+
+    expect(second.ok).toBe(false);
+    if (second.ok) return;
+    expect(second.error).toBe("duplicate_tenant");
   });
 });

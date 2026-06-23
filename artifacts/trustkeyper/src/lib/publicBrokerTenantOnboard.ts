@@ -7,6 +7,7 @@ type RegisterInviteError =
   | "invalid_name"
   | "invalid_phone"
   | "duplicate_tenant"
+  | "duplicate_tenant_account"
   | "duplicate_invite"
   | "unauthorized"
   | "server_error"
@@ -125,6 +126,7 @@ const REGISTER_ERROR_CODES: Record<string, RegisterInviteError> = {
   invalid_name: "invalid_name",
   invalid_phone: "invalid_phone",
   duplicate_tenant: "duplicate_tenant",
+  duplicate_tenant_account: "duplicate_tenant_account",
   duplicate_invite: "duplicate_invite",
 };
 

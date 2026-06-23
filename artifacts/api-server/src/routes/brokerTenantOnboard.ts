@@ -16,7 +16,8 @@ const router: IRouter = Router();
 const REGISTER_ERROR_MESSAGES: Record<RegisterBrokerOnboardInviteError, string> = {
   invalid_name: "Enter tenant full name",
   invalid_phone: "Enter a valid 10-digit mobile number",
-  duplicate_tenant: "A lead with this mobile number already exists.",
+  duplicate_tenant: "A tenant lead with this mobile number already exists.",
+  duplicate_tenant_account: "This mobile number already has a tenant account.",
   duplicate_invite: "An active onboarding link already exists for this number.",
 };
 
@@ -66,7 +67,12 @@ function onboardResponse(res: Response): OnboardResponse {
 }
 
 async function loadOnboardStore(): Promise<OnboardStore> {
-  return syncStore;
+  return {
+    findEntryByDataKey: syncStore.findEntryByDataKey,
+    getAccountData: syncStore.getAccountData,
+    setAccountDataKey: syncStore.setAccountDataKey,
+    accountHasProfile: syncStore.accountHasProfile,
+  };
 }
 
 function requestOrigin(req: Request): string {

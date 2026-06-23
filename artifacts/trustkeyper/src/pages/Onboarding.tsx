@@ -170,10 +170,9 @@ export default function Onboarding() {
                 role={role}
                 setRole={setRole}
                 onNext={() => {
-                  if (isAuthEntryRole(role)) {
-                    setAuthPendingRole(role);
-                    goNext();
-                  }
+                  if (!isAuthEntryRole(role) || role === "tenant") return;
+                  setAuthPendingRole(role);
+                  goNext();
                 }}
               />
             </>

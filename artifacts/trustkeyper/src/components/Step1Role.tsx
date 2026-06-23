@@ -4,7 +4,7 @@ import { AuthEntryRoleGrid } from "@/components/auth/AuthEntryRoleGrid";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
 import { AuthStepHeading } from "@/components/auth/AuthStepHeading";
 import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
-import { isAuthEntryRole, type Role } from "@/lib/auth";
+import { isAuthEntryRole } from "@/lib/auth";
 
 interface Step1RoleProps {
   role: string;
@@ -19,8 +19,11 @@ export default function Step1Role({
   onNext,
   footerLinkType = "login",
 }: Step1RoleProps) {
+  const tenantSelected = role === "tenant";
+  const canContinue = isAuthEntryRole(role) && !tenantSelected;
+
   const cta = (
-    <Button size="lg" onClick={onNext} disabled={!isAuthEntryRole(role)} className={authPrimaryButtonClass}>
+    <Button size="lg" onClick={onNext} disabled={!canContinue} className={authPrimaryButtonClass}>
       Continue
     </Button>
   );
@@ -35,6 +38,12 @@ export default function Step1Role({
         value={role}
         onChange={(r) => setRole(r)}
       />
+
+      {tenantSelected ? (
+        <p className="mt-4 text-sm text-gray-500 text-center max-w-md">
+          Tenant signup is coming soon. If your broker shared a link, open it to complete onboarding.
+        </p>
+      ) : null}
 
       {/* Always render the footer so the sticky CTA bar is visible on mobile even before selection */}
       <AuthSignupScreenFooter
