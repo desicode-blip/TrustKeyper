@@ -19,6 +19,8 @@ export const paymentRecipientConfigTable = pgTable(
     phone: text("phone").notNull(),
     role: text("role").notNull(),
     razorpayLinkedAccountId: text("razorpay_linked_account_id"),
+    razorpayProductId: text("razorpay_product_id"),
+    razorpayStakeholderId: text("razorpay_stakeholder_id"),
     razorpayReferenceId: text("razorpay_reference_id"),
     commissionRateBps: integer("commission_rate_bps").notNull().default(0),
     validationStatus: text("validation_status").notNull().default("pending"),
