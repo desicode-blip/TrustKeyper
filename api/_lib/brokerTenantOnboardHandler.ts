@@ -6,10 +6,6 @@ import type {
   OnboardStore,
   RegisterBrokerOnboardInviteError,
 } from "@workspace/broker-tenant-onboarding";
-import {
-  handleBrokerTenantOnboardRequest as handleBrokerTenantOnboardRequestCore,
-  registerBrokerOnboardingInvite,
-} from "@workspace/broker-tenant-onboarding";
 import { assertSyncAccountAuth } from "./syncAuth.js";
 import { json, readJsonBody } from "./http.js";
 
@@ -19,6 +15,10 @@ const REGISTER_ERROR_MESSAGES: Record<RegisterBrokerOnboardInviteError, string> 
   duplicate_tenant: "A lead with this mobile number already exists.",
   duplicate_invite: "An active onboarding link already exists for this number.",
 };
+
+async function loadBrokerTenantOnboarding() {
+  return import("@workspace/broker-tenant-onboarding");
+}
 
 function onboardPathSegments(req: VercelRequest): string[] {
   const raw = req.query.onboardPath ?? req.query.path;
@@ -149,6 +149,7 @@ async function handleCreateInvite(req: VercelRequest, res: VercelResponse): Prom
     (await resolveBrokerDisplayName(store, brokerPhone)) ||
     "Your broker";
 
+  const { registerBrokerOnboardingInvite } = await loadBrokerTenantOnboarding();
   const result = await registerBrokerOnboardingInvite(store, {
     brokerPhone,
     brokerName,
@@ -189,5 +190,7 @@ export async function handleBrokerTenantOnboardRequest(
 
   const adaptedReq = onboardRequest(req, segments);
   const adaptedRes = onboardResponse(res);
+  const { handleBrokerTenantOnboardRequest: handleBrokerTenantOnboardRequestCore } =
+    await loadBrokerTenantOnboarding();
   await handleBrokerTenantOnboardRequestCore(adaptedReq, adaptedRes, store);
 }
