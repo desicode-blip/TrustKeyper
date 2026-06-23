@@ -1,5 +1,5 @@
 import React from "react";
-import { User, IndianRupee } from "lucide-react";
+import { Home, User, IndianRupee } from "lucide-react";
 import { AUTH_ENTRY_ROLES, isAuthEntryRole, type AuthEntryRole } from "@/lib/auth";
 import { authRoleCardSelectedClass, authRoleCardUnselectedClass } from "@/components/auth/authStyles";
 
@@ -9,6 +9,7 @@ const ROLE_UI: Record<
 > = {
   owner: { shortLabel: "Property Owner", icon: User },
   broker: { shortLabel: "Broker", icon: IndianRupee },
+  tenant: { shortLabel: "Tenant", icon: Home },
 };
 
 interface AuthEntryRoleGridProps {
@@ -17,12 +18,12 @@ interface AuthEntryRoleGridProps {
 }
 
 /**
- * Signup/login role cards — owner and broker only (tenant & manager suppressed).
- * Mobile: vertical stack. Desktop (lg+): two columns side by side.
+ * Signup/login role cards — owner, broker, and tenant (manager suppressed).
+ * Mobile: vertical stack. Desktop (lg+): three columns.
  */
 export function AuthEntryRoleGrid({ value, onChange }: AuthEntryRoleGridProps) {
   return (
-    <div className="flex w-full max-w-md flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
+    <div className="flex w-full max-w-md flex-col gap-3 lg:max-w-none lg:grid lg:grid-cols-3 lg:gap-4">
       {AUTH_ENTRY_ROLES.map((id) => {
         const meta = ROLE_UI[id];
         const isSelected = value === id;

@@ -1,3 +1,21 @@
+import {
+  assertTenantPhoneAvailable,
+  registerTenantLeadPhoneClaim,
+  type TenantPhoneConflict,
+} from "./tenantPhoneUniqueness.js";
+
+export {
+  assertTenantPhoneAvailable,
+  findBrokerTenantLeadByPhone,
+  findGlobalTenantLeadClaim,
+  registerTenantLeadPhoneClaim,
+  tenantLeadPhoneDataKey,
+  TENANT_LEAD_PHONE_PREFIX,
+  type TenantPhoneConflict,
+  type TenantPhoneRegistryEntry,
+  type TenantPhoneUniquenessStore,
+} from "./tenantPhoneUniqueness.js";
+
 export type OnboardRequest = {
   method: string;
   query: Record<string, string | string[] | undefined>;
@@ -17,6 +35,7 @@ export type OnboardStore = {
   ) => Promise<{ phone: string; role: string; value: string } | null>;
   getAccountData: (phone: string, role: string) => Promise<Record<string, string>>;
   setAccountDataKey: (phone: string, role: string, dataKey: string, value: string) => Promise<void>;
+  accountHasProfile?: (phone: string, role: string) => Promise<boolean>;
 };
 
 type BrokerOnboardInviteStatus =
@@ -44,6 +63,8 @@ type BrokerOnboardTokenSnapshot = {
 };
 
 type BrokerTenantOnboardingInvite = BrokerOnboardTokenSnapshot & { id: string };
+
+type InviteRow = BrokerTenantOnboardingInvite & { deletedAt?: number };
 
 type StoredTenant = {
   id: string;
@@ -316,6 +337,16 @@ async function markInviteSubmitted(
   }
 }
 
+export class TenantPhoneUnavailableError extends Error {
+  readonly code: TenantPhoneConflict;
+
+  constructor(code: TenantPhoneConflict) {
+    super(code);
+    this.name = "TenantPhoneUnavailableError";
+    this.code = code;
+  }
+}
+
 async function appendBrokerTenantLead(
   store: OnboardStore,
   brokerPhone: string,
@@ -334,6 +365,11 @@ async function appendBrokerTenantLead(
   );
   if (existing) {
     return { tenant: existing, isDuplicate: true };
+  }
+
+  const conflict = await assertTenantPhoneAvailable(store, brokerPhone, digits);
+  if (conflict) {
+    throw new TenantPhoneUnavailableError(conflict);
   }
 
   const now = Date.now();
@@ -366,6 +402,12 @@ async function appendBrokerTenantLead(
 
   list.unshift(tenant);
   await store.setAccountDataKey(brokerPhone, "broker", "tenants", JSON.stringify(list));
+  await registerTenantLeadPhoneClaim(store, brokerPhone, digits, {
+    tenantId: tenant.id,
+    tenantName: tenant.name,
+    brokerPhone,
+    source: "broker_onboarding_link",
+  });
   return { tenant, isDuplicate: false };
 }
 
@@ -458,6 +500,7 @@ export type RegisterBrokerOnboardInviteError =
   | "invalid_name"
   | "invalid_phone"
   | "duplicate_tenant"
+  | "duplicate_tenant_account"
   | "duplicate_invite";
 
 export type RegisterBrokerOnboardInviteResult =
@@ -478,24 +521,10 @@ export async function registerBrokerOnboardingInvite(
   if (name.length < 2) return { ok: false, error: "invalid_name" };
   if (phoneDigits.length !== 10) return { ok: false, error: "invalid_phone" };
 
+  const phoneConflict = await assertTenantPhoneAvailable(store, brokerPhone, phoneDigits);
+  if (phoneConflict) return { ok: false, error: phoneConflict };
+
   const data = await store.getAccountData(brokerPhone, "broker");
-
-  const tenantsRaw = data.tenants;
-  if (tenantsRaw) {
-    try {
-      const tenants = JSON.parse(tenantsRaw) as StoredTenant[];
-      if (
-        Array.isArray(tenants) &&
-        tenants.some((row) => phoneLast10(row.phone) === phoneDigits)
-      ) {
-        return { ok: false, error: "duplicate_tenant" };
-      }
-    } catch {
-      /* ignore malformed tenants blob */
-    }
-  }
-
-  type InviteRow = BrokerOnboardTokenSnapshot & { id: string; inviteLink?: string; deletedAt?: number };
   let invites: InviteRow[] = [];
   const invitesRaw = data[BROKER_ONBOARDING_INVITES_KEY];
   if (invitesRaw) {
@@ -559,6 +588,13 @@ export async function registerBrokerOnboardingInvite(
     tokenDataKey(token),
     JSON.stringify(snapshot),
   );
+
+  await registerTenantLeadPhoneClaim(store, brokerPhone, phoneDigits, {
+    tenantId: invite.id,
+    tenantName: name,
+    brokerPhone: input.brokerPhone,
+    source: "onboarding_invite",
+  });
 
   return {
     ok: true,
@@ -679,7 +715,17 @@ export async function handleBrokerTenantOnboardRequest(
         brokerName: record.snapshot.brokerName,
         tenantId: tenant.id,
       });
-    } catch {
+    } catch (err) {
+      if (err instanceof TenantPhoneUnavailableError) {
+        json(res, 400, {
+          error:
+            err.code === "duplicate_tenant_account"
+              ? "This mobile number already has a tenant account."
+              : "A tenant lead with this mobile number already exists.",
+          code: err.code,
+        });
+        return;
+      }
       json(res, 500, { error: "Failed to save tenant requirements" });
     }
     return;

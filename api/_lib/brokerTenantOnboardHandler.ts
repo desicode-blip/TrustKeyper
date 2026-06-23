@@ -12,7 +12,8 @@ import { json, readJsonBody } from "./http.js";
 const REGISTER_ERROR_MESSAGES: Record<RegisterBrokerOnboardInviteError, string> = {
   invalid_name: "Enter tenant full name",
   invalid_phone: "Enter a valid 10-digit mobile number",
-  duplicate_tenant: "A lead with this mobile number already exists.",
+  duplicate_tenant: "A tenant lead with this mobile number already exists.",
+  duplicate_tenant_account: "This mobile number already has a tenant account.",
   duplicate_invite: "An active onboarding link already exists for this number.",
 };
 
@@ -65,6 +66,7 @@ async function loadOnboardStore(): Promise<OnboardStore> {
       },
       getAccountData: vercelDb.getAccountData,
       setAccountDataKey: vercelDb.setAccountDataKey,
+      accountHasProfile: vercelDb.accountHasProfile,
     };
   }
 
@@ -73,6 +75,7 @@ async function loadOnboardStore(): Promise<OnboardStore> {
     findEntryByDataKey: syncStore.findEntryByDataKey,
     getAccountData: syncStore.getAccountData,
     setAccountDataKey: syncStore.setAccountDataKey,
+    accountHasProfile: syncStore.accountHasProfile,
   };
 }
 

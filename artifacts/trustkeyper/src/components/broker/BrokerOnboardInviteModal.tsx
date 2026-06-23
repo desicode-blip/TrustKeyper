@@ -8,9 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import type { BrokerOnboardLinkPayload } from "@/lib/brokerOnboardShareActions";
 import {
   createBrokerTenantOnboardingInvite,
-  findDuplicateTenantLead,
   findPendingInviteByPhone,
+  getTenantPhoneConflict,
   isValidIndianMobile,
+  tenantPhoneConflictMessage,
   type CreateBrokerOnboardInviteResult,
 } from "@/lib/brokerTenantOnboarding";
 
@@ -19,7 +20,9 @@ type BrokerOnboardInviteError = Extract<CreateBrokerOnboardInviteResult, { ok: f
 const INVITE_ERROR_MESSAGES: Record<BrokerOnboardInviteError, string> = {
   invalid_name: "Enter tenant full name",
   invalid_phone: "Enter a valid 10-digit mobile number",
-  duplicate_tenant: "A lead with this mobile number already exists.",
+  duplicate_tenant: "A tenant lead with this mobile number already exists.",
+  duplicate_tenant_account:
+    "This mobile number already has a tenant account. A phone number can only be a tenant once.",
   duplicate_invite: "An active onboarding link already exists for this number.",
   no_session: "Please sign in as a broker to generate onboarding links.",
   unauthorized: "Your session expired. Sign in again and retry.",
@@ -67,15 +70,25 @@ export function BrokerOnboardInviteModal({
       setDuplicateWarning(null);
       return;
     }
-    if (findDuplicateTenantLead(phone)) {
-      setDuplicateWarning("A lead with this mobile number already exists in your tenant list.");
-      return;
-    }
-    if (findPendingInviteByPhone(phone)) {
-      setDuplicateWarning("An active onboarding link was already sent to this mobile number.");
-      return;
-    }
-    setDuplicateWarning(null);
+
+    let cancelled = false;
+    void (async () => {
+      const conflict = await getTenantPhoneConflict(phone);
+      if (cancelled) return;
+      if (conflict) {
+        setDuplicateWarning(tenantPhoneConflictMessage(conflict));
+        return;
+      }
+      if (findPendingInviteByPhone(phone)) {
+        setDuplicateWarning("An active onboarding link was already sent to this mobile number.");
+        return;
+      }
+      setDuplicateWarning(null);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [phone, phoneValid]);
 
   const handleSubmit = async () => {

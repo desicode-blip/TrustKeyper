@@ -10,6 +10,14 @@ import {
 } from "./brokerTenantInviteStatus";
 import { getActiveSession, getItem, setItem } from "./storageKeys";
 import { findTenantByContact, getTenants, type Tenant } from "./tenants";
+import { findDuplicateTenantLead, getTenantPhoneConflict } from "./tenantPhoneRules";
+
+export {
+  findDuplicateTenantLead,
+  getTenantPhoneConflict,
+  registerTenantLeadPhoneClaimLocally,
+  tenantPhoneConflictMessage,
+} from "./tenantPhoneRules";
 
 export { BROKER_ONBOARD_TOKEN_PREFIX, BROKER_ONBOARDING_INVITES_UPDATED_EVENT };
 export {
@@ -178,10 +186,6 @@ export function findPendingInviteByPhone(phone: string): BrokerTenantOnboardingI
   });
 }
 
-export function findDuplicateTenantLead(phone: string): Tenant | undefined {
-  return findTenantByContact(phone);
-}
-
 export function getTenantOnboardUrl(token: string): string {
   const base = import.meta.env.BASE_URL ?? "/";
   const normalized = base.endsWith("/") ? base.slice(0, -1) : base;
@@ -280,6 +284,7 @@ export type CreateBrokerOnboardInviteResult =
         | "invalid_name"
         | "invalid_phone"
         | "duplicate_tenant"
+        | "duplicate_tenant_account"
         | "duplicate_invite"
         | "no_session"
         | "unauthorized"
@@ -304,6 +309,11 @@ export async function createBrokerTenantOnboardingInvite(
 
   if (findDuplicateTenantLead(phone)) {
     return { ok: false, error: "duplicate_tenant" };
+  }
+
+  const tenantPhoneConflict = await getTenantPhoneConflict(phone);
+  if (tenantPhoneConflict === "tenant_account") {
+    return { ok: false, error: "duplicate_tenant_account" };
   }
 
   const pending = findPendingInviteByPhone(phone);
