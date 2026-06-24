@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 type OwnerFlowButtonProps = React.ComponentProps<typeof Button> & {
   /** Filled primary CTA (default) or border-only outline. */
   flowVariant?: "primary" | "outline";
+  /** Keep equal width in stacked action groups (Share + Edit). */
+  fullWidth?: boolean;
 };
 
 /**
@@ -14,6 +16,7 @@ type OwnerFlowButtonProps = React.ComponentProps<typeof Button> & {
 export function OwnerFlowButton({
   className,
   flowVariant = "primary",
+  fullWidth = false,
   children,
   ...props
 }: OwnerFlowButtonProps) {
@@ -21,7 +24,8 @@ export function OwnerFlowButton({
     <Button
       variant={flowVariant === "outline" ? "outline" : "default"}
       className={cn(
-        "h-10 min-h-10 w-full sm:w-fit px-6 text-sm font-semibold rounded-[4px] gap-2",
+        "h-10 min-h-10 px-6 text-sm font-semibold rounded-[4px] gap-2",
+        fullWidth ? "w-full" : "w-full sm:w-fit",
         flowVariant === "primary" && "border-0 shadow-md shadow-primary/25",
         className,
       )}

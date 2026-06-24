@@ -1,25 +1,20 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useLocation, useRoute } from "wouter";
 import {
-  MapPin,
   ChevronLeft,
   ChevronRight,
-  Edit,
   Eye,
-  Share2,
   FileText,
   Trash2,
   Wrench,
   Building2,
-  IndianRupee,
-  Ruler,
-  Sofa,
   X,
   ExternalLink,
 } from "lucide-react";
 import OwnerLayout from "@/components/OwnerLayout";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { SharePropertyModal } from "@/components/owner/SharePropertyModal";
+import { PropertyDetailsHero } from "@/components/property/PropertyDetailsHero";
 import { RaiseComplaintModal } from "@/components/owner/RaiseComplaintModal";
 import { getProperties, getPropertyTitle, type Property } from "@/lib/properties";
 import { PROPERTIES_UPDATED_EVENT } from "@/lib/propertyEditValidation";
@@ -57,13 +52,6 @@ function formatDate(ts: number): string {
     month: "short",
     year: "numeric",
   });
-}
-
-function bhkSummary(property: Property): string {
-  const beds = property.bedrooms?.trim();
-  const baths = property.bathrooms?.trim();
-  if (beds && baths) return `${beds} BHK`;
-  return property.unitSize || "—";
 }
 
 function DocumentViewerModal({
@@ -182,8 +170,7 @@ export default function OwnerPropertyDetails() {
     ? `${property.builtUpArea} ${property.builtUpUnits || ""}`.trim()
     : "—";
   const isRented = property.status === "Rented";
-  const title = property.nickname || property.address || "Property";
-  const location = [property.area, property.city].filter(Boolean).join(", ");
+  const title = getPropertyTitle(property);
 
   const handleUpload = async (file: File) => {
     try {
@@ -242,80 +229,13 @@ export default function OwnerPropertyDetails() {
           <ChevronLeft size={20} /> Back
         </button>
 
-        {/* Hero property card */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
-          <div className="relative h-44 sm:h-52 bg-gradient-to-br from-[#E8F4FC] to-[#D4EBE4]">
-            {property.images?.[0] ? (
-              <>
-                <img
-                  src={property.images[0]}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-transparent" />
-              </>
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Building2 size={48} className="text-primary/30" />
-              </div>
-            )}
-            <div className="absolute top-4 left-4">
-              <span className="inline-flex items-center gap-1.5 bg-primary text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
-                {!isRented && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
-                {isRented ? "Occupied" : "Live"}
-              </span>
-            </div>
-          </div>
-
-          <div className="p-5 sm:p-6">
-            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
-              <div className="min-w-0 flex-1">
-                <h1 className="text-2xl sm:text-[26px] font-semibold text-gray-900 leading-tight mb-1">
-                  {title}
-                </h1>
-                <p className="text-sm text-gray-500 flex items-center gap-1 mb-4">
-                  <MapPin size={14} className="shrink-0" />
-                  {location || "—"}
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                  {[
-                    { icon: Building2, label: "BHK", value: bhkSummary(property) },
-                    { icon: IndianRupee, label: "Price", value: `${rent}/mo` },
-                    { icon: Ruler, label: "Area", value: areaLabel },
-                    { icon: Sofa, label: "Furnishing", value: property.furnishing || "—" },
-                  ].map(({ icon: Icon, label, value }) => (
-                    <div
-                      key={label}
-                      className="rounded-xl bg-[#F5F9FC] border border-[#E8EEF4] px-3 py-2.5"
-                    >
-                      <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#768EA7] uppercase tracking-wide mb-0.5">
-                        <Icon size={12} />
-                        {label}
-                      </div>
-                      <p className="text-sm font-semibold text-gray-900 truncate">{value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0 w-full sm:w-auto sm:min-w-[180px]">
-                <OwnerFlowButton type="button" onClick={() => setShareOpen(true)}>
-                  <Share2 size={16} />
-                  Share Property
-                </OwnerFlowButton>
-                <OwnerFlowButton
-                  type="button"
-                  flowVariant="outline"
-                  onClick={() => setLocation(`/owner/properties/add?edit=${property.id}`)}
-                >
-                  <Edit size={16} />
-                  Edit Details
-                </OwnerFlowButton>
-              </div>
-            </div>
-          </div>
-
-        </div>
+        <PropertyDetailsHero
+          property={property}
+          title={title}
+          isRented={isRented}
+          onShare={() => setShareOpen(true)}
+          onEdit={() => setLocation(`/owner/properties/add?edit=${property.id}`)}
+        />
 
         <FlowSegmentTabs
           value={activeTab}
