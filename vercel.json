@@ -23,6 +23,9 @@
     },
     "api/razorpay-webhook.ts": {
       "maxDuration": 30
+    },
+    "api/payments-create-order.ts": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
