@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import {
-  ArrowLeft,
   MapPin,
   Users,
   Building2,
   Calendar,
-  Share2,
   Flag,
   Layers,
   Wind,
@@ -38,8 +36,11 @@ import { getProperties, type Property } from "@/lib/properties";
 import { PROPERTIES_UPDATED_EVENT } from "@/lib/propertyEditValidation";
 import BrokerLayout from "@/components/BrokerLayout";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
+import { PropertyDetailImageGallery } from "@/components/property/PropertyDetailImageGallery";
+import { PropertyDetailPageLayout } from "@/components/property/PropertyDetailPageLayout";
+import { PropertyDetailSummaryCard } from "@/components/property/PropertyDetailSummaryCard";
 import { SharePropertyModal } from "@/components/owner/SharePropertyModal";
-import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
+import { formatPropertyAvailableDate, getPropertyDetailTitle } from "@/lib/propertyDetailFormatters";
 
 // ─── Neighbourhood data keyed by city ─────────────────────────────────────────
 
@@ -126,27 +127,6 @@ type Tab = "overview" | "amenities" | "neighbourhood" | "owner";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatRent(v: string) {
-  const n = Number(v);
-  if (!n) return "—";
-  if (n >= 1000) return `₹${(n / 1000).toFixed(0)}K`;
-  return `₹${n}`;
-}
-
-function formatDeposit(v: string) {
-  const n = Number(v);
-  if (!n) return "—";
-  if (n >= 1000) return `₹${(n / 1000).toFixed(0)}K`;
-  return `₹${n}`;
-}
-
-function formatDate(v: string) {
-  if (!v) return "Immediately";
-  const d = new Date(v);
-  if (isNaN(d.getTime())) return v;
-  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
 // ─── Tab Content Components ───────────────────────────────────────────────────
 
 function OverviewTab({ property }: { property: Property }) {
@@ -163,7 +143,7 @@ function OverviewTab({ property }: { property: Property }) {
     { icon: SquareDashedBottom, label: "Built-up Area", value: property.builtUpArea ? `${property.builtUpArea} ${property.builtUpUnits}` : "—" },
     { icon: Compass, label: "Main Door Faces", value: property.mainDoorDirection || "—" },
     { icon: Users, label: "Tenant Preference", value: property.tenantsPreferred?.join(", ") || "No Preference" },
-    { icon: Calendar, label: "Available From", value: formatDate(property.availableFrom) },
+    { icon: Calendar, label: "Available From", value: formatPropertyAvailableDate(property.availableFrom) },
     { icon: BedDouble, label: "Bedrooms", value: property.bedrooms || "—" },
     { icon: Bath, label: "Bathrooms", value: property.bathrooms || "—" },
   ];
@@ -429,155 +409,6 @@ function AboutOwnerTab({ property }: { property: Property }) {
   );
 }
 
-// ─── Image Gallery ────────────────────────────────────────────────────────────
-
-const PLACEHOLDER_GRADIENTS = [
-  "from-blue-200 to-indigo-300",
-  "from-gray-200 to-gray-300",
-  "from-slate-200 to-blue-200",
-  "from-indigo-100 to-blue-200",
-  "from-blue-100 to-slate-200",
-];
-
-function ImageGallery({ images, selectedImage, onSelect }: {
-  images: string[];
-  selectedImage: number;
-  onSelect: (i: number) => void;
-}) {
-  const hasImages = images && images.length > 0;
-  const count = hasImages ? images.length : 1;
-  const gradients = PLACEHOLDER_GRADIENTS;
-
-  return (
-    <div>
-      {/* Main image */}
-      <div
-        className={`rounded-xl overflow-hidden relative ${hasImages ? "bg-gray-100" : `bg-gradient-to-br ${gradients[selectedImage % gradients.length]}`}`}
-        style={{ height: 340 }}
-      >
-        {hasImages ? (
-          <img
-            src={images[selectedImage]}
-            alt={`Property image ${selectedImage + 1}`}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Building2 size={56} className="text-white/40" />
-          </div>
-        )}
-        <span className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1 rounded-full">
-          {selectedImage + 1} / {count}
-        </span>
-      </div>
-      {/* Thumbnails */}
-      <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
-        {Array.from({ length: count }).map((_, i) => (
-          <button
-            key={i}
-            onClick={() => onSelect(i)}
-            className={`w-24 h-16 shrink-0 rounded-lg overflow-hidden relative transition-all ${
-              selectedImage === i ? "ring-2 ring-primary ring-offset-1" : "opacity-70 hover:opacity-100"
-            } ${hasImages ? "bg-gray-100" : `bg-gradient-to-br ${gradients[i % gradients.length]}`}`}
-          >
-            {hasImages ? (
-              <img
-                src={images[i]}
-                alt={`thumb ${i + 1}`}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-            ) : (
-              <Building2 size={18} className="text-white/40 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Summary card ─────────────────────────────────────────────────────────────
-
-function PropertySummaryCard({
-  property,
-  title,
-  type,
-  onEdit,
-  onShare,
-}: {
-  property: Property;
-  title: string;
-  type: string;
-  onEdit: () => void;
-  onShare: () => void;
-}) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold text-gray-900 leading-tight">{title}</h1>
-        <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
-          <MapPin size={13} className="text-gray-400" />
-          <span>
-            {property.area}, {property.city}
-          </span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div>
-          <p className="text-lg font-semibold text-primary">{formatRent(property.monthlyRent)}</p>
-          <p className="text-[10px] text-gray-500">Rent/month</p>
-        </div>
-        <div>
-          <p className="text-lg font-semibold text-gray-900">{property.builtUpArea || "—"}</p>
-          <p className="text-[10px] text-gray-500">{property.builtUpArea ? property.builtUpUnits : ""}</p>
-        </div>
-        <div>
-          <p className="text-lg font-semibold text-gray-900">{formatDeposit(property.securityDeposit)}</p>
-          <p className="text-[10px] text-gray-500">Deposit</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-y-2 text-sm">
-        {property.unitSize && (
-          <div className="flex items-center gap-2 text-gray-700">
-            <BedDouble size={14} className="text-gray-400" />
-            <span>{property.unitSize !== "Other" ? property.unitSize : property.unitSizeOther}</span>
-          </div>
-        )}
-        <div className="flex items-center gap-2 text-gray-700">
-          <Building2 size={14} className="text-gray-400" />
-          <span>{type}</span>
-        </div>
-        {property.tenantsPreferred?.length > 0 && (
-          <div className="flex items-center gap-2 text-gray-700">
-            <Users size={14} className="text-gray-400" />
-            <span className="truncate">{property.tenantsPreferred[0]}</span>
-          </div>
-        )}
-        <div className="flex items-center gap-2 text-gray-700">
-          <Calendar size={14} className="text-gray-400" />
-          <span>{property.availableFrom ? formatDate(property.availableFrom) : "Immediately"}</span>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-1.5 text-sm font-medium text-green-600">
-        <CheckCircle2 size={15} />
-        <span>Verified Available</span>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <OwnerFlowButton type="button" onClick={onShare} className="w-full sm:w-full">
-          <Share2 size={15} /> Share Property
-        </OwnerFlowButton>
-        <OwnerFlowButton type="button" flowVariant="outline" onClick={onEdit} className="w-full sm:w-full">
-          Edit Property
-        </OwnerFlowButton>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function PropertyDetails() {
@@ -633,15 +464,7 @@ export default function PropertyDetails() {
     );
   }
 
-  const type = property.propertyType === "Other"
-    ? (property.propertyTypeOther || "Property")
-    : property.propertyType;
-  const size = property.unitSize === "Other"
-    ? (property.unitSizeOther || "")
-    : property.unitSize;
-  const title = size
-    ? `${size} ${type} in ${property.nickname || property.area}`
-    : `${type} in ${property.nickname || property.area}`;
+  const title = getPropertyDetailTitle(property);
 
   const tabs: { value: Tab; label: string }[] = [
     { value: "overview", label: "Overview" },
@@ -650,68 +473,47 @@ export default function PropertyDetails() {
     { value: "owner", label: "About Owner" },
   ];
 
+  const summaryCard = (
+    <PropertyDetailSummaryCard
+      property={property}
+      title={title}
+      onShare={() => setShareOpen(true)}
+      onEdit={openEditFlow}
+      editLabel="Edit Property"
+    />
+  );
+
   return (
     <BrokerLayout>
-      <div>
-        <div className="flex items-center justify-between mb-5">
-          <button
-            onClick={() => setLocation("/broker/properties")}
-            className="flex items-center gap-1.5 text-sm text-gray-600 font-medium hover:text-primary transition-colors"
-          >
-            <ArrowLeft size={15} /> Back to Properties
-          </button>
-          <button
-            onClick={openEditFlow}
-            className="text-sm font-medium text-primary hover:underline md:hidden"
-          >
-            Edit Property
-          </button>
+      <PropertyDetailPageLayout
+        backLabel="Back to Properties"
+        onBack={() => setLocation("/broker/properties")}
+        mobileEditLabel="Edit Property"
+        onMobileEdit={openEditFlow}
+        summaryCard={summaryCard}
+      >
+        <PropertyDetailImageGallery
+          images={property.images ?? []}
+          selectedImage={selectedImage}
+          onSelect={setSelectedImage}
+        />
+
+        <div className="md:hidden mt-4">{summaryCard}</div>
+
+        <FlowSegmentTabs
+          value={activeTab}
+          onChange={(value) => setActiveTab(value as Tab)}
+          options={tabs}
+          className="mt-6"
+        />
+
+        <div className="mt-4">
+          {activeTab === "overview" && <OverviewTab property={property} />}
+          {activeTab === "amenities" && <AmenitiesTab property={property} />}
+          {activeTab === "neighbourhood" && <NeighbourhoodTab property={property} />}
+          {activeTab === "owner" && <AboutOwnerTab property={property} />}
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_296px] gap-6 items-start">
-          <div className="min-w-0">
-            <ImageGallery
-              images={property.images ?? []}
-              selectedImage={selectedImage}
-              onSelect={setSelectedImage}
-            />
-
-            <div className="md:hidden mt-4">
-              <PropertySummaryCard
-                property={property}
-                title={title}
-                type={type}
-                onEdit={openEditFlow}
-                onShare={() => setShareOpen(true)}
-              />
-            </div>
-
-            <FlowSegmentTabs
-              value={activeTab}
-              onChange={(value) => setActiveTab(value as Tab)}
-              options={tabs}
-              className="mt-6"
-            />
-
-            <div className="mt-4">
-              {activeTab === "overview" && <OverviewTab property={property} />}
-              {activeTab === "amenities" && <AmenitiesTab property={property} />}
-              {activeTab === "neighbourhood" && <NeighbourhoodTab property={property} />}
-              {activeTab === "owner" && <AboutOwnerTab property={property} />}
-            </div>
-          </div>
-
-          <div className="hidden md:block sticky top-6">
-            <PropertySummaryCard
-              property={property}
-              title={title}
-              type={type}
-              onEdit={openEditFlow}
-              onShare={() => setShareOpen(true)}
-            />
-          </div>
-        </div>
-      </div>
+      </PropertyDetailPageLayout>
 
       <SharePropertyModal property={property} open={shareOpen} onClose={() => setShareOpen(false)} />
     </BrokerLayout>
