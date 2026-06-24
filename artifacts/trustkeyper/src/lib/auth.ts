@@ -79,7 +79,7 @@ export function dashboardRouteFor(role: Role): string {
   const routes: Record<Role, string> = {
     broker: "/broker/dashboard",
     owner: "/owner/dashboard",
-    tenant: "/",
+    tenant: "/tenant/dashboard",
     manager: "/",
     admin: "/admin/dashboard",
   };

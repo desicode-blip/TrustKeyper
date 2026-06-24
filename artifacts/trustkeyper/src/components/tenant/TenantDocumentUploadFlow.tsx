@@ -28,6 +28,7 @@ import {
   type DocumentUploadInvitePayload,
 } from "@/lib/publicAgreementDocumentUpload";
 import { syncTenantDocumentUploadStatus } from "@/lib/tenantDocumentUploadStatus";
+import { saveTenantWorkspaceFromInvite } from "@/lib/tenantWorkspace";
 import {
   clearTenantDocumentUploadDraft,
   getTenantDocumentUploadDraft,
@@ -71,7 +72,6 @@ export function TenantDocumentUploadFlow({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successOpen, setSuccessOpen] = useState(false);
-  const [requesterLabel, setRequesterLabel] = useState(invite.requesterName);
 
   const fileRefs = useRef<Partial<Record<ExtendedDocumentId, HTMLInputElement | null>>>({});
 
@@ -237,10 +237,13 @@ export function TenantDocumentUploadFlow({
         setSubmitError(result.error);
         return;
       }
-      setRequesterLabel(result.requesterName);
       syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_submitted", {
         token: session.token,
         submittedAt: result.submittedAt ?? Date.now(),
+      });
+      saveTenantWorkspaceFromInvite(invite, {
+        documentUploadStatus: "documents_submitted",
+        documentUploadSubmittedAt: result.submittedAt ?? Date.now(),
       });
       clearTenantDocumentUploadDraft(session.token);
       setSuccessOpen(true);
@@ -474,12 +477,17 @@ export function TenantDocumentUploadFlow({
               <CheckCircle2 className="w-8 h-8 text-green-500" />
             </div>
             <h2 className="text-lg font-semibold text-gray-900 mb-2">Documents Submitted Successfully</h2>
-            <p className="text-sm text-gray-500 mb-6">
-              Your documents have been shared with the {invite.requesterRole === "broker" ? "broker" : "property owner"}{" "}
-              ({requesterLabel}) for agreement processing. You will be notified about the next steps shortly.
+            <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+              Your documents have been submitted successfully.
+              <br />
+              <br />
+              Please wait while the property owner/broker reviews your documents and prepares the agreement.
+              <br />
+              <br />
+              You will be notified once your agreement is ready.
             </p>
             <Button type="button" className="w-full" onClick={onDone}>
-              Done
+              Go To Dashboard
             </Button>
           </div>
         </div>
