@@ -317,7 +317,7 @@ The sync store supports multiple backends, selected by environment:
 |---|---|---|
 | PGLite | `DATABASE_URL=local` | Embedded Postgres, stores in `.data/pglite`. No Docker needed. |
 | Docker Postgres | `DATABASE_URL=postgresql://...` | Full Postgres for local dev |
-| Vercel Postgres | Production | Direct `pg` connection via `DATABASE_URL` |
+| Supabase Postgres | Production / staging | Direct `pg` connection via `DATABASE_URL` |
 | Vercel Blob | `BLOB_READ_WRITE_TOKEN` set | JSON file storage, fallback |
 | Mock/in-memory | `USE_MOCK_DB=1` or no DB config | Resets on cold start — Vercel prototype only |
 
@@ -327,8 +327,8 @@ The sync store supports multiple backends, selected by environment:
 
 | Environment | Branch | Supabase Project | Database | URL |
 |---|---|---|---|---|
-| Production | `main` | `trustkeyper-prod` | Vercel Postgres (prod) | app.trustkeyper.com |
-| Staging | `staging` | `trustkeyper-staging` | Vercel Postgres (staging) | staging.app.trustkeyper.com |
+| Production | `main` | `trustkeyper-prod` | Supabase Postgres (prod) | app.trustkeyper.com |
+| Staging | `staging` | `trustkeyper-staging` | Supabase Postgres (staging) | staging.app.trustkeyper.com |
 | Local dev | any | Either (or local PGLite) | PGLite or Docker | localhost:5173 |
 
 Staging is a full mirror of production with separate data. All changes are tested on staging before production release.
@@ -341,7 +341,6 @@ These are documented issues to address in future sprints:
 
 | Issue | Priority | Notes |
 |---|---|---|
-| `feedback` table has no migration file | High | Created via runtime DDL, should be a proper SQL migration |
 | `owner_tenant_invites` not in bulk sync | High | Can cause data loss on new device login |
 | `tenant_invitations` API not wired to frontend | High | Backend is complete, SPA still uses localStorage + WhatsApp only |
 | Public share link reads from viewer's localStorage | High | Broken for actual recipients |

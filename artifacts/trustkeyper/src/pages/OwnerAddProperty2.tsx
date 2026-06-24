@@ -14,10 +14,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import OwnerLayout from "@/components/OwnerLayout";
+import { FlowDateInput } from "@/components/flow/FlowDateInput";
+import { FlowNativeSelect } from "@/components/flow/FlowNativeSelect";
 import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/FlowStickyActionBar";
 import { FlowClearButton } from "@/components/owner/FlowClearButton";
 import { todayLocalDateInputMin } from "@/lib/dateInput";
-import { addProperty } from "@/lib/properties";
+import { addProperty, deriveBedroomsFromUnitSize } from "@/lib/properties";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
 
@@ -27,7 +29,6 @@ const UNIT_SIZES = ["1 RK", "1 BHK", "2 BHK", "3 BHK", "4 BHK", "Other"];
 const FURNISHING_OPTIONS = ["Unfurnished", "Semi Furnished", "Fully Furnished"];
 const UNIT_OPTIONS = ["sq ft", "sq m", "sq yards"];
 const FLOORS_OPTIONS = Array.from({ length: 30 }, (_, i) => String(i + 1));
-const BEDROOM_OPTIONS = Array.from({ length: 10 }, (_, i) => String(i + 1));
 const BATHROOM_OPTIONS = Array.from({ length: 8 }, (_, i) => String(i + 1));
 const BALCONY_OPTIONS = ["0", "1", "2", "3", "4", "5+"];
 const FLOOR_LEVEL_OPTIONS = [
@@ -128,7 +129,10 @@ function FieldLabel({ children, required }: { children: React.ReactNode; require
 }
 
 function SelectField({
-  value, onChange, options, placeholder,
+  value,
+  onChange,
+  options,
+  placeholder,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -136,21 +140,13 @@ function SelectField({
   placeholder?: string;
 }) {
   return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`w-full h-10 rounded-sm border border-gray-200 bg-white px-3 pr-8 text-sm appearance-none focus:outline-none focus:border-primary/50 ${
-          value ? "text-gray-900" : "text-[#6C849D]/40"
-        }`}
-      >
-        {placeholder && <option value="" disabled className="text-[#6C849D]/40">{placeholder}</option>}
-        {options.map((o) => (
-          <option key={o} value={o}>{o}</option>
-        ))}
-      </select>
-      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-    </div>
+    <FlowNativeSelect
+      variant="owner"
+      value={value}
+      onChange={onChange}
+      options={options}
+      placeholder={placeholder}
+    />
   );
 }
 
@@ -242,7 +238,6 @@ export default function OwnerAddProperty2() {
   const [builtUpArea, setBuiltUpArea] = useState("");
   const [builtUpUnits, setBuiltUpUnits] = useState("sq ft");
   const [totalFloors, setTotalFloors] = useState("");
-  const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
   const [balconies, setBalconies] = useState("");
   const [floorLevel, setFloorLevel] = useState("");
@@ -291,7 +286,6 @@ export default function OwnerAddProperty2() {
         setBuiltUpArea(data.builtUpArea || "");
         setBuiltUpUnits(data.builtUpUnits || "sq ft");
         setTotalFloors(data.totalFloors || "");
-        setBedrooms(data.bedrooms || "");
         setBathrooms(data.bathrooms || "");
         setBalconies(data.balconies || "");
         setFloorLevel(data.floorLevel || "");
@@ -318,7 +312,7 @@ export default function OwnerAddProperty2() {
       nickname, address, area, city, pincode, country,
       ownerName, ownerContact,
       propertyType, propertyTypeOther, unitSize, unitSizeOther, furnishing,
-      builtUpArea, builtUpUnits, totalFloors, bedrooms, bathrooms, balconies, floorLevel, mainDoorDirection,
+      builtUpArea, builtUpUnits, totalFloors, bathrooms, balconies, floorLevel, mainDoorDirection,
       amenities, amenityOtherChecked, amenityOtherText,
       tenantsPreferred, monthlyRent, rentNegotiable, maintenanceIncluded, monthlyMaintenance, securityDeposit, availableFrom,
       subStep,
@@ -328,7 +322,7 @@ export default function OwnerAddProperty2() {
     nickname, address, area, city, pincode, country, ownerName, ownerContact,
     nickname, address, area, city, pincode, country,
     propertyType, propertyTypeOther, unitSize, unitSizeOther, furnishing,
-    builtUpArea, builtUpUnits, totalFloors, bedrooms, bathrooms, balconies, floorLevel, mainDoorDirection,
+    builtUpArea, builtUpUnits, totalFloors, bathrooms, balconies, floorLevel, mainDoorDirection,
     amenities, amenityOtherChecked, amenityOtherText,
     tenantsPreferred, monthlyRent, rentNegotiable, maintenanceIncluded, monthlyMaintenance, securityDeposit, availableFrom,
     subStep
@@ -423,7 +417,7 @@ export default function OwnerAddProperty2() {
       return typeOk && sizeOk && furnishing !== "";
     }
     if (subStep === 2) {
-      return !!(builtUpArea && builtUpUnits && totalFloors && bedrooms && bathrooms && balconies && floorLevel && mainDoorDirection);
+      return !!(builtUpArea && builtUpUnits && totalFloors && bathrooms && balconies && floorLevel && mainDoorDirection);
     }
     if (subStep === 3) return true; // Amenities optional
     if (subStep === 4) {
@@ -447,7 +441,9 @@ export default function OwnerAddProperty2() {
       nickname, address, area, city, pincode, country,
       ownerName, ownerContact,
       propertyType, propertyTypeOther, unitSize, unitSizeOther, furnishing,
-      builtUpArea, builtUpUnits, totalFloors, bedrooms, bathrooms, balconies, floorLevel, mainDoorDirection,
+      builtUpArea, builtUpUnits, totalFloors,
+      bedrooms: deriveBedroomsFromUnitSize(unitSize, unitSizeOther),
+      bathrooms, balconies, floorLevel, mainDoorDirection,
       amenities: finalAmenities, tenantsPreferred, monthlyRent, rentNegotiable, maintenanceIncluded, monthlyMaintenance, securityDeposit, availableFrom,
       images: imageUrls, imageCount: imageUrls.length,
     };
@@ -620,10 +616,6 @@ export default function OwnerAddProperty2() {
           <Input placeholder="Type here" value={totalFloors} onChange={(e) => setTotalFloors(e.target.value)} type="number" className="h-10 rounded-sm border-gray-200 focus:border-primary/50" />
         </div>
         <div>
-          <FieldLabel required>Bedrooms</FieldLabel>
-          <SelectField value={bedrooms} onChange={setBedrooms} options={BEDROOM_OPTIONS} placeholder="Select" />
-        </div>
-        <div>
           <FieldLabel required>Bathrooms</FieldLabel>
           <SelectField value={bathrooms} onChange={setBathrooms} options={BATHROOM_OPTIONS} placeholder="Select" />
         </div>
@@ -742,13 +734,14 @@ export default function OwnerAddProperty2() {
         </div>
 
         <div>
-          <FieldLabel required>Available From *</FieldLabel>
-          <div className="flex items-center border border-gray-200 rounded-sm overflow-hidden sm:w-[200px]">
-            <span className="px-3 text-gray-400 h-10 flex items-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </span>
-            <input type="date" min={availableFromMin} value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} className="flex-1 h-10 px-2 text-[13px] text-gray-600 focus:outline-none bg-white w-full" />
-          </div>
+          <FieldLabel required>Available From</FieldLabel>
+          <FlowDateInput
+            variant="owner"
+            className="sm:w-[200px]"
+            min={availableFromMin}
+            value={availableFrom}
+            onChange={setAvailableFrom}
+          />
         </div>
       </div>
     </div>
@@ -840,7 +833,6 @@ export default function OwnerAddProperty2() {
     setBuiltUpArea("");
     setBuiltUpUnits("sq ft");
     setTotalFloors("");
-    setBedrooms("");
     setBathrooms("");
     setBalconies("");
     setFloorLevel("");

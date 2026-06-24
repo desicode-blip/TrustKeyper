@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import {
-  ArrowLeft,
   MapPin,
   Users,
   Building2,
   Calendar,
-  Share2,
   Flag,
   Layers,
   Wind,
@@ -34,13 +32,15 @@ import {
   IndianRupee,
   SquareDashedBottom,
 } from "lucide-react";
-import { getProperties, updateProperty, type Property } from "@/lib/properties";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { getProperties, type Property } from "@/lib/properties";
+import { PROPERTIES_UPDATED_EVENT } from "@/lib/propertyEditValidation";
 import BrokerLayout from "@/components/BrokerLayout";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
+import { PropertyDetailImageGallery } from "@/components/property/PropertyDetailImageGallery";
+import { PropertyDetailPageLayout } from "@/components/property/PropertyDetailPageLayout";
+import { PropertyDetailSummaryCard } from "@/components/property/PropertyDetailSummaryCard";
 import { SharePropertyModal } from "@/components/owner/SharePropertyModal";
-import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
+import { formatPropertyAvailableDate, getPropertyDetailTitle } from "@/lib/propertyDetailFormatters";
 
 // ─── Neighbourhood data keyed by city ─────────────────────────────────────────
 
@@ -127,27 +127,6 @@ type Tab = "overview" | "amenities" | "neighbourhood" | "owner";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatRent(v: string) {
-  const n = Number(v);
-  if (!n) return "—";
-  if (n >= 1000) return `₹${(n / 1000).toFixed(0)}K`;
-  return `₹${n}`;
-}
-
-function formatDeposit(v: string) {
-  const n = Number(v);
-  if (!n) return "—";
-  if (n >= 1000) return `₹${(n / 1000).toFixed(0)}K`;
-  return `₹${n}`;
-}
-
-function formatDate(v: string) {
-  if (!v) return "Immediately";
-  const d = new Date(v);
-  if (isNaN(d.getTime())) return v;
-  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
 // ─── Tab Content Components ───────────────────────────────────────────────────
 
 function OverviewTab({ property }: { property: Property }) {
@@ -164,7 +143,7 @@ function OverviewTab({ property }: { property: Property }) {
     { icon: SquareDashedBottom, label: "Built-up Area", value: property.builtUpArea ? `${property.builtUpArea} ${property.builtUpUnits}` : "—" },
     { icon: Compass, label: "Main Door Faces", value: property.mainDoorDirection || "—" },
     { icon: Users, label: "Tenant Preference", value: property.tenantsPreferred?.join(", ") || "No Preference" },
-    { icon: Calendar, label: "Available From", value: formatDate(property.availableFrom) },
+    { icon: Calendar, label: "Available From", value: formatPropertyAvailableDate(property.availableFrom) },
     { icon: BedDouble, label: "Bedrooms", value: property.bedrooms || "—" },
     { icon: Bath, label: "Bathrooms", value: property.bathrooms || "—" },
   ];
@@ -430,159 +409,6 @@ function AboutOwnerTab({ property }: { property: Property }) {
   );
 }
 
-// ─── Image Gallery ────────────────────────────────────────────────────────────
-
-const PLACEHOLDER_GRADIENTS = [
-  "from-blue-200 to-indigo-300",
-  "from-gray-200 to-gray-300",
-  "from-slate-200 to-blue-200",
-  "from-indigo-100 to-blue-200",
-  "from-blue-100 to-slate-200",
-];
-
-function ImageGallery({ images, selectedImage, onSelect }: {
-  images: string[];
-  selectedImage: number;
-  onSelect: (i: number) => void;
-}) {
-  const hasImages = images && images.length > 0;
-  const count = hasImages ? images.length : 1;
-  const gradients = PLACEHOLDER_GRADIENTS;
-
-  return (
-    <div>
-      {/* Main image */}
-      <div
-        className={`rounded-xl overflow-hidden relative ${hasImages ? "bg-gray-100" : `bg-gradient-to-br ${gradients[selectedImage % gradients.length]}`}`}
-        style={{ height: 340 }}
-      >
-        {hasImages ? (
-          <img
-            src={images[selectedImage]}
-            alt={`Property image ${selectedImage + 1}`}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Building2 size={56} className="text-white/40" />
-          </div>
-        )}
-        <span className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1 rounded-full">
-          {selectedImage + 1} / {count}
-        </span>
-      </div>
-      {/* Thumbnails */}
-      <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
-        {Array.from({ length: count }).map((_, i) => (
-          <button
-            key={i}
-            onClick={() => onSelect(i)}
-            className={`w-24 h-16 shrink-0 rounded-lg overflow-hidden relative transition-all ${
-              selectedImage === i ? "ring-2 ring-primary ring-offset-1" : "opacity-70 hover:opacity-100"
-            } ${hasImages ? "bg-gray-100" : `bg-gradient-to-br ${gradients[i % gradients.length]}`}`}
-          >
-            {hasImages ? (
-              <img
-                src={images[i]}
-                alt={`thumb ${i + 1}`}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-            ) : (
-              <Building2 size={18} className="text-white/40 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Summary card ─────────────────────────────────────────────────────────────
-
-function PropertySummaryCard({
-  property,
-  title,
-  type,
-  isEditing,
-  onEdit,
-  onShare,
-}: {
-  property: Property;
-  title: string;
-  type: string;
-  isEditing: boolean;
-  onEdit: () => void;
-  onShare: () => void;
-}) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold text-gray-900 leading-tight">{title}</h1>
-        <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
-          <MapPin size={13} className="text-gray-400" />
-          <span>
-            {property.area}, {property.city}
-          </span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div>
-          <p className="text-lg font-semibold text-primary">{formatRent(property.monthlyRent)}</p>
-          <p className="text-[10px] text-gray-500">Rent/month</p>
-        </div>
-        <div>
-          <p className="text-lg font-semibold text-gray-900">{property.builtUpArea || "—"}</p>
-          <p className="text-[10px] text-gray-500">{property.builtUpArea ? property.builtUpUnits : ""}</p>
-        </div>
-        <div>
-          <p className="text-lg font-semibold text-gray-900">{formatDeposit(property.securityDeposit)}</p>
-          <p className="text-[10px] text-gray-500">Deposit</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-y-2 text-sm">
-        {property.unitSize && (
-          <div className="flex items-center gap-2 text-gray-700">
-            <BedDouble size={14} className="text-gray-400" />
-            <span>{property.unitSize !== "Other" ? property.unitSize : property.unitSizeOther}</span>
-          </div>
-        )}
-        <div className="flex items-center gap-2 text-gray-700">
-          <Building2 size={14} className="text-gray-400" />
-          <span>{type}</span>
-        </div>
-        {property.tenantsPreferred?.length > 0 && (
-          <div className="flex items-center gap-2 text-gray-700">
-            <Users size={14} className="text-gray-400" />
-            <span className="truncate">{property.tenantsPreferred[0]}</span>
-          </div>
-        )}
-        <div className="flex items-center gap-2 text-gray-700">
-          <Calendar size={14} className="text-gray-400" />
-          <span>{property.availableFrom ? formatDate(property.availableFrom) : "Immediately"}</span>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-1.5 text-sm font-medium text-green-600">
-        <CheckCircle2 size={15} />
-        <span>Verified Available</span>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <OwnerFlowButton type="button" onClick={onShare} className="w-full">
-          <Share2 size={15} /> Share Property
-        </OwnerFlowButton>
-        {!isEditing && (
-          <OwnerFlowButton type="button" flowVariant="outline" onClick={onEdit} className="w-full">
-            Edit Property
-          </OwnerFlowButton>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function PropertyDetails() {
@@ -591,64 +417,35 @@ export default function PropertyDetails() {
   const [property, setProperty] = useState<Property | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isEditing, setIsEditing] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const { toast } = useToast();
 
-  // Form states
-  const [draftNickname, setDraftNickname] = useState("");
-  const [draftRent, setDraftRent] = useState("");
-  const [draftArea, setDraftArea] = useState("");
-  const [draftCity, setDraftCity] = useState("");
-
-  const syncDraftsFromProperty = (value: Property) => {
-    setDraftNickname(value.nickname || "");
-    setDraftRent(value.monthlyRent || "");
-    setDraftArea(value.area || "");
-    setDraftCity(value.city || "");
+  const openEditFlow = () => {
+    if (!id) return;
+    setLocation(`/broker/properties/add?edit=${id}`);
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("edit") === "true" && id) {
+      setLocation(`/broker/properties/add?edit=${id}`);
+    }
+  }, [id, setLocation]);
 
   useEffect(() => {
     const list = getProperties();
     const found = list.find((p) => p.id === id);
-    if (found) {
-      setProperty(found);
-      syncDraftsFromProperty(found);
-    }
+    if (found) setProperty(found);
   }, [id]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("edit") === "true") {
-      setIsEditing(true);
-    }
-  }, []);
-
-  const handleSave = () => {
-    if (!property) return;
-    updateProperty(property.id, {
-      nickname: draftNickname,
-      monthlyRent: draftRent,
-      area: draftArea,
-      city: draftCity,
-    });
-    toast({ description: "Property updated successfully!" });
-    setIsEditing(false);
-    // Update local state
-    setProperty({
-      ...property,
-      nickname: draftNickname,
-      monthlyRent: draftRent,
-      area: draftArea,
-      city: draftCity,
-    });
-  };
-
-  const handleDiscard = () => {
-    if (!property) return;
-    syncDraftsFromProperty(property);
-    setIsEditing(false);
-  };
+    const refresh = () => {
+      if (!id) return;
+      const found = getProperties().find((p) => p.id === id);
+      if (found) setProperty(found);
+    };
+    window.addEventListener(PROPERTIES_UPDATED_EVENT, refresh);
+    return () => window.removeEventListener(PROPERTIES_UPDATED_EVENT, refresh);
+  }, [id]);
 
   if (!property) {
     return (
@@ -667,15 +464,7 @@ export default function PropertyDetails() {
     );
   }
 
-  const type = property.propertyType === "Other"
-    ? (property.propertyTypeOther || "Property")
-    : property.propertyType;
-  const size = property.unitSize === "Other"
-    ? (property.unitSizeOther || "")
-    : property.unitSize;
-  const title = size
-    ? `${size} ${type} in ${property.nickname || property.area}`
-    : `${type} in ${property.nickname || property.area}`;
+  const title = getPropertyDetailTitle(property);
 
   const tabs: { value: Tab; label: string }[] = [
     { value: "overview", label: "Overview" },
@@ -684,162 +473,49 @@ export default function PropertyDetails() {
     { value: "owner", label: "About Owner" },
   ];
 
+  const summaryCard = (
+    <PropertyDetailSummaryCard
+      property={property}
+      title={title}
+      onShare={() => setShareOpen(true)}
+      onEdit={openEditFlow}
+      editLabel="Edit Property"
+    />
+  );
+
   return (
     <BrokerLayout>
-      <div>
-        <div className="flex items-center justify-between mb-5">
-          <button
-            onClick={() => setLocation("/broker/properties")}
-            className="flex items-center gap-1.5 text-sm text-gray-600 font-medium hover:text-primary transition-colors"
-          >
-            <ArrowLeft size={15} /> Back to Properties
-          </button>
-          {!isEditing && (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="text-sm font-medium text-primary hover:underline md:hidden"
-            >
-              Edit Property
-            </button>
-          )}
+      <PropertyDetailPageLayout
+        backLabel="Back to Properties"
+        onBack={() => setLocation("/broker/properties")}
+        mobileEditLabel="Edit Property"
+        onMobileEdit={openEditFlow}
+        summaryCard={summaryCard}
+      >
+        <PropertyDetailImageGallery
+          images={property.images ?? []}
+          selectedImage={selectedImage}
+          onSelect={setSelectedImage}
+        />
+
+        <div className="md:hidden mt-4">{summaryCard}</div>
+
+        <FlowSegmentTabs
+          value={activeTab}
+          onChange={(value) => setActiveTab(value as Tab)}
+          options={tabs}
+          className="mt-6"
+        />
+
+        <div className="mt-4">
+          {activeTab === "overview" && <OverviewTab property={property} />}
+          {activeTab === "amenities" && <AmenitiesTab property={property} />}
+          {activeTab === "neighbourhood" && <NeighbourhoodTab property={property} />}
+          {activeTab === "owner" && <AboutOwnerTab property={property} />}
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_296px] gap-6 items-start">
-          <div className="min-w-0">
-            <ImageGallery
-              images={property.images ?? []}
-              selectedImage={selectedImage}
-              onSelect={setSelectedImage}
-            />
-
-            <div className="md:hidden mt-4">
-              <PropertySummaryCard
-                property={property}
-                title={title}
-                type={type}
-                isEditing={isEditing}
-                onEdit={() => setIsEditing(true)}
-                onShare={() => setShareOpen(true)}
-              />
-            </div>
-
-            <FlowSegmentTabs
-              value={activeTab}
-              onChange={(value) => setActiveTab(value as Tab)}
-              options={tabs}
-              className="mt-6"
-            />
-
-            <div className="mt-4">
-              {isEditing ? (
-                <EditForm
-                  onSave={handleSave}
-                  onCancel={handleDiscard}
-                  drafts={{
-                    nickname: draftNickname,
-                    setNickname: setDraftNickname,
-                    rent: draftRent,
-                    setRent: setDraftRent,
-                    area: draftArea,
-                    setArea: setDraftArea,
-                    city: draftCity,
-                    setCity: setDraftCity,
-                  }}
-                />
-              ) : (
-                <>
-                  {activeTab === "overview" && <OverviewTab property={property} />}
-                  {activeTab === "amenities" && <AmenitiesTab property={property} />}
-                  {activeTab === "neighbourhood" && <NeighbourhoodTab property={property} />}
-                  {activeTab === "owner" && <AboutOwnerTab property={property} />}
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="hidden md:block sticky top-6">
-            <PropertySummaryCard
-              property={property}
-              title={title}
-              type={type}
-              isEditing={isEditing}
-              onEdit={() => setIsEditing(true)}
-              onShare={() => setShareOpen(true)}
-            />
-          </div>
-        </div>
-      </div>
+      </PropertyDetailPageLayout>
 
       <SharePropertyModal property={property} open={shareOpen} onClose={() => setShareOpen(false)} />
     </BrokerLayout>
-  );
-}
-
-function EditForm({ 
-  onSave, 
-  onCancel,
-  drafts: { nickname, setNickname, rent, setRent, area, setArea, city, setCity }
-}: { 
-  onSave: () => void; 
-  onCancel: () => void;
-  drafts: any;
-}) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Edit Property Details</h2>
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Property Nickname</label>
-            <Input 
-              value={nickname} 
-              onChange={(e) => setNickname(e.target.value)} 
-              placeholder="e.g. Sunny Apartment"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Monthly Rent (₹)</label>
-            <Input 
-              type="number"
-              value={rent} 
-              onChange={(e) => setRent(e.target.value)} 
-              placeholder="e.g. 25000"
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Area / Landmark</label>
-            <Input 
-              value={area} 
-              onChange={(e) => setArea(e.target.value)} 
-              placeholder="e.g. Madhapur"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">City</label>
-            <Input 
-              value={city} 
-              onChange={(e) => setCity(e.target.value)} 
-              placeholder="e.g. Hyderabad"
-            />
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center justify-end gap-3 mt-8 pt-6 border-t border-gray-100">
-        <button
-          onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900"
-        >
-          Discard Changes
-        </button>
-        <button
-          onClick={onSave}
-          className="px-6 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          Save Changes
-        </button>
-      </div>
-    </div>
   );
 }

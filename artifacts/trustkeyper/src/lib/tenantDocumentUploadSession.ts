@@ -1,0 +1,67 @@
+export type TenantDocumentUploadSession = {
+  token: string;
+  name: string;
+  phone: string;
+  requesterName: string;
+  verifiedAt: number;
+};
+
+function sessionKey(token: string): string {
+  return `tk_tenant_doc_upload_session_${token}`;
+}
+
+export function getTenantDocumentUploadSession(token: string): TenantDocumentUploadSession | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(sessionKey(token));
+    if (!raw) return null;
+    return JSON.parse(raw) as TenantDocumentUploadSession;
+  } catch {
+    return null;
+  }
+}
+
+export function setTenantDocumentUploadSession(session: TenantDocumentUploadSession): void {
+  sessionStorage.setItem(sessionKey(session.token), JSON.stringify(session));
+}
+
+export function clearTenantDocumentUploadSession(token: string): void {
+  sessionStorage.removeItem(sessionKey(token));
+}
+
+function draftKey(token: string): string {
+  return `tk_tenant_doc_upload_draft_${token}`;
+}
+
+export type TenantDocumentUploadDraft = {
+  step: 1 | 2;
+  uploads: Record<string, { fileName: string; fileSize: number; mimeType: string; dataUrl: string }>;
+  bankDetails?: {
+    mode: "bank" | "upi";
+    holderName?: string;
+    bankName?: string;
+    accountNumber?: string;
+    ifscCode?: string;
+    upiId?: string;
+    upiQrFileName?: string;
+  };
+};
+
+export function getTenantDocumentUploadDraft(token: string): TenantDocumentUploadDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(draftKey(token));
+    if (!raw) return null;
+    return JSON.parse(raw) as TenantDocumentUploadDraft;
+  } catch {
+    return null;
+  }
+}
+
+export function setTenantDocumentUploadDraft(token: string, draft: TenantDocumentUploadDraft): void {
+  localStorage.setItem(draftKey(token), JSON.stringify(draft));
+}
+
+export function clearTenantDocumentUploadDraft(token: string): void {
+  localStorage.removeItem(draftKey(token));
+}

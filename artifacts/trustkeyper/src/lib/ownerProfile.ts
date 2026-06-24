@@ -84,14 +84,24 @@ export function saveOwnerProfile(profile: OwnerProfile): void {
   }
 }
 
-export function hasOwnerBankDetails(): boolean {
-  const p = getOwnerProfile();
+export function hasProfileBankDetails(p: Pick<OwnerProfile, "bankName" | "bankAccountNumber" | "bankIFSC">): boolean {
   return !!(p.bankName && p.bankAccountNumber && p.bankIFSC);
 }
 
+export function hasProfileUpiDetails(p: Pick<OwnerProfile, "upiId" | "upiQrFileName">): boolean {
+  return !!(p.upiId?.trim() || p.upiQrFileName?.trim());
+}
+
+export function hasProfilePaymentDetails(p: Pick<OwnerProfile, "bankName" | "bankAccountNumber" | "bankIFSC" | "upiId" | "upiQrFileName">): boolean {
+  return hasProfileBankDetails(p) || hasProfileUpiDetails(p);
+}
+
+export function hasOwnerBankDetails(): boolean {
+  return hasProfileBankDetails(getOwnerProfile());
+}
+
 export function hasOwnerUpiDetails(): boolean {
-  const p = getOwnerProfile();
-  return !!p.upiId?.trim();
+  return hasProfileUpiDetails(getOwnerProfile());
 }
 
 const MAX_PROFILE_DOC_BYTES = 4 * 1024 * 1024;
@@ -160,6 +170,24 @@ export function saveOwnerProfileUpi(upiId: string): void {
   saveOwnerProfile({
     ...current,
     upiId: upiId.trim(),
+  });
+}
+
+export function saveOwnerProfileUpiDetails(data: { upiId: string; upiQrFileName: string }): void {
+  const current = getOwnerProfile();
+  saveOwnerProfile({
+    ...current,
+    upiId: data.upiId.trim(),
+    upiQrFileName: data.upiQrFileName.trim(),
+  });
+}
+
+export function clearOwnerProfileUpi(): void {
+  const current = getOwnerProfile();
+  saveOwnerProfile({
+    ...current,
+    upiId: "",
+    upiQrFileName: "",
   });
 }
 

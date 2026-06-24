@@ -1,4 +1,5 @@
 import pg from "pg";
+import { adaptBlobWrite } from "./blobSyncAdapter.js";
 
 const { Pool } = pg;
 
@@ -23,7 +24,7 @@ export function usePostgres(): boolean {
 
 let pool: pg.Pool | null = null;
 
-function getPool(): pg.Pool {
+export function getPool(): pg.Pool {
   const connectionString = resolvePostgresUrl();
   if (!connectionString) {
     throw new Error("DATABASE_URL is not configured");
@@ -87,6 +88,7 @@ export async function setAccountDataKey(
      DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
     [p, role, dataKey, value],
   );
+  void adaptBlobWrite(p, role, dataKey, value);
 }
 
 export async function setAccountDataBulk(

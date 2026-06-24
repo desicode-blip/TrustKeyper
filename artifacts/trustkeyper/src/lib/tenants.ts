@@ -1,4 +1,7 @@
+import type { TenantDocumentUploadStatus } from "@workspace/tenant-document-upload";
+import { markInviteConverted } from "./brokerTenantOnboarding";
 import { queueCloudSync } from "./cloudSync";
+import { registerTenantLeadPhoneClaimLocally } from "./tenantPhoneRules";
 import { getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
 
 export type TenantWho = "Family" | "Bachelor";
@@ -19,23 +22,43 @@ export interface TenantProfile {
   pan?: string;
 }
 
+export type LeadStatus =
+  | "New Lead"
+  | "Contacted"
+  | "Property Shared"
+  | "Site Visit Scheduled"
+  | "Converted"
+  | "Closed";
+
+export type TenantLeadSource = "manual" | "broker_onboarding_link" | "property_share";
+
 export interface Tenant {
   id: string;
   name: string;
   phone: string;
   profile?: TenantProfile;
+  linkedinUrl?: string;
   occupancyFrom?: string;
-  who?: TenantWho;
-  identify?: Identify[];
-  food?: Food;
+  who?: TenantWho | string;
+  whoOther?: string;
+  identify?: Identify[] | string[];
+  food?: Food | string;
   city?: string;
   localities?: string[];
-  propertyType?: PropertyType;
-  sharing?: Sharing;
-  roommate?: Roommate[];
+  propertyType?: PropertyType | string;
+  propertyTypeOther?: string;
+  sharing?: Sharing | string;
+  roommate?: Roommate[] | string[];
   status: "Lead Added" | "Profile Complete";
   invitationSent: boolean;
   detailsComplete: boolean;
+  leadStatus?: LeadStatus;
+  source?: TenantLeadSource;
+  onboardingToken?: string;
+  submittedAt?: number;
+  documentUploadStatus?: TenantDocumentUploadStatus;
+  documentUploadToken?: string;
+  documentUploadSubmittedAt?: number;
   createdAt: number;
 }
 
@@ -83,6 +106,10 @@ export function addTenant(
   const list = getTenants();
   list.unshift(tenant);
   persistTenantList(list);
+  const leadSource = rest.source ?? "manual";
+  if (leadSource === "manual") {
+    registerTenantLeadPhoneClaimLocally(tenant, "manual");
+  }
   return tenant;
 }
 
@@ -103,6 +130,9 @@ export function updateTenant(
   }
   list[idx] = next;
   persistTenantList(list);
+  if (patch.leadStatus === "Converted" && next.onboardingToken) {
+    markInviteConverted(next.onboardingToken);
+  }
   return next;
 }
 

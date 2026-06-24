@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm run typecheck:deploy && pnpm --filter @workspace/trustkeyper run build",
+  "buildCommand": "pnpm run typecheck:deploy && pnpm --filter @workspace/broker-tenant-onboarding run build && pnpm --filter @workspace/tenant-document-upload run build && pnpm --filter @workspace/trustkeyper run build",
   "outputDirectory": "artifacts/trustkeyper/dist",
   "installCommand": "pnpm install",
   "functions": {
@@ -7,6 +7,21 @@
       "maxDuration": 30
     },
     "api/feedback.ts": {
+      "maxDuration": 30
+    },
+    "api/broker-tenant-onboard.ts": {
+      "maxDuration": 30
+    },
+    "api/tenant-document-upload.ts": {
+      "maxDuration": 30
+    },
+    "api/payments-onboard.ts": {
+      "maxDuration": 30
+    },
+    "api/payments-onboard-complete.ts": {
+      "maxDuration": 30
+    },
+    "api/razorpay-webhook.ts": {
       "maxDuration": 30
     }
   },
@@ -22,6 +37,14 @@
     {
       "source": "/api/share/property/(.*)",
       "destination": "/api/share-property?sharePath=property/$1"
+    },
+    {
+      "source": "/api/broker-tenant-onboard/(.*)",
+      "destination": "/api/broker-tenant-onboard?onboardPath=$1"
+    },
+    {
+      "source": "/api/tenant-document-upload/(.*)",
+      "destination": "/api/tenant-document-upload?uploadPath=$1"
     },
     {
       "source": "/((?!api/).*)",

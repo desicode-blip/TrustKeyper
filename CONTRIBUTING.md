@@ -189,7 +189,7 @@ Every PR that adds a feature includes tests for that feature. Every bug fix incl
 pnpm run test              # Unit + component (watch mode)
 pnpm run test:run          # Unit + component (single run, for CI)
 pnpm run test:coverage     # With coverage report
-pnpm run test:e2e          # E2E against staging (requires STAGING_URL)
+# E2E via Playwright is planned but not yet set up — see TESTING.md
 ```
 
 ---

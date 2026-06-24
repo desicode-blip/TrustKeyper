@@ -7,6 +7,7 @@ import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { Button } from "@/components/ui/button";
 import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 import { getProperties, type Property } from "@/lib/properties";
+import { PROPERTIES_UPDATED_EVENT } from "@/lib/propertyEditValidation";
 
 const TABS = [
   { id: "all", label: "All" },
@@ -31,9 +32,11 @@ export default function OwnerProperties() {
     refresh();
     window.addEventListener("storage", refresh);
     window.addEventListener("focus", refresh);
+    window.addEventListener(PROPERTIES_UPDATED_EVENT, refresh);
     return () => {
       window.removeEventListener("storage", refresh);
       window.removeEventListener("focus", refresh);
+      window.removeEventListener(PROPERTIES_UPDATED_EVENT, refresh);
     };
   }, [ownerName]);
 

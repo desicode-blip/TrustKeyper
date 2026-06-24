@@ -1,3 +1,4 @@
+import type { TenantDocumentUploadStatus } from "@workspace/tenant-document-upload";
 import type { Food, TenantWho } from "@/lib/tenants";
 import { queueCloudSync } from "@/lib/cloudSync";
 import type { Property } from "@/lib/properties";
@@ -51,6 +52,9 @@ export interface OwnerTenantInvite {
   createdAt: number;
   acceptedAt?: number;
   rejectedAt?: number;
+  documentUploadStatus?: TenantDocumentUploadStatus;
+  documentUploadToken?: string;
+  documentUploadSubmittedAt?: number;
 }
 
 export interface SendTenantInvitePayload {
@@ -287,6 +291,7 @@ export function recordPropertyNotInterested(input: {
     const payload = JSON.stringify(list.slice(0, 200));
     setSessionItem(DECLINES_KEY, payload);
     setItem(DECLINES_KEY, payload);
+    queueCloudSync(DECLINES_KEY, payload);
   } catch {
     /* ignore */
   }
@@ -366,6 +371,27 @@ export function deleteOwnerInvite(inviteId: string): boolean {
   if (next.length === invites.length) return false;
   persist(INVITES_KEY, next);
   return true;
+}
+
+export function syncOwnerInviteDocumentUploadStatus(
+  tenantPhone: string,
+  status: TenantDocumentUploadStatus,
+  options?: { token?: string; submittedAt?: number },
+): void {
+  const digits = tenantPhone.replace(/\D/g, "").slice(-10);
+  const invites = getOwnerInvites();
+  let changed = false;
+  const next = invites.map((invite) => {
+    if (invite.phone.replace(/\D/g, "").slice(-10) !== digits) return invite;
+    changed = true;
+    return {
+      ...invite,
+      documentUploadStatus: status,
+      documentUploadToken: options?.token ?? invite.documentUploadToken,
+      documentUploadSubmittedAt: options?.submittedAt ?? invite.documentUploadSubmittedAt,
+    };
+  });
+  if (changed) persist(INVITES_KEY, next);
 }
 
 export function formatMemberContact(phone: string): string {

@@ -100,3 +100,11 @@ export async function assertSyncAccountAuth(
 
   return { ok: true, user };
 }
+
+/** Payment routes — JWT phone match only; role/ownership checks added in later increments. */
+export async function assertPaymentAuth(
+  authorization: string | undefined,
+  phone: string,
+): Promise<SyncAuthResult> {
+  return assertSyncAccountAuth(authorization, phone);
+}

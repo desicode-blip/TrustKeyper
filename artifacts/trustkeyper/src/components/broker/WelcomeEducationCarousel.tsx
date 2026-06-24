@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { FilePlus2, Plus, UserPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, FilePlus2, Plus, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const SLIDE_MS = 8000;
+/** Auto-advance interval for welcome education slides (8 seconds). */
+export const WELCOME_CAROUSEL_SLIDE_MS = 8000;
+const SLIDE_MS = WELCOME_CAROUSEL_SLIDE_MS;
 
 type Slide = {
   id: string;
@@ -75,6 +77,14 @@ export function WelcomeEducationCarousel({
     [scheduleAdvance],
   );
 
+  const goPrev = useCallback(() => {
+    goTo((index - 1 + slides.length) % slides.length);
+  }, [goTo, index, slides.length]);
+
+  const goNext = useCallback(() => {
+    goTo((index + 1) % slides.length);
+  }, [goTo, index, slides.length]);
+
   useEffect(() => {
     scheduleAdvance();
     return () => {
@@ -98,7 +108,8 @@ export function WelcomeEducationCarousel({
           />
         </div>
 
-        <div className="relative min-h-[280px] p-6">
+        <div className="relative min-h-[300px] p-6">
+
           {slides.map((s, i) => (
             <article
               key={s.id}
@@ -125,18 +136,35 @@ export function WelcomeEducationCarousel({
                 {s.icon}
               </div>
               <h3 className="text-xl font-semibold tracking-tight text-gray-900 mb-3">{s.title}</h3>
-              <p className="text-gray-500 leading-relaxed flex-grow text-sm">{s.description}</p>
-              <button
-                type="button"
-                onClick={s.onAction}
-                className={cn(
-                  "mt-6 inline-flex w-fit items-center gap-2 font-semibold transition-all hover:gap-3",
-                  s.id === "tenant" ? "text-accent" : "text-primary",
-                )}
-              >
-                {s.id === "agreement" ? <FilePlus2 size={16} /> : s.id === "tenant" ? <UserPlus size={16} /> : <Plus size={16} />}
-                {s.ctaLabel}
-              </button>
+              <p className="text-gray-500 leading-relaxed text-sm">{s.description}</p>
+              <div className="mt-auto border-t border-gray-100 pt-4 space-y-4">
+                <button
+                  type="button"
+                  onClick={s.onAction}
+                  className="inline-flex w-fit items-center gap-2 font-semibold text-primary transition-all hover:gap-3"
+                >
+                  {s.id === "agreement" ? <FilePlus2 size={16} /> : s.id === "tenant" ? <UserPlus size={16} /> : <Plus size={16} />}
+                  {s.ctaLabel}
+                </button>
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={goPrev}
+                    aria-label="Previous slide"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:border-primary/30 hover:text-primary"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    aria-label="Next slide"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:border-primary/30 hover:text-primary"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
             </article>
           ))}
         </div>

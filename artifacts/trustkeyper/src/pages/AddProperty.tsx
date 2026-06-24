@@ -14,13 +14,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BrokerLayout from "@/components/BrokerLayout";
+import { FlowDateInput } from "@/components/flow/FlowDateInput";
+import { FlowNativeSelect } from "@/components/flow/FlowNativeSelect";
 import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/FlowStickyActionBar";
 import { FlowChipButton } from "@/components/FlowChipButton";
 import { AddPropertyProgressBar } from "@/components/AddPropertyProgressBar";
 import { useScrollToTopOnChange } from "@/hooks/useScrollToTopOnChange";
 import { getActiveSession } from "@/lib/auth";
 import { todayLocalDateInputMin } from "@/lib/dateInput";
-import { addProperty } from "@/lib/properties";
+import { addProperty, deriveBedroomsFromUnitSize } from "@/lib/properties";
+import { appendPropertyImagesFromFiles, preparePropertyImagesForStorage } from "@/lib/propertyMedia";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
 import { getItem, removeItem, setItem } from "@/lib/storageKeys";
@@ -33,7 +36,6 @@ const UNIT_SIZES = ["1 RK", "1 BHK", "2 BHK", "3 BHK", "4 BHK", "Other"];
 const FURNISHING_OPTIONS = ["Unfurnished", "Semi Furnished", "Fully Furnished"];
 const UNIT_OPTIONS = ["sq ft", "sq m", "sq yards"];
 const FLOORS_OPTIONS = Array.from({ length: 30 }, (_, i) => String(i + 1));
-const BEDROOM_OPTIONS = Array.from({ length: 10 }, (_, i) => String(i + 1));
 const BATHROOM_OPTIONS = Array.from({ length: 8 }, (_, i) => String(i + 1));
 const BALCONY_OPTIONS = ["0", "1", "2", "3", "4", "5+"];
 const FLOOR_LEVEL_OPTIONS = [
@@ -69,7 +71,10 @@ function FieldLabel({ children, required }: { children: React.ReactNode; require
 }
 
 function SelectField({
-  value, onChange, options, placeholder,
+  value,
+  onChange,
+  options,
+  placeholder,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -77,21 +82,12 @@ function SelectField({
   placeholder?: string;
 }) {
   return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`w-full h-9 rounded-md border border-input bg-white px-3 pr-8 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
-          value ? "text-gray-900" : "text-[#6C849D]/40"
-        }`}
-      >
-        {placeholder && <option value="">{placeholder}</option>}
-        {options.map((o) => (
-          <option key={o} value={o}>{o}</option>
-        ))}
-      </select>
-      <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-    </div>
+    <FlowNativeSelect
+      value={value}
+      onChange={onChange}
+      options={options}
+      placeholder={placeholder}
+    />
   );
 }
 
@@ -164,7 +160,6 @@ export default function AddProperty() {
   const [builtUpArea, setBuiltUpArea] = useState(savedData?.builtUpArea ?? "");
   const [builtUpUnits, setBuiltUpUnits] = useState(savedData?.builtUpUnits ?? "sq ft");
   const [totalFloors, setTotalFloors] = useState(savedData?.totalFloors ?? "");
-  const [bedrooms, setBedrooms] = useState(savedData?.bedrooms ?? "");
   const [bathrooms, setBathrooms] = useState(savedData?.bathrooms ?? "");
   const [balconies, setBalconies] = useState(savedData?.balconies ?? "");
   const [floorLevel, setFloorLevel] = useState(savedData?.floorLevel ?? "");
@@ -184,11 +179,13 @@ export default function AddProperty() {
   const [securityDeposit, setSecurityDeposit] = useState(savedData?.securityDeposit ?? "");
   const [availableFrom, setAvailableFrom] = useState(savedData?.availableFrom ?? "");
 
-  // Sub-step 5 – Images
+  // Sub-step 5 – Images (kept in memory only — not written to draft storage)
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [pendingImageUploads, setPendingImageUploads] = useState(0);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const availableFromRef = useRef<HTMLInputElement>(null);
 
   const clearDraft = () => {
     try {
@@ -211,7 +208,6 @@ export default function AddProperty() {
     setBuiltUpArea("");
     setBuiltUpUnits("sq ft");
     setTotalFloors("");
-    setBedrooms("");
     setBathrooms("");
     setBalconies("");
     setFloorLevel("");
@@ -227,14 +223,11 @@ export default function AddProperty() {
     setSecurityDeposit("");
     setAvailableFrom("");
     setImageUrls([]);
+    setImageUploadError(null);
     setShowSuccess(false);
     broadcastBrokerPendingFlowsUpdated();
   };
 
-  const openDatePicker = () => {
-    availableFromRef.current?.showPicker?.();
-    availableFromRef.current?.focus();
-  };
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -248,21 +241,28 @@ export default function AddProperty() {
       prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
     );
 
-  const handleFiles = useCallback((files: FileList | null) => {
-    if (!files) return;
-    const remaining = 5 - imageUrls.length;
-    const toAdd = Array.from(files).slice(0, remaining);
-    toAdd.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        if (dataUrl) setImageUrls((prev) => [...prev, dataUrl]);
-      };
-      reader.readAsDataURL(file);
-    });
-  }, [imageUrls]);
+  const handleFiles = useCallback(async (files: FileList | null) => {
+    if (!files || pendingImageUploads > 0) return;
+
+    setImageUploadError(null);
+    setPendingImageUploads(files.length);
+
+    try {
+      const result = await appendPropertyImagesFromFiles(files, imageUrls);
+      setImageUrls(result.images);
+
+      if (result.failedCount > 0) {
+        setImageUploadError("Some photos could not be uploaded. Try again with image files only.");
+      } else if (result.skippedDuplicateCount > 0 && result.addedCount === 0) {
+        setImageUploadError("That photo is already in your gallery.");
+      }
+    } finally {
+      setPendingImageUploads(0);
+    }
+  }, [imageUrls, pendingImageUploads]);
 
   const removeImage = (idx: number) => {
+    setImageUploadError(null);
     setImageUrls((prev) => prev.filter((_, i) => i !== idx));
   };
 
@@ -321,7 +321,6 @@ export default function AddProperty() {
       builtUpArea,
       builtUpUnits,
       totalFloors,
-      bedrooms,
       bathrooms,
       balconies,
       floorLevel,
@@ -336,7 +335,6 @@ export default function AddProperty() {
       monthlyMaintenance,
       securityDeposit,
       availableFrom,
-      imageUrls,
     };
 
     try {
@@ -363,7 +361,6 @@ export default function AddProperty() {
     builtUpArea,
     builtUpUnits,
     totalFloors,
-    bedrooms,
     bathrooms,
     balconies,
     floorLevel,
@@ -378,7 +375,6 @@ export default function AddProperty() {
     monthlyMaintenance,
     securityDeposit,
     availableFrom,
-    imageUrls,
   ]);
 
   // ── Validation ────────────────────────────────────────────────────────────────
@@ -403,7 +399,7 @@ export default function AddProperty() {
       return typeOk && sizeOk && furnishing !== "";
     }
     if (subStep === 2) {
-      return !!(builtUpArea && builtUpUnits && totalFloors && bedrooms && bathrooms && balconies && floorLevel && mainDoorDirection);
+      return !!(builtUpArea && builtUpUnits && totalFloors && bathrooms && balconies && floorLevel && mainDoorDirection);
     }
     if (subStep === 3) return true;
     if (subStep === 4) {
@@ -414,52 +410,68 @@ export default function AddProperty() {
 
   // ── Submit ────────────────────────────────────────────────────────────────────
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!getActiveSession()) {
       toast({ title: "Please sign in to save properties", variant: "destructive" });
       sessionStorage.setItem("tk_pending_role", "broker");
       setLocation("/login");
       return;
     }
+    if (isSaving || pendingImageUploads > 0) return;
+
     const finalAmenities = [...amenities];
     if (amenityOtherChecked && amenityOtherText.trim()) {
       finalAmenities.push(amenityOtherText.trim());
     }
 
-    addProperty({
-      nickname,
-      address,
-      area,
-      city,
-      pincode,
-      country,
-      ownerName,
-      ownerContact,
-      propertyType,
-      propertyTypeOther,
-      unitSize,
-      unitSizeOther,
-      furnishing,
-      builtUpArea,
-      builtUpUnits,
-      totalFloors,
-      bedrooms,
-      bathrooms,
-      balconies,
-      floorLevel,
-      mainDoorDirection,
-      amenities: finalAmenities,
-      tenantsPreferred,
-      monthlyRent,
-      rentNegotiable,
-      maintenanceIncluded,
-      monthlyMaintenance,
-      securityDeposit,
-      availableFrom,
-      images: imageUrls,
-      imageCount: imageUrls.length,
-      status: "Active",
-    });
+    setIsSaving(true);
+    try {
+      const preparedImages = await preparePropertyImagesForStorage(imageUrls);
+      addProperty({
+        nickname,
+        address,
+        area,
+        city,
+        pincode,
+        country,
+        ownerName,
+        ownerContact,
+        propertyType,
+        propertyTypeOther,
+        unitSize,
+        unitSizeOther,
+        furnishing,
+        builtUpArea,
+        builtUpUnits,
+        totalFloors,
+        bedrooms: deriveBedroomsFromUnitSize(unitSize, unitSizeOther),
+        bathrooms,
+        balconies,
+        floorLevel,
+        mainDoorDirection,
+        amenities: finalAmenities,
+        tenantsPreferred,
+        monthlyRent,
+        rentNegotiable,
+        maintenanceIncluded,
+        monthlyMaintenance,
+        securityDeposit,
+        availableFrom,
+        images: preparedImages.images,
+        imageCount: preparedImages.imageCount,
+        status: "Active",
+        uploadedBy: "broker",
+      });
+    } catch {
+      toast({
+        title: "Could not save property",
+        description: "Storage may be full. Try fewer or smaller photos, then try again.",
+        variant: "destructive",
+      });
+      return;
+    } finally {
+      setIsSaving(false);
+    }
     try {
       removeItem("add_property_data");
     } catch {
@@ -491,7 +503,7 @@ export default function AddProperty() {
     if (subStep < 5) {
       setSubStep((s: number) => s + 1);
     } else {
-      handleSubmit();
+      void handleSubmit();
     }
   };
 
@@ -690,21 +702,15 @@ export default function AddProperty() {
             />
           </div>
           <div>
-            <FieldLabel required>Bedrooms</FieldLabel>
-            <SelectField value={bedrooms} onChange={setBedrooms} options={BEDROOM_OPTIONS} placeholder="Select" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
             <FieldLabel required>Bathrooms</FieldLabel>
             <SelectField value={bathrooms} onChange={setBathrooms} options={BATHROOM_OPTIONS} placeholder="Select" />
           </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <FieldLabel required>Balconies</FieldLabel>
             <SelectField value={balconies} onChange={setBalconies} options={BALCONY_OPTIONS} placeholder="Select" />
           </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
           <div>
             <FieldLabel required>Floor Level</FieldLabel>
             <Input
@@ -714,6 +720,8 @@ export default function AddProperty() {
               type="text"
             />
           </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <FieldLabel required>Facing</FieldLabel>
             <SelectField value={mainDoorDirection} onChange={setMainDoorDirection} options={DIRECTION_OPTIONS} placeholder="Select" />
@@ -867,22 +875,11 @@ export default function AddProperty() {
 
         <div>
           <FieldLabel required>Available From</FieldLabel>
-          <div
-            className="flex items-center border border-input rounded-md overflow-hidden cursor-text"
-            onClick={openDatePicker}
-          >
-            <span className="px-3 text-primary h-9 flex items-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </span>
-            <input
-              ref={availableFromRef}
-              type="date"
-              min={availableFromMin}
-              value={availableFrom}
-              onChange={(e) => setAvailableFrom(e.target.value)}
-              className="flex-1 h-9 px-2 text-sm focus:outline-none bg-white appearance-none [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:w-0 [&::-webkit-calendar-picker-indicator]:h-0"
-            />
-          </div>
+          <FlowDateInput
+            min={availableFromMin}
+            value={availableFrom}
+            onChange={setAvailableFrom}
+          />
         </div>
       </div>
     </div>
@@ -914,15 +911,23 @@ export default function AddProperty() {
           </ul>
         </div>
 
+        {pendingImageUploads > 0 ? (
+          <p className="text-sm text-gray-600">Uploading photos…</p>
+        ) : null}
+        {imageUploadError ? (
+          <p className="text-sm text-destructive">{imageUploadError}</p>
+        ) : null}
+
         {imageUrls.length === 0 ? (
           <button
             type="button"
+            disabled={pendingImageUploads > 0}
             onClick={() => fileInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-primary/40 rounded-xl bg-blue-50/40 flex flex-col items-center justify-center py-10 gap-3 hover:bg-blue-50 transition-colors"
+            className="w-full border-2 border-dashed border-primary/40 rounded-xl bg-blue-50/40 flex flex-col items-center justify-center py-10 gap-3 hover:bg-blue-50 transition-colors disabled:opacity-60"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
-              handleFiles(e.dataTransfer.files);
+              void handleFiles(e.dataTransfer.files);
             }}
           >
             <ImageIcon size={32} className="text-primary" />
@@ -946,8 +951,9 @@ export default function AddProperty() {
             {imageUrls.length < 5 && (
               <button
                 type="button"
+                disabled={pendingImageUploads > 0}
                 onClick={() => fileInputRef.current?.click()}
-                className="aspect-square border-2 border-dashed border-primary/40 rounded-lg bg-blue-50/40 flex items-center justify-center hover:bg-blue-50 transition-colors"
+                className="aspect-square border-2 border-dashed border-primary/40 rounded-lg bg-blue-50/40 flex items-center justify-center hover:bg-blue-50 transition-colors disabled:opacity-60"
               >
                 <Plus size={24} className="text-primary" />
               </button>
@@ -972,7 +978,10 @@ export default function AddProperty() {
           accept="image/*"
           multiple
           className="hidden"
-          onChange={(e) => handleFiles(e.target.files)}
+          onChange={(e) => {
+            void handleFiles(e.target.files);
+            e.target.value = "";
+          }}
         />
       </div>
     </div>
@@ -1016,10 +1025,10 @@ export default function AddProperty() {
           <Button
             size="lg"
             onClick={handleContinue}
-            disabled={!canContinue()}
+            disabled={!canContinue() || isSaving || pendingImageUploads > 0}
             className="w-48 bg-primary hover:bg-primary/90"
           >
-            {subStep === 5 ? "Submit" : "Continue →"}
+            {isSaving ? "Saving…" : subStep === 5 ? "Submit" : "Continue →"}
           </Button>
         </div>
       </div>
@@ -1029,10 +1038,10 @@ export default function AddProperty() {
         <Button
           size="lg"
           onClick={handleContinue}
-          disabled={!canContinue()}
+          disabled={!canContinue() || isSaving || pendingImageUploads > 0}
           className="w-full bg-primary hover:bg-primary/90 rounded-[4px]"
         >
-          {subStep === 5 ? "Submit" : "Continue →"}
+          {isSaving ? "Saving…" : subStep === 5 ? "Submit" : "Continue →"}
         </Button>
       </FlowStickyActionBar>
 

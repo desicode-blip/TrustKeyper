@@ -37,7 +37,7 @@ export default function BrokerDocuments() {
           <p className="text-xs text-gray-400 mt-1">Agreements sent for e-signing will appear here</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 min-w-0 w-full overflow-x-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 min-w-0 w-full overflow-visible">
           {agreements.map((agr) => (
             <AgreementDocumentRow
               key={agr.id}

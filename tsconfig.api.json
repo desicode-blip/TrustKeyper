@@ -9,6 +9,8 @@
   "references": [
     { "path": "./lib/db" },
     { "path": "./lib/sync-store" },
-    { "path": "./lib/invitations-store" }
+    { "path": "./lib/invitations-store" },
+    { "path": "./lib/broker-tenant-onboarding" },
+    { "path": "./lib/tenant-document-upload" }
   ]
 }

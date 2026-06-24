@@ -22,8 +22,8 @@ export type Role = "broker" | "owner" | "tenant" | "manager" | "admin";
 
 export const ALL_ROLES: Role[] = ["broker", "owner", "tenant", "manager", "admin"];
 
-/** Roles offered on signup / login (tenant & manager hidden for now). */
-export const AUTH_ENTRY_ROLES = ["owner", "broker"] as const;
+/** Roles offered on signup / login (manager hidden for now). */
+export const AUTH_ENTRY_ROLES = ["owner", "broker", "tenant"] as const;
 export type AuthEntryRole = (typeof AUTH_ENTRY_ROLES)[number];
 
 export function isAuthEntryRole(role: string): role is AuthEntryRole {
@@ -79,7 +79,7 @@ export function dashboardRouteFor(role: Role): string {
   const routes: Record<Role, string> = {
     broker: "/broker/dashboard",
     owner: "/owner/dashboard",
-    tenant: "/",
+    tenant: "/tenant/dashboard",
     manager: "/",
     admin: "/admin/dashboard",
   };

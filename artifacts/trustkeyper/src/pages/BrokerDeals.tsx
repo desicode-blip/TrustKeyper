@@ -7,6 +7,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
+import { BrokerFlowButton } from "@/components/broker/BrokerFlowButton";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import { getTenants, timeAgo } from "@/lib/tenants";
@@ -346,12 +347,14 @@ export default function BrokerDeals() {
               { value: "table", label: "Table" },
             ]}
           />
-          <button
+          <BrokerFlowButton
+            type="button"
+            flowVariant="sm-primary"
             onClick={() => setLocation("/broker/agreements/generate")}
-            className="inline-flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-lg bg-primary text-white text-xs sm:text-sm font-semibold hover:bg-primary/90 transition-colors"
+            className="px-3 sm:px-4 text-xs sm:text-sm"
           >
             <Plus size={14} /> <span className="hidden sm:inline">Generate Rent Agreement</span><span className="sm:hidden">Agreement</span>
-          </button>
+          </BrokerFlowButton>
         </div>
       </div>
       {/* ── Earnings banner ── */}

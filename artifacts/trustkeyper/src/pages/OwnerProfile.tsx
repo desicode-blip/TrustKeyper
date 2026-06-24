@@ -1,34 +1,38 @@
 import React, { useEffect, useRef, useState } from "react";
 import OwnerLayout from "@/components/OwnerLayout";
+import { PaymentMethodOrDivider, ProfileSectionHeader } from "@/components/profile/ProfileSectionHeader";
 import {
   User,
   Phone,
   Landmark,
   CreditCard,
   Check,
-  Pencil,
-  Save,
-  X,
   ChevronDown,
   Upload,
   Trash2,
   FileText,
   AlertTriangle,
+  QrCode,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 import {
   clearOwnerProfileBank,
+  clearOwnerProfileUpi,
   getOwnerProfile,
   hasOwnerBankDetails,
+  hasOwnerUpiDetails,
+  hasProfilePaymentDetails,
   removeOwnerProfileDocument,
   saveOwnerProfile,
   saveOwnerProfileBank,
   saveOwnerProfileDocument,
+  saveOwnerProfileUpiDetails,
   type OwnerDocumentKind,
   type OwnerProfile,
 } from "@/lib/ownerProfile";
 import { getFileTypeError, isValidAccountNumber, isValidIFSC } from "@/lib/fileValidation";
+import { isValidUpiId, sanitizeUpiInput } from "@/lib/upi";
 
 const BANK_NAMES = [
   "State Bank of India", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak Mahindra Bank",
@@ -64,53 +68,6 @@ function TextInput({
       disabled={disabled}
       className="w-full h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50 disabled:text-gray-500 transition-colors"
     />
-  );
-}
-
-function SectionHeader({ icon: Icon, title, onEdit, onSave, onCancel, onDelete, editing, saved }: {
-  icon: React.ElementType; title: string;
-  onEdit?: () => void; onSave?: () => void; onCancel?: () => void; onDelete?: () => void;
-  editing: boolean; saved: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50">
-      <div className="flex items-center gap-2">
-        <Icon size={15} className="text-primary" />
-        <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">{title}</p>
-        {saved && !editing && (
-          <span className="flex items-center gap-1 text-[10px] text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full">
-            <Check size={10} /> Saved
-          </span>
-        )}
-      </div>
-      {(onEdit || onSave) && (
-        <div className="flex items-center gap-2">
-          {editing ? (
-            <>
-              <button type="button" onClick={onSave} className="flex items-center gap-1 text-xs text-white bg-primary px-2.5 py-1 rounded-lg font-medium hover:bg-primary/90 transition-colors">
-                <Save size={11} /> Save
-              </button>
-              <button type="button" onClick={onCancel} className="flex items-center gap-1 text-xs text-gray-600 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors">
-                <X size={11} /> Cancel
-              </button>
-            </>
-          ) : (
-            <>
-              {saved && onDelete && (
-                <button type="button" onClick={onDelete} className="flex items-center gap-1 text-xs text-red-500 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">
-                  <Trash2 size={11} /> Delete
-                </button>
-              )}
-              {onEdit && (
-                <button type="button" onClick={onEdit} className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
-                  <Pencil size={11} /> Edit
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -261,6 +218,7 @@ export default function OwnerProfile() {
   const [profile, setProfile] = useState<OwnerProfile>(() => getOwnerProfile());
   const [editingBasic, setEditingBasic] = useState(false);
   const [editingBank, setEditingBank] = useState(false);
+  const [editingUPI, setEditingUPI] = useState(false);
   const [draftBasic, setDraftBasic] = useState({ name: profile.name, phone: profile.phone });
   const [draftBank, setDraftBank] = useState({
     bankHolderName: profile.bankHolderName,
@@ -268,11 +226,19 @@ export default function OwnerProfile() {
     bankAccountNumber: profile.bankAccountNumber,
     bankIFSC: profile.bankIFSC,
   });
+  const [draftUPI, setDraftUPI] = useState({
+    upiId: profile.upiId,
+    upiQrFileName: profile.upiQrFileName,
+  });
   const [otpPhone, setOtpPhone] = useState<string | null>(null);
   const [confirmDeleteBank, setConfirmDeleteBank] = useState(false);
+  const [confirmDeleteUpi, setConfirmDeleteUpi] = useState(false);
+  const qrRef = useRef<HTMLInputElement>(null);
 
   const savedBasic = !!(profile.name && profile.phone);
   const savedBank = hasOwnerBankDetails();
+  const savedUPI = hasOwnerUpiDetails();
+  const savedPayment = hasProfilePaymentDetails(profile);
   const savedAadhaar = !!profile.aadhaar?.fileName;
   const savedPan = !!profile.pan?.fileName;
 
@@ -352,6 +318,30 @@ export default function OwnerProfile() {
     setEditingBank(false);
   };
 
+  const saveUPI = () => {
+    const upiId = draftUPI.upiId.trim();
+    const hasQr = !!draftUPI.upiQrFileName?.trim();
+    if (!upiId && !hasQr) {
+      toast({ title: "UPI details required", description: "Enter a valid UPI ID or upload a QR code.", variant: "destructive" });
+      return;
+    }
+    if (upiId && !isValidUpiId(upiId)) {
+      toast({ title: "Invalid UPI ID", description: "Enter a valid UPI ID (e.g. name@bank).", variant: "destructive" });
+      return;
+    }
+    saveOwnerProfileUpiDetails({ upiId, upiQrFileName: draftUPI.upiQrFileName });
+    const next = getOwnerProfile();
+    setProfile(next);
+    setDraftUPI({ upiId: next.upiId, upiQrFileName: next.upiQrFileName });
+    setEditingUPI(false);
+    toast({ title: "UPI details saved", description: "Used automatically when you generate agreements." });
+  };
+
+  const cancelUPI = () => {
+    setDraftUPI({ upiId: profile.upiId, upiQrFileName: profile.upiQrFileName });
+    setEditingUPI(false);
+  };
+
   const handleDocUpload = (kind: OwnerDocumentKind, file: File) => {
     const error = getFileTypeError(file);
     if (error) {
@@ -388,6 +378,16 @@ export default function OwnerProfile() {
     toast({ title: "Bank details removed" });
   };
 
+  const deleteUpi = () => {
+    clearOwnerProfileUpi();
+    const next = getOwnerProfile();
+    setProfile(next);
+    setDraftUPI({ upiId: "", upiQrFileName: "" });
+    setConfirmDeleteUpi(false);
+    setEditingUPI(false);
+    toast({ title: "UPI details removed" });
+  };
+
   return (
     <OwnerLayout>
       <div className="p-6 sm:p-10 max-w-2xl mx-auto">
@@ -400,7 +400,7 @@ export default function OwnerProfile() {
 
         <div className="space-y-4">
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <SectionHeader
+            <ProfileSectionHeader
               icon={User}
               title="Basic Details"
               editing={editingBasic}
@@ -449,7 +449,7 @@ export default function OwnerProfile() {
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <SectionHeader
+            <ProfileSectionHeader
               icon={FileText}
               title="Documents"
               editing={false}
@@ -474,20 +474,21 @@ export default function OwnerProfile() {
             </div>
           </div>
 
-          {!savedBank && (
+          {!savedPayment && (
             <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
               <AlertTriangle size={16} className="text-amber-600 mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-amber-800">Add bank details</p>
+                <p className="text-sm font-semibold text-amber-800">Add payment details</p>
                 <p className="text-xs text-amber-700 mt-0.5">
-                  Save once and they will be pre-filled when you generate rental agreements.
+                  Save your bank or UPI details once and they will be pre-filled when you generate rental agreements.
                 </p>
               </div>
             </div>
           )}
 
+          <div className="space-y-0">
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <SectionHeader
+            <ProfileSectionHeader
               icon={Landmark}
               title="Bank Details"
               editing={editingBank}
@@ -510,7 +511,7 @@ export default function OwnerProfile() {
                       <select
                         value={draftBank.bankName}
                         onChange={(e) => setDraftBank((d) => ({ ...d, bankName: e.target.value }))}
-                        className="w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white"
+                        className={`w-full h-9 px-3 pr-7 rounded-lg border border-gray-300 text-sm text-gray-900 appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white ${!draftBank.bankName ? "text-gray-400" : ""}`}
                       >
                         <option value=""></option>
                         {BANK_NAMES.map((b) => <option key={b} value={b}>{b}</option>)}
@@ -561,6 +562,100 @@ export default function OwnerProfile() {
               )}
             </div>
           </div>
+
+          <PaymentMethodOrDivider />
+
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <ProfileSectionHeader
+              icon={QrCode}
+              title="UPI Details"
+              editing={editingUPI}
+              saved={savedUPI}
+              onEdit={() => setEditingUPI(true)}
+              onSave={saveUPI}
+              onCancel={cancelUPI}
+              onDelete={() => setConfirmDeleteUpi(true)}
+            />
+            <div className="px-5 py-4">
+              {editingUPI ? (
+                <div className="space-y-4">
+                  <div>
+                    <FieldLabel>UPI ID</FieldLabel>
+                    <TextInput
+                      value={draftUPI.upiId}
+                      onChange={(v) => setDraftUPI((d) => ({ ...d, upiId: sanitizeUpiInput(v) }))}
+                      placeholder="yourname@bank"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 text-center font-medium">OR</p>
+                  <div>
+                    <FieldLabel>QR Code</FieldLabel>
+                    <button
+                      type="button"
+                      onClick={() => qrRef.current?.click()}
+                      className="w-full h-20 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1.5 hover:border-primary/50 hover:bg-gray-50 transition-colors"
+                    >
+                      {draftUPI.upiQrFileName ? (
+                        <>
+                          <Check size={16} className="text-green-500" />
+                          <span className="text-xs text-green-600 font-medium">{draftUPI.upiQrFileName}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={16} className="text-gray-400" />
+                          <span className="text-xs text-gray-500">Upload QR Code image or PDF</span>
+                        </>
+                      )}
+                    </button>
+                    <input
+                      ref={qrRef}
+                      type="file"
+                      accept=".pdf,.png,.jpeg,.jpg"
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                          setDraftUPI((d) => ({ ...d, upiQrFileName: e.target.files![0].name }));
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : (profile.upiId || profile.upiQrFileName) ? (
+                <div className="space-y-3">
+                  {profile.upiId && (
+                    <div className="flex items-start gap-2">
+                      <QrCode size={14} className="text-gray-400 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase tracking-wide">UPI ID</p>
+                        <p className="text-sm font-medium text-gray-800">{profile.upiId}</p>
+                      </div>
+                    </div>
+                  )}
+                  {profile.upiQrFileName && (
+                    <div className="flex items-start gap-2">
+                      <QrCode size={14} className="text-gray-400 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase tracking-wide">QR Code</p>
+                        <p className="text-sm font-medium text-green-600 flex items-center gap-1">
+                          <Check size={12} />
+                          {profile.upiQrFileName}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setEditingUPI(true)}
+                  className="w-full h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center gap-2 text-sm text-gray-400 hover:border-primary/40 hover:text-primary transition-colors"
+                >
+                  <QrCode size={16} /> Add UPI ID or QR Code
+                </button>
+              )}
+            </div>
+          </div>
+          </div>
         </div>
       </div>
 
@@ -586,6 +681,23 @@ export default function OwnerProfile() {
                 Cancel
               </button>
               <button type="button" onClick={deleteBank} className="flex-1 h-10 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmDeleteUpi && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <AlertTriangle size={28} className="text-amber-500 mx-auto mb-3" />
+            <p className="font-semibold text-gray-900 mb-1">Delete UPI details?</p>
+            <p className="text-sm text-gray-500 mb-5">You can add them again anytime from this page or during agreement generation.</p>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setConfirmDeleteUpi(false)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-600">
+                Cancel
+              </button>
+              <button type="button" onClick={deleteUpi} className="flex-1 h-10 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600">
                 Delete
               </button>
             </div>

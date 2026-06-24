@@ -12,11 +12,22 @@ import LoginDirect from "@/pages/LoginDirect";
 import BrokerDashboard from "@/pages/BrokerDashboard";
 import BrokerProperties from "@/pages/BrokerProperties";
 import BrokerTenants from "@/pages/BrokerTenants";
+import BrokerTenantInvite from "@/pages/BrokerTenantInvite";
+import TenantBrokerOnboarding from "@/pages/TenantBrokerOnboarding";
+import TenantDocumentUpload from "@/pages/TenantDocumentUpload";
+import TenantOnboardLegacyRedirect from "@/pages/TenantOnboardLegacyRedirect";
+import TenantDashboard from "@/pages/TenantDashboard";
+import TenantRentPayments from "@/pages/tenant/TenantRentPayments";
+import TenantMaintenance from "@/pages/tenant/TenantMaintenance";
+import TenantDocuments from "@/pages/tenant/TenantDocuments";
+import TenantContact from "@/pages/tenant/TenantContact";
+import TenantProfile from "@/pages/tenant/TenantProfile";
+import TenantSettings from "@/pages/tenant/TenantSettings";
 import BrokerDeals from "@/pages/BrokerDeals";
 import BrokerCommission from "@/pages/BrokerCommission";
 import BrokerDocuments from "@/pages/BrokerDocuments";
 import AddTenant from "@/pages/AddTenant";
-import AddProperty from "@/pages/AddProperty";
+import BrokerPropertyAddRoute from "@/pages/BrokerPropertyAddRoute";
 import PropertyDetails from "@/pages/PropertyDetails";
 import GenerateAgreement from "@/pages/GenerateAgreement";
 import AddProperty2 from "@/pages/AddProperty2";
@@ -70,6 +81,16 @@ function Router() {
     <>
     <Switch>
       <Route path="/share/property/:id" component={SharedProperty} />
+      <Route path="/tenant/onboard/:token" component={TenantOnboardLegacyRedirect} />
+      <Route path="/onboard/tenant/:token" component={TenantBrokerOnboarding} />
+      <Route path="/upload/documents/:token" component={TenantDocumentUpload} />
+      <Route path="/tenant/dashboard" component={TenantDashboard} />
+      <Route path="/tenant/rent" component={TenantRentPayments} />
+      <Route path="/tenant/maintenance" component={TenantMaintenance} />
+      <Route path="/tenant/documents" component={TenantDocuments} />
+      <Route path="/tenant/contact" component={TenantContact} />
+      <Route path="/tenant/profile" component={TenantProfile} />
+      <Route path="/tenant/settings" component={TenantSettings} />
       <Route path="/login" component={Login} />
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />
@@ -90,11 +111,12 @@ function Router() {
       <Route path="/owner/profile" component={OwnerProfile} />
       <Route path="/broker/dashboard" component={BrokerDashboard} />
       <Route path="/broker/properties" component={BrokerProperties} />
-      <Route path="/broker/properties/add" component={AddProperty} />
+      <Route path="/broker/properties/add" component={BrokerPropertyAddRoute} />
       <Route path="/broker/properties/add2" component={AddProperty2} />
       <Route path="/broker/properties/:id" component={PropertyDetails} />
       <Route path="/broker/agreements/generate" component={GenerateAgreement} />
       <Route path="/broker/tenants" component={BrokerTenants} />
+      <Route path="/broker/tenants/invite" component={BrokerTenantInvite} />
       <Route path="/broker/tenants/add" component={AddTenant} />
       <Route path="/broker/deals" component={BrokerDeals} />
       <Route path="/broker/commission" component={BrokerCommission} />

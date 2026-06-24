@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Calendar, Send } from "lucide-react";
+import { ArrowRight, Send } from "lucide-react";
+import { FlowDateInput } from "@/components/flow/FlowDateInput";
 import {
   Dialog,
   DialogContent,
@@ -266,18 +267,11 @@ export function InviteTenantsModal({
               <Label className="text-xs text-gray-500 mb-1.5 block">
                 Start Date<span className="text-red-500">*</span>
               </Label>
-              <div className="relative">
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="h-10 pr-10"
-                />
-                <Calendar
-                  size={16}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                />
-              </div>
+              <FlowDateInput
+                variant="owner"
+                value={startDate}
+                onChange={setStartDate}
+              />
             </div>
             <div className="flex flex-col sm:flex-row justify-center gap-2 pt-4">
               <OwnerFlowButton

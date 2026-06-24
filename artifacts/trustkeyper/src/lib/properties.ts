@@ -1,5 +1,7 @@
 import { queueCloudSync } from "./cloudSync";
-import { getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
+import { normalizePropertyImages } from "./propertyMedia";
+import { notifyPropertiesUpdated } from "./propertyEditValidation";
+import { activeKey, getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
 
 export type PropertyStatus = "Active" | "Draft" | "Rented";
 
@@ -55,14 +57,19 @@ const readProperties = (): Property[] => {
   }
 };
 
-const saveProperties = (list: Property[]) => {
+const saveProperties = (list: Property[]): boolean => {
   try {
     const payload = JSON.stringify(list);
-    setItem("properties", payload);
-    setSessionItem("properties", payload);
+    const key = activeKey("properties");
+    if (!key) return false;
+    localStorage.setItem(key, payload);
+    sessionStorage.setItem(key, payload);
+    if (localStorage.getItem(key) !== payload) return false;
     queueCloudSync("properties", payload);
+    notifyPropertiesUpdated();
+    return true;
   } catch {
-    // ignore write errors
+    return false;
   }
 };
 
@@ -71,15 +78,19 @@ export function getProperties(): Property[] {
 }
 
 export function addProperty(p: Omit<Property, "id" | "createdAt" | "status"> & { status?: PropertyStatus }): Property {
+  const imageFields = normalizePropertyImages(p.images ?? []);
   const property: Property = {
     ...p,
+    ...imageFields,
     id: `prop_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     createdAt: Date.now(),
     status: p.status ?? "Active",
   };
   const list = getProperties();
   list.unshift(property);
-  saveProperties(list);
+  if (!saveProperties(list)) {
+    throw new Error("Failed to persist property");
+  }
   return property;
 }
 
@@ -92,13 +103,37 @@ export function updatePropertyStatus(id: string, status: PropertyStatus): void {
   }
 }
 
-export function updateProperty(id: string, changes: Partial<Omit<Property, "id" | "createdAt" | "uploadedBy">>): void {
+export function updateProperty(
+  id: string,
+  changes: Partial<Omit<Property, "id" | "createdAt" | "uploadedBy">>,
+): boolean {
   const list = getProperties();
   const idx = list.findIndex((p) => p.id === id);
-  if (idx !== -1) {
-    list[idx] = { ...list[idx], ...changes };
-    saveProperties(list);
+  if (idx === -1) return false;
+
+  const nextChanges = { ...changes };
+  if (nextChanges.images !== undefined) {
+    Object.assign(nextChanges, normalizePropertyImages(nextChanges.images));
+  } else if (nextChanges.imageCount !== undefined) {
+    const currentImages = list[idx].images ?? [];
+    nextChanges.imageCount = currentImages.length;
   }
+
+  list[idx] = { ...list[idx], ...nextChanges };
+  return saveProperties(list);
+}
+
+/** Derive bedroom count from BHK / RK selection captured in step 1. */
+export function deriveBedroomsFromUnitSize(
+  unitSize: string,
+  unitSizeOther?: string,
+): string {
+  const source =
+    unitSize === "Other" ? (unitSizeOther ?? "").trim() : unitSize.trim();
+  const bhkMatch = source.match(/^(\d+)\s*BHK/i);
+  if (bhkMatch) return bhkMatch[1];
+  if (/^1\s*RK/i.test(source)) return "1";
+  return "";
 }
 
 export function getPropertyTitle(p: Property): string {

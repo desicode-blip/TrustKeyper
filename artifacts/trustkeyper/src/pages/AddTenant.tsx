@@ -9,8 +9,14 @@ import {
   X,
 } from "lucide-react";
 import BrokerLayout from "@/components/BrokerLayout";
-import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
+import { BrokerFlowButton } from "@/components/broker/BrokerFlowButton";
+import { BrokerOnboardInvitationCreatedModal } from "@/components/broker/BrokerOnboardInvitationCreatedModal";
+import {
+  AddManuallySectionHeader,
+  BrokerOnboardLinkGeneratorCard,
+} from "@/components/broker/BrokerOnboardLinkGeneratorCard";
 import { FlowChipButton } from "@/components/FlowChipButton";
+import { FlowDateInput } from "@/components/flow/FlowDateInput";
 import {
   FLOW_STICKY_CONTENT_CLASS,
   FlowStickyActionBar,
@@ -39,7 +45,12 @@ import {
   type Sharing,
   type Roommate,
 } from "@/lib/tenants";
+import {
+  getTenantPhoneConflict,
+  tenantPhoneConflictMessage,
+} from "@/lib/tenantPhoneRules";
 import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
+import type { BrokerOnboardLinkPayload } from "@/lib/brokerOnboardShareActions";
 
 type Step = 1 | 2;
 
@@ -82,9 +93,12 @@ export default function AddTenant() {
   const [sharing, setSharing] = useState<Sharing | "">("");
   const [roommate, setRoommate] = useState<Roommate[]>([]);
   const [localityInput, setLocalityInput] = useState("");
+  const [phoneConflictWarning, setPhoneConflictWarning] = useState<string | null>(null);
 
   // Success modal
   const [successOpen, setSuccessOpen] = useState(false);
+  const [invitationCreatedPayload, setInvitationCreatedPayload] =
+    useState<BrokerOnboardLinkPayload | null>(null);
 
   useEffect(() => {
     if (!editId || typeof window === "undefined") return;
@@ -94,14 +108,36 @@ export default function AddTenant() {
     setName(tenant.name);
     setPhone(tenant.phone.replace(/\D/g, "").slice(-10));
     setOccupancyFrom(tenant.occupancyFrom ?? "");
-    setWho(tenant.who ?? "");
-    setIdentify(tenant.identify ?? []);
-    setFood(tenant.food ?? "");
+    setWho(tenant.who === "Family" || tenant.who === "Bachelor" ? tenant.who : "");
+    setIdentify(
+      (tenant.identify ?? []).filter((value): value is Identify => value === "Male" || value === "Female"),
+    );
+    setFood(tenant.food === "Veg" || tenant.food === "Non-Veg" ? tenant.food : "");
     setCity(tenant.city ?? "Hyderabad");
     setLocalities(tenant.localities ?? []);
-    setPropertyType(tenant.propertyType ?? "");
-    setSharing(tenant.sharing ?? "");
-    setRoommate(tenant.roommate ?? []);
+    setPropertyType(
+      tenant.propertyType === "Apartment" ||
+        tenant.propertyType === "House" ||
+        tenant.propertyType === "Studio" ||
+        tenant.propertyType === "Villa" ||
+        tenant.propertyType === "PG/Hostel" ||
+        tenant.propertyType === "Other"
+        ? tenant.propertyType
+        : "",
+    );
+    setSharing(
+      tenant.sharing === "Single" ||
+        tenant.sharing === "Double" ||
+        tenant.sharing === "Triple" ||
+        tenant.sharing === "Entire Property"
+        ? tenant.sharing
+        : "",
+    );
+    setRoommate(
+      (tenant.roommate ?? []).filter(
+        (value): value is Roommate => value === "Male" || value === "Female" || value === "Anyone",
+      ),
+    );
     setStep(tenant.detailsComplete ? 2 : 1);
   }, [editId]);
 
@@ -204,12 +240,31 @@ export default function AddTenant() {
       phone.trim().length !== 10 ||
       !occupancyFrom ||
       !who ||
-      !food
+      !food ||
+      phoneConflictWarning
     )
       return false;
     if (who === "Bachelor" && identify.length === 0) return false;
     return true;
-  }, [name, phone, occupancyFrom, who, identify, food]);
+  }, [name, phone, occupancyFrom, who, identify, food, phoneConflictWarning]);
+
+  useEffect(() => {
+    if (phone.trim().length !== 10) {
+      setPhoneConflictWarning(null);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const conflict = await getTenantPhoneConflict(phone, { excludeTenantId: editId ?? undefined });
+      if (cancelled) return;
+      setPhoneConflictWarning(conflict ? tenantPhoneConflictMessage(conflict) : null);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [phone, editId]);
 
   const step2Valid = useMemo(() => {
     if (localities.length === 0) return false;
@@ -224,7 +279,27 @@ export default function AddTenant() {
     setStep(2);
   };
 
-  const persistTenant = (complete: boolean) => {
+  const persistTenant = async (complete: boolean) => {
+    if (!editId) {
+      const conflict = await getTenantPhoneConflict(phone);
+      if (conflict) {
+        toast({
+          description: tenantPhoneConflictMessage(conflict),
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      const conflict = await getTenantPhoneConflict(phone, { excludeTenantId: editId });
+      if (conflict) {
+        toast({
+          description: tenantPhoneConflictMessage(conflict),
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     draftPausedRef.current = true;
     const payload = {
       name,
@@ -244,7 +319,7 @@ export default function AddTenant() {
     if (editId) {
       updateTenant(editId, payload);
     } else {
-      addTenant(payload);
+      addTenant({ ...payload, source: "manual" });
     }
 
     try {
@@ -265,11 +340,11 @@ export default function AddTenant() {
 
   const handleSaveDetails = () => {
     if (!step2Valid) return;
-    persistTenant(true);
+    void persistTenant(true);
   };
 
   const handleSkipSave = () => {
-    persistTenant(false);
+    void persistTenant(false);
   };
 
   const toggleIdentify = (v: Identify) => {
@@ -348,8 +423,20 @@ export default function AddTenant() {
 
         {step === 1 && (
           <>
-            <h2 className="text-base font-semibold text-gray-900 mb-1">Tenant details</h2>
-            <p className="text-sm text-gray-500 mb-4">Add the tenant&apos;s basic information manually.</p>
+            {!editId ? (
+              <BrokerOnboardLinkGeneratorCard onSuccess={setInvitationCreatedPayload} />
+            ) : null}
+
+            {!editId ? <AddManuallySectionHeader /> : null}
+
+            {editId ? (
+              <>
+                <h2 className="text-base font-semibold text-gray-900 mb-1">Tenant details</h2>
+                <p className="text-sm text-gray-500 mb-4">
+                  Update the tenant&apos;s basic information.
+                </p>
+              </>
+            ) : null}
 
             <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -390,6 +477,9 @@ export default function AddTenant() {
                       className="flex-1"
                     />
                   </div>
+                  {phoneConflictWarning ? (
+                    <p className="text-sm text-destructive">{phoneConflictWarning}</p>
+                  ) : null}
                 </div>
               </div>
 
@@ -397,12 +487,11 @@ export default function AddTenant() {
                 <Label htmlFor="t-occ" className="text-gray-700">
                   Occupancy From <span className="text-destructive">*</span>
                 </Label>
-                <Input
+                <FlowDateInput
                   id="t-occ"
-                  type="date"
                   min={todayLocalDateInputMin()}
                   value={occupancyFrom}
-                  onChange={(e) => setOccupancyFrom(e.target.value)}
+                  onChange={setOccupancyFrom}
                 />
               </div>
 
@@ -470,14 +559,14 @@ export default function AddTenant() {
 
             {/* Step 1 CTA — desktop */}
             <div className="hidden sm:flex justify-center mt-8">
-              <OwnerFlowButton
+              <BrokerFlowButton
                 type="button"
                 onClick={handleStep1Continue}
                 disabled={!step1Valid}
                 className="sm:min-w-[160px]"
               >
                 Continue <ArrowRight size={16} />
-              </OwnerFlowButton>
+              </BrokerFlowButton>
             </div>
           </>
         )}
@@ -635,22 +724,22 @@ export default function AddTenant() {
 
             {/* Step 2 CTA — desktop */}
             <div className="hidden sm:flex justify-center gap-3 mt-6">
-              <OwnerFlowButton
+              <BrokerFlowButton
                 type="button"
                 flowVariant="outline"
                 onClick={handleSkipSave}
                 className="sm:min-w-[160px]"
               >
                 Skip and Save details
-              </OwnerFlowButton>
-              <OwnerFlowButton
+              </BrokerFlowButton>
+              <BrokerFlowButton
                 type="button"
                 onClick={handleSaveDetails}
                 disabled={!step2Valid}
                 className="sm:min-w-[160px]"
               >
                 Save Details
-              </OwnerFlowButton>
+              </BrokerFlowButton>
             </div>
           </>
         )}
@@ -658,34 +747,34 @@ export default function AddTenant() {
 
       {step === 1 && (
         <FlowStickyActionBar>
-          <OwnerFlowButton
+          <BrokerFlowButton
             type="button"
             onClick={handleStep1Continue}
             disabled={!step1Valid}
             className="w-full"
           >
             Continue <ArrowRight size={16} />
-          </OwnerFlowButton>
+          </BrokerFlowButton>
         </FlowStickyActionBar>
       )}
       {step === 2 && (
         <FlowStickyActionBar innerClassName="flex gap-3">
-          <OwnerFlowButton
+          <BrokerFlowButton
             type="button"
             flowVariant="outline"
             onClick={handleSkipSave}
             className="flex-1"
           >
             Skip
-          </OwnerFlowButton>
-          <OwnerFlowButton
+          </BrokerFlowButton>
+          <BrokerFlowButton
             type="button"
             onClick={handleSaveDetails}
             disabled={!step2Valid}
             className="flex-1"
           >
             Save Details
-          </OwnerFlowButton>
+          </BrokerFlowButton>
         </FlowStickyActionBar>
       )}
 
@@ -709,7 +798,7 @@ export default function AddTenant() {
               The tenant details have been saved successfully.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <OwnerFlowButton
+              <BrokerFlowButton
                 type="button"
                 flowVariant="outline"
                 onClick={() => {
@@ -718,8 +807,8 @@ export default function AddTenant() {
                 }}
               >
                 Skip for now
-              </OwnerFlowButton>
-              <OwnerFlowButton
+              </BrokerFlowButton>
+              <BrokerFlowButton
                 type="button"
                 onClick={() => {
                   setSuccessOpen(false);
@@ -728,11 +817,19 @@ export default function AddTenant() {
               >
                 <FileText size={16} />
                 Generate Agreement
-              </OwnerFlowButton>
+              </BrokerFlowButton>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {invitationCreatedPayload && !editId ? (
+        <BrokerOnboardInvitationCreatedModal
+          open
+          {...invitationCreatedPayload}
+          onClose={() => setInvitationCreatedPayload(null)}
+        />
+      ) : null}
     </BrokerLayout>
   );
 }

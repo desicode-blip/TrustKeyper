@@ -16,19 +16,47 @@ import {
 import { FaWhatsapp } from "react-icons/fa";
 import BrokerLayout from "@/components/BrokerLayout";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
-import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
+import { BrokerFlowButton } from "@/components/broker/BrokerFlowButton";
 import { OwnerPageEmpty } from "@/components/owner/OwnerPageEmpty";
+import { BrokerTenantInviteCard } from "@/components/broker/BrokerTenantInviteCard";
 import { PropertyInquiryRow } from "@/components/property/PropertyInquiryRow";
 import { pullAccountFromCloud } from "@/lib/cloudSync";
+import {
+  BROKER_ONBOARDING_INVITES_UPDATED_EVENT,
+  getBrokerOnboardingInvitesForBroker,
+  getInviteResolvedStatus,
+  type BrokerTenantOnboardingInvite,
+} from "@/lib/brokerTenantOnboarding";
+import { isActiveInviteStatus } from "@/lib/brokerTenantInviteStatus";
+import {
+  formatMoveInDisplay,
+  formatOccupancyDisplay,
+  formatPropertyTypeDisplay,
+} from "@/lib/tenantOnboardRequirements";
 import {
   BROKER_INQUIRIES_UPDATED_EVENT,
   getBrokerPropertyShareInquiries,
   type OwnerTenantInquiry,
 } from "@/lib/ownerTenants";
 import { getActiveSession } from "@/lib/storageKeys";
-import { getBrokerTenantWhatsAppHref, getTenants, timeAgo, type Tenant } from "@/lib/tenants";
+import {
+  getBrokerTenantWhatsAppHref,
+  getTenants,
+  timeAgo,
+  type LeadStatus,
+  type Tenant,
+} from "@/lib/tenants";
+import { documentUploadStatusLabel, TENANT_DOCUMENT_STATUS_UPDATED_EVENT } from "@/lib/tenantDocumentUploadStatus";
+import {
+  fetchRequesterDocumentUploadDetail,
+  fetchRequesterDocumentUploadInvites,
+} from "@/lib/agreementDocumentUpload";
+import { AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT } from "@/lib/agreementDocumentUploadStore";
+import { TenantSubmittedDocumentsModal } from "@/components/agreement/TenantSubmittedDocumentsModal";
+import type { DocumentUploadInviteForUi } from "@/lib/agreementDocumentUploadSanitize";
 
 const TABS = [
+  { id: "invites", label: "Invites" },
   { id: "inquiries", label: "Inquiries" },
   { id: "all", label: "All Leads" },
   { id: "new", label: "New" },
@@ -53,17 +81,26 @@ function formatDate(d?: string): string {
   }
 }
 
+function leadStatusLabel(t: Tenant): LeadStatus {
+  return t.leadStatus ?? "New Lead";
+}
+
 function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) {
   const [open, setOpen] = useState(false);
+  const [viewInvite, setViewInvite] = useState<DocumentUploadInviteForUi | null>(null);
   const whatsAppUrl = getBrokerTenantWhatsAppHref(t);
 
   const summaryChips: { icon: React.ReactNode; label: string }[] = [];
-  if (t.who) summaryChips.push({ icon: <UsersIcon size={12} />, label: t.who });
+  if (t.who)
+    summaryChips.push({
+      icon: <UsersIcon size={12} />,
+      label: formatOccupancyDisplay(t.who, t.whoOther),
+    });
   if (t.food) summaryChips.push({ icon: <Utensils size={12} />, label: t.food });
   if (t.occupancyFrom)
     summaryChips.push({
       icon: <Calendar size={12} />,
-      label: `From ${formatDate(t.occupancyFrom)}`,
+      label: formatMoveInDisplay(t.occupancyFrom),
     });
   if (t.localities?.length)
     summaryChips.push({
@@ -73,7 +110,10 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
       }`,
     });
   if (t.propertyType)
-    summaryChips.push({ icon: <Building2 size={12} />, label: t.propertyType });
+    summaryChips.push({
+      icon: <Building2 size={12} />,
+      label: formatPropertyTypeDisplay(t.propertyType, t.propertyTypeOther),
+    });
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5">
@@ -85,14 +125,27 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <p className="font-semibold text-gray-900">{t.name}</p>
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 text-primary text-xs font-medium">
+                {leadStatusLabel(t)}
+              </span>
               {t.detailsComplete ? (
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   Profile Complete
                 </span>
               ) : null}
+              {t.documentUploadStatus ? (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-violet-50 text-violet-700 text-xs font-medium">
+                  {documentUploadStatusLabel(t.documentUploadStatus)}
+                </span>
+              ) : null}
             </div>
             <p className="text-sm text-gray-500">{t.phone}</p>
+            {t.documentUploadSubmittedAt ? (
+              <p className="text-xs text-gray-500 mt-1">
+                Documents submitted {formatDate(new Date(t.documentUploadSubmittedAt).toISOString())}
+              </p>
+            ) : null}
           </div>
         </div>
         <a
@@ -121,17 +174,22 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
 
       {open && (
         <div className="mt-4 ml-14 rounded-lg border border-gray-100 bg-gray-50/60 p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <DetailRow label="Occupancy from" value={formatDate(t.occupancyFrom)} />
-          <DetailRow label="Staying as" value={t.who ?? "—"} />
+          <DetailRow label="Move-in timeline" value={formatMoveInDisplay(t.occupancyFrom)} />
+          <DetailRow label="Budget" value="—" />
+          {t.linkedinUrl ? <DetailRow label="LinkedIn" value={t.linkedinUrl} /> : null}
+          <DetailRow label="Staying as" value={formatOccupancyDisplay(t.who, t.whoOther)} />
           {t.identify && t.identify.length > 0 && (
-            <DetailRow label="Identifies as" value={t.identify.join(", ")} />
+            <DetailRow label="Gender" value={t.identify.join(", ")} />
           )}
           <DetailRow label="Food preference" value={t.food ?? "—"} />
           {t.detailsComplete ? (
             <>
               <DetailRow label="City" value={t.city ?? "—"} />
               <DetailRow label="Localities" value={t.localities?.join(", ") ?? "—"} />
-              <DetailRow label="Property type" value={t.propertyType ?? "—"} />
+              <DetailRow
+                label="Property type"
+                value={formatPropertyTypeDisplay(t.propertyType, t.propertyTypeOther)}
+              />
               <DetailRow label="Sharing" value={t.sharing ?? "—"} />
               {t.roommate && t.roommate.length > 0 && (
                 <DetailRow label="Roommate preference" value={t.roommate.join(", ")} />
@@ -144,11 +202,31 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
       )}
 
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 flex-wrap gap-3">
-        <p className="text-xs text-gray-500">Added {timeAgo(t.createdAt)}</p>
+        <p className="text-xs text-gray-500">
+          {t.submittedAt
+            ? `Submitted ${formatDate(new Date(t.submittedAt).toISOString())}`
+            : `Added ${timeAgo(t.createdAt)}`}
+        </p>
         <div className="flex items-center gap-2 flex-wrap">
-          <button
+          {t.documentUploadToken &&
+          (t.documentUploadStatus === "documents_submitted" ||
+            t.documentUploadStatus === "documents_in_progress") ? (
+            <BrokerFlowButton
+              type="button"
+              flowVariant="sm-outline"
+              onClick={() => {
+                void fetchRequesterDocumentUploadDetail(t.documentUploadToken ?? "").then((detail) => {
+                  if (detail.ok) setViewInvite(detail.invite);
+                });
+              }}
+            >
+              View tenant documents
+            </BrokerFlowButton>
+          ) : null}
+          <BrokerFlowButton
+            type="button"
+            flowVariant="sm-ghost"
             onClick={() => setOpen((o) => !o)}
-            className="inline-flex items-center gap-2 h-9 px-3 rounded-[4px] border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50"
           >
             {open ? (
               <>
@@ -159,16 +237,20 @@ function TenantCard({ t, onEdit }: { t: Tenant; onEdit: (id: string) => void }) 
                 View details <ChevronDown size={14} />
               </>
             )}
-          </button>
-          <button
+          </BrokerFlowButton>
+          <BrokerFlowButton
             type="button"
+            flowVariant="sm-outline"
             onClick={() => onEdit(t.id)}
-            className="inline-flex items-center gap-2 h-9 px-3 rounded-[4px] border border-primary text-primary text-xs font-semibold hover:bg-primary/5"
           >
             <Pencil size={14} /> Edit details
-          </button>
+          </BrokerFlowButton>
         </div>
       </div>
+
+      {viewInvite ? (
+        <TenantSubmittedDocumentsModal invite={viewInvite} onClose={() => setViewInvite(null)} />
+      ) : null}
     </div>
   );
 }
@@ -183,22 +265,44 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function BrokerTenants() {
-  const [active, setActive] = useState<BrokerTenantTab>("inquiries");
+  const initialTab = (() => {
+    if (typeof window === "undefined") return "invites" as BrokerTenantTab;
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab === "invites" || tab === "inquiries" || tab === "all" || tab === "new") {
+      return tab;
+    }
+    return "invites";
+  })();
+
+  const [active, setActive] = useState<BrokerTenantTab>(initialTab);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [inquiries, setInquiries] = useState<OwnerTenantInquiry[]>([]);
+  const [invites, setInvites] = useState<BrokerTenantOnboardingInvite[]>([]);
+  const [loading, setLoading] = useState(true);
   const [, setLocation] = useLocation();
 
   const reload = useCallback(() => {
+    const session = getActiveSession();
     setTenants(getTenants());
     setInquiries(getBrokerPropertyShareInquiries());
+    setInvites(
+      session?.role === "broker"
+        ? getBrokerOnboardingInvitesForBroker(session.phone).filter((inv) =>
+            isActiveInviteStatus(getInviteResolvedStatus(inv)),
+          )
+        : [],
+    );
   }, []);
 
   const reloadFromCloud = useCallback(async () => {
+    setLoading(true);
     const session = getActiveSession();
     if (session?.role === "broker") {
       await pullAccountFromCloud(session.phone, "broker");
+      await fetchRequesterDocumentUploadInvites();
     }
     reload();
+    setLoading(false);
   }, [reload]);
 
   useEffect(() => {
@@ -209,19 +313,27 @@ export default function BrokerTenants() {
     const refresh = () => void reloadFromCloud();
     window.addEventListener("focus", refresh);
     window.addEventListener(BROKER_INQUIRIES_UPDATED_EVENT, refresh);
+    window.addEventListener(BROKER_ONBOARDING_INVITES_UPDATED_EVENT, refresh);
+    window.addEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, refresh);
+    window.addEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, refresh);
     return () => {
       window.removeEventListener("focus", refresh);
       window.removeEventListener(BROKER_INQUIRIES_UPDATED_EVENT, refresh);
+      window.removeEventListener(BROKER_ONBOARDING_INVITES_UPDATED_EVENT, refresh);
+      window.removeEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, refresh);
+      window.removeEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, refresh);
     };
   }, [reloadFromCloud]);
 
   const counts = {
+    invites: invites.length,
     all: tenants.length,
-    new: tenants.filter((t) => !t.invitationSent).length,
+    new: tenants.filter((t) => leadStatusLabel(t) === "New Lead").length,
     inquiries: inquiries.length,
   };
 
   const tabLabel = (id: BrokerTenantTab) => {
+    if (id === "invites") return `Invites (${counts.invites})`;
     if (id === "inquiries") return `Inquiries (${counts.inquiries})`;
     if (id === "all") return `All Leads (${counts.all})`;
     return `New (${counts.new})`;
@@ -229,7 +341,7 @@ export default function BrokerTenants() {
 
   const visibleTenants = tenants.filter((t) => {
     if (active === "all") return true;
-    if (active === "new") return !t.invitationSent;
+    if (active === "new") return leadStatusLabel(t) === "New Lead";
     return false;
   });
 
@@ -237,9 +349,9 @@ export default function BrokerTenants() {
     <BrokerLayout>
       <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">Tenant Leads</h1>
-        <OwnerFlowButton onClick={() => setLocation("/broker/tenants/add")} className="w-full sm:w-fit">
-          <Plus size={16} /> Register Tenant Lead
-        </OwnerFlowButton>
+        <BrokerFlowButton onClick={() => setLocation("/broker/tenants/add")} className="w-full sm:w-fit">
+          <Plus size={16} /> Add Tenant
+        </BrokerFlowButton>
       </div>
 
       <FlowSegmentTabs
@@ -248,6 +360,45 @@ export default function BrokerTenants() {
         className="mb-8"
         options={TABS.map((t) => ({ value: t.id, label: tabLabel(t.id) }))}
       />
+
+      {active === "invites" && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900">Tenant Invitations</h2>
+          <p className="text-sm text-gray-500 -mt-2">
+            Track onboarding links you have sent to prospective tenants.
+          </p>
+          {loading ? (
+            <div className="space-y-3">
+              {[0, 1].map((key) => (
+                <div
+                  key={key}
+                  className="rounded-xl border border-gray-200 bg-white p-5 animate-pulse"
+                >
+                  <div className="h-4 w-40 bg-gray-100 rounded mb-2" />
+                  <div className="h-3 w-28 bg-gray-100 rounded" />
+                </div>
+              ))}
+            </div>
+          ) : invites.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {invites.map((invite) => (
+                <BrokerTenantInviteCard key={invite.id} invite={invite} />
+              ))}
+            </div>
+          ) : (
+            <OwnerPageEmpty
+              icon={User}
+              title="No tenant invitations have been sent yet."
+              description="Generate an onboarding link when adding a tenant to start tracking invite status."
+              action={
+                <BrokerFlowButton onClick={() => setLocation("/broker/tenants/add")}>
+                  <Plus size={16} /> Invite Tenant
+                </BrokerFlowButton>
+              }
+            />
+          )}
+        </div>
+      )}
 
       {active === "inquiries" && (
         <div className="space-y-4">
@@ -276,7 +427,7 @@ export default function BrokerTenants() {
         </div>
       )}
 
-      {active !== "inquiries" && (
+      {active !== "inquiries" && active !== "invites" && (
         <>
           {visibleTenants.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-32 text-center">

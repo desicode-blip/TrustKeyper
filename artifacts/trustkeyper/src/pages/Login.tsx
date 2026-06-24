@@ -15,8 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { resolveTenantPostLoginRoute } from "@/lib/tenantPostLoginRoute";
 import {
   type AuthEntryRole,
+  type Role,
   clearInvalidAuthPendingRole,
   clearRememberedSessionFromLocalStorage,
   dashboardRouteFor,
@@ -38,6 +40,11 @@ import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 
 type Phase = "phone" | "otp";
 
+function postAuthRoute(role: Role, phone: string): string {
+  if (role === "tenant") return resolveTenantPostLoginRoute(phone);
+  return dashboardRouteFor(role);
+}
+
 /** Phone + OTP login (role from signup / session — no "I am a" cards). */
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -54,7 +61,7 @@ export default function Login() {
   useEffect(() => {
     const remembered = restoreRememberedSessionFromLocalStorage();
     if (remembered) {
-      setLocation(dashboardRouteFor(remembered.role));
+      setLocation(postAuthRoute(remembered.role, remembered.phone));
       return;
     }
 
@@ -135,7 +142,7 @@ export default function Login() {
           clearActiveSessionBackup();
         }
         toast({ title: "Signed in", description: "Welcome back to TrustKeyper." });
-        setLocation(dashboardRouteFor(loginRole));
+        setLocation(postAuthRoute(loginRole, phoneDigits));
         return;
       }
       toast({
@@ -220,7 +227,7 @@ export default function Login() {
           <div className="auth-step-heading mb-8 border-b border-gray-200 pb-4">
             <h1 className="text-3xl font-semibold text-gray-900">Login to TrustKeyper</h1>
             <p className="mt-2 text-sm text-gray-500">
-              Choose Property Owner or Broker on signup first, then return here to log in.
+              Choose Property Owner, Broker, or Tenant on signup first, then return here to log in.
             </p>
           </div>
           <AuthGoToSignupLink className="text-center" />

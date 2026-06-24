@@ -27,6 +27,14 @@ import {
   type OwnerTenantInvite,
   type RecordedInviteStatus,
 } from "@/lib/ownerTenants";
+import {
+  documentUploadStatusLabel,
+  TENANT_DOCUMENT_STATUS_UPDATED_EVENT,
+} from "@/lib/tenantDocumentUploadStatus";
+import { fetchRequesterDocumentUploadDetail, fetchRequesterDocumentUploadInvites } from "@/lib/agreementDocumentUpload";
+import { AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT } from "@/lib/agreementDocumentUploadStore";
+import { TenantSubmittedDocumentsModal } from "@/components/agreement/TenantSubmittedDocumentsModal";
+import type { DocumentUploadInviteForUi } from "@/lib/agreementDocumentUploadSanitize";
 
 const TABS = [
   { id: "inquiries", label: "Inquiries" },
@@ -86,6 +94,7 @@ function InvitedTenantRow({
   invite: OwnerTenantInvite;
   onUpdate: () => void;
 }) {
+  const [viewInvite, setViewInvite] = useState<DocumentUploadInviteForUi | null>(null);
   const fromInquiry = isInviteFromInquiry(invite);
   const recorded = getRecordedInviteStatus(invite);
   const whatsAppUrl = getWhatsAppInviteHref(invite);
@@ -111,6 +120,11 @@ function InvitedTenantRow({
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-semibold text-gray-900 text-[15px] truncate">{invite.name}</p>
             {recorded ? <OutcomeBadge status={recorded} /> : null}
+            {invite.documentUploadStatus ? (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-violet-50 text-violet-700 border border-violet-100">
+                {documentUploadStatusLabel(invite.documentUploadStatus)}
+              </span>
+            ) : null}
             {fromInquiry && invite.linkedinUrl ? (
               <LinkedInProfileLink url={invite.linkedinUrl} />
             ) : null}
@@ -146,6 +160,21 @@ function InvitedTenantRow({
       </div>
 
       <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 pt-1 border-t border-green-100/60">
+        {invite.documentUploadToken &&
+        (invite.documentUploadStatus === "documents_submitted" ||
+          invite.documentUploadStatus === "documents_in_progress") ? (
+          <button
+            type="button"
+            onClick={() => {
+              void fetchRequesterDocumentUploadDetail(invite.documentUploadToken ?? "").then((detail) => {
+                if (detail.ok) setViewInvite(detail.invite);
+              });
+            }}
+            className="h-10 px-3 rounded-[4px] text-sm font-semibold border border-primary/40 text-primary bg-white hover:bg-primary/5 transition-colors col-span-2 sm:col-span-1"
+          >
+            View tenant documents
+          </button>
+        ) : null}
         <button
           type="button"
           disabled={recorded === "accepted"}
@@ -172,6 +201,10 @@ function InvitedTenantRow({
           Delete
         </button>
       </div>
+
+      {viewInvite ? (
+        <TenantSubmittedDocumentsModal invite={viewInvite} onClose={() => setViewInvite(null)} />
+      ) : null}
     </div>
   );
 }
@@ -219,6 +252,7 @@ export default function OwnerTenants() {
     const session = getActiveSession();
     if (session?.role === "owner") {
       await pullAccountFromCloud(session.phone, "owner");
+      await fetchRequesterDocumentUploadInvites();
     }
     reload();
   }, [reload]);
@@ -233,11 +267,15 @@ export default function OwnerTenants() {
     window.addEventListener("focus", refresh);
     window.addEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
     window.addEventListener(OWNER_INQUIRIES_UPDATED_EVENT, refresh);
+    window.addEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, refresh);
+    window.addEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, refresh);
     return () => {
       window.removeEventListener("storage", refresh);
       window.removeEventListener("focus", refresh);
       window.removeEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
       window.removeEventListener(OWNER_INQUIRIES_UPDATED_EVENT, refresh);
+      window.removeEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, refresh);
+      window.removeEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, refresh);
     };
   }, [reloadFromCloud]);
 

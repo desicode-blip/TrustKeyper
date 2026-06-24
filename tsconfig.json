@@ -20,6 +20,12 @@
     },
     {
       "path": "./lib/invitations-store"
+    },
+    {
+      "path": "./lib/broker-tenant-onboarding"
+    },
+    {
+      "path": "./lib/tenant-document-upload"
     }
   ]
 }

@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   FileText,
   Eye,
@@ -282,7 +283,9 @@ export function AgreementDocumentRow({
 }) {
   const isNew = Date.now() - agreement.createdAt < 24 * 60 * 60 * 1000;
   const [dropOpen, setDropOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const dropRef = useRef<HTMLDivElement>(null);
+  const editBtnRef = useRef<HTMLButtonElement>(null);
   const recentlyEdited =
     typeof window !== "undefined" &&
     window.sessionStorage.getItem("agreement_needs_resend") === agreement.id;
@@ -297,6 +300,40 @@ export function AgreementDocumentRow({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [dropOpen]);
+
+  const updateMenuPosition = useCallback(() => {
+    const btn = editBtnRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const menuWidth = 160;
+    setMenuPos({
+      top: rect.bottom + 4,
+      left: Math.max(8, rect.right - menuWidth),
+    });
+  }, []);
+
+  const toggleDropOpen = () => {
+    setDropOpen((open) => {
+      if (open) return false;
+      updateMenuPosition();
+      return true;
+    });
+  };
+
+  useEffect(() => {
+    if (!dropOpen) {
+      setMenuPos(null);
+      return;
+    }
+    updateMenuPosition();
+    const onScrollOrResize = () => setDropOpen(false);
+    window.addEventListener("scroll", onScrollOrResize, true);
+    window.addEventListener("resize", onScrollOrResize);
+    return () => {
+      window.removeEventListener("scroll", onScrollOrResize, true);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, [dropOpen, updateMenuPosition]);
 
   const handleDownload = () => {
     const text = agreement.customText ?? generateAgreementText(agreement);
@@ -387,8 +424,9 @@ export function AgreementDocumentRow({
           </button>
           <div ref={dropRef} className="relative">
             <button
+              ref={editBtnRef}
               type="button"
-              onClick={() => setDropOpen((v) => !v)}
+              onClick={toggleDropOpen}
               aria-expanded={dropOpen}
               aria-haspopup="menu"
               className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${dropOpen ? "bg-primary text-white" : "text-primary bg-blue-50 hover:bg-primary hover:text-white"}`}
@@ -397,26 +435,33 @@ export function AgreementDocumentRow({
             >
               <Pencil size={15} />
             </button>
-            {dropOpen ? (
-              <div className="absolute right-0 top-full mt-1 bg-white rounded-xl border border-gray-200 shadow-lg z-50 py-1 min-w-[160px]" role="menu">
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => { setDropOpen(false); onEditDetails(); }}
-                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary transition-colors"
-                >
-                  <Edit size={13} /> Edit Details
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => { setDropOpen(false); onEditManually(); }}
-                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary transition-colors"
-                >
-                  <PenLine size={13} /> Edit Manually
-                </button>
-              </div>
-            ) : null}
+            {dropOpen && menuPos
+              ? createPortal(
+                  <div
+                    className="fixed bg-white rounded-xl border border-gray-200 shadow-lg z-[100] py-1 min-w-[160px]"
+                    style={{ top: menuPos.top, left: menuPos.left }}
+                    role="menu"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => { setDropOpen(false); onEditDetails(); }}
+                      className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary transition-colors"
+                    >
+                      <Edit size={13} /> Edit Details
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => { setDropOpen(false); onEditManually(); }}
+                      className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary transition-colors"
+                    >
+                      <PenLine size={13} /> Edit Manually
+                    </button>
+                  </div>,
+                  document.body,
+                )
+              : null}
           </div>
           <button
             type="button"
