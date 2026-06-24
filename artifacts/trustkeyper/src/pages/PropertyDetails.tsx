@@ -32,19 +32,10 @@ import {
   IndianRupee,
   SquareDashedBottom,
 } from "lucide-react";
-import { getProperties, updateProperty, type Property } from "@/lib/properties";
-import {
-  brokerDraftsEqual,
-  PROPERTIES_UPDATED_EVENT,
-  validateBrokerPropertyEditDraft,
-  type BrokerPropertyEditDraft,
-} from "@/lib/propertyEditValidation";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { getProperties, type Property } from "@/lib/properties";
+import { PROPERTIES_UPDATED_EVENT } from "@/lib/propertyEditValidation";
 import BrokerLayout from "@/components/BrokerLayout";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
-import { FlowStickyActionBar } from "@/components/FlowStickyActionBar";
-import { PropertyEditSaveDiscardBar } from "@/components/property/PropertyEditSaveDiscardBar";
 import { PropertyDetailImageGallery } from "@/components/property/PropertyDetailImageGallery";
 import { PropertyDetailPageLayout } from "@/components/property/PropertyDetailPageLayout";
 import { PropertyDetailSummaryCard } from "@/components/property/PropertyDetailSummaryCard";
@@ -426,181 +417,35 @@ export default function PropertyDetails() {
   const [property, setProperty] = useState<Property | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isEditing, setIsEditing] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const { toast } = useToast();
 
-  // Form states
-  const [draftNickname, setDraftNickname] = useState("");
-  const [draftRent, setDraftRent] = useState("");
-  const [draftArea, setDraftArea] = useState("");
-  const [draftCity, setDraftCity] = useState("");
-  const [savedDraft, setSavedDraft] = useState<BrokerPropertyEditDraft>({
-    nickname: "",
-    monthlyRent: "",
-    area: "",
-    city: "",
-  });
-
-  const currentDraft = useMemo(
-    (): BrokerPropertyEditDraft => ({
-      nickname: draftNickname,
-      monthlyRent: draftRent,
-      area: draftArea,
-      city: draftCity,
-    }),
-    [draftNickname, draftRent, draftArea, draftCity],
-  );
-
-  const hasUnsavedChanges = !brokerDraftsEqual(currentDraft, savedDraft);
-
-  const syncDraftsFromProperty = (value: Property) => {
-    const draft: BrokerPropertyEditDraft = {
-      nickname: value.nickname || "",
-      monthlyRent: value.monthlyRent || "",
-      area: value.area || "",
-      city: value.city || "",
-    };
-    setDraftNickname(draft.nickname);
-    setDraftRent(draft.monthlyRent);
-    setDraftArea(draft.area);
-    setDraftCity(draft.city);
-    setSavedDraft(draft);
+  const openEditFlow = () => {
+    if (!id) return;
+    setLocation(`/broker/properties/add?edit=${id}`);
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("edit") === "true" && id) {
+      setLocation(`/broker/properties/add?edit=${id}`);
+    }
+  }, [id, setLocation]);
 
   useEffect(() => {
     const list = getProperties();
     const found = list.find((p) => p.id === id);
-    if (found) {
-      setProperty(found);
-      syncDraftsFromProperty(found);
-    }
+    if (found) setProperty(found);
   }, [id]);
 
   useEffect(() => {
     const refresh = () => {
       if (!id) return;
       const found = getProperties().find((p) => p.id === id);
-      if (found) {
-        setProperty(found);
-        if (!isEditing) syncDraftsFromProperty(found);
-      }
+      if (found) setProperty(found);
     };
     window.addEventListener(PROPERTIES_UPDATED_EVENT, refresh);
     return () => window.removeEventListener(PROPERTIES_UPDATED_EVENT, refresh);
-  }, [id, isEditing]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("edit") === "true") {
-      setIsEditing(true);
-    }
-  }, []);
-
-  const clearEditQueryParam = () => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("edit") === "true") {
-      params.delete("edit");
-      const query = params.toString();
-      const next = query ? `?${query}` : "";
-      window.history.replaceState(null, "", `${window.location.pathname}${next}`);
-    }
-  };
-
-  const persistBrokerChangesSilently = (): boolean => {
-    if (!property || !hasUnsavedChanges) return false;
-
-    const validation = validateBrokerPropertyEditDraft(currentDraft);
-    if (!validation.ok) return false;
-
-    const saved = updateProperty(property.id, {
-      nickname: draftNickname,
-      monthlyRent: draftRent,
-      area: draftArea,
-      city: draftCity,
-    });
-    if (!saved) return false;
-
-    const updated: Property = {
-      ...property,
-      nickname: draftNickname,
-      monthlyRent: draftRent,
-      area: draftArea,
-      city: draftCity,
-    };
-    setProperty(updated);
-    setSavedDraft(currentDraft);
-    return true;
-  };
-
-  const exitEditMode = () => {
-    persistBrokerChangesSilently();
-    setIsEditing(false);
-    clearEditQueryParam();
-  };
-
-  const handleSave = async () => {
-    if (!property || isSaving) return;
-
-    if (!hasUnsavedChanges) {
-      exitEditMode();
-      return;
-    }
-
-    const validation = validateBrokerPropertyEditDraft(currentDraft);
-    if (!validation.ok) {
-      toast({
-        title: "Could not save",
-        description: validation.message,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const saved = updateProperty(property.id, {
-        nickname: draftNickname,
-        monthlyRent: draftRent,
-        area: draftArea,
-        city: draftCity,
-      });
-      if (!saved) {
-        toast({
-          title: "Save failed",
-          description: "Could not save property changes. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const updated: Property = {
-        ...property,
-        nickname: draftNickname,
-        monthlyRent: draftRent,
-        area: draftArea,
-        city: draftCity,
-      };
-      setProperty(updated);
-      setSavedDraft(currentDraft);
-      toast({ description: "Property details updated successfully." });
-      setIsEditing(false);
-      clearEditQueryParam();
-    } catch {
-      toast({
-        title: "Save failed",
-        description: "Could not save property changes. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleDiscardRequest = () => {
-    exitEditMode();
-  };
+  }, [id]);
 
   if (!property) {
     return (
@@ -633,152 +478,44 @@ export default function PropertyDetails() {
       property={property}
       title={title}
       onShare={() => setShareOpen(true)}
-      onEdit={() => setIsEditing(true)}
+      onEdit={openEditFlow}
       editLabel="Edit Property"
-      showEdit={!isEditing}
     />
   );
 
   return (
     <BrokerLayout>
-      <div className={isEditing ? "pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] sm:pb-0" : undefined}>
-        <PropertyDetailPageLayout
-          backLabel={isEditing ? "Back to Property" : "Back to Properties"}
-          onBack={() => {
-            if (isEditing) {
-              exitEditMode();
-              return;
-            }
-            setLocation("/broker/properties");
-          }}
-          mobileEditLabel={!isEditing ? "Edit Property" : undefined}
-          onMobileEdit={() => setIsEditing(true)}
-          summaryCard={summaryCard}
-        >
-          <PropertyDetailImageGallery
-            images={property.images ?? []}
-            selectedImage={selectedImage}
-            onSelect={setSelectedImage}
-          />
+      <PropertyDetailPageLayout
+        backLabel="Back to Properties"
+        onBack={() => setLocation("/broker/properties")}
+        mobileEditLabel="Edit Property"
+        onMobileEdit={openEditFlow}
+        summaryCard={summaryCard}
+      >
+        <PropertyDetailImageGallery
+          images={property.images ?? []}
+          selectedImage={selectedImage}
+          onSelect={setSelectedImage}
+        />
 
-          <div className="md:hidden mt-4">{summaryCard}</div>
+        <div className="md:hidden mt-4">{summaryCard}</div>
 
-          <FlowSegmentTabs
-            value={activeTab}
-            onChange={(value) => setActiveTab(value as Tab)}
-            options={tabs}
-            className="mt-6"
-          />
+        <FlowSegmentTabs
+          value={activeTab}
+          onChange={(value) => setActiveTab(value as Tab)}
+          options={tabs}
+          className="mt-6"
+        />
 
-          <div className="mt-4">
-            {isEditing ? (
-              <>
-                <EditForm
-                  drafts={{
-                    nickname: draftNickname,
-                    setNickname: setDraftNickname,
-                    rent: draftRent,
-                    setRent: setDraftRent,
-                    area: draftArea,
-                    setArea: setDraftArea,
-                    city: draftCity,
-                    setCity: setDraftCity,
-                  }}
-                />
-                <div className="mt-10 hidden sm:flex justify-center">
-                  <PropertyEditSaveDiscardBar
-                    align="center"
-                    onSave={() => void handleSave()}
-                    onDiscard={handleDiscardRequest}
-                    saving={isSaving}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                {activeTab === "overview" && <OverviewTab property={property} />}
-                {activeTab === "amenities" && <AmenitiesTab property={property} />}
-                {activeTab === "neighbourhood" && <NeighbourhoodTab property={property} />}
-                {activeTab === "owner" && <AboutOwnerTab property={property} />}
-              </>
-            )}
-          </div>
-        </PropertyDetailPageLayout>
-      </div>
+        <div className="mt-4">
+          {activeTab === "overview" && <OverviewTab property={property} />}
+          {activeTab === "amenities" && <AmenitiesTab property={property} />}
+          {activeTab === "neighbourhood" && <NeighbourhoodTab property={property} />}
+          {activeTab === "owner" && <AboutOwnerTab property={property} />}
+        </div>
+      </PropertyDetailPageLayout>
 
       <SharePropertyModal property={property} open={shareOpen} onClose={() => setShareOpen(false)} />
-
-      {isEditing ? (
-        <FlowStickyActionBar>
-          <PropertyEditSaveDiscardBar
-            onSave={() => void handleSave()}
-            onDiscard={handleDiscardRequest}
-            saving={isSaving}
-          />
-        </FlowStickyActionBar>
-      ) : null}
     </BrokerLayout>
-  );
-}
-
-interface EditFormDrafts {
-  nickname: string;
-  setNickname: (value: string) => void;
-  rent: string;
-  setRent: (value: string) => void;
-  area: string;
-  setArea: (value: string) => void;
-  city: string;
-  setCity: (value: string) => void;
-}
-
-function EditForm({
-  drafts: { nickname, setNickname, rent, setRent, area, setArea, city, setCity },
-}: {
-  drafts: EditFormDrafts;
-}) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Edit Property Details</h2>
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Property Nickname</label>
-            <Input 
-              value={nickname} 
-              onChange={(e) => setNickname(e.target.value)} 
-              placeholder="e.g. Sunny Apartment"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Monthly Rent (₹)</label>
-            <Input 
-              type="number"
-              value={rent} 
-              onChange={(e) => setRent(e.target.value)} 
-              placeholder="e.g. 25000"
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Area / Landmark</label>
-            <Input 
-              value={area} 
-              onChange={(e) => setArea(e.target.value)} 
-              placeholder="e.g. Madhapur"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">City</label>
-            <Input 
-              value={city} 
-              onChange={(e) => setCity(e.target.value)} 
-              placeholder="e.g. Hyderabad"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
