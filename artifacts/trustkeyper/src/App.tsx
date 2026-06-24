@@ -20,7 +20,7 @@ import BrokerDeals from "@/pages/BrokerDeals";
 import BrokerCommission from "@/pages/BrokerCommission";
 import BrokerDocuments from "@/pages/BrokerDocuments";
 import AddTenant from "@/pages/AddTenant";
-import AddProperty from "@/pages/AddProperty";
+import BrokerPropertyAddRoute from "@/pages/BrokerPropertyAddRoute";
 import PropertyDetails from "@/pages/PropertyDetails";
 import GenerateAgreement from "@/pages/GenerateAgreement";
 import AddProperty2 from "@/pages/AddProperty2";
@@ -97,7 +97,7 @@ function Router() {
       <Route path="/owner/profile" component={OwnerProfile} />
       <Route path="/broker/dashboard" component={BrokerDashboard} />
       <Route path="/broker/properties" component={BrokerProperties} />
-      <Route path="/broker/properties/add" component={AddProperty} />
+      <Route path="/broker/properties/add" component={BrokerPropertyAddRoute} />
       <Route path="/broker/properties/add2" component={AddProperty2} />
       <Route path="/broker/properties/:id" component={PropertyDetails} />
       <Route path="/broker/agreements/generate" component={GenerateAgreement} />
