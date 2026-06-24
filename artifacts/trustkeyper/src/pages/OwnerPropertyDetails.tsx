@@ -1,19 +1,10 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useLocation, useRoute } from "wouter";
 import {
-  MapPin,
-  ChevronLeft,
-  ChevronRight,
-  Edit,
   Eye,
-  Share2,
   FileText,
   Trash2,
   Wrench,
-  Building2,
-  IndianRupee,
-  Ruler,
-  Sofa,
   X,
   ExternalLink,
 } from "lucide-react";
@@ -21,7 +12,12 @@ import OwnerLayout from "@/components/OwnerLayout";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import { SharePropertyModal } from "@/components/owner/SharePropertyModal";
 import { RaiseComplaintModal } from "@/components/owner/RaiseComplaintModal";
+import { PropertyDetailImageGallery } from "@/components/property/PropertyDetailImageGallery";
+import { PropertyDetailPageLayout } from "@/components/property/PropertyDetailPageLayout";
+import { PropertyDetailSummaryCard } from "@/components/property/PropertyDetailSummaryCard";
+import { OwnerPropertyOverviewPanel } from "@/components/property/OwnerPropertyOverviewPanel";
 import { getProperties, getPropertyTitle, type Property } from "@/lib/properties";
+import { getPropertyDetailTitle } from "@/lib/propertyDetailFormatters";
 import { PROPERTIES_UPDATED_EVENT } from "@/lib/propertyEditValidation";
 import {
   formatDocumentSize,
@@ -40,7 +36,6 @@ import {
 import { MaintenanceTicketCard } from "@/components/owner/MaintenanceTicketCard";
 import { MaintenanceTicketDetailsModal } from "@/components/owner/MaintenanceTicketDetailsModal";
 import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
-import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 
 type TabId = "overview" | "documents" | "maintenance";
@@ -57,13 +52,6 @@ function formatDate(ts: number): string {
     month: "short",
     year: "numeric",
   });
-}
-
-function bhkSummary(property: Property): string {
-  const beds = property.bedrooms?.trim();
-  const baths = property.bathrooms?.trim();
-  if (beds && baths) return `${beds} BHK`;
-  return property.unitSize || "—";
 }
 
 function DocumentViewerModal({
@@ -121,8 +109,7 @@ export default function OwnerPropertyDetails() {
   const [shareOpen, setShareOpen] = useState(false);
   const [complaintOpen, setComplaintOpen] = useState(false);
   const [viewerDoc, setViewerDoc] = useState<PropertyDocument | null>(null);
-  const [galleryImages, setGalleryImages] = useState<string[]>([]);
-  const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
+  const [selectedImage, setSelectedImage] = useState(0);
   const [documents, setDocuments] = useState<PropertyDocument[]>([]);
   const [tickets, setTickets] = useState(() =>
     params?.id ? getPropertyMaintenanceTickets(params.id) : [],
@@ -182,8 +169,7 @@ export default function OwnerPropertyDetails() {
     ? `${property.builtUpArea} ${property.builtUpUnits || ""}`.trim()
     : "—";
   const isRented = property.status === "Rented";
-  const title = property.nickname || property.address || "Property";
-  const location = [property.area, property.city].filter(Boolean).join(", ");
+  const title = getPropertyDetailTitle(property);
 
   const handleUpload = async (file: File) => {
     try {
@@ -211,199 +197,53 @@ export default function OwnerPropertyDetails() {
     setViewerDoc(doc);
   };
 
-  const images = property.images ?? [];
-  const visibleThumbs = images.slice(1, 6);
-
-  const openImageViewer = (list: string[], startIndex: number) => {
-    if (!list[startIndex]) return;
-    setGalleryImages(list);
-    setActiveImageIndex(startIndex);
-  };
-
-  const closeImageViewer = () => {
-    setActiveImageIndex(null);
-    setGalleryImages([]);
-  };
-
-  const goToImage = (delta: number) => {
-    if (activeImageIndex === null || galleryImages.length === 0) return;
-    const next = (activeImageIndex + delta + galleryImages.length) % galleryImages.length;
-    setActiveImageIndex(next);
-  };
+  const summaryCard = (
+    <PropertyDetailSummaryCard
+      property={property}
+      title={title}
+      onShare={() => setShareOpen(true)}
+      onEdit={() => setLocation(`/owner/properties/add?edit=${property.id}`)}
+      verifiedLabel={isRented ? "Occupied" : "Live"}
+      verifiedTone={isRented ? "warning" : "success"}
+    />
+  );
 
   return (
     <OwnerLayout>
-      <div className="p-4 sm:p-8 max-w-6xl mx-auto">
-        <button
-          type="button"
-          onClick={() => window.history.back()}
-          className="flex items-center gap-2 text-primary font-semibold text-lg mb-6 hover:underline w-fit"
+      <div className="p-4 sm:p-8">
+        <PropertyDetailPageLayout
+          backLabel="Back"
+          onBack={() => window.history.back()}
+          mobileEditLabel="Edit Details"
+          onMobileEdit={() => setLocation(`/owner/properties/add?edit=${property.id}`)}
+          summaryCard={summaryCard}
         >
-          <ChevronLeft size={20} /> Back
-        </button>
+          <PropertyDetailImageGallery
+            images={property.images ?? []}
+            selectedImage={selectedImage}
+            onSelect={setSelectedImage}
+          />
 
-        {/* Hero property card */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
-          <div className="relative h-44 sm:h-52 bg-gradient-to-br from-[#E8F4FC] to-[#D4EBE4]">
-            {property.images?.[0] ? (
-              <>
-                <img
-                  src={property.images[0]}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-transparent" />
-              </>
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Building2 size={48} className="text-primary/30" />
-              </div>
+          <div className="md:hidden mt-4">{summaryCard}</div>
+
+          <FlowSegmentTabs
+            value={activeTab}
+            onChange={(v) => setActiveTab(v as TabId)}
+            options={TABS}
+            className="mt-6"
+          />
+
+          <div className="mt-4">
+            {activeTab === "overview" && (
+              <OwnerPropertyOverviewPanel
+                property={property}
+                rentLabel={rent}
+                areaLabel={areaLabel}
+              />
             )}
-            <div className="absolute top-4 left-4">
-              <span className="inline-flex items-center gap-1.5 bg-primary text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
-                {!isRented && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
-                {isRented ? "Occupied" : "Live"}
-              </span>
-            </div>
-          </div>
 
-          <div className="p-5 sm:p-6">
-            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
-              <div className="min-w-0 flex-1">
-                <h1 className="text-2xl sm:text-[26px] font-semibold text-gray-900 leading-tight mb-1">
-                  {title}
-                </h1>
-                <p className="text-sm text-gray-500 flex items-center gap-1 mb-4">
-                  <MapPin size={14} className="shrink-0" />
-                  {location || "—"}
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                  {[
-                    { icon: Building2, label: "BHK", value: bhkSummary(property) },
-                    { icon: IndianRupee, label: "Price", value: `${rent}/mo` },
-                    { icon: Ruler, label: "Area", value: areaLabel },
-                    { icon: Sofa, label: "Furnishing", value: property.furnishing || "—" },
-                  ].map(({ icon: Icon, label, value }) => (
-                    <div
-                      key={label}
-                      className="rounded-xl bg-[#F5F9FC] border border-[#E8EEF4] px-3 py-2.5"
-                    >
-                      <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#768EA7] uppercase tracking-wide mb-0.5">
-                        <Icon size={12} />
-                        {label}
-                      </div>
-                      <p className="text-sm font-semibold text-gray-900 truncate">{value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0 w-full sm:w-auto sm:min-w-[180px]">
-                <OwnerFlowButton type="button" onClick={() => setShareOpen(true)}>
-                  <Share2 size={16} />
-                  Share Property
-                </OwnerFlowButton>
-                <OwnerFlowButton
-                  type="button"
-                  flowVariant="outline"
-                  onClick={() => setLocation(`/owner/properties/add?edit=${property.id}`)}
-                >
-                  <Edit size={16} />
-                  Edit Details
-                </OwnerFlowButton>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <FlowSegmentTabs
-          value={activeTab}
-          onChange={(v) => setActiveTab(v as TabId)}
-          options={TABS}
-          fullWidth
-          className="mb-6 bg-transparent border-transparent p-0"
-        />
-
-        {activeTab === "overview" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-300">
-            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm p-3">
-              <div className="space-y-3">
-                {images.length > 0 ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => openImageViewer(images, 0)}
-                      className="w-full h-[260px] sm:h-[320px] rounded-xl bg-gray-100 overflow-hidden block"
-                    >
-                      <img src={images[0]} alt="Main" className="w-full h-full object-cover" />
-                    </button>
-                    {visibleThumbs.length > 0 && (
-                      <div className="grid grid-cols-5 gap-2">
-                        {visibleThumbs.map((img, i) => (
-                          <button
-                            key={img + i}
-                            type="button"
-                            onClick={() => openImageViewer(images, i + 1)}
-                            className="h-16 sm:h-20 rounded-lg bg-gray-100 overflow-hidden border border-gray-200 hover:border-primary/50"
-                          >
-                            <img src={img} alt="" className="w-full h-full object-cover" />
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="h-56 flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                    <p className="text-sm font-semibold">No photos uploaded</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">Property Details</h2>
-              <div className="space-y-4">
-                {[
-                  { label: "Property Type", value: property.propertyType },
-                  { label: "BHK / Size", value: `${property.bedrooms} Bed, ${property.bathrooms} Bath` },
-                  { label: "Built-up Area", value: areaLabel },
-                  { label: "Furnishing", value: property.furnishing },
-                  { label: "Expected Rent", value: `${rent}/mo` },
-                  {
-                    label: "Security Deposit",
-                    value: `₹${Number(property.securityDeposit || 0).toLocaleString("en-IN")}`,
-                  },
-                  { label: "Floor Level", value: property.floorLevel },
-                  { label: "Direction", value: property.mainDoorDirection },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="flex items-center justify-between py-2 border-b border-gray-50 last:border-none"
-                  >
-                    <span className="text-sm text-gray-500 font-medium">{item.label}</span>
-                    <span className="text-sm font-semibold text-gray-900">{item.value || "—"}</span>
-                  </div>
-                ))}
-              </div>
-              {property.amenities && property.amenities.length > 0 && (
-                <div className="pt-5 flex flex-wrap gap-2">
-                  {property.amenities.map((a) => (
-                    <span
-                      key={a}
-                      className="px-3 py-1 bg-primary/10 text-primary text-[11px] font-semibold rounded-full border border-primary/15"
-                    >
-                      {a}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "documents" && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-8 animate-in fade-in duration-300">
+            {activeTab === "documents" && (
+              <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Documents</h2>
@@ -496,11 +336,11 @@ export default function OwnerPropertyDetails() {
                 ))}
               </div>
             )}
-          </div>
-        )}
+              </div>
+            )}
 
-        {activeTab === "maintenance" && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-8 animate-in fade-in duration-300">
+            {activeTab === "maintenance" && (
+              <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Maintenance History</h2>
@@ -545,8 +385,10 @@ export default function OwnerPropertyDetails() {
                 ))}
               </div>
             )}
+              </div>
+            )}
           </div>
-        )}
+        </PropertyDetailPageLayout>
       </div>
 
       <SharePropertyModal property={property} open={shareOpen} onClose={() => setShareOpen(false)} />
@@ -571,43 +413,6 @@ export default function OwnerPropertyDetails() {
         }}
       />
       <DocumentViewerModal doc={viewerDoc} onClose={() => setViewerDoc(null)} />
-      {activeImageIndex !== null && galleryImages[activeImageIndex] && (
-        <div className="fixed inset-0 z-[65] bg-black/90 flex items-center justify-center p-4">
-          <button
-            type="button"
-            onClick={closeImageViewer}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20"
-            aria-label="Close viewer"
-          >
-            <X size={18} />
-          </button>
-          {galleryImages.length > 1 && (
-            <button
-              type="button"
-              onClick={() => goToImage(-1)}
-              className="absolute left-4 sm:left-8 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20"
-              aria-label="Previous image"
-            >
-              <ChevronLeft size={20} />
-            </button>
-          )}
-          <img
-            src={galleryImages[activeImageIndex]}
-            alt={`Property view ${activeImageIndex + 1}`}
-            className="max-h-[85vh] max-w-[90vw] object-contain rounded-lg"
-          />
-          {galleryImages.length > 1 && (
-            <button
-              type="button"
-              onClick={() => goToImage(1)}
-              className="absolute right-4 sm:right-8 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20"
-              aria-label="Next image"
-            >
-              <ChevronRight size={20} />
-            </button>
-          )}
-        </div>
-      )}
     </OwnerLayout>
   );
 }
