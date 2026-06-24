@@ -175,7 +175,7 @@ export default function BrokerProperties() {
   const refresh = () => setProperties(getProperties());
 
   const handleViewDetails = (id: string) => setLocation(`/broker/properties/${id}`);
-  const handleEditProperty = (id: string) => setLocation(`/broker/properties/${id}?edit=true`);
+  const handleEditProperty = (id: string) => setLocation(`/broker/properties/add?edit=${id}`);
 
   useEffect(() => {
     refresh();
