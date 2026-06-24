@@ -83,7 +83,7 @@ import {
   AgreementDocUploadShareModal,
   type AgreementDocUploadSharePayload,
 } from "@/components/agreement/AgreementDocUploadShareModal";
-import { createAgreementDocumentUploadInvite, fetchRequesterDocumentUploadInvites } from "@/lib/agreementDocumentUpload";
+import { createAgreementDocumentUploadInvite, fetchRequesterDocumentUploadDetail, fetchRequesterDocumentUploadInvites } from "@/lib/agreementDocumentUpload";
 import {
   AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT,
   findDocumentUploadInviteByTenantPhone,
@@ -1028,11 +1028,19 @@ function Step3Documents({
 
   const refreshReceivedDocuments = useCallback(async () => {
     const result = await fetchRequesterDocumentUploadInvites();
-    if (result.ok) {
-      applyReceivedInvites(result.invites);
-      return;
-    }
-    applyReceivedInvites(getStoredDocumentUploadInvites());
+    const invites = result.ok ? result.invites : getStoredDocumentUploadInvites();
+    const enriched = await Promise.all(
+      invites.map(async (invite) => {
+        const needsDetail =
+          invite.tenantDocumentStatus === "documents_submitted" ||
+          invite.tenantDocumentStatus === "documents_in_progress" ||
+          invite.status === "submitted";
+        if (!needsDetail) return invite;
+        const detail = await fetchRequesterDocumentUploadDetail(invite.token);
+        return detail.ok ? detail.invite : invite;
+      }),
+    );
+    applyReceivedInvites(enriched);
   }, [applyReceivedInvites]);
 
   useEffect(() => {

@@ -16,6 +16,13 @@ import BrokerTenantInvite from "@/pages/BrokerTenantInvite";
 import TenantBrokerOnboarding from "@/pages/TenantBrokerOnboarding";
 import TenantDocumentUpload from "@/pages/TenantDocumentUpload";
 import TenantOnboardLegacyRedirect from "@/pages/TenantOnboardLegacyRedirect";
+import TenantDashboard from "@/pages/TenantDashboard";
+import TenantRentPayments from "@/pages/tenant/TenantRentPayments";
+import TenantMaintenance from "@/pages/tenant/TenantMaintenance";
+import TenantDocuments from "@/pages/tenant/TenantDocuments";
+import TenantContact from "@/pages/tenant/TenantContact";
+import TenantProfile from "@/pages/tenant/TenantProfile";
+import TenantSettings from "@/pages/tenant/TenantSettings";
 import BrokerDeals from "@/pages/BrokerDeals";
 import BrokerCommission from "@/pages/BrokerCommission";
 import BrokerDocuments from "@/pages/BrokerDocuments";
@@ -77,6 +84,13 @@ function Router() {
       <Route path="/tenant/onboard/:token" component={TenantOnboardLegacyRedirect} />
       <Route path="/onboard/tenant/:token" component={TenantBrokerOnboarding} />
       <Route path="/upload/documents/:token" component={TenantDocumentUpload} />
+      <Route path="/tenant/dashboard" component={TenantDashboard} />
+      <Route path="/tenant/rent" component={TenantRentPayments} />
+      <Route path="/tenant/maintenance" component={TenantMaintenance} />
+      <Route path="/tenant/documents" component={TenantDocuments} />
+      <Route path="/tenant/contact" component={TenantContact} />
+      <Route path="/tenant/profile" component={TenantProfile} />
+      <Route path="/tenant/settings" component={TenantSettings} />
       <Route path="/login" component={Login} />
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />

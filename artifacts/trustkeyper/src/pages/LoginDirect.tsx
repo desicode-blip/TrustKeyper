@@ -13,8 +13,10 @@ import {
 } from "@/components/auth/authStyles";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { resolveTenantPostLoginRoute } from "@/lib/tenantPostLoginRoute";
 import {
   type AuthEntryRole,
+  type Role,
   clearInvalidAuthPendingRole,
   dashboardRouteFor,
   loginSuccess,
@@ -27,6 +29,11 @@ import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { createEmptyOtp, OTP_LAST_INDEX } from "@/lib/otp";
 
 type Phase = "role" | "phone" | "otp";
+
+function postAuthRoute(role: Role, phone: string): string {
+  if (role === "tenant") return resolveTenantPostLoginRoute(phone);
+  return dashboardRouteFor(role);
+}
 
 /** Login with "I am a" role cards — not linked in app until enabled. */
 export default function LoginDirect() {
@@ -112,7 +119,7 @@ export default function LoginDirect() {
       const ok = await loginSuccess(phoneDigits, loginRole);
       if (ok) {
         toast({ title: "Signed in", description: "Welcome back to TrustKeyper." });
-        setLocation(dashboardRouteFor(loginRole));
+        setLocation(postAuthRoute(loginRole, phoneDigits));
         return;
       }
       toast({

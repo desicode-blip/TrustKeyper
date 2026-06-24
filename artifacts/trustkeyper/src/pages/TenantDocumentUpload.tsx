@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { useRoute } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SharedPropertyLandingBackdrop } from "@/components/tenant/SharedPropertyLandingBackdrop";
@@ -8,7 +8,7 @@ import {
   type TenantOnboardModalPhase,
 } from "@/components/tenant/TenantBrokerOnboardModal";
 import { TenantDocumentUploadFlow } from "@/components/tenant/TenantDocumentUploadFlow";
-import { profileExistsAsync, signUpSuccess } from "@/lib/auth";
+import { profileExistsAsync, signUpSuccess, loginSuccess } from "@/lib/auth";
 import {
   fetchDocumentUploadInvite,
   markDocumentUploadStarted,
@@ -22,6 +22,7 @@ import {
   setTenantDocumentUploadSession,
   type TenantDocumentUploadSession,
 } from "@/lib/tenantDocumentUploadSession";
+import { saveTenantWorkspaceFromInvite } from "@/lib/tenantWorkspace";
 
 type PagePhase =
   | "loading"
@@ -33,6 +34,7 @@ type PagePhase =
   | "done";
 
 export default function TenantDocumentUpload() {
+  const [, setLocation] = useLocation();
   const [, params] = useRoute("/upload/documents/:token");
   const token = params?.token ?? "";
 
@@ -75,6 +77,10 @@ export default function TenantDocumentUpload() {
 
     if (payload.status === "submitted") {
       clearTenantDocumentUploadSession(token);
+      saveTenantWorkspaceFromInvite(payload, {
+        documentUploadStatus: "documents_submitted",
+        documentUploadSubmittedAt: payload.submittedAt ?? Date.now(),
+      });
       setInvite(payload);
       setPagePhase("already_submitted");
       return;
@@ -92,6 +98,7 @@ export default function TenantDocumentUpload() {
 
     if (payload.hasTenantAccount) {
       const digits = payload.tenantPhone.replace(/\D/g, "").slice(-10);
+      void loginSuccess(digits, "tenant");
       const nextSession: TenantDocumentUploadSession = {
         token,
         name: payload.tenantName,
@@ -144,6 +151,8 @@ export default function TenantDocumentUpload() {
     const hasAccount = await profileExistsAsync(digits, "tenant");
     if (!hasAccount) {
       await signUpSuccess(digits, "tenant", { name: name.trim(), phone: digits });
+    } else {
+      await loginSuccess(digits, "tenant");
     }
 
     setVerifyOtpError(null);
@@ -171,10 +180,14 @@ export default function TenantDocumentUpload() {
         token,
         submittedAt: Date.now(),
       });
+      saveTenantWorkspaceFromInvite(invite, {
+        documentUploadStatus: "documents_submitted",
+        documentUploadSubmittedAt: Date.now(),
+      });
     }
     clearTenantDocumentUploadSession(token);
     setPagePhase("done");
-    window.location.href = "/";
+    setLocation("/tenant/dashboard");
   };
 
   if (pagePhase === "loading") {
@@ -238,8 +251,16 @@ export default function TenantDocumentUpload() {
                 ? `Your documents were already shared with ${invite?.requesterName ?? "your property manager"}.`
                 : (loadError ?? "This document upload link is not valid.")}
             </p>
-            <Button type="button" variant="outline" onClick={() => (window.location.href = "/")}>
-              Go to TrustKeyper
+            <Button
+              type="button"
+              className="w-full"
+              onClick={() => {
+                const digits = invite?.tenantPhone.replace(/\D/g, "").slice(-10);
+                if (digits) void loginSuccess(digits, "tenant");
+                setLocation("/tenant/dashboard");
+              }}
+            >
+              Go To Dashboard
             </Button>
           </div>
         </div>
