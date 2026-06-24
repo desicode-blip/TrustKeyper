@@ -84,4 +84,14 @@ describe("tenantWorkspace", () => {
     expect(notification.kind).toBe("documents_under_review");
     expect(notification.title).toBe("Documents Under Review");
   });
+
+  it("returns continue action for in-progress document collection", () => {
+    const notification = resolveTenantNotification({
+      ...baseWorkspace,
+      documentUploadStatus: "documents_in_progress",
+      documentUploadToken: "adu_resume",
+    });
+    expect(notification.actionLabel).toBe("Continue Document Collection");
+    expect(notification.actionHref).toBe("/upload/documents/adu_resume");
+  });
 });

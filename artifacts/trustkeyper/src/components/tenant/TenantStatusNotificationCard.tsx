@@ -1,4 +1,5 @@
 import { FileText } from "lucide-react";
+import { Link } from "wouter";
 import type { TenantNotificationContent } from "@/lib/tenantWorkspace";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,14 @@ export function TenantStatusNotificationCard({ notification, loading }: TenantSt
       </div>
       <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">{notification.title}</h3>
       <p className="text-sm text-gray-600 leading-relaxed">{notification.description}</p>
+      {notification.actionHref && notification.actionLabel ? (
+        <Link
+          href={notification.actionHref}
+          className="inline-flex items-center justify-center mt-4 h-9 px-4 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
+        >
+          {notification.actionLabel}
+        </Link>
+      ) : null}
     </div>
   );
 }
