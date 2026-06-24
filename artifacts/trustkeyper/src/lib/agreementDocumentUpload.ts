@@ -5,8 +5,11 @@ import type {
 import { getActiveSession } from "./storageKeys";
 import { syncAuthHeaders } from "./syncSession";
 import {
+  findDocumentUploadInviteByTenantPhone,
+  findDocumentUploadInviteByToken,
   mergeStoredDocumentUploadInvites,
   upsertStoredDocumentUploadInvite,
+  type StoredDocumentUploadInvite,
 } from "./agreementDocumentUploadStore";
 
 export function buildDocumentUploadShareMessage(tenantName: string, link: string): string {
@@ -58,8 +61,32 @@ export function getDocumentUploadTelegramHref(tenantName: string, link: string):
 }
 
 export function documentUploadLinkFromToken(token: string): string {
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://app.trustkeyper.com";
+  const origin =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : "https://app.trustkeyper.com";
   return `${origin.replace(/\/$/, "")}/upload/documents/${token}`;
+}
+
+export function resolveExistingDocumentUploadInvite(input: {
+  token?: string;
+  tenantPhone?: string;
+}): StoredDocumentUploadInvite | null {
+  const byToken = input.token ? findDocumentUploadInviteByToken(input.token) : undefined;
+  if (byToken) {
+    return {
+      ...byToken,
+      inviteLink: byToken.inviteLink || documentUploadLinkFromToken(byToken.token),
+    };
+  }
+
+  const byPhone = input.tenantPhone ? findDocumentUploadInviteByTenantPhone(input.tenantPhone) : undefined;
+  if (!byPhone) return null;
+
+  return {
+    ...byPhone,
+    inviteLink: byPhone.inviteLink || documentUploadLinkFromToken(byPhone.token),
+  };
 }
 
 export type CreateDocumentUploadInviteResult =

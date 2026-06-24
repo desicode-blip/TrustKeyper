@@ -83,7 +83,13 @@ import {
   AgreementDocUploadShareModal,
   type AgreementDocUploadSharePayload,
 } from "@/components/agreement/AgreementDocUploadShareModal";
-import { createAgreementDocumentUploadInvite, fetchRequesterDocumentUploadDetail, fetchRequesterDocumentUploadInvites } from "@/lib/agreementDocumentUpload";
+import {
+  createAgreementDocumentUploadInvite,
+  documentUploadLinkFromToken,
+  fetchRequesterDocumentUploadDetail,
+  fetchRequesterDocumentUploadInvites,
+  resolveExistingDocumentUploadInvite,
+} from "@/lib/agreementDocumentUpload";
 import {
   AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT,
   findDocumentUploadInviteByTenantPhone,
@@ -1093,6 +1099,35 @@ function Step3Documents({
       return;
     }
 
+    const existingInvite = resolveExistingDocumentUploadInvite({
+      token: target.documentUploadToken,
+      tenantPhone: target.contact,
+    });
+    if (existingInvite && existingInvite.status !== "submitted") {
+      setPersons((prev) =>
+        prev.map((p, pi) =>
+          pi !== pIdx
+            ? p
+            : {
+                ...p,
+                documentUploadToken: existingInvite.token,
+                docs: p.docs.map((d) =>
+                  d.status === "pending" ? { ...d, status: "link_sent" as DocStatus } : d,
+                ),
+              },
+        ),
+      );
+      setSharePayload({
+        tenantName: existingInvite.tenantName,
+        tenantPhone: existingInvite.tenantPhone,
+        link: existingInvite.inviteLink || documentUploadLinkFromToken(existingInvite.token),
+        token: existingInvite.token,
+      });
+      setShareOpen(true);
+      showToast(`Upload link ready for ${target.name || "tenant"} ✓`);
+      return;
+    }
+
     setSendingLink(true);
     try {
       const result = await createAgreementDocumentUploadInvite({
@@ -1314,7 +1349,7 @@ function Step3Documents({
               </span>
             )}
           </div>
-          {isTenantParty && person.docs.some((d) => d.status === "pending") ? (
+          {isTenantParty && (person.docs.some((d) => d.status === "pending") || !!person.documentUploadToken) ? (
             <button
               type="button"
               disabled={sendingLink}
@@ -1322,7 +1357,11 @@ function Step3Documents({
               className="mt-4 flex items-center justify-center gap-2 w-full h-10 rounded-xl border border-primary/40 text-sm font-medium text-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
             >
               <Link2 size={14} />
-              {sendingLink ? "Preparing link…" : "Send Link to Upload Documents"}
+              {sendingLink
+                ? "Preparing link…"
+                : person.documentUploadToken
+                  ? "Resend Link to Upload Documents"
+                  : "Send Link to Upload Documents"}
             </button>
           ) : null}
         </div>

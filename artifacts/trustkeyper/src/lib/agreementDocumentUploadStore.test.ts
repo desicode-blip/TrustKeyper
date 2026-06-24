@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RequesterDocumentUploadInviteView } from "@workspace/tenant-document-upload";
 import { addProperty, getProperties } from "./properties";
 import { upsertStoredDocumentUploadInvite } from "./agreementDocumentUploadStore";
+import { resolveExistingDocumentUploadInvite } from "./agreementDocumentUpload";
 import { sanitizeDocumentUploadInviteForLocalStorage } from "./agreementDocumentUploadSanitize";
 
 function createMemoryStorage(): Storage {
@@ -126,5 +127,16 @@ describe("upsertStoredDocumentUploadInvite", () => {
     expect(property.id).toMatch(/^prop_/);
     expect(getProperties()).toHaveLength(1);
     expect(getProperties()[0]?.id).toBe(property.id);
+  });
+
+  it("reuses an existing invite for resend actions", () => {
+    upsertStoredDocumentUploadInvite(sampleInvite("data:application/pdf;base64,abc"));
+
+    const existing = resolveExistingDocumentUploadInvite({
+      tenantPhone: "+919123456789",
+    });
+
+    expect(existing?.token).toBe("adu_test");
+    expect(existing?.inviteLink).toContain("/upload/documents/adu_test");
   });
 });
