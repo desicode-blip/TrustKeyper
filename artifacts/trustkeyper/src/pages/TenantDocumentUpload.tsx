@@ -8,7 +8,7 @@ import {
   type TenantOnboardModalPhase,
 } from "@/components/tenant/TenantBrokerOnboardModal";
 import { TenantDocumentUploadFlow } from "@/components/tenant/TenantDocumentUploadFlow";
-import { profileExistsAsync, signUpSuccess, loginSuccess } from "@/lib/auth";
+import { getActiveSession, profileExistsAsync, signUpSuccess, loginSuccess } from "@/lib/auth";
 import {
   fetchDocumentUploadInvite,
   markDocumentUploadStarted,
@@ -22,6 +22,7 @@ import {
   setTenantDocumentUploadSession,
   type TenantDocumentUploadSession,
 } from "@/lib/tenantDocumentUploadSession";
+import { ensureTenantDashboardSession } from "@/lib/tenantDocumentUploadRedirect";
 import { saveTenantWorkspaceFromInvite } from "@/lib/tenantWorkspace";
 
 type PagePhase =
@@ -30,8 +31,7 @@ type PagePhase =
   | "expired"
   | "already_submitted"
   | "modal"
-  | "upload"
-  | "done";
+  | "upload";
 
 export default function TenantDocumentUpload() {
   const [, setLocation] = useLocation();
@@ -98,7 +98,7 @@ export default function TenantDocumentUpload() {
 
     if (payload.hasTenantAccount) {
       const digits = payload.tenantPhone.replace(/\D/g, "").slice(-10);
-      void loginSuccess(digits, "tenant");
+      await ensureTenantDashboardSession(digits, getActiveSession, loginSuccess);
       const nextSession: TenantDocumentUploadSession = {
         token,
         name: payload.tenantName,
@@ -174,7 +174,7 @@ export default function TenantDocumentUpload() {
     setPagePhase("upload");
   };
 
-  const handleFlowDone = () => {
+  const handleFlowDone = async () => {
     if (invite) {
       syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_submitted", {
         token,
@@ -184,9 +184,9 @@ export default function TenantDocumentUpload() {
         documentUploadStatus: "documents_submitted",
         documentUploadSubmittedAt: Date.now(),
       });
+      await ensureTenantDashboardSession(invite.tenantPhone, getActiveSession, loginSuccess);
     }
     clearTenantDocumentUploadSession(token);
-    setPagePhase("done");
     setLocation("/tenant/dashboard");
   };
 
@@ -201,14 +201,6 @@ export default function TenantDocumentUpload() {
 
   if (pagePhase === "upload" && session && invite) {
     return <TenantDocumentUploadFlow invite={invite} session={session} onDone={handleFlowDone} />;
-  }
-
-  if (pagePhase === "done") {
-    return (
-      <div className="min-h-screen bg-[#F5F7FA] flex flex-col items-center justify-center p-6">
-        <p className="text-sm text-gray-600">Thank you. You can close this tab.</p>
-      </div>
-    );
   }
 
   return (
@@ -254,9 +246,11 @@ export default function TenantDocumentUpload() {
             <Button
               type="button"
               className="w-full"
-              onClick={() => {
+              onClick={async () => {
                 const digits = invite?.tenantPhone.replace(/\D/g, "").slice(-10);
-                if (digits) void loginSuccess(digits, "tenant");
+                if (digits) {
+                  await ensureTenantDashboardSession(digits, getActiveSession, loginSuccess);
+                }
                 setLocation("/tenant/dashboard");
               }}
             >

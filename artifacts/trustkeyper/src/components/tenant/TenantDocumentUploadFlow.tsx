@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   AlertTriangle,
   CheckCircle2,
-  ChevronLeft,
+  Eye,
   Loader2,
   MapPin,
   Plus,
@@ -38,8 +38,6 @@ import {
 } from "@/lib/tenantDocumentUploadSession";
 import { cn } from "@/lib/utils";
 
-type FlowStep = 1 | 2;
-
 type LocalDocState = {
   status: UploadDocumentStatus;
   fileName?: string;
@@ -63,15 +61,15 @@ export function TenantDocumentUploadFlow({
 }: {
   invite: DocumentUploadInvitePayload;
   session: TenantDocumentUploadSession;
-  onDone: () => void;
+  onDone: () => void | Promise<void>;
 }) {
-  const [step, setStep] = useState<FlowStep>(1);
   const [docs, setDocs] = useState<Partial<Record<ExtendedDocumentId, LocalDocState>>>({});
   const [bankDetails, setBankDetails] = useState<BankDetailsData | null>(null);
   const [bankModalOpen, setBankModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successOpen, setSuccessOpen] = useState(false);
+  const [continuing, setContinuing] = useState(false);
 
   const fileRefs = useRef<Partial<Record<ExtendedDocumentId, HTMLInputElement | null>>>({});
 
@@ -99,7 +97,6 @@ export function TenantDocumentUploadFlow({
     }
     const draft = getTenantDocumentUploadDraft(session.token);
     if (draft) {
-      if (draft.step) setStep(draft.step <= 2 ? (draft.step as FlowStep) : 2);
       for (const [id, file] of Object.entries(draft.uploads)) {
         const docId = id as ExtendedDocumentId;
         if (!isFileDocumentId(docId)) continue;
@@ -120,7 +117,7 @@ export function TenantDocumentUploadFlow({
   }, [invite, session.token]);
 
   const persistDraft = useCallback(
-    (nextStep: FlowStep) => {
+    () => {
       const uploads: TenantDocumentUploadDraft["uploads"] = {};
       for (const [id, doc] of Object.entries(docs)) {
         if (!doc?.dataUrl || !doc.fileName || !doc.mimeType || typeof doc.fileSize !== "number") continue;
@@ -132,7 +129,7 @@ export function TenantDocumentUploadFlow({
         };
       }
       setTenantDocumentUploadDraft(session.token, {
-        step: nextStep,
+        step: 1,
         uploads,
         bankDetails: bankDetails ?? undefined,
       });
@@ -188,6 +185,7 @@ export function TenantDocumentUploadFlow({
           },
         },
       });
+      persistDraft();
       syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_in_progress", { token: session.token });
     } catch {
       setDocs((prev) => ({
@@ -205,6 +203,7 @@ export function TenantDocumentUploadFlow({
     }));
     setBankModalOpen(false);
     void submitDocumentUploadInvite(session.token, { draft: true, bankDetails: data });
+    persistDraft();
     syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_in_progress", { token: session.token });
   };
 
@@ -252,6 +251,25 @@ export function TenantDocumentUploadFlow({
     }
   };
 
+  const handleSuccessDone = async () => {
+    setContinuing(true);
+    try {
+      await onDone();
+    } finally {
+      setContinuing(false);
+    }
+  };
+
+  const handleViewDoc = (id: ExtendedDocumentId) => {
+    if (id === "bank") {
+      setBankModalOpen(true);
+      return;
+    }
+    const dataUrl = docs[id]?.dataUrl;
+    if (!dataUrl) return;
+    window.open(dataUrl, "_blank", "noopener,noreferrer");
+  };
+
   const renderDocRow = (id: ExtendedDocumentId) => {
     const doc = docs[id] ?? { status: "not_uploaded" as UploadDocumentStatus };
     const label = documentLabel(id);
@@ -281,6 +299,19 @@ export function TenantDocumentUploadFlow({
             )}
           </div>
           <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => handleViewDoc(id)}
+              disabled={doc.status !== "uploaded"}
+              className={cn(
+                "flex items-center gap-1 text-xs rounded-lg px-3 py-1.5 font-medium border",
+                doc.status === "uploaded"
+                  ? "text-gray-600 border-gray-200"
+                  : "text-gray-300 border-gray-200 cursor-not-allowed",
+              )}
+            >
+              <Eye size={11} /> View
+            </button>
             <button
               type="button"
               onClick={() => setBankModalOpen(true)}
@@ -334,14 +365,23 @@ export function TenantDocumentUploadFlow({
         </div>
         <div className="flex items-center gap-2">
           {doc.status === "uploaded" ? (
-            <button
-              type="button"
-              aria-label="Remove document"
-              onClick={() => setDocs((prev) => ({ ...prev, [id]: { status: "not_uploaded" } }))}
-              className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500"
-            >
-              <Trash2 size={13} />
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => handleViewDoc(id)}
+                className="flex items-center gap-1 text-xs rounded-lg px-3 py-1.5 font-medium border border-gray-200 text-gray-600"
+              >
+                <Eye size={11} /> View
+              </button>
+              <button
+                type="button"
+                aria-label="Remove document"
+                onClick={() => setDocs((prev) => ({ ...prev, [id]: { status: "not_uploaded" } }))}
+                className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500"
+              >
+                <Trash2 size={13} />
+              </button>
+            </>
           ) : (
             <>
               <button
@@ -374,31 +414,13 @@ export function TenantDocumentUploadFlow({
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F5F7FA]">
-      <header className="sticky top-0 z-20 bg-white border-b border-gray-100 px-4 sm:px-6 py-4 flex items-center justify-between">
-        {step > 1 ? (
-          <button
-            type="button"
-            onClick={() => setStep(1)}
-            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-          >
-            <ChevronLeft size={16} /> Go back
-          </button>
-        ) : (
-          <span className="text-sm text-gray-400 inline-flex items-center gap-2">
-            <ChevronLeft size={16} /> Go back
-          </span>
-        )}
+      <header className="sticky top-0 z-20 bg-white border-b border-gray-100 px-4 sm:px-6 py-4 flex items-center justify-end">
         <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
           <User size={18} />
         </div>
       </header>
 
       <main className="flex-1 px-4 sm:px-6 py-6 max-w-2xl mx-auto w-full">
-        <div className="flex items-center gap-2 mb-6">
-          <span className={cn("h-1.5 flex-1 rounded-full", step >= 1 ? "bg-primary" : "bg-gray-200")} />
-          <span className={cn("h-1.5 flex-1 rounded-full", step >= 2 ? "bg-primary" : "bg-gray-200")} />
-        </div>
-
         {invite.propertyLabel ? (
           <div className="rounded-xl border border-gray-200 bg-white p-4 mb-6 flex gap-3 items-center">
             <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
@@ -411,59 +433,26 @@ export function TenantDocumentUploadFlow({
           </div>
         ) : null}
 
-        {step === 1 ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6 shadow-sm">
-            <h1 className="text-xl font-semibold text-gray-900 mb-1">Upload Documents</h1>
-            <p className="text-sm text-gray-500 mb-5">Required for rental agreement preparation.</p>
-            <div className="space-y-2">{invite.requestedDocumentIds.map((id) => renderDocRow(id))}</div>
-            <Button
-              type="button"
-              className="w-full mt-6"
-              disabled={!canSubmit}
-              onClick={() => {
-                persistDraft(2);
-                setStep(2);
-              }}
-            >
-              Review & Submit
-            </Button>
-          </div>
-        ) : null}
-
-        {step === 2 ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6 shadow-sm">
-            <h1 className="text-xl font-semibold text-gray-900 mb-1">Review before submit</h1>
-            <p className="text-sm text-gray-500 mb-5">Check documents and bank details.</p>
-            <dl className="space-y-3 text-sm">
-              {invite.requestedDocumentIds.map((id) => {
-                const doc = docs[id];
-                return (
-                  <div key={id} className="flex justify-between gap-4 border-b border-gray-100 pb-2">
-                    <dt className="text-gray-600">{documentLabel(id)}</dt>
-                    <dd className="font-medium text-gray-900 text-right">
-                      {doc?.status === "uploaded" ? "Complete" : "Missing"}
-                    </dd>
-                  </div>
-                );
-              })}
-            </dl>
-            {submitError ? <p className="text-sm text-destructive mt-4">{submitError}</p> : null}
-            <Button
-              type="button"
-              className="w-full mt-6"
-              disabled={!canSubmit || submitting}
-              onClick={() => void handleFinalSubmit()}
-            >
-              {submitting ? (
-                <>
-                  <Loader2 size={16} className="animate-spin mr-2" /> Submitting…
-                </>
-              ) : (
-                "Submit Documents"
-              )}
-            </Button>
-          </div>
-        ) : null}
+        <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6 shadow-sm">
+          <h1 className="text-xl font-semibold text-gray-900 mb-1">Upload Documents</h1>
+          <p className="text-sm text-gray-500 mb-5">Upload each required item, review it with the view action, then send it directly.</p>
+          <div className="space-y-2">{invite.requestedDocumentIds.map((id) => renderDocRow(id))}</div>
+          {submitError ? <p className="text-sm text-destructive mt-4">{submitError}</p> : null}
+          <Button
+            type="button"
+            className="w-full mt-6"
+            disabled={!canSubmit || submitting}
+            onClick={() => void handleFinalSubmit()}
+          >
+            {submitting ? (
+              <>
+                <Loader2 size={16} className="animate-spin mr-2" /> Sending…
+              </>
+            ) : (
+              "Send Documents"
+            )}
+          </Button>
+        </div>
       </main>
 
       {bankModalOpen ? (
@@ -486,8 +475,14 @@ export function TenantDocumentUploadFlow({
               <br />
               You will be notified once your agreement is ready.
             </p>
-            <Button type="button" className="w-full" onClick={onDone}>
-              Go To Dashboard
+            <Button type="button" className="w-full" onClick={() => void handleSuccessDone()} disabled={continuing}>
+              {continuing ? (
+                <>
+                  <Loader2 size={16} className="animate-spin mr-2" /> Opening dashboard…
+                </>
+              ) : (
+                "Go To Dashboard"
+              )}
             </Button>
           </div>
         </div>
