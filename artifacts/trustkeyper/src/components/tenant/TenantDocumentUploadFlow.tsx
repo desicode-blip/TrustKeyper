@@ -117,9 +117,9 @@ export function TenantDocumentUploadFlow({
   }, [invite, session.token]);
 
   const persistDraft = useCallback(
-    () => {
+    (nextDocs: Partial<Record<ExtendedDocumentId, LocalDocState>>, nextBank: BankDetailsData | null) => {
       const uploads: TenantDocumentUploadDraft["uploads"] = {};
-      for (const [id, doc] of Object.entries(docs)) {
+      for (const [id, doc] of Object.entries(nextDocs)) {
         if (!doc?.dataUrl || !doc.fileName || !doc.mimeType || typeof doc.fileSize !== "number") continue;
         uploads[id] = {
           fileName: doc.fileName,
@@ -131,11 +131,16 @@ export function TenantDocumentUploadFlow({
       setTenantDocumentUploadDraft(session.token, {
         step: 1,
         uploads,
-        bankDetails: bankDetails ?? undefined,
+        bankDetails: nextBank ?? undefined,
       });
     },
-    [bankDetails, docs, session.token],
+    [session.token],
   );
+
+  useEffect(() => {
+    if (Object.keys(docs).length === 0) return;
+    persistDraft(docs, bankDetails);
+  }, [docs, bankDetails, persistDraft]);
 
   const fileDocIds = useMemo(
     () => invite.requestedDocumentIds.filter((id) => isFileDocumentId(id)),
@@ -185,7 +190,6 @@ export function TenantDocumentUploadFlow({
           },
         },
       });
-      persistDraft();
       syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_in_progress", { token: session.token });
     } catch {
       setDocs((prev) => ({
@@ -203,7 +207,6 @@ export function TenantDocumentUploadFlow({
     }));
     setBankModalOpen(false);
     void submitDocumentUploadInvite(session.token, { draft: true, bankDetails: data });
-    persistDraft();
     syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_in_progress", { token: session.token });
   };
 
@@ -258,6 +261,18 @@ export function TenantDocumentUploadFlow({
     } finally {
       setContinuing(false);
     }
+  };
+
+  const handleRemoveDoc = (id: ExtendedDocumentId) => {
+    setDocs((prev) => {
+      const next = { ...prev, [id]: { status: "not_uploaded" as UploadDocumentStatus } };
+      persistDraft(next, bankDetails);
+      return next;
+    });
+    if (isFileDocumentId(id)) {
+      void submitDocumentUploadInvite(session.token, { draft: true, documents: {} });
+    }
+    syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_in_progress", { token: session.token });
   };
 
   const handleViewDoc = (id: ExtendedDocumentId) => {
@@ -376,7 +391,7 @@ export function TenantDocumentUploadFlow({
               <button
                 type="button"
                 aria-label="Remove document"
-                onClick={() => setDocs((prev) => ({ ...prev, [id]: { status: "not_uploaded" } }))}
+                onClick={() => handleRemoveDoc(id)}
                 className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500"
               >
                 <Trash2 size={13} />

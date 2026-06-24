@@ -49,6 +49,8 @@ export interface TenantNotificationContent {
   kind: TenantNotificationKind;
   title: string;
   description: string;
+  actionLabel?: string;
+  actionHref?: string;
 }
 
 function phoneDigits(phone: string): string {
@@ -181,12 +183,18 @@ export function resolveTenantNotification(
   }
 
   const status = workspace.documentUploadStatus;
+  const uploadHref = workspace.documentUploadToken
+    ? `/upload/documents/${workspace.documentUploadToken}`
+    : undefined;
+
   if (!status || status === "document_request_sent" || status === "documents_in_progress") {
     return {
       kind: "documents_pending",
       title: "Documents pending",
       description:
         "Upload your required documents using the secure link shared by your property owner or broker to continue.",
+      actionLabel: "Continue Document Collection",
+      actionHref: uploadHref,
     };
   }
 
@@ -205,6 +213,8 @@ export function resolveTenantNotification(
       title: "Documents Under Review",
       description:
         "You will receive an email and a dashboard notification once the digital agreement is ready for your signature.",
+      actionLabel: "View Upload Status",
+      actionHref: uploadHref,
     };
   }
 

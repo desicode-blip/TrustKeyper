@@ -44,9 +44,8 @@ import {
   type OwnerRentSplit,
   type RentSplitMode,
 } from "@/components/owner/agreement/StepOwnerPaymentSplit";
-import { broadcastBrokerPendingFlowsUpdated, clearAgreementDraftStorage } from "@/lib/brokerPendingFlows";
-import { queueCloudSync } from "@/lib/cloudSync";
-import { getItem, getSessionItem, removeSessionItem, setItem, setSessionItem } from "@/lib/storageKeys";
+import { clearAgreementDraftStorage } from "@/lib/brokerPendingFlows";
+import { getSessionItem, removeSessionItem } from "@/lib/storageKeys";
 import { FlowDateInput } from "@/components/flow/FlowDateInput";
 import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { getProperties, getPropertyTitle, updateProperty, type Property } from "@/lib/properties";
@@ -72,6 +71,12 @@ import {
 } from "@/lib/ownerProfile";
 import { isValidUpiId, sanitizeUpiInput } from "@/lib/upi";
 import { getFileTypeError, isValidAccountNumber, isValidIFSC } from "@/lib/fileValidation";
+import { readFileAsDataUrl } from "@/lib/publicAgreementDocumentUpload";
+import {
+  loadAgreementWorkflowDraft,
+  saveAgreementWorkflowDraft,
+  type AgreementWorkflowDraft,
+} from "@/lib/agreementWorkflowDraft";
 import { toast as pushToast } from "@/hooks/use-toast";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import {
@@ -926,6 +931,7 @@ function applyOwnerSelfDocPrefill(persons: PersonState[]): PersonState[] {
             fileName: profile.aadhaar.fileName,
             fileSize: profile.aadhaar.fileSize,
             uploadedAt: profile.aadhaar.uploadedAt ?? Date.now(),
+            dataUrl: profile.aadhaar.dataUrl ?? d.dataUrl,
           };
         }
         if (d.id === "pan" && profile.pan?.fileName) {
@@ -935,6 +941,7 @@ function applyOwnerSelfDocPrefill(persons: PersonState[]): PersonState[] {
             fileName: profile.pan.fileName,
             fileSize: profile.pan.fileSize,
             uploadedAt: profile.pan.uploadedAt ?? Date.now(),
+            dataUrl: profile.pan.dataUrl ?? d.dataUrl,
           };
         }
         return d;
@@ -969,6 +976,9 @@ function Step3Documents({
   onContinue,
   isOwnerFlow = false,
   initialPersons = [],
+  initialPersonIdx = 0,
+  onPersonsChange,
+  onPersonIdxChange,
   propertyId,
   propertyLabel,
   requesterName,
@@ -979,13 +989,18 @@ function Step3Documents({
   onContinue: (result: { documentsComplete: boolean; persons: PersonState[] }) => void;
   isOwnerFlow?: boolean;
   initialPersons?: PersonState[];
+  initialPersonIdx?: number;
+  onPersonsChange?: (persons: PersonState[]) => void;
+  onPersonIdxChange?: (idx: number) => void;
   propertyId?: string;
   propertyLabel?: string;
   requesterName: string;
   requesterRole: "owner" | "broker";
 }) {
   const [persons, setPersons] = useState<PersonState[]>(() => {
-    if (initialPersons && initialPersons.length > 0) return initialPersons;
+    if (initialPersons && initialPersons.length > 0) {
+      return isOwnerFlow ? applyOwnerSelfDocPrefill(initialPersons) : initialPersons;
+    }
     if (!allParties || allParties.length === 0) return [initPersonDocs("Owner", "", "OWNER 1")];
     let ownerIdx = 0;
     let tenantIdx = 0;
@@ -1003,7 +1018,10 @@ function Step3Documents({
     return isOwnerFlow ? applyOwnerSelfDocPrefill(built) : built;
   });
 
-  const [personIdx, setPersonIdx] = useState(0);
+  const [personIdx, setPersonIdx] = useState(() => {
+    const maxIdx = Math.max((initialPersons.length || 1) - 1, 0);
+    return Math.min(Math.max(initialPersonIdx, 0), maxIdx);
+  });
   const [bankModal, setBankModal] = useState<{ pIdx: number; dIdx: number } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
@@ -1063,6 +1081,14 @@ function Step3Documents({
     };
   }, [applyReceivedInvites, refreshReceivedDocuments]);
 
+  useEffect(() => {
+    onPersonsChange?.(persons);
+  }, [persons, onPersonsChange]);
+
+  useEffect(() => {
+    onPersonIdxChange?.(personIdx);
+  }, [personIdx, onPersonIdxChange]);
+
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
@@ -1074,17 +1100,32 @@ function Step3Documents({
     ));
   };
 
-  const handleUpload = (pIdx: number, dIdx: number, file: File) => {
+  const handleUpload = async (pIdx: number, dIdx: number, file: File) => {
     const error = getFileTypeError(file);
     if (error) {
       pushToast({ title: "Invalid file", description: error, variant: "destructive" });
       return;
     }
-    updateDoc(pIdx, dIdx, { status: "uploaded", fileName: file.name, fileSize: file.size, uploadedAt: Date.now() });
-    const person = persons[pIdx];
-    const docId = person?.docs[dIdx]?.id;
-    if (isOwnerPrimarySelf(pIdx, person, isOwnerFlow) && (docId === "aadhaar" || docId === "pan")) {
-      saveOwnerProfileDocument(docId as OwnerDocumentKind, file);
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      updateDoc(pIdx, dIdx, {
+        status: "uploaded",
+        fileName: file.name,
+        fileSize: file.size,
+        uploadedAt: Date.now(),
+        dataUrl,
+      });
+      const person = persons[pIdx];
+      const docId = person?.docs[dIdx]?.id;
+      if (isOwnerPrimarySelf(pIdx, person, isOwnerFlow) && (docId === "aadhaar" || docId === "pan")) {
+        saveOwnerProfileDocument(docId as OwnerDocumentKind, file);
+      }
+    } catch {
+      pushToast({
+        title: "Upload failed",
+        description: "Could not read the file. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -2031,6 +2072,7 @@ export default function GenerateAgreement() {
   const [submitting, setSubmitting] = useState(false);
   const [documentsComplete, setDocumentsComplete] = useState(false);
   const [documentPersons, setDocumentPersons] = useState<PersonState[]>([]);
+  const [documentStepPersonIdx, setDocumentStepPersonIdx] = useState(0);
 
   const skipOwnerAutofillNext = useRef(false);
   const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2087,40 +2129,15 @@ export default function GenerateAgreement() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("resume") !== "1") return;
-    const raw = getItem("agreement_draft");
-    if (!raw) return;
+    const d = loadAgreementWorkflowDraft();
+    if (!d) return;
     try {
-      const d = JSON.parse(raw) as {
-        step?: Step;
-        selectedPropertyId?: string | null;
-        ownerName?: string;
-        ownerContact?: string;
-        primaryOwnerSelected?: boolean;
-        additionalOwners?: Party[];
-        selectedTenants?: Party[];
-        documentsComplete?: boolean;
-        documentPersons?: PersonState[];
-        startDate?: string;
-        monthlyRent?: string;
-        securityDeposit?: string;
-        lockInPeriod?: string;
-        noticePeriod?: string;
-        rentDueDay?: string;
-        maintenanceCharges?: string;
-        maintenanceIncluded?: boolean;
-        brokerageAmount?: string;
-        brokerageAmountOwner?: string;
-        brokerageAmountTenant?: string;
-        brokeragePaidBy?: "Owner" | "Tenant" | "Both";
-        brokerageMode?: "Bank Transfer" | "UPI";
-        editingAgreementId?: string | null;
-      };
       const prop = d.selectedPropertyId
         ? getProperties().find((p) => p.id === d.selectedPropertyId) ?? null
         : null;
       skipOwnerAutofillNext.current = true;
       if (prop) setSelectedProperty(prop);
-      if (typeof d.step === "number" && d.step >= 1 && d.step <= 6) setStep(d.step);
+      if (typeof d.step === "number" && d.step >= 1 && d.step <= 6) setStep(d.step as Step);
       setOwnerName(d.ownerName ?? "");
       setOwnerContact(d.ownerContact ?? "");
       setPrimaryOwnerSelected(d.primaryOwnerSelected ?? true);
@@ -2128,6 +2145,7 @@ export default function GenerateAgreement() {
       setSelectedTenants(d.selectedTenants ?? []);
       setDocumentsComplete(!!d.documentsComplete);
       setDocumentPersons(d.documentPersons ?? []);
+      setDocumentStepPersonIdx(d.documentStepPersonIdx ?? 0);
       setStartDate(d.startDate ?? "");
       setMonthlyRent(d.monthlyRent ?? "");
       setSecurityDeposit(d.securityDeposit ?? "");
@@ -2193,10 +2211,6 @@ export default function GenerateAgreement() {
   }, []);
 
   useEffect(() => {
-    if (step === 3) setDocumentsComplete(false);
-  }, [step]);
-
-  useEffect(() => {
     if (!isOwnerFlow) return;
     const profile = getBrokerProfile();
     if (profile.name && !ownerName) setOwnerName(profile.name);
@@ -2229,42 +2243,36 @@ export default function GenerateAgreement() {
     if (!selectedProperty && step === 1) return;
     if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
     draftSaveTimerRef.current = setTimeout(() => {
-      try {
-        const draft = {
-          v: 1 as const,
-          step,
-          selectedPropertyId: selectedProperty?.id ?? null,
-          ownerName,
-          ownerContact,
-          primaryOwnerSelected,
-          additionalOwners,
-          selectedTenants,
-          documentsComplete,
-          documentPersons,
-          startDate,
-          monthlyRent,
-          securityDeposit,
-          lockInPeriod,
-          noticePeriod,
-          rentDueDay,
-          maintenanceCharges,
-          maintenanceIncluded,
-          brokerageAmount,
-          brokerageAmountOwner,
-          brokerageAmountTenant,
-          brokeragePaidBy,
-          brokerageMode,
-          editingAgreementId,
-          savedAt: Date.now(),
-        };
-        const draftJson = JSON.stringify(draft);
-        setItem("agreement_draft", draftJson);
-        queueCloudSync("agreement_draft", draftJson);
-        broadcastBrokerPendingFlowsUpdated();
-      } catch {
-        /* ignore */
-      }
-    }, 450);
+      const draft: AgreementWorkflowDraft = {
+        v: 1,
+        step,
+        selectedPropertyId: selectedProperty?.id ?? null,
+        ownerName,
+        ownerContact,
+        primaryOwnerSelected,
+        additionalOwners,
+        selectedTenants,
+        documentsComplete,
+        documentPersons,
+        documentStepPersonIdx,
+        startDate,
+        monthlyRent,
+        securityDeposit,
+        lockInPeriod,
+        noticePeriod,
+        rentDueDay,
+        maintenanceCharges,
+        maintenanceIncluded,
+        brokerageAmount,
+        brokerageAmountOwner,
+        brokerageAmountTenant,
+        brokeragePaidBy,
+        brokerageMode,
+        editingAgreementId,
+        savedAt: Date.now(),
+      };
+      saveAgreementWorkflowDraft(draft);
+    }, 200);
     return () => {
       if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
     };
@@ -2278,6 +2286,70 @@ export default function GenerateAgreement() {
     selectedTenants,
     documentsComplete,
     documentPersons,
+    documentStepPersonIdx,
+    startDate,
+    monthlyRent,
+    securityDeposit,
+    lockInPeriod,
+    noticePeriod,
+    rentDueDay,
+    maintenanceCharges,
+    maintenanceIncluded,
+    brokerageAmount,
+    brokerageAmountOwner,
+    brokerageAmountTenant,
+    brokeragePaidBy,
+    brokerageMode,
+    editingAgreementId,
+  ]);
+
+  // Flush draft immediately when leaving the page
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const flush = () => {
+      if (!selectedProperty && step === 1) return;
+      saveAgreementWorkflowDraft({
+        v: 1,
+        step,
+        selectedPropertyId: selectedProperty?.id ?? null,
+        ownerName,
+        ownerContact,
+        primaryOwnerSelected,
+        additionalOwners,
+        selectedTenants,
+        documentsComplete,
+        documentPersons,
+        documentStepPersonIdx,
+        startDate,
+        monthlyRent,
+        securityDeposit,
+        lockInPeriod,
+        noticePeriod,
+        rentDueDay,
+        maintenanceCharges,
+        maintenanceIncluded,
+        brokerageAmount,
+        brokerageAmountOwner,
+        brokerageAmountTenant,
+        brokeragePaidBy,
+        brokerageMode,
+        editingAgreementId,
+        savedAt: Date.now(),
+      });
+    };
+    window.addEventListener("pagehide", flush);
+    return () => window.removeEventListener("pagehide", flush);
+  }, [
+    step,
+    selectedProperty,
+    ownerName,
+    ownerContact,
+    primaryOwnerSelected,
+    additionalOwners,
+    selectedTenants,
+    documentsComplete,
+    documentPersons,
+    documentStepPersonIdx,
     startDate,
     monthlyRent,
     securityDeposit,
@@ -2301,6 +2373,7 @@ export default function GenerateAgreement() {
     setSubmitting(false);
     setDocumentsComplete(false);
     setDocumentPersons([]);
+    setDocumentStepPersonIdx(0);
     setSelectedProperty(null);
     setOwnerName("");
     setOwnerContact("");
@@ -2591,6 +2664,9 @@ export default function GenerateAgreement() {
           ownerCount={ownerCount}
           isOwnerFlow={isOwnerFlow}
           initialPersons={documentPersons}
+          initialPersonIdx={documentStepPersonIdx}
+          onPersonsChange={setDocumentPersons}
+          onPersonIdxChange={setDocumentStepPersonIdx}
           propertyId={selectedProperty?.id}
           propertyLabel={selectedProperty ? getPropertyTitle(selectedProperty) : undefined}
           requesterName={
