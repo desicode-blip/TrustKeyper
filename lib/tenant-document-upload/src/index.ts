@@ -629,5 +629,39 @@ export async function handleTenantDocumentUploadRequest(
     return;
   }
 
+  if (segments[1] === "file" && segments[2]) {
+    if (req.method !== "GET") {
+      json(res, 405, { error: "Method not allowed" });
+      return;
+    }
+
+    const docId = segments[2] as ExtendedDocumentId;
+    const record = await loadTokenSnapshot(store, token);
+    if (!record) {
+      json(res, 404, { error: "Invalid document upload link" });
+      return;
+    }
+    if (resolveStatus(record.snapshot) === "expired") {
+      json(res, 410, { error: "This document upload link has expired", code: "expired" });
+      return;
+    }
+
+    const file = record.snapshot.documents[docId];
+    if (!file?.dataUrl) {
+      json(res, 404, { error: "Document file not found", code: "not_found" });
+      return;
+    }
+
+    json(res, 200, {
+      documentId: docId,
+      fileName: file.fileName,
+      fileSize: file.fileSize,
+      mimeType: file.mimeType,
+      uploadedAt: file.uploadedAt,
+      dataUrl: file.dataUrl,
+    });
+    return;
+  }
+
   json(res, 404, { error: "Not found" });
 }

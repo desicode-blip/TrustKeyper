@@ -23,6 +23,7 @@ import {
   type TenantDocumentUploadSession,
 } from "@/lib/tenantDocumentUploadSession";
 import { ensureTenantDashboardSession } from "@/lib/tenantDocumentUploadRedirect";
+import { mergeTenantProfileFromInvitePayload } from "@/lib/tenantProfile";
 import { saveTenantWorkspaceFromInvite } from "@/lib/tenantWorkspace";
 
 type PagePhase =
@@ -87,6 +88,7 @@ export default function TenantDocumentUpload() {
     }
 
     setInvite(payload);
+    mergeTenantProfileFromInvitePayload(payload);
 
     const existingSession = getTenantDocumentUploadSession(token);
     if (existingSession) {
@@ -165,6 +167,7 @@ export default function TenantDocumentUpload() {
     };
     setTenantDocumentUploadSession(nextSession);
     setSession(nextSession);
+    if (invite) mergeTenantProfileFromInvitePayload(invite);
     void markDocumentUploadStarted(token);
     syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_in_progress", { token });
     setModalPhase("account_success");
