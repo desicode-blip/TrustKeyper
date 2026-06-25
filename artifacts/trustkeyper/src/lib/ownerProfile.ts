@@ -35,6 +35,15 @@ function normalizePhoneDigits(phone: string): string {
   return phone.replace(/\D/g, "").slice(-10);
 }
 
+function sanitizeDocumentMeta(meta?: OwnerDocumentMeta): OwnerDocumentMeta | undefined {
+  if (!meta?.fileName) return meta ? { ...meta, dataUrl: undefined } : undefined;
+  return {
+    fileName: meta.fileName,
+    fileSize: meta.fileSize,
+    uploadedAt: meta.uploadedAt,
+  };
+}
+
 function readStored(): OwnerProfile {
   if (typeof window === "undefined") return { ...defaults };
   try {
@@ -71,7 +80,12 @@ export function getOwnerProfile(): OwnerProfile {
 export function saveOwnerProfile(profile: OwnerProfile): void {
   try {
     const phone = normalizePhoneDigits(profile.phone);
-    const payload: OwnerProfile = { ...profile, phone };
+    const payload: OwnerProfile = {
+      ...profile,
+      phone,
+      aadhaar: sanitizeDocumentMeta(profile.aadhaar),
+      pan: sanitizeDocumentMeta(profile.pan),
+    };
     const json = JSON.stringify(payload);
     setItem("profile", json);
     setSessionItem("name", payload.name);
@@ -116,30 +130,21 @@ export function saveOwnerProfileDocument(
     return;
   }
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const current = getOwnerProfile();
-      const meta: OwnerDocumentMeta = {
-        fileName: file.name,
-        fileSize: file.size,
-        uploadedAt: Date.now(),
-        dataUrl: typeof reader.result === "string" ? reader.result : undefined,
-      };
-      saveOwnerProfile({
-        ...current,
-        [kind]: meta,
-      });
-      callbacks?.onSuccess?.();
-    } catch {
-      callbacks?.onError?.("Could not save document. Storage may be full.");
-    }
-  };
-  reader.onerror = () => {
-    console.error("saveOwnerProfileDocument: failed to read file", kind, file.name);
+  try {
+    const current = getOwnerProfile();
+    const meta: OwnerDocumentMeta = {
+      fileName: file.name,
+      fileSize: file.size,
+      uploadedAt: Date.now(),
+    };
+    saveOwnerProfile({
+      ...current,
+      [kind]: meta,
+    });
+    callbacks?.onSuccess?.();
+  } catch {
     callbacks?.onError?.("Could not read the file. Please try again.");
-  };
-  reader.readAsDataURL(file);
+  }
 }
 
 export function removeOwnerProfileDocument(kind: OwnerDocumentKind): void {
