@@ -57,7 +57,14 @@ import {
   type RentalAgreementInput,
 } from "@/lib/rentalAgreementDocument";
 import { whatsAppInviteHref } from "@/lib/ownerTenants";
-import { getBrokerProfile, saveBrokerProfile, hasBankDetails } from "@/lib/brokerProfile";
+import {
+  getBrokerProfile,
+  saveBrokerProfile,
+  hasBankDetails,
+  removeBrokerProfileDocument,
+  saveBrokerProfileDocument,
+  type BrokerDocumentKind,
+} from "@/lib/brokerProfile";
 import {
   getOwnerProfile,
   hasOwnerBankDetails,
@@ -75,8 +82,15 @@ import { readFileAsDataUrl } from "@/lib/publicAgreementDocumentUpload";
 import {
   loadAgreementWorkflowDraft,
   saveAgreementWorkflowDraft,
+  type AgreementDocDraftState,
+  type AgreementDocDraftStatus,
+  type AgreementPersonDraftState,
   type AgreementWorkflowDraft,
 } from "@/lib/agreementWorkflowDraft";
+import {
+  areAgreementDocumentsComplete,
+  reconcileAgreementDocumentPersons,
+} from "@/lib/agreementDocumentPersons";
 import { toast as pushToast } from "@/hooks/use-toast";
 import { FlowSegmentTabs } from "@/components/FlowSegmentTabs";
 import {
@@ -758,36 +772,9 @@ function Step2Parties({
 
 // ─── Step 3 — Documents ───────────────────────────────────────────────────────
 
-type DocStatus = "pending" | "uploaded" | "link_sent";
-
-interface DocState {
-  id: "aadhaar" | "pan" | "bank";
-  label: string;
-  status: DocStatus;
-  fileName?: string;
-  fileSize?: number;
-  uploadedAt?: number;
-  dataUrl?: string;
-}
-
-interface PersonState {
-  name: string;
-  contact: string;
-  personLabel: string;
-  documentUploadToken?: string;
-  docs: DocState[];
-}
-
-function initPersonDocs(name: string, contact: string, label: string): PersonState {
-  return {
-    name, contact, personLabel: label,
-    docs: [
-      { id: "aadhaar", label: "Aadhaar Card", status: "pending" },
-      { id: "pan", label: "PAN Card", status: "pending" },
-      { id: "bank", label: "Bank Account Details", status: "pending" },
-    ],
-  };
-}
+type DocStatus = AgreementDocDraftStatus;
+type DocState = AgreementDocDraftState;
+type PersonState = AgreementPersonDraftState;
 
 function fmtFileSize(b: number) {
   return b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${(b / 1024).toFixed(1)} KB` : `${(b / (1024 * 1024)).toFixed(1)} MB`;
@@ -899,57 +886,6 @@ function DocRow({
   );
 }
 
-function applyOwnerSelfDocPrefill(persons: PersonState[]): PersonState[] {
-  const profile = getOwnerProfile();
-  const hasBank = hasOwnerBankDetails();
-  const hasUpi = hasOwnerUpiDetails();
-  return persons.map((p) => {
-    if (!isLoggedInOwnerParty(p, true)) return p;
-    return {
-      ...p,
-      docs: p.docs.map((d) => {
-        if (d.id === "bank" && hasBank) {
-          return {
-            ...d,
-            status: "uploaded" as DocStatus,
-            fileName: "Bank Account",
-            uploadedAt: Date.now(),
-          };
-        }
-        if (d.id === "bank" && hasUpi && !hasBank) {
-          return {
-            ...d,
-            status: "uploaded" as DocStatus,
-            fileName: "UPI Details",
-            uploadedAt: Date.now(),
-          };
-        }
-        if (d.id === "aadhaar" && profile.aadhaar?.fileName) {
-          return {
-            ...d,
-            status: "uploaded" as DocStatus,
-            fileName: profile.aadhaar.fileName,
-            fileSize: profile.aadhaar.fileSize,
-            uploadedAt: profile.aadhaar.uploadedAt ?? Date.now(),
-            dataUrl: profile.aadhaar.dataUrl ?? d.dataUrl,
-          };
-        }
-        if (d.id === "pan" && profile.pan?.fileName) {
-          return {
-            ...d,
-            status: "uploaded" as DocStatus,
-            fileName: profile.pan.fileName,
-            fileSize: profile.pan.fileSize,
-            uploadedAt: profile.pan.uploadedAt ?? Date.now(),
-            dataUrl: profile.pan.dataUrl ?? d.dataUrl,
-          };
-        }
-        return d;
-      }),
-    };
-  });
-}
-
 function isLoggedInOwnerParty(person: PersonState, isOwnerFlow: boolean): boolean {
   if (!isOwnerFlow || !person.personLabel.startsWith("OWNER")) return false;
   if (person.personLabel !== "OWNER" && person.personLabel !== "OWNER 1") return false;
@@ -964,8 +900,84 @@ function isLoggedInOwnerParty(person: PersonState, isOwnerFlow: boolean): boolea
   return false;
 }
 
-function isOwnerPrimarySelf(pIdx: number, person: PersonState, isOwnerFlow: boolean): boolean {
-  return isLoggedInOwnerParty(person, isOwnerFlow);
+function isLoggedInBrokerParty(person: PersonState, isOwnerFlow: boolean): boolean {
+  if (isOwnerFlow || !person.personLabel.startsWith("OWNER")) return false;
+  if (person.personLabel !== "OWNER" && person.personLabel !== "OWNER 1") return false;
+  const profile = getBrokerProfile();
+  const normPhone = (s: string) => s.replace(/\D/g, "").slice(-10);
+  const profilePhone = normPhone(profile.phone);
+  const personPhone = normPhone(person.contact);
+  const profileName = profile.name.trim().toLowerCase();
+  const personName = person.name.trim().toLowerCase();
+  if (profileName && personName && profileName === personName) return true;
+  if (profilePhone && personPhone && profilePhone === personPhone) return true;
+  return false;
+}
+
+function isLoggedInRequesterParty(
+  person: PersonState,
+  requesterRole: "owner" | "broker",
+  isOwnerFlow: boolean,
+): boolean {
+  return requesterRole === "owner"
+    ? isLoggedInOwnerParty(person, isOwnerFlow)
+    : isLoggedInBrokerParty(person, isOwnerFlow);
+}
+
+function applyRequesterSelfDocPrefill(
+  persons: PersonState[],
+  requesterRole: "owner" | "broker",
+  isOwnerFlow: boolean,
+): PersonState[] {
+  const ownerProfile = requesterRole === "owner" ? getOwnerProfile() : null;
+  const brokerProfile = requesterRole === "broker" ? getBrokerProfile() : null;
+  const hasBank = requesterRole === "owner" ? hasOwnerBankDetails() : hasBankDetails();
+  const hasUpi = requesterRole === "owner"
+    ? hasOwnerUpiDetails()
+    : Boolean(brokerProfile?.upiId?.trim() || brokerProfile?.upiQrFileName?.trim());
+
+  return persons.map((person) => {
+    if (!isLoggedInRequesterParty(person, requesterRole, isOwnerFlow)) return person;
+
+    return {
+      ...person,
+      docs: person.docs.map((doc) => {
+        if (doc.id === "bank" && hasBank) {
+          return {
+            ...doc,
+            status: "uploaded" as DocStatus,
+            fileName: "Bank Account",
+            uploadedAt: doc.uploadedAt ?? Date.now(),
+          };
+        }
+        if (doc.id === "bank" && hasUpi && !hasBank) {
+          return {
+            ...doc,
+            status: "uploaded" as DocStatus,
+            fileName: "UPI Details",
+            uploadedAt: doc.uploadedAt ?? Date.now(),
+          };
+        }
+
+        const profileDoc = requesterRole === "owner"
+          ? (doc.id === "aadhaar" ? ownerProfile?.aadhaar : doc.id === "pan" ? ownerProfile?.pan : undefined)
+          : (doc.id === "aadhaar" ? brokerProfile?.aadhaar : doc.id === "pan" ? brokerProfile?.pan : undefined);
+
+        if (profileDoc?.fileName) {
+          return {
+            ...doc,
+            status: "uploaded" as DocStatus,
+            fileName: profileDoc.fileName,
+            fileSize: profileDoc.fileSize,
+            uploadedAt: profileDoc.uploadedAt ?? doc.uploadedAt ?? Date.now(),
+            dataUrl: profileDoc.dataUrl ?? doc.dataUrl,
+          };
+        }
+
+        return doc;
+      }),
+    };
+  });
 }
 
 // ── Step 3 Main ───────────────────────────────────────────────────────────────
@@ -998,24 +1010,8 @@ function Step3Documents({
   requesterRole: "owner" | "broker";
 }) {
   const [persons, setPersons] = useState<PersonState[]>(() => {
-    if (initialPersons && initialPersons.length > 0) {
-      return isOwnerFlow ? applyOwnerSelfDocPrefill(initialPersons) : initialPersons;
-    }
-    if (!allParties || allParties.length === 0) return [initPersonDocs("Owner", "", "OWNER 1")];
-    let ownerIdx = 0;
-    let tenantIdx = 0;
-    const built = allParties.map((p, i) => {
-      let label: string;
-      if (i < ownerCount) {
-        ownerIdx++;
-        label = ownerCount === 1 ? "OWNER" : `OWNER ${ownerIdx}`;
-      } else {
-        tenantIdx++;
-        label = `TENANT ${tenantIdx}`;
-      }
-      return initPersonDocs(p.name, p.contact, label);
-    });
-    return isOwnerFlow ? applyOwnerSelfDocPrefill(built) : built;
+    const reconciled = reconcileAgreementDocumentPersons(initialPersons, allParties, ownerCount);
+    return applyRequesterSelfDocPrefill(reconciled, requesterRole, isOwnerFlow);
   });
 
   const [personIdx, setPersonIdx] = useState(() => {
@@ -1082,6 +1078,17 @@ function Step3Documents({
   }, [applyReceivedInvites, refreshReceivedDocuments]);
 
   useEffect(() => {
+    setPersons((prev) => {
+      const reconciled = reconcileAgreementDocumentPersons(prev, allParties, ownerCount);
+      return applyRequesterSelfDocPrefill(reconciled, requesterRole, isOwnerFlow);
+    });
+  }, [allParties, ownerCount, requesterRole, isOwnerFlow]);
+
+  useEffect(() => {
+    setPersonIdx((prev) => Math.min(prev, Math.max(persons.length - 1, 0)));
+  }, [persons.length]);
+
+  useEffect(() => {
     onPersonsChange?.(persons);
   }, [persons, onPersonsChange]);
 
@@ -1117,8 +1124,12 @@ function Step3Documents({
       });
       const person = persons[pIdx];
       const docId = person?.docs[dIdx]?.id;
-      if (isOwnerPrimarySelf(pIdx, person, isOwnerFlow) && (docId === "aadhaar" || docId === "pan")) {
-        saveOwnerProfileDocument(docId as OwnerDocumentKind, file);
+      if (isLoggedInRequesterParty(person, requesterRole, isOwnerFlow) && (docId === "aadhaar" || docId === "pan")) {
+        if (requesterRole === "owner") {
+          saveOwnerProfileDocument(docId as OwnerDocumentKind, file);
+        } else {
+          saveBrokerProfileDocument(docId as BrokerDocumentKind, file);
+        }
       }
     } catch {
       pushToast({
@@ -1229,8 +1240,12 @@ function Step3Documents({
     const person = persons[pIdx];
     const docId = person?.docs[dIdx]?.id;
     updateDoc(pIdx, dIdx, { status: "pending", fileName: undefined, fileSize: undefined });
-    if (isOwnerPrimarySelf(pIdx, person, isOwnerFlow) && (docId === "aadhaar" || docId === "pan")) {
-      removeOwnerProfileDocument(docId as OwnerDocumentKind);
+    if (isLoggedInRequesterParty(person, requesterRole, isOwnerFlow) && (docId === "aadhaar" || docId === "pan")) {
+      if (requesterRole === "owner") {
+        removeOwnerProfileDocument(docId as OwnerDocumentKind);
+      } else {
+        removeBrokerProfileDocument(docId as BrokerDocumentKind);
+      }
     }
   };
 
@@ -1243,7 +1258,7 @@ function Step3Documents({
     const pIdx = bankModal.pIdx;
     const person = persons[pIdx];
     updateDoc(pIdx, bankModal.dIdx, { status: "uploaded", fileName: data.mode === "upi" ? "UPI Details" : "Bank Account", uploadedAt: Date.now() });
-    if (isLoggedInOwnerParty(person, isOwnerFlow)) {
+    if (isLoggedInRequesterParty(person, requesterRole, isOwnerFlow)) {
       if (
         data.mode === "bank" &&
         data.holderName &&
@@ -1251,16 +1266,35 @@ function Step3Documents({
         data.accountNumber &&
         data.ifscCode
       ) {
-        saveOwnerProfileBank({
-          holderName: data.holderName,
-          bankName: data.bankName,
-          accountNumber: data.accountNumber,
-          ifscCode: data.ifscCode,
-        });
+        if (requesterRole === "owner") {
+          saveOwnerProfileBank({
+            holderName: data.holderName,
+            bankName: data.bankName,
+            accountNumber: data.accountNumber,
+            ifscCode: data.ifscCode,
+          });
+        } else {
+          saveBrokerProfile({
+            ...getBrokerProfile(),
+            bankHolderName: data.holderName,
+            bankName: data.bankName,
+            bankAccountNumber: data.accountNumber,
+            bankIFSC: data.ifscCode,
+          });
+        }
       } else if (data.mode === "upi") {
-        if (isValidUpiId(data.upiId)) saveOwnerProfileUpi(data.upiId);
-        if (data.upiQrFileName) {
-          saveOwnerProfile({ ...getOwnerProfile(), upiQrFileName: data.upiQrFileName });
+        if (requesterRole === "owner") {
+          if (isValidUpiId(data.upiId)) saveOwnerProfileUpi(data.upiId);
+          if (data.upiQrFileName) {
+            saveOwnerProfile({ ...getOwnerProfile(), upiQrFileName: data.upiQrFileName });
+          }
+        } else {
+          const current = getBrokerProfile();
+          saveBrokerProfile({
+            ...current,
+            upiId: isValidUpiId(data.upiId) ? data.upiId : current.upiId,
+            upiQrFileName: data.upiQrFileName || current.upiQrFileName,
+          });
         }
       }
     }
@@ -1419,7 +1453,7 @@ function Step3Documents({
               onRemove={() => handleResetDoc(personIdx, dIdx)}
               onAddDetails={() => setBankModal({ pIdx: personIdx, dIdx })}
               onView={() => handleViewDoc(person, doc)}
-              hideSendLink={!isTenantParty || isOwnerPrimarySelf(personIdx, person, isOwnerFlow)}
+              hideSendLink={!isTenantParty || isLoggedInRequesterParty(person, requesterRole, isOwnerFlow)}
             />
           ))}
         </div>
@@ -2449,6 +2483,11 @@ export default function GenerateAgreement() {
 
   const Layout = isOwnerFlow ? OwnerLayout : BrokerLayout;
 
+  const handleDocumentPersonsChange = useCallback((persons: PersonState[]) => {
+    setDocumentPersons(persons);
+    setDocumentsComplete(areAgreementDocumentsComplete(persons));
+  }, []);
+
   const handleSubmit = () => {
     if (!selectedProperty) return;
     setSubmitting(true);
@@ -2665,7 +2704,7 @@ export default function GenerateAgreement() {
           isOwnerFlow={isOwnerFlow}
           initialPersons={documentPersons}
           initialPersonIdx={documentStepPersonIdx}
-          onPersonsChange={setDocumentPersons}
+          onPersonsChange={handleDocumentPersonsChange}
           onPersonIdxChange={setDocumentStepPersonIdx}
           propertyId={selectedProperty?.id}
           propertyLabel={selectedProperty ? getPropertyTitle(selectedProperty) : undefined}
