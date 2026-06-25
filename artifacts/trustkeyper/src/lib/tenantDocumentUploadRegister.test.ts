@@ -143,4 +143,65 @@ describe("registerDocumentUploadInvite", () => {
     if (!detail.ok) return;
     expect(detail.invite.bankDetails?.accountNumber).toBe("1234567890");
   });
+
+  it("archives prior file versions when tenant replaces a submitted document", async () => {
+    const { store } = createMemoryStore();
+
+    const created = await registerDocumentUploadInvite(store, {
+      requesterPhone: "9876543210",
+      requesterRole: "broker",
+      requesterName: "Demo Broker",
+      tenantName: "Rajesh Kumar",
+      tenantPhone: "9123456789",
+      origin: "https://staging.app.trustkeyper.com",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const token = created.invite.token;
+    const firstUpload = await submitDocumentUpload(store, token, {
+      draft: false,
+      documents: {
+        aadhaar: {
+          fileName: "aadhaar-v1.pdf",
+          fileSize: 1200,
+          mimeType: "application/pdf",
+          dataUrl: "data:application/pdf;base64,QUJD",
+        },
+        pan: {
+          fileName: "pan.pdf",
+          fileSize: 900,
+          mimeType: "application/pdf",
+          dataUrl: "data:application/pdf;base64,UEFO",
+        },
+      },
+      bankDetails: {
+        mode: "bank",
+        holderName: "Rajesh Kumar",
+        bankName: "HDFC Bank",
+        accountNumber: "1234567890",
+        ifscCode: "HDFC0001234",
+      },
+    });
+    expect(firstUpload.ok).toBe(true);
+
+    const replaced = await submitDocumentUpload(store, token, {
+      draft: true,
+      documents: {
+        aadhaar: {
+          fileName: "aadhaar-v2.pdf",
+          fileSize: 1300,
+          mimeType: "application/pdf",
+          dataUrl: "data:application/pdf;base64,RENEW",
+        },
+      },
+    });
+    expect(replaced.ok).toBe(true);
+    if (!replaced.ok) return;
+
+    expect(replaced.snapshot.documents.aadhaar?.fileName).toBe("aadhaar-v2.pdf");
+    expect(replaced.snapshot.status).toBe("submitted");
+    expect(replaced.snapshot.documentHistory?.aadhaar?.versions).toHaveLength(1);
+    expect(replaced.snapshot.documentHistory?.aadhaar?.versions[0]?.fileName).toBe("aadhaar-v1.pdf");
+  });
 });

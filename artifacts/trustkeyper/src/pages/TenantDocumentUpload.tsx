@@ -7,6 +7,7 @@ import {
   TenantBrokerOnboardModal,
   type TenantOnboardModalPhase,
 } from "@/components/tenant/TenantBrokerOnboardModal";
+import { TenantDocumentManagementFlow } from "@/components/tenant/TenantDocumentManagementFlow";
 import { TenantDocumentUploadFlow } from "@/components/tenant/TenantDocumentUploadFlow";
 import { getActiveSession, profileExistsAsync, signUpSuccess, loginSuccess } from "@/lib/auth";
 import {
@@ -25,14 +26,30 @@ import {
 import { ensureTenantDashboardSession } from "@/lib/tenantDocumentUploadRedirect";
 import { mergeTenantProfileFromInvitePayload } from "@/lib/tenantProfile";
 import { saveTenantWorkspaceFromInvite } from "@/lib/tenantWorkspace";
+import {
+  resolveReturningTenantAccess,
+  shouldOpenDocumentManagement,
+} from "@/lib/tenantReturningAccess";
 
-type PagePhase =
-  | "loading"
-  | "invalid"
-  | "expired"
-  | "already_submitted"
-  | "modal"
-  | "upload";
+type PagePhase = "loading" | "invalid" | "expired" | "modal" | "upload" | "management";
+
+function phoneLast10(phone: string): string {
+  return phone.replace(/\D/g, "").slice(-10);
+}
+
+function buildUploadSession(
+  token: string,
+  invite: DocumentUploadInvitePayload,
+): TenantDocumentUploadSession {
+  const digits = phoneLast10(invite.tenantPhone);
+  return {
+    token,
+    name: invite.tenantName,
+    phone: `+91${digits}`,
+    requesterName: invite.requesterName,
+    verifiedAt: Date.now(),
+  };
+}
 
 export default function TenantDocumentUpload() {
   const [, setLocation] = useLocation();
@@ -49,6 +66,16 @@ export default function TenantDocumentUpload() {
   const [sendingOtp, setSendingOtp] = useState(false);
   const [session, setSession] = useState<TenantDocumentUploadSession | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const openWithSession = useCallback(
+    (payload: DocumentUploadInvitePayload, nextSession: TenantDocumentUploadSession, phase: PagePhase) => {
+      setInvite(payload);
+      setSession(nextSession);
+      setTenantDocumentUploadSession(nextSession);
+      setPagePhase(phase);
+    },
+    [],
+  );
 
   const bootstrap = useCallback(async () => {
     if (!token) {
@@ -76,51 +103,58 @@ export default function TenantDocumentUpload() {
       return;
     }
 
-    if (payload.status === "submitted") {
-      clearTenantDocumentUploadSession(token);
+    mergeTenantProfileFromInvitePayload(payload);
+    const isManagement = shouldOpenDocumentManagement(payload.status);
+
+    if (isManagement) {
       saveTenantWorkspaceFromInvite(payload, {
         documentUploadStatus: "documents_submitted",
         documentUploadSubmittedAt: payload.submittedAt ?? Date.now(),
       });
-      setInvite(payload);
-      setPagePhase("already_submitted");
+    }
+
+    const activeSession = getActiveSession();
+    const existingUploadSession = getTenantDocumentUploadSession(token);
+    const access = resolveReturningTenantAccess({
+      inviteStatus: payload.status,
+      tenantPhone: payload.tenantPhone,
+      hasActiveTenantSession: activeSession?.role === "tenant",
+      activeTenantPhone: activeSession?.phone,
+      hasUploadSession: Boolean(existingUploadSession),
+      hasTenantAccount: payload.hasTenantAccount,
+    });
+
+    if (access.kind === "blocked") {
+      setPagePhase(access.reason === "expired" ? "expired" : "invalid");
+      setLoadError(
+        access.reason === "expired"
+          ? "This document upload link has expired"
+          : "Invalid document upload link",
+      );
+      return;
+    }
+
+    if (access.kind === "immediate") {
+      const digits = phoneLast10(payload.tenantPhone);
+      if (access.reason === "active_tenant_session") {
+        await ensureTenantDashboardSession(digits, getActiveSession, loginSuccess);
+      }
+      const nextSession = existingUploadSession ?? buildUploadSession(token, payload);
+      const phase: PagePhase = isManagement ? "management" : "upload";
+      openWithSession(payload, nextSession, phase);
+      if (!isManagement) {
+        void markDocumentUploadStarted(token);
+        syncTenantDocumentUploadStatus(payload.tenantPhone, "documents_in_progress", { token });
+      }
       return;
     }
 
     setInvite(payload);
-    mergeTenantProfileFromInvitePayload(payload);
-
-    const existingSession = getTenantDocumentUploadSession(token);
-    if (existingSession) {
-      setSession(existingSession);
-      setPagePhase("upload");
-      void markDocumentUploadStarted(token);
-      return;
-    }
-
-    if (payload.hasTenantAccount) {
-      const digits = payload.tenantPhone.replace(/\D/g, "").slice(-10);
-      await ensureTenantDashboardSession(digits, getActiveSession, loginSuccess);
-      const nextSession: TenantDocumentUploadSession = {
-        token,
-        name: payload.tenantName,
-        phone: `+91${digits}`,
-        requesterName: payload.requesterName,
-        verifiedAt: Date.now(),
-      };
-      setTenantDocumentUploadSession(nextSession);
-      setSession(nextSession);
-      void markDocumentUploadStarted(token);
-      syncTenantDocumentUploadStatus(payload.tenantPhone, "documents_in_progress", { token });
-      setPagePhase("upload");
-      return;
-    }
-
     setName(payload.tenantName);
-    setPhone(payload.tenantPhone.replace(/\D/g, "").slice(-10));
-    setModalPhase("welcome");
+    setPhone(phoneLast10(payload.tenantPhone));
+    setModalPhase(access.reason === "account_exists" ? "welcome" : "welcome");
     setPagePhase("modal");
-  }, [token]);
+  }, [openWithSession, token]);
 
   useEffect(() => {
     void bootstrap();
@@ -167,14 +201,22 @@ export default function TenantDocumentUpload() {
     };
     setTenantDocumentUploadSession(nextSession);
     setSession(nextSession);
-    if (invite) mergeTenantProfileFromInvitePayload(invite);
-    void markDocumentUploadStarted(token);
-    syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_in_progress", { token });
+    mergeTenantProfileFromInvitePayload(invite);
+
+    const isManagement = shouldOpenDocumentManagement(invite.status);
+    if (!isManagement) {
+      void markDocumentUploadStarted(token);
+      syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_in_progress", { token });
+    }
+
     setModalPhase("account_success");
   };
 
   const handleAccountSuccessDone = () => {
-    setPagePhase("upload");
+    if (!invite) return;
+    const nextSession = session ?? buildUploadSession(token, invite);
+    setSession(nextSession);
+    setPagePhase(shouldOpenDocumentManagement(invite.status) ? "management" : "upload");
   };
 
   const handleFlowDone = async () => {
@@ -200,6 +242,10 @@ export default function TenantDocumentUpload() {
         <p className="text-sm text-gray-500">Loading your document request…</p>
       </div>
     );
+  }
+
+  if (pagePhase === "management" && session && invite) {
+    return <TenantDocumentManagementFlow invite={invite} session={session} />;
   }
 
   if (pagePhase === "upload" && session && invite) {
@@ -228,36 +274,18 @@ export default function TenantDocumentUpload() {
         />
       ) : null}
 
-      {pagePhase === "invalid" || pagePhase === "expired" || pagePhase === "already_submitted" ? (
+      {pagePhase === "invalid" || pagePhase === "expired" ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
             <div className="mx-auto w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-4">
               <AlertCircle className="w-8 h-8 text-red-500" />
             </div>
             <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              {pagePhase === "already_submitted"
-                ? "Documents already submitted"
-                : pagePhase === "expired"
-                  ? "Link expired"
-                  : "Invalid link"}
+              {pagePhase === "expired" ? "Link expired" : "Invalid link"}
             </h2>
-            <p className="text-sm text-gray-500 mb-6">
-              {pagePhase === "already_submitted"
-                ? `Your documents were already shared with ${invite?.requesterName ?? "your property manager"}.`
-                : (loadError ?? "This document upload link is not valid.")}
-            </p>
-            <Button
-              type="button"
-              className="w-full"
-              onClick={async () => {
-                const digits = invite?.tenantPhone.replace(/\D/g, "").slice(-10);
-                if (digits) {
-                  await ensureTenantDashboardSession(digits, getActiveSession, loginSuccess);
-                }
-                setLocation("/tenant/dashboard");
-              }}
-            >
-              Go To Dashboard
+            <p className="text-sm text-gray-500 mb-6">{loadError ?? "This document upload link is not valid."}</p>
+            <Button type="button" className="w-full" onClick={() => setLocation("/login")}>
+              Sign In
             </Button>
           </div>
         </div>

@@ -14,28 +14,34 @@ export interface TenantProgressTrackerProps {
 
 export function TenantProgressTracker({ steps }: TenantProgressTrackerProps) {
   return (
-    <div className="rounded-2xl border border-[#D9EAF8] bg-[#F3F9FE] p-4 sm:p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="rounded-2xl border border-[#D9EAF8] bg-[#F3F9FE] px-4 py-5 sm:px-8 sm:py-6">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         {steps.map((step, index) => {
           const Icon = STEP_ICONS[step.id] ?? FileText;
           const isLast = index === steps.length - 1;
           return (
-            <div key={step.id} className="flex items-center gap-3 sm:flex-1 min-w-0">
-              <div
-                className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center shrink-0 border",
-                  step.state === "complete" && "bg-green-500 border-green-500 text-white",
-                  step.state === "current" && "bg-[#E8F4FC] border-primary text-primary",
-                  step.state === "upcoming" && "bg-white border-gray-200 text-gray-400",
-                )}
-              >
-                {step.state === "complete" ? <Check size={18} strokeWidth={2.5} /> : <Icon size={18} />}
-              </div>
-              <div className="min-w-0 flex-1">
+            <div key={step.id} className="flex items-start gap-0 sm:flex-1 min-w-0">
+              <div className="flex flex-col items-center flex-1 min-w-0">
+                <div
+                  className={cn(
+                    "w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shrink-0 border",
+                    step.state === "complete" && "bg-green-500 border-green-500 text-white",
+                    step.state === "current" && "bg-[#E8F4FC] border-primary text-primary",
+                    step.state === "upcoming" && "bg-white border-gray-200 text-gray-400",
+                  )}
+                >
+                  {step.state === "complete" ? (
+                    <Check size={18} strokeWidth={2.5} />
+                  ) : (
+                    <Icon size={18} />
+                  )}
+                </div>
                 <p
                   className={cn(
-                    "text-sm font-semibold truncate",
-                    step.state === "upcoming" ? "text-gray-400" : "text-gray-900",
+                    "text-xs sm:text-sm font-semibold text-center mt-2 leading-snug max-w-[120px]",
+                    step.state === "current" && "text-primary",
+                    step.state === "complete" && "text-gray-700",
+                    step.state === "upcoming" && "text-gray-400",
                   )}
                 >
                   {step.label}
@@ -44,8 +50,8 @@ export function TenantProgressTracker({ steps }: TenantProgressTrackerProps) {
               {!isLast ? (
                 <div
                   className={cn(
-                    "hidden sm:block h-0.5 flex-1 mx-2 rounded-full",
-                    step.state === "complete" ? "bg-primary" : "bg-gray-200",
+                    "hidden sm:block h-0.5 flex-1 mt-5 mx-1 rounded-full min-w-[24px]",
+                    step.state === "complete" ? "bg-primary/40" : "bg-gray-200",
                   )}
                   aria-hidden
                 />

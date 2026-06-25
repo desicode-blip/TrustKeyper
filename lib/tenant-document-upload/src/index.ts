@@ -19,6 +19,21 @@ export {
   type ExtendedDocumentId,
   type UploadDocumentStatus,
 } from "./documentTypes.js";
+import {
+  archiveDocumentFile,
+  canTenantModifyDocuments,
+  type DocumentHistoryMap,
+  type DocumentVersionHistory,
+  type StoredUploadFileVersion,
+} from "./documentHistory.js";
+
+export {
+  archiveDocumentFile,
+  canTenantModifyDocuments,
+  type DocumentHistoryMap,
+  type DocumentVersionHistory,
+  type StoredUploadFileVersion,
+} from "./documentHistory.js";
 
 export type DocumentUploadRequesterRole = "owner" | "broker";
 
@@ -69,11 +84,13 @@ export type DocumentUploadTokenSnapshot = {
   documents: Partial<Record<ExtendedDocumentId, StoredUploadFile>>;
   documentStatuses: Partial<Record<ExtendedDocumentId, UploadDocumentStatus>>;
   bankDetails?: StoredBankDetails;
+  documentHistory?: DocumentHistoryMap;
   createdAt: number;
   expiresAt: number;
   linkSentAt?: number;
   startedAt?: number;
   submittedAt?: number;
+  lastDocumentUpdateAt?: number;
 };
 
 export type DocumentUploadStore = {
@@ -309,6 +326,7 @@ export type SubmitDocumentUploadBody = {
   >;
   bankDetails?: StoredBankDetails;
   draft?: boolean;
+  removeDocumentIds?: ExtendedDocumentId[];
 };
 
 function validateFilePayload(file: {
@@ -362,8 +380,37 @@ export async function submitDocumentUpload(
   }
 
   const snapshot: DocumentUploadTokenSnapshot = { ...record.snapshot };
+  const wasSubmitted =
+    snapshot.status === "submitted" || snapshot.tenantDocumentStatus === "documents_submitted";
+  if (!canTenantModifyDocuments(snapshot) && (body.documents || body.bankDetails || body.removeDocumentIds?.length)) {
+    return {
+      ok: false,
+      error: "Documents cannot be changed after agreement generation",
+      code: "documents_locked",
+    };
+  }
+
   const nextDocuments = { ...snapshot.documents };
   const nextStatuses = { ...snapshot.documentStatuses };
+  const nextHistory: DocumentHistoryMap = { ...(snapshot.documentHistory ?? {}) };
+
+  if (body.removeDocumentIds?.length) {
+    for (const id of body.removeDocumentIds) {
+      if (!snapshot.requestedDocumentIds.includes(id)) continue;
+      if (id === "bank") {
+        snapshot.bankDetails = undefined;
+        nextStatuses.bank = "not_uploaded";
+        continue;
+      }
+      if (!isFileDocumentId(id)) continue;
+      const current = nextDocuments[id];
+      if (current) {
+        nextHistory[id] = archiveDocumentFile(nextHistory[id], current);
+      }
+      delete nextDocuments[id];
+      nextStatuses[id] = "not_uploaded";
+    }
+  }
 
   if (body.documents) {
     for (const [id, file] of Object.entries(body.documents) as [ExtendedDocumentId, NonNullable<SubmitDocumentUploadBody["documents"]>[ExtendedDocumentId]][]) {
@@ -372,6 +419,10 @@ export async function submitDocumentUpload(
       if (!isFileDocumentId(id)) continue;
       const validationError = validateFilePayload(file);
       if (validationError) return { ok: false, error: validationError, code: "invalid_file" };
+      const current = nextDocuments[id];
+      if (current) {
+        nextHistory[id] = archiveDocumentFile(nextHistory[id], current);
+      }
       nextDocuments[id] = {
         fileName: file.fileName,
         fileSize: file.fileSize,
@@ -392,10 +443,20 @@ export async function submitDocumentUpload(
 
   snapshot.documents = nextDocuments;
   snapshot.documentStatuses = nextStatuses;
-  snapshot.status = body.draft ? "in_progress" : "submitted";
-  snapshot.tenantDocumentStatus = body.draft ? "documents_in_progress" : "documents_submitted";
+  snapshot.documentHistory = nextHistory;
+  snapshot.lastDocumentUpdateAt = Date.now();
+
+  if (body.draft) {
+    snapshot.status = wasSubmitted ? "submitted" : "in_progress";
+    snapshot.tenantDocumentStatus = wasSubmitted
+      ? snapshot.tenantDocumentStatus
+      : "documents_in_progress";
+  } else {
+    snapshot.status = "submitted";
+    snapshot.tenantDocumentStatus = "documents_submitted";
+    snapshot.submittedAt = Date.now();
+  }
   snapshot.startedAt = snapshot.startedAt ?? Date.now();
-  if (!body.draft) snapshot.submittedAt = Date.now();
 
   await persistSnapshot(store, record.requesterPhone, record.requesterRole, snapshot);
 

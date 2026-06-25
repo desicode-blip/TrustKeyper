@@ -116,6 +116,7 @@ import {
   getStoredDocumentUploadInvites,
 } from "@/lib/agreementDocumentUploadStore";
 import { syncTenantDocumentUploadStatus, TENANT_DOCUMENT_STATUS_UPDATED_EVENT } from "@/lib/tenantDocumentUploadStatus";
+import { DOCUMENT_SUBMISSION_SYNC_EVENT } from "@/lib/documentSubmissionSync";
 import {
   applyReceivedInviteToAgreementDocs,
   TenantSubmittedDocumentsModal,
@@ -1070,10 +1071,12 @@ function Step3Documents({
     const onStatus = () => void refreshReceivedDocuments();
     window.addEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onStatus);
     window.addEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onStatus);
+    window.addEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, onStatus);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onStatus);
       window.removeEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onStatus);
+      window.removeEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, onStatus);
     };
   }, [applyReceivedInvites, refreshReceivedDocuments]);
 
@@ -2163,6 +2166,7 @@ export default function GenerateAgreement() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("resume") !== "1") return;
+    const focusToken = params.get("focusToken");
     const d = loadAgreementWorkflowDraft();
     if (!d) return;
     try {
@@ -2180,6 +2184,20 @@ export default function GenerateAgreement() {
       setDocumentsComplete(!!d.documentsComplete);
       setDocumentPersons(d.documentPersons ?? []);
       setDocumentStepPersonIdx(d.documentStepPersonIdx ?? 0);
+      if (focusToken && d.documentPersons?.length) {
+        const phoneLast10 = (phone: string) => phone.replace(/\D/g, "").slice(-10);
+        const focusIdx = d.documentPersons.findIndex(
+          (person) =>
+            person.documentUploadToken === focusToken ||
+            getStoredDocumentUploadInvites().some(
+              (invite) =>
+                invite.token === focusToken &&
+                phoneLast10(invite.tenantPhone) === phoneLast10(person.contact),
+            ),
+        );
+        setStep(3);
+        if (focusIdx >= 0) setDocumentStepPersonIdx(focusIdx);
+      }
       setStartDate(d.startDate ?? "");
       setMonthlyRent(d.monthlyRent ?? "");
       setSecurityDeposit(d.securityDeposit ?? "");
@@ -2199,6 +2217,24 @@ export default function GenerateAgreement() {
     } catch {
       /* ignore */
     }
+  }, []);
+
+  useEffect(() => {
+    const applyDraftSync = () => {
+      const draft = loadAgreementWorkflowDraft();
+      if (!draft || draft.sentCompleted) return;
+      setDocumentPersons(draft.documentPersons ?? []);
+      setDocumentsComplete(!!draft.documentsComplete);
+      if (draft.selectedTenants.length > 0) {
+        setSelectedTenants(draft.selectedTenants);
+      }
+      if (draft.selectedPropertyId) {
+        const prop = getProperties().find((row) => row.id === draft.selectedPropertyId) ?? null;
+        if (prop) setSelectedProperty(prop);
+      }
+    };
+    window.addEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, applyDraftSync);
+    return () => window.removeEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, applyDraftSync);
   }, []);
 
   // Load edit draft if coming from Documents → Edit Details
