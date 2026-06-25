@@ -44,6 +44,15 @@ function normalizePhoneDigits(phone: string): string {
   return phone.replace(/\D/g, "").slice(-10);
 }
 
+function sanitizeDocumentMeta(meta?: BrokerDocumentMeta): BrokerDocumentMeta | undefined {
+  if (!meta?.fileName) return meta ? { ...meta, dataUrl: undefined } : undefined;
+  return {
+    fileName: meta.fileName,
+    fileSize: meta.fileSize,
+    uploadedAt: meta.uploadedAt,
+  };
+}
+
 export function getBrokerProfile(): BrokerProfile {
   try {
     const raw = getItem("profile");
@@ -67,6 +76,8 @@ export function saveBrokerProfile(profile: BrokerProfile): void {
     const normalized = {
       ...profile,
       phone: normalizePhoneDigits(profile.phone),
+      aadhaar: sanitizeDocumentMeta(profile.aadhaar),
+      pan: sanitizeDocumentMeta(profile.pan),
     };
     const payload = JSON.stringify(normalized);
     setItem("profile", payload);
@@ -94,29 +105,21 @@ export function saveBrokerProfileDocument(
     return;
   }
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const current = getBrokerProfile();
-      const meta: BrokerDocumentMeta = {
-        fileName: file.name,
-        fileSize: file.size,
-        uploadedAt: Date.now(),
-        dataUrl: typeof reader.result === "string" ? reader.result : undefined,
-      };
-      saveBrokerProfile({
-        ...current,
-        [kind]: meta,
-      });
-      callbacks?.onSuccess?.();
-    } catch {
-      callbacks?.onError?.("Could not save document. Storage may be full.");
-    }
-  };
-  reader.onerror = () => {
+  try {
+    const current = getBrokerProfile();
+    const meta: BrokerDocumentMeta = {
+      fileName: file.name,
+      fileSize: file.size,
+      uploadedAt: Date.now(),
+    };
+    saveBrokerProfile({
+      ...current,
+      [kind]: meta,
+    });
+    callbacks?.onSuccess?.();
+  } catch {
     callbacks?.onError?.("Could not read the file. Please try again.");
-  };
-  reader.readAsDataURL(file);
+  }
 }
 
 export function removeBrokerProfileDocument(kind: BrokerDocumentKind): void {
