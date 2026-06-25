@@ -2,6 +2,14 @@ import { randomUUID } from "node:crypto";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Razorpay from "razorpay";
 import { json } from "./http.js";
+import {
+  attachTransferToRentPayment,
+  readActivationStatus,
+  readLinkedAccountId,
+  readProductId,
+  updateRecipientValidationStatus,
+  validationStatusForRouteWebhook,
+} from "./razorpayRouteHelpers.js";
 import { getPool } from "./vercelSyncDb.js";
 
 type RazorpayWebhookEvent = {
@@ -12,6 +20,8 @@ type RazorpayWebhookEvent = {
     payment?: { entity: Record<string, unknown> };
     transfer?: { entity: Record<string, unknown> };
     order?: { entity: Record<string, unknown> };
+    account?: { entity: Record<string, unknown> };
+    product?: { entity: Record<string, unknown> };
   };
   created_at: number;
 };
@@ -110,6 +120,81 @@ async function markWebhookEvent(
   );
 }
 
+async function resolveTransferRentPaymentId(
+  razorpayTransferId: string,
+  transferEntity: Record<string, unknown> | undefined,
+): Promise<string | null> {
+  const found = await getPool().query<{ rent_payment_id: string }>(
+    `SELECT rent_payment_id
+     FROM public.rent_payment_transfers
+     WHERE razorpay_transfer_id = $1
+     LIMIT 1`,
+    [razorpayTransferId],
+  );
+  if (found.rows[0]) return found.rows[0].rent_payment_id;
+
+  const sourceOrderId = asString(transferEntity?.source);
+  if (!sourceOrderId) return null;
+
+  return attachTransferToRentPayment({
+    razorpayOrderId: sourceOrderId,
+    razorpayTransferId,
+    linkedAccountId: asString(transferEntity?.recipient),
+  });
+}
+
+async function handleRouteRecipientStatus(
+  event: RazorpayWebhookEvent,
+  razorpayEventId: string,
+): Promise<void> {
+  const accountEntity = event.payload.account?.entity;
+  const productEntity = event.payload.product?.entity;
+  const linkedAccountId =
+    readLinkedAccountId(accountEntity) ?? readLinkedAccountId(productEntity);
+  const productId = readProductId(productEntity);
+  const activationStatus = readActivationStatus(productEntity) ?? readActivationStatus(accountEntity);
+  const validationStatus = validationStatusForRouteWebhook(event.event, activationStatus);
+
+  if (!validationStatus) {
+    await markWebhookEvent(razorpayEventId, { processingStatus: "ignored" });
+    return;
+  }
+
+  const updated = await updateRecipientValidationStatus({
+    linkedAccountId,
+    productId,
+    validationStatus,
+  });
+
+  await markWebhookEvent(razorpayEventId, {
+    processingStatus: updated > 0 ? "processed" : "ignored",
+  });
+}
+
+async function handleTransferCreated(
+  event: RazorpayWebhookEvent,
+  razorpayEventId: string,
+): Promise<string | null> {
+  const transfer = event.payload.transfer?.entity;
+  const razorpayTransferId = asString(transfer?.id);
+  const sourceOrderId = asString(transfer?.source);
+
+  let rentPaymentId: string | null = null;
+  if (razorpayTransferId && sourceOrderId) {
+    rentPaymentId = await attachTransferToRentPayment({
+      razorpayOrderId: sourceOrderId,
+      razorpayTransferId,
+      linkedAccountId: asString(transfer?.recipient),
+    });
+  }
+
+  await markWebhookEvent(razorpayEventId, {
+    processingStatus: "processed",
+    rentPaymentId,
+  });
+  return rentPaymentId;
+}
+
 async function handlePaymentCaptured(
   event: RazorpayWebhookEvent,
   razorpayEventId: string,
@@ -162,6 +247,8 @@ async function handleTransferProcessed(
   let rentPaymentId: string | null = null;
 
   if (razorpayTransferId) {
+    rentPaymentId = await resolveTransferRentPaymentId(razorpayTransferId, transfer);
+
     const found = await getPool().query<{
       id: string;
       rent_payment_id: string;
@@ -175,7 +262,6 @@ async function handleTransferProcessed(
     );
     const row = found.rows[0];
     if (row) {
-      rentPaymentId = row.rent_payment_id;
       if (row.status !== "processed") {
         await getPool().query(
           `UPDATE public.rent_payment_transfers
@@ -264,6 +350,8 @@ async function handleTransferFailed(
   let rentPaymentId: string | null = null;
 
   if (razorpayTransferId) {
+    rentPaymentId = await resolveTransferRentPaymentId(razorpayTransferId, transfer);
+
     const found = await getPool().query<{ id: string; rent_payment_id: string }>(
       `SELECT id, rent_payment_id
        FROM public.rent_payment_transfers
@@ -299,6 +387,9 @@ async function processWebhookEvent(
     case "payment.captured":
       await handlePaymentCaptured(event, razorpayEventId);
       return;
+    case "transfer.created":
+      await handleTransferCreated(event, razorpayEventId);
+      return;
     case "transfer.processed":
       await handleTransferProcessed(event, razorpayEventId);
       return;
@@ -308,7 +399,19 @@ async function processWebhookEvent(
     case "transfer.failed":
       await handleTransferFailed(event, razorpayEventId);
       return;
+    case "product.route.activated":
+    case "product.route.on_hold":
+    case "product.route.needs_clarification":
+    case "product.route.activation.in_progress":
+    case "product.route.under_review":
+    case "product.route.rejected":
+      await handleRouteRecipientStatus(event, razorpayEventId);
+      return;
     default:
+      if (event.event.startsWith("product.route.")) {
+        await handleRouteRecipientStatus(event, razorpayEventId);
+        return;
+      }
       await markWebhookEvent(razorpayEventId, { processingStatus: "ignored" });
   }
 }
