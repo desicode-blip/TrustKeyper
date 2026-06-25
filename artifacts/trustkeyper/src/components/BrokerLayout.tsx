@@ -5,6 +5,7 @@ import { TrustKeyperFooter } from "@/components/TrustKeyperFooter";
 import { hasBankDetails, getBrokerProfile } from "@/lib/brokerProfile";
 import { BROKER_PENDING_FLOWS_EVENT, getPendingFlowItems } from "@/lib/brokerPendingFlows";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
+import { DocumentSubmissionNotificationHost } from "@/components/DocumentSubmissionNotificationHost";
 import {
   getActiveSession,
   logout,
@@ -101,6 +102,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
 
   return (
     <div className="min-h-screen w-full bg-[#F5F7FA] flex flex-col">
+      <DocumentSubmissionNotificationHost />
       {/* ── Top Header ─────────────────────────────────────────────────────── */}
       <header className="h-14 sm:h-[90px] bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-8 shrink-0 z-20 sticky top-0">
         <div className="flex items-center gap-3">

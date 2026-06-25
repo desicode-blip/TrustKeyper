@@ -11,7 +11,12 @@ import {
   getRecordedInviteStatus,
   OWNER_INVITES_UPDATED_EVENT,
 } from "@/lib/ownerTenants";
+import {
+  DOCUMENT_SUBMISSION_NOTIFICATION_EVENT,
+  getDocumentSubmissionNotifications,
+} from "@/lib/documentSubmissionNotifications";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
+import { DocumentSubmissionNotificationHost } from "@/components/DocumentSubmissionNotificationHost";
 import {
   getActiveSession,
   logout,
@@ -77,10 +82,12 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
     window.addEventListener("storage", refresh);
     window.addEventListener("focus", refresh);
     window.addEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
+    window.addEventListener(DOCUMENT_SUBMISSION_NOTIFICATION_EVENT, refresh);
     return () => {
       window.removeEventListener("storage", refresh);
       window.removeEventListener("focus", refresh);
       window.removeEventListener(OWNER_INVITES_UPDATED_EVENT, refresh);
+      window.removeEventListener(DOCUMENT_SUBMISSION_NOTIFICATION_EVENT, refresh);
     };
   }, []);
 
@@ -158,7 +165,22 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
       return [];
     });
 
-    return [...propertyEvents, ...agreementEvents, ...inviteEvents, ...accountEvent]
+    const documentSubmissionEvents = getDocumentSubmissionNotifications()
+      .filter((row) => row.requesterRole === "owner" && row.status !== "archived")
+      .map((row) => ({
+        id: row.id,
+        title: "Documents Submitted",
+        desc: `${row.tenantName} uploaded all requested documents`,
+        time: row.submittedAt,
+      }));
+
+    return [
+      ...documentSubmissionEvents,
+      ...propertyEvents,
+      ...agreementEvents,
+      ...inviteEvents,
+      ...accountEvent,
+    ]
       .sort((a, b) => b.time - a.time)
       .slice(0, 12);
   }, [ownerName, notificationEpoch]);
@@ -176,6 +198,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
 
   return (
     <div className="min-h-screen w-full bg-[#F5F7FA] flex flex-col">
+      <DocumentSubmissionNotificationHost />
       {/* ── Top Header ─────────────────────────────────────────────────────── */}
       <header className="h-14 sm:h-[90px] bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-8 shrink-0 z-20 sticky top-0">
         <div className="flex items-center gap-3">

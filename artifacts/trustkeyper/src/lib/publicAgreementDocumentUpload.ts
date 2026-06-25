@@ -61,6 +61,7 @@ export type SubmitDocumentUploadPayload = {
   >;
   bankDetails?: StoredBankDetails;
   draft?: boolean;
+  removeDocumentIds?: ExtendedDocumentId[];
 };
 
 export async function submitDocumentUploadInvite(

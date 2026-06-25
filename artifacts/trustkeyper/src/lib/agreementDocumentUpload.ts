@@ -11,6 +11,7 @@ import {
   upsertStoredDocumentUploadInvite,
   type StoredDocumentUploadInvite,
 } from "./agreementDocumentUploadStore";
+import { processIncomingDocumentSubmissions } from "./documentSubmissionSync";
 
 export function buildDocumentUploadShareMessage(tenantName: string, link: string): string {
   return `Hi ${tenantName},
@@ -207,6 +208,7 @@ export async function fetchRequesterDocumentUploadInvites(): Promise<
     if (!res.ok || !json.invites) return { ok: false, error: "unauthorized" };
 
     mergeStoredDocumentUploadInvites(json.invites);
+    processIncomingDocumentSubmissions(json.invites, session.role);
     return { ok: true, invites: json.invites };
   } catch {
     return { ok: false, error: "network" };
@@ -236,6 +238,7 @@ export async function fetchRequesterDocumentUploadDetail(token: string): Promise
     if (!res.ok || !json.invite) return { ok: false, error: "unauthorized" };
 
     upsertStoredDocumentUploadInvite(json.invite);
+    processIncomingDocumentSubmissions([json.invite], session.role);
     return { ok: true, invite: json.invite };
   } catch {
     return { ok: false, error: "network" };
