@@ -209,14 +209,21 @@ export default function TenantDocumentUpload() {
       syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_in_progress", { token });
     }
 
-    setModalPhase("account_success");
+    openDocumentFlowAfterVerification(nextSession, invite);
+  };
+
+  const openDocumentFlowAfterVerification = (
+    nextSession: TenantDocumentUploadSession,
+    payload: DocumentUploadInvitePayload,
+  ) => {
+    setSession(nextSession);
+    setPagePhase(shouldOpenDocumentManagement(payload.status) ? "management" : "upload");
   };
 
   const handleAccountSuccessDone = () => {
     if (!invite) return;
     const nextSession = session ?? buildUploadSession(token, invite);
-    setSession(nextSession);
-    setPagePhase(shouldOpenDocumentManagement(invite.status) ? "management" : "upload");
+    openDocumentFlowAfterVerification(nextSession, invite);
   };
 
   const handleFlowDone = async () => {
@@ -261,6 +268,9 @@ export default function TenantDocumentUpload() {
       {pagePhase === "modal" && invite ? (
         <TenantBrokerOnboardModal
           phase={modalPhase}
+          flowContext="document_upload"
+          requesterName={invite.requesterName}
+          propertyLabel={invite.propertyLabel}
           name={name}
           phone={phone}
           onNameChange={setName}

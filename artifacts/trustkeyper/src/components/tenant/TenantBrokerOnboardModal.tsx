@@ -18,10 +18,57 @@ import { cn } from "@/lib/utils";
 
 export type TenantOnboardModalPhase = "welcome" | "otp" | "account_success";
 
+export type TenantOnboardModalFlowContext = "broker_onboard" | "document_upload";
+
+export interface TenantOnboardModalCopy {
+  welcomeTitle: string;
+  welcomeDescription: string;
+  consentLabel: string;
+  successTitle: string;
+  successDescription: string;
+  successCta: string;
+}
+
+export function resolveTenantOnboardModalCopy(input: {
+  flowContext: TenantOnboardModalFlowContext;
+  requesterName?: string;
+  propertyLabel?: string;
+}): TenantOnboardModalCopy {
+  if (input.flowContext === "document_upload") {
+    const requester = input.requesterName?.trim() || "Your property manager";
+    const property = input.propertyLabel?.trim();
+    return {
+      welcomeTitle: "Upload your documents",
+      welcomeDescription: property
+        ? `${requester} has requested documents for ${property}. Verify your phone to continue securely.`
+        : `${requester} has requested documents for your rental application. Verify your phone to continue securely.`,
+      consentLabel: "I agree to share my documents with the property owner and broker",
+      successTitle: "Phone verified",
+      successDescription:
+        "You can now upload the documents needed to continue your agreement process.",
+      successCta: "Continue to documents",
+    };
+  }
+
+  return {
+    welcomeTitle: "Welcome to TrustKeyper",
+    welcomeDescription:
+      "Help us understand your rental requirements so we can find properties that best match your needs.",
+    consentLabel: "I agree to share my contact details with the Owner and Broker",
+    successTitle: "Account Verified",
+    successDescription:
+      "Let's capture your rental preferences so your broker can find the right property.",
+    successCta: "Continue",
+  };
+}
+
 export function TenantBrokerOnboardModal({
   phase,
   name,
   phone,
+  flowContext = "broker_onboard",
+  requesterName,
+  propertyLabel,
   onNameChange,
   onPhoneChange,
   onClose,
@@ -35,6 +82,9 @@ export function TenantBrokerOnboardModal({
   phase: TenantOnboardModalPhase;
   name: string;
   phone: string;
+  flowContext?: TenantOnboardModalFlowContext;
+  requesterName?: string;
+  propertyLabel?: string;
   onNameChange: (value: string) => void;
   onPhoneChange: (value: string) => void;
   onClose?: () => void;
@@ -45,6 +95,7 @@ export function TenantBrokerOnboardModal({
   sendingOtp: boolean;
   onSendOtp: () => Promise<boolean>;
 }) {
+  const copy = resolveTenantOnboardModalCopy({ flowContext, requesterName, propertyLabel });
   const [agreed, setAgreed] = useState(false);
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(0);
@@ -153,24 +204,19 @@ export function TenantBrokerOnboardModal({
             <div className="mx-auto w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
               <CheckCircle2 className="w-8 h-8 text-emerald-500" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">Account Verified</h2>
-            <p className="text-sm text-gray-500 mb-6">
-              Let&apos;s capture your rental preferences so your broker can find the right property.
-            </p>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">{copy.successTitle}</h2>
+            <p className="text-sm text-gray-500 mb-6">{copy.successDescription}</p>
             <Button type="button" className={authPrimaryButtonClass} onClick={onAccountSuccessDone}>
-              Continue
+              {copy.successCta}
             </Button>
           </div>
         ) : (
           <div className="p-6 sm:p-8">
             <div className="border-b border-gray-100 pb-5 mb-5 pr-8">
               <h2 id="tenant-onboard-modal-title" className="text-lg font-semibold text-gray-900 mb-1">
-                Welcome to TrustKeyper
+                {copy.welcomeTitle}
               </h2>
-              <p className="text-sm text-gray-500">
-                Help us understand your rental requirements so we can find properties that best match
-                your needs.
-              </p>
+              <p className="text-sm text-gray-500">{copy.welcomeDescription}</p>
             </div>
 
             <div className="space-y-4 mb-6">
@@ -252,9 +298,7 @@ export function TenantBrokerOnboardModal({
               ) : (
                 <label className="flex items-start gap-3 cursor-pointer">
                   <Checkbox checked={agreed} onCheckedChange={(v) => setAgreed(v === true)} />
-                  <span className="text-sm text-gray-600 leading-snug">
-                    I agree to share my contact details with the Owner and Broker
-                  </span>
+                  <span className="text-sm text-gray-600 leading-snug">{copy.consentLabel}</span>
                 </label>
               )}
             </div>
