@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
 import { json, readJsonBody } from "./http.js";
 import { getRazorpayClient } from "./razorpayClient.js";
+import { extractTransfersFromOrder } from "./razorpayRouteHelpers.js";
 import { assertPaymentAuth } from "./syncAuth.js";
 import { getPool, normalizePhone } from "./vercelSyncDb.js";
 
@@ -48,6 +49,7 @@ type RazorpayErrorShape = {
 
 type RazorpayOrderShape = {
   id: string;
+  transfers?: unknown;
 };
 
 type TransferSpec = {
@@ -157,6 +159,7 @@ async function persistRentPayment(
     commissionPaise: number;
     ownerSettlementPaise: number;
     razorpayOrderId: string;
+    razorpayTransferIds: string[];
     ownerName: string;
     role: string;
   },
@@ -218,6 +221,8 @@ async function persistRentPayment(
       [rentPaymentId],
     );
 
+    const primaryTransferId = params.razorpayTransferIds[0] ?? null;
+
     await client.query(
       `INSERT INTO public.rent_payment_transfers (
          id,
@@ -230,7 +235,7 @@ async function persistRentPayment(
          status
        ) VALUES (
          gen_random_uuid()::text,
-         $1, $2, $3, $4, $5, NULL, 'pending'
+         $1, $2, $3, $4, $5, $6, 'pending'
        )`,
       [
         rentPaymentId,
@@ -238,8 +243,19 @@ async function persistRentPayment(
         params.ownerName,
         params.role,
         params.ownerSettlementPaise,
+        primaryTransferId,
       ],
     );
+
+    if (params.razorpayTransferIds.length > 0) {
+      await client.query(
+        `UPDATE public.rent_payments
+         SET razorpay_transfer_ids = $2::jsonb,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [rentPaymentId, JSON.stringify(params.razorpayTransferIds)],
+      );
+    }
 
     await client.query("COMMIT");
     return rentPaymentId;
@@ -368,6 +384,9 @@ export async function handlePaymentCreateOrderRequest(
       return;
     }
 
+    const orderTransfers = extractTransfersFromOrder(order);
+    const razorpayTransferIds = orderTransfers.map((t) => t.id);
+
     let rentPaymentId: string;
     try {
       rentPaymentId = await persistRentPayment({
@@ -380,6 +399,7 @@ export async function handlePaymentCreateOrderRequest(
         commissionPaise,
         ownerSettlementPaise,
         razorpayOrderId: order.id,
+        razorpayTransferIds,
         ownerName: agreement.owner_name,
         role: body.role,
       });
