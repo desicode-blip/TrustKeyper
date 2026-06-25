@@ -43,6 +43,7 @@ import {
   type TenantOnboardL2Draft,
 } from "@/lib/tenantOnboardRequirements";
 import { CITY_LOCALITIES } from "@/lib/tenants";
+import { getTenantAccountProfile, saveTenantAccountProfile, saveTenantRentalPreferences } from "@/lib/tenantProfile";
 import { cn } from "@/lib/utils";
 
 type Step = 1 | 2;
@@ -215,6 +216,24 @@ export function TenantOnboardRequirementFlow({
         setSubmitError(result.error);
         return;
       }
+      saveTenantRentalPreferences(`+91${phoneDigits}`, {
+        occupancyType: occupancyType === "Other" ? occupancyOther.trim() : occupancyType,
+        occupancyOther: occupancyType === "Other" ? occupancyOther.trim() : undefined,
+        moveInTimeline,
+        foodPreference,
+        sharingPreference,
+        roommatePreference: roommateGender || undefined,
+        propertyType: propertyType === "Other" ? propertyTypeOther.trim() : propertyType,
+        city,
+        localities,
+      });
+      const currentProfile = getTenantAccountProfile();
+      saveTenantAccountProfile({
+        ...currentProfile,
+        name: session.name.trim() || currentProfile.name,
+        phone: phoneDigits,
+        gender: bachelorGender || currentProfile.gender,
+      });
       setBrokerName(result.brokerName);
       setSuccessOpen(true);
     } finally {

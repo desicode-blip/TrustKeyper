@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import TenantLayout from "@/components/TenantLayout";
+import { TenantDashboardProfileCard } from "@/components/tenant/TenantDashboardProfileCard";
 import { TenantDashboardPropertyCard } from "@/components/tenant/TenantDashboardPropertyCard";
 import { TenantProgressTracker } from "@/components/tenant/TenantProgressTracker";
 import { TenantStatusNotificationCard } from "@/components/tenant/TenantStatusNotificationCard";
 import { TENANT_DOCUMENT_STATUS_UPDATED_EVENT } from "@/lib/tenantDocumentUploadStatus";
+import { TENANT_PROFILE_UPDATED_EVENT } from "@/lib/tenantProfile";
 import {
   getActiveTenantWorkspace,
   getTenantDisplayName,
@@ -25,9 +27,11 @@ export default function TenantDashboard() {
     refreshWorkspace();
     const onUpdate = () => refreshWorkspace();
     window.addEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onUpdate);
+    window.addEventListener(TENANT_PROFILE_UPDATED_EVENT, onUpdate);
     window.addEventListener("storage", onUpdate);
     return () => {
       window.removeEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onUpdate);
+      window.removeEventListener(TENANT_PROFILE_UPDATED_EVENT, onUpdate);
       window.removeEventListener("storage", onUpdate);
     };
   }, []);
@@ -49,6 +53,8 @@ export default function TenantDashboard() {
           <TenantDashboardPropertyCard workspace={workspace} loading={loading} />
           <TenantStatusNotificationCard notification={notification} loading={loading} />
         </div>
+
+        <TenantDashboardProfileCard loading={loading} />
       </div>
     </TenantLayout>
   );
