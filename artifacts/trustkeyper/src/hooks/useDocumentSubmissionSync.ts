@@ -10,7 +10,7 @@ import {
 import { DOCUMENT_SUBMISSION_SYNC_EVENT } from "@/lib/documentSubmissionSync";
 import { getActiveSession } from "@/lib/storageKeys";
 
-const POLL_INTERVAL_MS = 8000;
+const POLL_INTERVAL_MS = 60_000;
 
 export function useDocumentSubmissionSync(): {
   activeNotification: DocumentSubmissionNotification | null;
