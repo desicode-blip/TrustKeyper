@@ -106,6 +106,12 @@ async function adaptProperties(phone: string, role: string, value: string): Prom
       tenantsPreferred: item.tenantsPreferred ?? [],
     });
 
+    const imagesArray = Array.isArray(item.images)
+      ? item.images.filter((img): img is string => typeof img === "string")
+      : [];
+    const imagesUrls = imagesArray.filter((img) => img.startsWith("https://"));
+    const imagesLegacy = imagesArray.filter((img) => img.startsWith("data:"));
+
     await getPool().query(
       `INSERT INTO public.properties (
         id, account_phone, account_role, nickname, address, area, city, pincode, country,
@@ -120,7 +126,7 @@ async function adaptProperties(phone: string, role: string, value: string): Prom
         $16, $17, $18, $19, $20, $21, $22,
         $23, $24, $25, $26, $27,
         $28, $29, $30, $31, $32,
-        NULL, $33::jsonb, $34::jsonb, NOW()
+        $33::jsonb, $34::jsonb, $35::jsonb, NOW()
       )
       ON CONFLICT (id) DO UPDATE SET
         account_phone = EXCLUDED.account_phone,
@@ -191,7 +197,8 @@ async function adaptProperties(phone: string, role: string, value: string): Prom
         str(item.availableFrom),
         str(item.status, "Draft"),
         optionalStr(item.uploadedBy),
-        jsonb(item.images ?? []),
+        jsonb(imagesUrls.length > 0 ? imagesUrls : null),
+        jsonb(imagesLegacy.length > 0 ? imagesLegacy : null),
         listingDetails,
       ],
     );

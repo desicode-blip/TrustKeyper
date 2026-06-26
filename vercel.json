@@ -35,6 +35,9 @@
     },
     "api/tenant-workflow.ts": {
       "maxDuration": 30
+    },
+    "api/upload-property-image.ts": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
