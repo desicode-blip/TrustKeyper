@@ -1072,7 +1072,7 @@ function Step3Documents({
   useEffect(() => {
     applyReceivedInvites(getStoredDocumentUploadInvites());
     void refreshReceivedDocuments();
-    const interval = window.setInterval(() => void refreshReceivedDocuments(), 15000);
+    const interval = window.setInterval(() => void refreshReceivedDocuments(), 60_000);
     const onStatus = () => void refreshReceivedDocuments();
     window.addEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onStatus);
     window.addEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onStatus);
