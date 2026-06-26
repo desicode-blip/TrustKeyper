@@ -190,6 +190,11 @@ export function saveTenantWorkspaceFromInvite(
     securityDeposit = linkedProperty.securityDeposit;
     propertyType = linkedProperty.propertyType;
     ownerName = linkedProperty.ownerName;
+  } else {
+    propertyImage = invite.propertyImage;
+    monthlyRent = invite.monthlyRent;
+    propertyAddress = invite.propertyAddress;
+    securityDeposit = invite.securityDeposit;
   }
 
   const propertyTitle =

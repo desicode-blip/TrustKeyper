@@ -72,6 +72,7 @@ const sendForESignBodySchema = z.object({
   propertyId: z.string().optional(),
   propertyLabel: z.string().trim().min(1),
   propertyAddress: z.string().optional(),
+  propertyImage: z.string().optional(),
   monthlyRent: z.string().optional(),
   securityDeposit: z.string().optional(),
   propertyType: z.string().optional(),
@@ -94,6 +95,7 @@ const patchWorkspaceBodySchema = z.object({
   propertyLabel: z.string().trim().min(1).optional(),
   propertyId: z.string().optional(),
   propertyAddress: z.string().optional(),
+  propertyImage: z.string().optional(),
   monthlyRent: z.string().optional(),
   securityDeposit: z.string().optional(),
   propertyType: z.string().optional(),
@@ -333,6 +335,7 @@ type TenantWorkspaceRecord = {
   propertyId?: string;
   propertyLabel: string;
   propertyAddress?: string;
+  propertyImage?: string;
   monthlyRent?: string;
   securityDeposit?: string;
   propertyType?: string;
@@ -568,6 +571,7 @@ async function handleSendForESign(req: VercelRequest, res: VercelResponse): Prom
     propertyId: body.propertyId,
     propertyLabel: body.propertyLabel,
     propertyAddress: body.propertyAddress,
+    propertyImage: body.propertyImage,
     monthlyRent: body.monthlyRent,
     securityDeposit: body.securityDeposit,
     propertyType: body.propertyType,
@@ -642,6 +646,7 @@ async function handlePatchWorkspace(req: VercelRequest, res: VercelResponse): Pr
       propertyLabel,
       propertyId: patchBody.propertyId,
       propertyAddress: patchBody.propertyAddress,
+      propertyImage: patchBody.propertyImage,
       monthlyRent: patchBody.monthlyRent,
       securityDeposit: patchBody.securityDeposit,
       propertyType: patchBody.propertyType,

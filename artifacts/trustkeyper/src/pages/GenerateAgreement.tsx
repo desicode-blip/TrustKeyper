@@ -113,6 +113,8 @@ import {
 import {
   createAgreementDocumentUploadInvite,
   documentUploadLinkFromToken,
+  applyDocumentUploadInvitesToPersons,
+  fetchEnrichedRequesterDocumentUploadInvites,
   fetchRequesterDocumentUploadDetail,
   fetchRequesterDocumentUploadInvites,
   resolveExistingDocumentUploadInvite,
@@ -1002,6 +1004,10 @@ function Step3Documents({
   onPersonIdxChange,
   propertyId,
   propertyLabel,
+  propertyImage,
+  propertyAddress,
+  monthlyRent,
+  securityDeposit,
   requesterName,
   requesterRole,
 }: {
@@ -1015,6 +1021,10 @@ function Step3Documents({
   onPersonIdxChange?: (idx: number) => void;
   propertyId?: string;
   propertyLabel?: string;
+  propertyImage?: string;
+  propertyAddress?: string;
+  monthlyRent?: string;
+  securityDeposit?: string;
   requesterName: string;
   requesterRole: "owner" | "broker";
 }) {
@@ -1200,6 +1210,10 @@ function Step3Documents({
         requesterRole,
         propertyId,
         propertyLabel,
+        propertyImage,
+        propertyAddress,
+        monthlyRent,
+        securityDeposit,
       });
 
       if (!result.ok) {
@@ -2558,6 +2572,32 @@ export default function GenerateAgreement() {
     setDocumentsComplete(areAgreementDocumentsComplete(persons));
   }, []);
 
+  useEffect(() => {
+    if (step < 3 || step > 6) return;
+
+    const refreshTenantDocuments = async () => {
+      const invites = await fetchEnrichedRequesterDocumentUploadInvites();
+      setDocumentPersons((prev) => {
+        const next = applyDocumentUploadInvitesToPersons(prev, invites);
+        setDocumentsComplete(areAgreementDocumentsComplete(next));
+        return next;
+      });
+    };
+
+    void refreshTenantDocuments();
+    const interval = window.setInterval(() => void refreshTenantDocuments(), 15000);
+    const onStatus = () => void refreshTenantDocuments();
+    window.addEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onStatus);
+    window.addEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onStatus);
+    window.addEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, onStatus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onStatus);
+      window.removeEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onStatus);
+      window.removeEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, onStatus);
+    };
+  }, [step]);
+
   const handleSubmit = () => {
     if (!selectedProperty) return;
     setSubmitting(true);
@@ -2607,6 +2647,11 @@ export default function GenerateAgreement() {
     void shareRentalAgreementPdf(agreementInput, propertyTitle, waPhone, whatsAppInviteHref, shareMessage);
 
     void (async () => {
+      const enrichedInvites = await fetchEnrichedRequesterDocumentUploadInvites();
+      const refreshedPersons = applyDocumentUploadInvitesToPersons(documentPersons, enrichedInvites);
+      setDocumentPersons(refreshedPersons);
+      setDocumentsComplete(areAgreementDocumentsComplete(refreshedPersons));
+
       const mode = brokerageMode as Agreement["brokerageMode"];
       const customText =
         isOwnerFlow && showPaymentSplit
@@ -2670,18 +2715,15 @@ export default function GenerateAgreement() {
       let nextWorkflowError: string | null = null;
 
       if (session && session.role === requesterRole) {
-        const synced = await pushAccountKeyToCloud(
+        void pushAccountKeyToCloud(
           session.phone,
           requesterRole,
           "agreements",
           getAgreementsSyncPayload(),
         );
-        if (!synced) {
-          nextWorkflowError = "Could not sync agreement to the server. Try again from Agreements.";
-        }
       }
 
-      if (!nextWorkflowError && requesterPhone && tenantPhone.length === 10) {
+      if (requesterPhone && tenantPhone.length === 10) {
         const workflowResult = await sendAgreementForESign({
           phone: requesterPhone,
           role: requesterRole,
@@ -2691,6 +2733,7 @@ export default function GenerateAgreement() {
           propertyId: selectedProperty.id,
           propertyLabel: propertyTitle,
           propertyAddress,
+          propertyImage: selectedProperty.images?.[0],
           monthlyRent,
           securityDeposit,
           propertyType: selectedProperty.propertyType,
@@ -2841,6 +2884,16 @@ export default function GenerateAgreement() {
           onPersonIdxChange={setDocumentStepPersonIdx}
           propertyId={selectedProperty?.id}
           propertyLabel={selectedProperty ? getPropertyTitle(selectedProperty) : undefined}
+          propertyImage={selectedProperty?.images?.[0]}
+          propertyAddress={
+            selectedProperty
+              ? [selectedProperty.address, selectedProperty.area, selectedProperty.city]
+                  .filter(Boolean)
+                  .join(", ")
+              : undefined
+          }
+          monthlyRent={selectedProperty?.monthlyRent}
+          securityDeposit={selectedProperty?.securityDeposit}
           requesterName={
             isOwnerFlow
               ? ownerDisplayName || ownerName

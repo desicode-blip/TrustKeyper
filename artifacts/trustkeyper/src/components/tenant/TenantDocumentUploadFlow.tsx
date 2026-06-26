@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   Eye,
   Loader2,
-  MapPin,
   Plus,
   Trash2,
   Upload,
@@ -37,6 +36,8 @@ import {
   resolveTenantDocumentDataUrl,
 } from "@/lib/tenantProfileDocument";
 import { saveTenantWorkspaceFromInvite } from "@/lib/tenantWorkspace";
+import type { TenantWorkspaceRecord } from "@/lib/tenantWorkspace";
+import { TenantDashboardPropertyCard } from "@/components/tenant/TenantDashboardPropertyCard";
 import {
   clearTenantDocumentUploadDraft,
   getTenantDocumentUploadDraft,
@@ -60,6 +61,22 @@ function fmtFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function inviteToPropertyWorkspace(invite: DocumentUploadInvitePayload): TenantWorkspaceRecord {
+  return {
+    phone: invite.tenantPhone,
+    tenantName: invite.tenantName,
+    propertyId: invite.propertyId,
+    propertyLabel: invite.propertyLabel ?? "Assigned Property",
+    propertyAddress: invite.propertyAddress,
+    propertyImage: invite.propertyImage,
+    monthlyRent: invite.monthlyRent,
+    securityDeposit: invite.securityDeposit,
+    requesterName: invite.requesterName,
+    requesterRole: invite.requesterRole,
+    updatedAt: Date.now(),
+  };
 }
 
 export function TenantDocumentUploadFlow({
@@ -538,14 +555,14 @@ export function TenantDocumentUploadFlow({
 
       <main className="flex-1 px-4 sm:px-6 py-6 max-w-2xl mx-auto w-full">
         {invite.propertyLabel ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-4 mb-6 flex gap-3 items-center">
-            <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-              <MapPin size={20} className="text-gray-400" />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900">{invite.propertyLabel}</p>
-              <p className="text-xs text-gray-500">Requested by {invite.requesterName}</p>
-            </div>
+          <div className="mb-6">
+            <TenantDashboardPropertyCard
+              workspace={inviteToPropertyWorkspace(invite)}
+              workflowStage="documents_requested"
+            />
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              Requested by {invite.requesterName}
+            </p>
           </div>
         ) : null}
 

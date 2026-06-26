@@ -77,4 +77,21 @@ describe("agreementDocumentPersons", () => {
     expect(areAgreementDocumentsComplete(partial)).toBe(false);
     expect(areAgreementDocumentsComplete(complete)).toBe(true);
   });
+
+  it("treats link_sent tenant docs as incomplete", () => {
+    const linkSentTenant: AgreementPersonDraftState[] = [
+      {
+        name: "Tenant One",
+        contact: "+919811112222",
+        personLabel: "TENANT 1",
+        docs: [
+          { id: "aadhaar", label: "Aadhaar Card", status: "link_sent" },
+          { id: "pan", label: "PAN Card", status: "link_sent" },
+          { id: "bank", label: "Bank Account Details", status: "link_sent" },
+        ],
+      },
+    ];
+
+    expect(areAgreementDocumentsComplete(linkSentTenant)).toBe(false);
+  });
 });
