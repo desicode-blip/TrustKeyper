@@ -182,6 +182,9 @@ importers:
       '@workspace/tenant-document-upload':
         specifier: workspace:*
         version: link:lib/tenant-document-upload
+      '@workspace/tenant-workflow':
+        specifier: workspace:*
+        version: link:lib/tenant-workflow
       pg:
         specifier: ^8.20.0
         version: 8.20.0
@@ -252,6 +255,12 @@ importers:
       '@workspace/sync-store':
         specifier: workspace:*
         version: link:../../lib/sync-store
+      '@workspace/tenant-document-upload':
+        specifier: workspace:*
+        version: link:../../lib/tenant-document-upload
+      '@workspace/tenant-workflow':
+        specifier: workspace:*
+        version: link:../../lib/tenant-workflow
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -617,6 +626,9 @@ importers:
       '@workspace/tenant-document-upload':
         specifier: workspace:*
         version: link:../../lib/tenant-document-upload
+      '@workspace/tenant-workflow':
+        specifier: workspace:*
+        version: link:../../lib/tenant-workflow
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -797,6 +809,15 @@ importers:
         version: 25.6.0
 
   lib/tenant-document-upload:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.6.2
+      typescript:
+        specifier: ~5.9.2
+        version: 5.9.3
+
+  lib/tenant-workflow:
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

@@ -79,15 +79,34 @@ describe("tenantEcosystem", () => {
     expect(enriched.propertyImage).toBe("https://example.com/prestige.jpg");
   });
 
-  it("marks property missing when id cannot be resolved", () => {
+  it("marks property missing when id cannot be resolved and snapshot is incomplete", () => {
     const enriched = enrichTenantWorkspaceEcosystem({
       phone: "9876543210",
       tenantName: "Meena",
       propertyId: "missing-prop",
-      propertyLabel: "Old Label",
+      propertyLabel: "",
       updatedAt: Date.now(),
     });
 
     expect(enriched.propertyMissing).toBe(true);
+  });
+
+  it("keeps server workspace snapshot when local property list is empty", () => {
+    const enriched = enrichTenantWorkspaceEcosystem({
+      phone: "9876543210",
+      tenantName: "Meena",
+      propertyId: "missing-prop",
+      propertyLabel: "Prestige Unit 1806",
+      propertyAddress: "Financial District, Hyderabad",
+      monthlyRent: "13000",
+      requesterName: "Demo Broker",
+      requesterRole: "broker",
+      updatedAt: Date.now(),
+    });
+
+    expect(enriched.propertyMissing).toBe(false);
+    expect(enriched.propertyLabel).toBe("Prestige Unit 1806");
+    expect(enriched.monthlyRent).toBe("13000");
+    expect(enriched.brokerName).toBe("Demo Broker");
   });
 });

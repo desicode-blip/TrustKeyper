@@ -30,6 +30,7 @@ import {
   Eye,
   Clock,
   AlertTriangle,
+  AlertCircle,
   Link2,
   QrCode,
   Split,
@@ -55,7 +56,9 @@ import { FlowDateInput } from "@/components/flow/FlowDateInput";
 import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { getProperties, getPropertyTitle, updateProperty, type Property } from "@/lib/properties";
 import { ensureTenantFromAgreement, getTenants, resolveTenantKyc, type Tenant } from "@/lib/tenants";
-import { addAgreement, getAgreements, updateAgreement, type Agreement } from "@/lib/agreements";
+import { addAgreement, getAgreements, getAgreementsSyncPayload, updateAgreement, type Agreement } from "@/lib/agreements";
+import { pushAccountKeyToCloud } from "@/lib/cloudSync";
+import { getActiveSession } from "@/lib/auth";
 import {
   generateRentalAgreementText,
   shareRentalAgreementPdf,
@@ -2070,28 +2073,52 @@ function Step6Review({
 
 // ─── Success Overlay ──────────────────────────────────────────────────────────
 
-function SuccessOverlay({ onDone, isOwnerFlow }: { onDone: () => void; isOwnerFlow: boolean }) {
+function SuccessOverlay({
+  onDone,
+  isOwnerFlow,
+  workflowError,
+}: {
+  onDone: () => void;
+  isOwnerFlow: boolean;
+  workflowError?: string | null;
+}) {
   useEffect(() => {
+    if (workflowError) return;
     const t = setTimeout(onDone, 2000);
     return () => clearTimeout(t);
-  }, [onDone]);
+  }, [onDone, workflowError]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl p-10 max-w-sm w-full mx-4 text-center">
-        <div className="w-20 h-20 rounded-full bg-accent/15 mx-auto mb-5 flex items-center justify-center">
-          <CheckCircle2 size={44} className="text-accent" />
+        <div
+          className={`w-20 h-20 rounded-full mx-auto mb-5 flex items-center justify-center ${
+            workflowError ? "bg-red-50" : "bg-accent/15"
+          }`}
+        >
+          {workflowError ? (
+            <AlertCircle size={44} className="text-red-600" />
+          ) : (
+            <CheckCircle2 size={44} className="text-accent" />
+          )}
         </div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Agreement Saved!</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          {workflowError ? "Agreement saved — tenant workflow issue" : "Agreement Saved!"}
+        </h2>
         <p className="text-sm text-gray-500 mb-4">
-          Your rental agreement details have been saved successfully. You can view and manage it from your Agreements page.
+          {workflowError
+            ? "Your agreement was saved, but we could not start the tenant signing workflow. The tenant may not see it on their dashboard yet."
+            : "Your rental agreement details have been saved successfully. The tenant can now review and sign from their dashboard."}
         </p>
-        <p className="text-xs text-gray-500 mb-6">
-          Note: PDF generation and e-signature are coming soon.
-        </p>
-        <p className="text-xs text-gray-400 mb-4">
-          {isOwnerFlow ? "Redirecting to Agreements…" : "Redirecting to Documents…"}
-        </p>
+        {workflowError ? (
+          <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2 mb-4">
+            {workflowError}
+          </p>
+        ) : (
+          <p className="text-xs text-gray-400 mb-4">
+            {isOwnerFlow ? "Redirecting to Agreements…" : "Redirecting to Documents…"}
+          </p>
+        )}
         <button
           onClick={onDone}
           className="w-full h-10 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90"
@@ -2111,6 +2138,7 @@ export default function GenerateAgreement() {
   const ownerDisplayName = getOwnerName().replace("!", "").trim();
   const [step, setStep] = useState<Step>(1);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [workflowError, setWorkflowError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [documentsComplete, setDocumentsComplete] = useState(false);
   const [documentPersons, setDocumentPersons] = useState<PersonState[]>([]);
@@ -2445,6 +2473,7 @@ export default function GenerateAgreement() {
     clearAgreementDraftStorage();
     setStep(1);
     setShowSuccess(false);
+    setWorkflowError(null);
     setSubmitting(false);
     setDocumentsComplete(false);
     setDocumentPersons([]);
@@ -2532,6 +2561,7 @@ export default function GenerateAgreement() {
   const handleSubmit = () => {
     if (!selectedProperty) return;
     setSubmitting(true);
+    setWorkflowError(null);
     const primaryTenant = selectedTenants[0];
     const { aadhaar: tenantAadhaar, pan: tenantPan } = resolveTenantKyc(
       primaryTenant?.contact ?? "",
@@ -2576,7 +2606,7 @@ export default function GenerateAgreement() {
 
     void shareRentalAgreementPdf(agreementInput, propertyTitle, waPhone, whatsAppInviteHref, shareMessage);
 
-    setTimeout(() => {
+    void (async () => {
       const mode = brokerageMode as Agreement["brokerageMode"];
       const customText =
         isOwnerFlow && showPaymentSplit
@@ -2608,7 +2638,7 @@ export default function GenerateAgreement() {
         customText,
       };
 
-      const senderLabel = isOwnerFlow
+      const senderLabelForSave = isOwnerFlow
         ? (ownerName?.trim() ? ownerName.trim() : "Owner")
         : (getBrokerProfile().name?.trim() ? getBrokerProfile().name.trim() : "Broker");
 
@@ -2632,12 +2662,29 @@ export default function GenerateAgreement() {
         savedAgreement = addAgreement({ ...base, status: "Sent" });
       }
 
-      const requesterPhone = resolveRequesterPhone(isOwnerFlow ? "owner" : "broker");
+      const session = getActiveSession();
+      const requesterRole = isOwnerFlow ? "owner" : "broker";
+      const requesterPhone = resolveRequesterPhone(requesterRole);
       const tenantPhone = (primaryTenant?.contact ?? "").replace(/\D/g, "").slice(-10);
-      if (requesterPhone && tenantPhone.length === 10) {
-        void sendAgreementForESign({
+
+      let nextWorkflowError: string | null = null;
+
+      if (session && session.role === requesterRole) {
+        const synced = await pushAccountKeyToCloud(
+          session.phone,
+          requesterRole,
+          "agreements",
+          getAgreementsSyncPayload(),
+        );
+        if (!synced) {
+          nextWorkflowError = "Could not sync agreement to the server. Try again from Agreements.";
+        }
+      }
+
+      if (!nextWorkflowError && requesterPhone && tenantPhone.length === 10) {
+        const workflowResult = await sendAgreementForESign({
           phone: requesterPhone,
-          role: isOwnerFlow ? "owner" : "broker",
+          role: requesterRole,
           agreementId: savedAgreement.id,
           tenantPhone,
           tenantName: primaryTenant?.name ?? "",
@@ -2649,21 +2696,26 @@ export default function GenerateAgreement() {
           propertyType: selectedProperty.propertyType,
           ownerName,
           ownerContact,
-          brokerName: isOwnerFlow ? undefined : senderLabel,
-          requesterRole: isOwnerFlow ? "owner" : "broker",
-          requesterName: senderLabel,
+          brokerName: isOwnerFlow ? undefined : senderLabelForSave,
+          requesterRole,
+          requesterName: senderLabelForSave,
           agreementSnapshot: buildAgreementSnapshotFromAgreement(
             savedAgreement,
             propertyAddress,
             isOwnerFlow,
           ),
+          agreementRecord: savedAgreement,
         });
+        if (!workflowResult.ok) {
+          nextWorkflowError = workflowResult.error;
+        }
       }
 
+      setWorkflowError(nextWorkflowError);
       setSubmitting(false);
       setShowSuccess(true);
       clearAgreementDraftStorage();
-    }, 400);
+    })();
   };
 
   return (
@@ -2671,8 +2723,10 @@ export default function GenerateAgreement() {
       {showSuccess && (
         <SuccessOverlay
           isOwnerFlow={isOwnerFlow}
+          workflowError={workflowError}
           onDone={() => {
             setShowSuccess(false);
+            setWorkflowError(null);
             setLocation(isOwnerFlow ? "/owner/agreements" : "/broker/documents");
           }}
         />

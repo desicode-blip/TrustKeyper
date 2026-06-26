@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm run build && node --enable-source-maps ./dist/index.mjs",
-    "prebuild": "pnpm --filter @workspace/broker-tenant-onboarding run build",
+    "prebuild": "pnpm --filter @workspace/broker-tenant-onboarding run build && pnpm --filter @workspace/tenant-workflow run build",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
@@ -14,6 +14,8 @@
     "@workspace/api-zod": "workspace:*",
     "@workspace/auth-server": "workspace:*",
     "@workspace/broker-tenant-onboarding": "workspace:*",
+    "@workspace/tenant-document-upload": "workspace:*",
+    "@workspace/tenant-workflow": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/invitations-store": "workspace:*",
     "@workspace/sync-store": "workspace:*",
