@@ -63,6 +63,10 @@ export function TenantDashboardPropertyCard({
 
   const deposit = formatTenantSecurityDeposit(workspace.securityDeposit);
   const showBroker = shouldDisplayBrokerName(workspace, workflowStage);
+  const isAgreementFlowView =
+    workflowStage === "agreement_ready" ||
+    workflowStage === "esign_document_upload" ||
+    workflowStage === "awaiting_esign_signatures";
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 shadow-sm h-full">
@@ -92,6 +96,7 @@ export function TenantDashboardPropertyCard({
             </p>
             <p className="text-lg font-semibold text-primary">{formatTenantRent(workspace.monthlyRent)}</p>
           </div>
+          {isAgreementFlowView ? null : (
           <dl className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500">
             {deposit ? (
               <div>
@@ -130,6 +135,7 @@ export function TenantDashboardPropertyCard({
               </div>
             ) : null}
           </dl>
+          )}
         </div>
       </div>
     </div>

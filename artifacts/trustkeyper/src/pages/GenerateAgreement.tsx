@@ -45,6 +45,11 @@ import {
   type RentSplitMode,
 } from "@/components/owner/agreement/StepOwnerPaymentSplit";
 import { clearAgreementDraftStorage } from "@/lib/brokerPendingFlows";
+import {
+  buildAgreementSnapshotFromAgreement,
+  resolveRequesterPhone,
+  sendAgreementForESign,
+} from "@/lib/tenantWorkflowServer";
 import { getSessionItem, removeSessionItem } from "@/lib/storageKeys";
 import { FlowDateInput } from "@/components/flow/FlowDateInput";
 import { todayLocalDateInputMin } from "@/lib/dateInput";
@@ -2532,11 +2537,12 @@ export default function GenerateAgreement() {
       primaryTenant?.contact ?? "",
     );
     const propertyTitle = getPropertyTitle(selectedProperty);
+    const propertyAddress = [selectedProperty.address, selectedProperty.area, selectedProperty.city]
+      .filter(Boolean)
+      .join(", ");
     const agreementInput: RentalAgreementInput = {
       propertyTitle,
-      propertyAddress: [selectedProperty.address, selectedProperty.area, selectedProperty.city]
-        .filter(Boolean)
-        .join(", "),
+      propertyAddress,
       ownerName,
       ownerContact,
       additionalOwnerNames: additionalOwners.map((o) => o.name).filter(Boolean).join(", "),
@@ -2602,6 +2608,11 @@ export default function GenerateAgreement() {
         customText,
       };
 
+      const senderLabel = isOwnerFlow
+        ? (ownerName?.trim() ? ownerName.trim() : "Owner")
+        : (getBrokerProfile().name?.trim() ? getBrokerProfile().name.trim() : "Broker");
+
+      let savedAgreement: Agreement;
       if (editingAgreementId) {
         const existing = getAgreements().find((a) => a.id === editingAgreementId);
         if (existing) {
@@ -2612,11 +2623,43 @@ export default function GenerateAgreement() {
             documents: existing.documents,
             status: "Sent",
           });
+          savedAgreement = { ...existing, ...base, status: "Sent" };
+        } else {
+          savedAgreement = addAgreement({ ...base, status: "Sent" });
         }
         setEditingAgreementId(null);
       } else {
-        addAgreement({ ...base, status: "Sent" });
+        savedAgreement = addAgreement({ ...base, status: "Sent" });
       }
+
+      const requesterPhone = resolveRequesterPhone(isOwnerFlow ? "owner" : "broker");
+      const tenantPhone = (primaryTenant?.contact ?? "").replace(/\D/g, "").slice(-10);
+      if (requesterPhone && tenantPhone.length === 10) {
+        void sendAgreementForESign({
+          phone: requesterPhone,
+          role: isOwnerFlow ? "owner" : "broker",
+          agreementId: savedAgreement.id,
+          tenantPhone,
+          tenantName: primaryTenant?.name ?? "",
+          propertyId: selectedProperty.id,
+          propertyLabel: propertyTitle,
+          propertyAddress,
+          monthlyRent,
+          securityDeposit,
+          propertyType: selectedProperty.propertyType,
+          ownerName,
+          ownerContact,
+          brokerName: isOwnerFlow ? undefined : senderLabel,
+          requesterRole: isOwnerFlow ? "owner" : "broker",
+          requesterName: senderLabel,
+          agreementSnapshot: buildAgreementSnapshotFromAgreement(
+            savedAgreement,
+            propertyAddress,
+            isOwnerFlow,
+          ),
+        });
+      }
+
       setSubmitting(false);
       setShowSuccess(true);
       clearAgreementDraftStorage();

@@ -1,7 +1,12 @@
-import { FileText } from "lucide-react";
+import { ArrowRight, FileSignature, FileText, type LucideIcon } from "lucide-react";
 import { Link } from "wouter";
-import type { TenantNotificationContent } from "@/lib/tenantWorkspace";
+import { Button } from "@/components/ui/button";
+import type { TenantNotificationContent, TenantNotificationKind } from "@/lib/tenantWorkspace";
 import { cn } from "@/lib/utils";
+
+const NOTIFICATION_ICONS: Partial<Record<TenantNotificationKind, LucideIcon>> = {
+  esign_document_upload: FileSignature,
+};
 
 export interface TenantStatusNotificationCardProps {
   notification: TenantNotificationContent;
@@ -21,10 +26,12 @@ export function TenantStatusNotificationCard({ notification, loading }: TenantSt
     );
   }
 
+  const Icon = NOTIFICATION_ICONS[notification.kind] ?? FileText;
   const isHighlight =
     notification.kind === "documents_under_review" ||
     notification.kind === "agreement_being_prepared" ||
-    notification.kind === "agreement_ready";
+    notification.kind === "agreement_ready" ||
+    notification.kind === "esign_document_upload";
 
   return (
     <div className="rounded-2xl border border-[#D9EAF8] bg-[#F3F9FE] p-4 h-full">
@@ -40,17 +47,21 @@ export function TenantStatusNotificationCard({ notification, loading }: TenantSt
             isHighlight ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-500",
           )}
         >
-          <FileText size={20} />
+          <Icon size={20} />
         </div>
         <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">{notification.title}</h3>
         <p className="text-sm text-gray-600 leading-relaxed flex-1">{notification.description}</p>
         {notification.actionHref && notification.actionLabel ? (
-          <Link
-            href={notification.actionHref}
-            className="inline-flex items-center justify-center mt-4 h-9 px-4 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors w-fit"
+          <Button
+            type="button"
+            className="mt-4 h-9 px-4 rounded-lg text-sm font-semibold w-fit gap-1.5"
+            asChild
           >
-            {notification.actionLabel}
-          </Link>
+            <Link href={notification.actionHref}>
+              {notification.actionLabel}
+              <ArrowRight size={16} aria-hidden />
+            </Link>
+          </Button>
         ) : null}
       </div>
     </div>

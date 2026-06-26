@@ -40,9 +40,14 @@ describe("tenantWorkflowState", () => {
     expect(snapshot.showBroker).toBe(true);
   });
 
-  it("hides broker after agreement is ready", () => {
-    expect(shouldShowBrokerForStage("documents_under_review")).toBe(true);
-    expect(shouldShowBrokerForStage("agreement_ready")).toBe(false);
+  it("shows broker until rent payment for broker-initiated flows", () => {
+    const brokerWorkspace = { ...baseWorkspace, requesterRole: "broker" as const };
+    expect(shouldShowBrokerForStage("documents_under_review", brokerWorkspace)).toBe(true);
+    expect(shouldShowBrokerForStage("agreement_ready", brokerWorkspace)).toBe(true);
+    expect(shouldShowBrokerForStage("rent_payment_due", brokerWorkspace)).toBe(false);
+    expect(shouldShowBrokerForStage("agreement_ready", { ...baseWorkspace, requesterRole: "owner" })).toBe(
+      false,
+    );
   });
 
   it("keeps progress and notification in sync for in-progress uploads", () => {
@@ -62,6 +67,80 @@ describe("tenantWorkflowState", () => {
     expect(steps[0]?.state).toBe("complete");
     expect(steps[1]?.state).toBe("complete");
     expect(steps[2]?.state).toBe("current");
+  });
+
+  it("matches approve agreement dashboard when agreement is ready", () => {
+    const snapshot = resolveTenantWorkflowState({
+      ...baseWorkspace,
+      documentUploadStatus: "agreement_ready",
+      documentUploadSubmittedAt: Date.now(),
+      agreementId: "agr-123",
+    });
+
+    expect(snapshot.stage).toBe("agreement_ready");
+    expect(snapshot.progressSteps[0]?.state).toBe("complete");
+    expect(snapshot.progressSteps[1]?.state).toBe("complete");
+    expect(snapshot.progressSteps[2]?.state).toBe("current");
+    expect(snapshot.notification.title).toBe("Approve Agreement");
+    expect(snapshot.notification.description).toContain("final lease agreement");
+    expect(snapshot.notification.actionLabel).toBe("Review and Approve Agreement");
+    expect(snapshot.notification.actionHref).toBe("/tenant/agreement?agreementId=agr-123");
+    expect(snapshot.showBroker).toBe(true);
+  });
+
+  it("uses rent-only CTA after owner-path deposit was paid", () => {
+    const snapshot = resolveTenantWorkflowState({
+      ...baseWorkspace,
+      requesterRole: "owner",
+      lifecycleStage: "rent_payment_due",
+      preSigningEscrowType: "security_deposit",
+    });
+
+    expect(snapshot.notification.actionLabel).toBe("Pay rent");
+    expect(snapshot.notification.title).toBe("Rent payment due");
+  });
+
+  it("uses rent plus deposit CTA after broker-path brokerage was paid", () => {
+    const snapshot = resolveTenantWorkflowState({
+      ...baseWorkspace,
+      lifecycleStage: "rent_payment_due",
+      preSigningEscrowType: "brokerage_tenant",
+    });
+
+    expect(snapshot.notification.actionLabel).toBe("Pay rent and security deposit");
+    expect(snapshot.notification.title).toBe("Rent and deposit due");
+  });
+
+  it("matches upload signed agreement dashboard after e-sign", () => {
+    const snapshot = resolveTenantWorkflowState({
+      ...baseWorkspace,
+      lifecycleStage: "esign_document_upload",
+      agreementId: "agr-123",
+    });
+
+    expect(snapshot.stage).toBe("esign_document_upload");
+    expect(snapshot.progressSteps[0]?.state).toBe("complete");
+    expect(snapshot.progressSteps[1]?.state).toBe("complete");
+    expect(snapshot.progressSteps[2]?.state).toBe("current");
+    expect(snapshot.notification.kind).toBe("esign_document_upload");
+    expect(snapshot.notification.title).toBe("Upload Signed Agreement");
+    expect(snapshot.notification.actionLabel).toBe("Upload Signed Agreement");
+    expect(snapshot.notification.actionHref).toBe("/tenant/agreement/upload-signed");
+    expect(snapshot.showBroker).toBe(true);
+  });
+
+  it("matches waiting for signatures dashboard after tenant e-sign", () => {
+    const snapshot = resolveTenantWorkflowState({
+      ...baseWorkspace,
+      lifecycleStage: "awaiting_esign_signatures",
+      esignSignedPartyPhones: ["9876543210"],
+    });
+
+    expect(snapshot.stage).toBe("awaiting_esign_signatures");
+    expect(snapshot.progressSteps.every((step) => step.state === "complete")).toBe(true);
+    expect(snapshot.notification.kind).toBe("awaiting_esign_signatures");
+    expect(snapshot.signatureStatus?.title).toBe("Waiting for signatures");
+    expect(snapshot.showBroker).toBe(true);
   });
 
   it("returns empty-state notification when no property assigned", () => {

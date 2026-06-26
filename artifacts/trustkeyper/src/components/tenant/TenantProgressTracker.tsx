@@ -26,7 +26,12 @@ export function TenantProgressTracker({ steps }: TenantProgressTrackerProps) {
                   className={cn(
                     "w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shrink-0 border",
                     step.state === "complete" && "bg-green-500 border-green-500 text-white",
-                    step.state === "current" && "bg-[#E8F4FC] border-primary text-primary",
+                    step.state === "current" &&
+                      step.id === "review" &&
+                      "bg-white border-gray-200 text-gray-400",
+                    step.state === "current" &&
+                      step.id !== "review" &&
+                      "bg-[#E8F4FC] border-primary text-primary",
                     step.state === "upcoming" && "bg-white border-gray-200 text-gray-400",
                   )}
                 >
@@ -39,7 +44,8 @@ export function TenantProgressTracker({ steps }: TenantProgressTrackerProps) {
                 <p
                   className={cn(
                     "text-xs sm:text-sm font-semibold text-center mt-2 leading-snug max-w-[120px]",
-                    step.state === "current" && "text-primary",
+                    step.state === "current" && step.id === "review" && "text-gray-500",
+                    step.state === "current" && step.id !== "review" && "text-primary",
                     step.state === "complete" && "text-gray-700",
                     step.state === "upcoming" && "text-gray-400",
                   )}

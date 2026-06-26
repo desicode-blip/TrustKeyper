@@ -4,6 +4,10 @@ import type {
   TenantProgressStep,
   TenantWorkspaceRecord,
 } from "./tenantWorkspace";
+import {
+  resolveTenantAwaitingSignaturesStatus,
+  type TenantAwaitingSignaturesStatus,
+} from "./tenantAgreementSignatureStatus";
 
 export const TENANT_WORKFLOW_UPDATED_EVENT = "tk-tenant-workflow-updated";
 
@@ -20,6 +24,8 @@ export type TenantWorkflowStage =
   | "additional_documents_required"
   | "agreement_being_prepared"
   | "agreement_ready"
+  | "esign_document_upload"
+  | "awaiting_esign_signatures"
   | "agreement_signed"
   | "rent_payment_due"
   | "move_in_scheduled"
@@ -40,6 +46,7 @@ export interface TenantWorkflowSnapshot {
   progressSteps: TenantProgressStep[];
   notification: TenantNotificationContent;
   showBroker: boolean;
+  signatureStatus?: TenantAwaitingSignaturesStatus;
   error?: TenantWorkflowError;
 }
 
@@ -66,6 +73,8 @@ function stageRank(stage: TenantWorkflowStage): number {
     "additional_documents_required",
     "agreement_being_prepared",
     "agreement_ready",
+    "esign_document_upload",
+    "awaiting_esign_signatures",
     "agreement_signed",
     "rent_payment_due",
     "move_in_scheduled",
@@ -85,7 +94,7 @@ function agreementPhaseComplete(stage: TenantWorkflowStage): boolean {
 }
 
 function reviewPhaseComplete(stage: TenantWorkflowStage): boolean {
-  return stageRank(stage) >= stageRank("agreement_signed");
+  return stageRank(stage) >= stageRank("awaiting_esign_signatures");
 }
 
 export function buildProgressStepsFromStage(stage: TenantWorkflowStage): TenantProgressStep[] {
@@ -151,8 +160,37 @@ function resolveStage(workspace: TenantWorkspaceRecord | null): TenantWorkflowSt
   return mapUploadStatusToStage(workspace.documentUploadStatus, workspace);
 }
 
-export function shouldShowBrokerForStage(stage: TenantWorkflowStage): boolean {
-  return stageRank(stage) < stageRank("agreement_ready");
+export function shouldShowBrokerForStage(
+  stage: TenantWorkflowStage,
+  workspace?: TenantWorkspaceRecord | null,
+): boolean {
+  if (workspace?.requesterRole !== "broker") return false;
+  return stageRank(stage) < stageRank("rent_payment_due");
+}
+
+function resolvePostSigningRentNotification(
+  workspace: TenantWorkspaceRecord | null,
+): TenantNotificationContent {
+  const depositAlreadyPaid = workspace?.preSigningEscrowType === "security_deposit";
+  if (depositAlreadyPaid) {
+    return {
+      kind: "rent_due",
+      title: "Rent payment due",
+      description:
+        "Your agreement is complete. Pay your first month's rent to confirm move-in.",
+      actionLabel: "Pay rent",
+      actionHref: "/tenant/payments",
+    };
+  }
+
+  return {
+    kind: "rent_due",
+    title: "Rent and deposit due",
+    description:
+      "Your agreement is complete. Pay rent and the security deposit to confirm move-in.",
+    actionLabel: "Pay rent and security deposit",
+    actionHref: "/tenant/payments",
+  };
 }
 
 function buildNotification(
@@ -266,9 +304,26 @@ function buildNotification(
     },
     agreement_ready: {
       kind: "agreement_ready",
-      title: "Agreement ready",
+      title: "Approve Agreement",
       description:
-        "Your rental agreement is ready for review. You will receive a notification when it is available to sign.",
+        "Your approval is required on the final lease agreement to secure your move-in date.",
+      actionLabel: "Review and Approve Agreement",
+      actionHref: workspace?.agreementId
+        ? `/tenant/agreement?agreementId=${encodeURIComponent(workspace.agreementId)}`
+        : "/tenant/agreement",
+    },
+    esign_document_upload: {
+      kind: "esign_document_upload",
+      title: "Upload Signed Agreement",
+      description:
+        "Download your agreement, sign it offline, and upload your signed rental agreement so your owner can finalise your move-in.",
+      actionLabel: "Upload Signed Agreement",
+      actionHref: "/tenant/agreement/upload-signed",
+    },
+    awaiting_esign_signatures: {
+      kind: "awaiting_esign_signatures",
+      title: "Waiting for signatures",
+      description: "You'll be notified once everyone signs.",
     },
     agreement_signed: {
       kind: "agreement_signed",
@@ -276,19 +331,14 @@ function buildNotification(
       description:
         "Your rental agreement has been signed. Rent payment and move-in details will appear here shortly.",
     },
-    rent_payment_due: {
-      kind: "rent_due",
-      title: "Rent payment due",
-      description:
-        "Your rent payment is due. Complete payment to stay on track with your lease.",
-      actionLabel: "View Payments",
-      actionHref: "/tenant/payments",
-    },
+    rent_payment_due: resolvePostSigningRentNotification(workspace),
     move_in_scheduled: {
       kind: "move_in_scheduled",
       title: "Move-in scheduled",
       description:
-        "Your move-in date has been scheduled. Check your dashboard for property access details.",
+        workspace?.agreementSnapshot?.leaseStartDate
+          ? `Your move-in is scheduled for ${workspace.agreementSnapshot.leaseStartDate}. Property access details will appear here soon.`
+          : "Your move-in date has been scheduled. Check your dashboard for property access details.",
     },
     maintenance_update: {
       kind: "maintenance_open",
@@ -353,14 +403,19 @@ export function resolveTenantWorkflowState(
   const stage = resolveStage(workspace);
   const progressSteps = buildProgressStepsFromStage(stage);
   const notification = buildNotification(stage, workspace);
-  const showBroker = shouldShowBrokerForStage(stage);
+  const showBroker = shouldShowBrokerForStage(stage, workspace);
   const error = resolveWorkflowError(workspace, stage);
+  const signatureStatus =
+    stage === "awaiting_esign_signatures"
+      ? resolveTenantAwaitingSignaturesStatus(workspace)
+      : undefined;
 
   return {
     stage,
     progressSteps,
     notification,
     showBroker,
+    signatureStatus,
     error,
   };
 }

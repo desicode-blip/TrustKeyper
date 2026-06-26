@@ -26,6 +26,15 @@
     },
     "api/payments-create-order.ts": {
       "maxDuration": 30
+    },
+    "api/payments-create-escrow-order.ts": {
+      "maxDuration": 30
+    },
+    "api/payments-release-escrow.ts": {
+      "maxDuration": 30
+    },
+    "api/tenant-workflow.ts": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
@@ -48,6 +57,10 @@
     {
       "source": "/api/tenant-document-upload/(.*)",
       "destination": "/api/tenant-document-upload?uploadPath=$1"
+    },
+    {
+      "source": "/api/tenant-workflow/(.*)",
+      "destination": "/api/tenant-workflow?workflowPath=$1"
     },
     {
       "source": "/((?!api/).*)",
