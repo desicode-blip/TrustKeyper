@@ -58,3 +58,4 @@ Thumbs.db
 .env.test-sandbox
 **/.env.local
 .vercel
+.env.production
