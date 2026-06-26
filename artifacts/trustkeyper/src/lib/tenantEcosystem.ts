@@ -1,4 +1,5 @@
 import { getProperties, getPropertyTitle, type Property } from "./properties";
+import { hasServerWorkspaceSnapshot } from "@workspace/tenant-workflow";
 import type { TenantWorkspaceRecord } from "./tenantWorkspace";
 import type { TenantWorkflowStage } from "./tenantWorkflowState";
 
@@ -28,6 +29,18 @@ export function enrichTenantWorkspaceEcosystem(
 
   const property = getProperties().find((row) => row.id === workspace.propertyId);
   if (!property) {
+    if (hasServerWorkspaceSnapshot(workspace)) {
+      return {
+        ...workspace,
+        ownerName:
+          workspace.ownerName ??
+          (workspace.requesterRole === "owner" ? workspace.requesterName : undefined),
+        brokerName:
+          workspace.brokerName ??
+          (workspace.requesterRole === "broker" ? workspace.requesterName : undefined),
+        propertyMissing: false,
+      };
+    }
     return {
       ...workspace,
       propertyMissing: true,

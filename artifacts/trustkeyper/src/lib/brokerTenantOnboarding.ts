@@ -367,6 +367,11 @@ function applyServerInviteLocally(invite: BrokerTenantOnboardingInvite): void {
 
   const tokenPayload = JSON.stringify(snapshotFromInvite(normalized));
   setItem(onboardTokenKey(normalized.token), tokenPayload);
+
+  const session = getActiveSession();
+  if (session?.role === "broker") {
+    void pushAccountKeyToCloud(session.phone, "broker", onboardTokenKey(normalized.token), tokenPayload);
+  }
 }
 
 function createBrokerTenantOnboardingInviteLocally(

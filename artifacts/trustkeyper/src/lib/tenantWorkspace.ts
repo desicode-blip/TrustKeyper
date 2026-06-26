@@ -121,7 +121,15 @@ function formatPropertyStatusLabel(status: string): string {
   return "Available";
 }
 
-export function saveTenantWorkspace(record: TenantWorkspaceRecord): void {
+export type SaveTenantWorkspaceOptions = {
+  /** Mirror to sync API — only for legacy bulk restore. Workflow writes use tenant-workflow API. */
+  syncToCloud?: boolean;
+};
+
+export function saveTenantWorkspace(
+  record: TenantWorkspaceRecord,
+  options?: SaveTenantWorkspaceOptions,
+): void {
   const digits = phoneDigits(record.phone);
   const enriched = enrichTenantWorkspaceEcosystem({ ...record, phone: digits, updatedAt: Date.now() });
   const payload = JSON.stringify(enriched);
@@ -129,7 +137,9 @@ export function saveTenantWorkspace(record: TenantWorkspaceRecord): void {
   const session = getActiveSession();
   if (session && phoneDigits(session.phone) === digits && session.role === "tenant") {
     localStorage.setItem(storageKey(digits, "tenant", "tenant_workspace"), payload);
-    queueCloudSync("tenant_workspace", payload);
+    if (options?.syncToCloud) {
+      queueCloudSync("tenant_workspace", payload);
+    }
   }
   broadcastTenantWorkflowUpdated();
 }
@@ -214,6 +224,7 @@ export function saveTenantWorkspaceFromInvite(
   });
 
   saveTenantWorkspace(record);
+  void import("./tenantWorkflowServer").then((mod) => mod.upsertTenantWorkspaceOnServer(record));
   return record;
 }
 

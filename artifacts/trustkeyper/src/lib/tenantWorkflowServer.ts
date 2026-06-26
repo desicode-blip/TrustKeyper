@@ -1,10 +1,10 @@
 import type { Role } from "./auth";
+import type { Agreement } from "./agreements";
 import { getActiveSession, normalizePhoneDigits } from "./storageKeys";
 import { syncAuthHeaders } from "./syncSession";
+import { generateRentalAgreementText, type RentalAgreementInput } from "./rentalAgreementDocument";
 import type { TenantAgreementSnapshot, TenantWorkspaceRecord } from "./tenantWorkspace";
 import { saveTenantWorkspace } from "./tenantWorkspace";
-import type { Agreement } from "./agreements";
-import { generateRentalAgreementText, type RentalAgreementInput } from "./rentalAgreementDocument";
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
@@ -28,6 +28,7 @@ export interface SendAgreementForESignInput {
   requesterRole: "owner" | "broker";
   requesterName: string;
   agreementSnapshot: TenantAgreementSnapshot;
+  agreementRecord?: Agreement;
 }
 
 function workflowUrl(path: string): string {
@@ -153,6 +154,35 @@ export async function patchTenantWorkspaceOnServer(
   } catch {
     return null;
   }
+}
+
+export async function upsertTenantWorkspaceOnServer(
+  workspace: TenantWorkspaceRecord,
+): Promise<TenantWorkspaceRecord | null> {
+  return patchTenantWorkspaceOnServer({
+    phone: normalizePhoneDigits(workspace.phone),
+    tenantName: workspace.tenantName,
+    propertyLabel: workspace.propertyLabel,
+    propertyId: workspace.propertyId,
+    propertyAddress: workspace.propertyAddress,
+    monthlyRent: workspace.monthlyRent,
+    securityDeposit: workspace.securityDeposit,
+    propertyType: workspace.propertyType,
+    ownerName: workspace.ownerName,
+    ownerContact: workspace.ownerContact,
+    brokerName: workspace.brokerName,
+    requesterName: workspace.requesterName,
+    requesterRole: workspace.requesterRole,
+    documentUploadToken: workspace.documentUploadToken,
+    documentUploadStatus: workspace.documentUploadStatus,
+    lifecycleStage: workspace.lifecycleStage,
+    agreementId: workspace.agreementId,
+    preSigningEscrowType: workspace.preSigningEscrowType,
+    escrowPaymentId: workspace.escrowPaymentId,
+    escrowPaymentStatus: workspace.escrowPaymentStatus,
+    agreementSnapshot: workspace.agreementSnapshot,
+    esignSignedPartyPhones: workspace.esignSignedPartyPhones,
+  });
 }
 
 export async function recordTenantAgreementSignature(input: {
