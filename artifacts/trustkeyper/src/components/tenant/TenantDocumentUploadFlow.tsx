@@ -100,29 +100,26 @@ export function TenantDocumentUploadFlow({
 
   useEffect(() => {
     const initial: Partial<Record<ExtendedDocumentId, LocalDocState>> = {};
-    const storedProfile = getTenantAccountProfile();
     for (const id of invite.requestedDocumentIds) {
       const serverStatus = invite.documentStatuses[id] ?? "not_uploaded";
       const serverFile = invite.documents[id];
-      const profileDoc =
-        id === "aadhaar" ? storedProfile.aadhaar : id === "pan" ? storedProfile.pan : undefined;
       if (id === "bank") {
+        const bankUploaded = serverStatus === "uploaded";
         initial.bank = {
-          status: serverStatus === "uploaded" || invite.bankDetails ? "uploaded" : "not_uploaded",
-          fileName: invite.bankDetails ? "Bank Account Details" : undefined,
+          status: bankUploaded ? "uploaded" : "not_uploaded",
+          fileName: bankUploaded ? "Bank Account Details" : undefined,
         };
-        if (invite.bankDetails) {
+        if (bankUploaded && invite.bankDetails) {
           setBankDetails(invite.bankDetails as BankDetailsData);
         }
         continue;
       }
-      const hasUploaded =
-        serverStatus === "uploaded" || profileDoc?.fileName || serverFile?.fileName;
+      const hasUploaded = serverStatus === "uploaded" && Boolean(serverFile?.fileName);
       initial[id] = {
-        status: hasUploaded ? "uploaded" : serverStatus,
-        fileName: profileDoc?.fileName ?? serverFile?.fileName,
-        fileSize: profileDoc?.fileSize ?? serverFile?.fileSize,
-        mimeType: profileDoc?.mimeType ?? serverFile?.mimeType,
+        status: hasUploaded ? "uploaded" : serverStatus === "reupload_required" ? "reupload_required" : "not_uploaded",
+        fileName: hasUploaded ? serverFile?.fileName : undefined,
+        fileSize: hasUploaded ? serverFile?.fileSize : undefined,
+        mimeType: hasUploaded ? serverFile?.mimeType : undefined,
       };
     }
     const draft = getTenantDocumentUploadDraft(session.token);
