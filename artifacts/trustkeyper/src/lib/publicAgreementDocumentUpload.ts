@@ -15,6 +15,10 @@ export type DocumentUploadInvitePayload = {
   requesterRole: "owner" | "broker";
   propertyId?: string;
   propertyLabel?: string;
+  propertyImage?: string;
+  propertyAddress?: string;
+  monthlyRent?: string;
+  securityDeposit?: string;
   requestedDocumentIds: ExtendedDocumentId[];
   status: string;
   tenantDocumentStatus: TenantDocumentUploadStatus;

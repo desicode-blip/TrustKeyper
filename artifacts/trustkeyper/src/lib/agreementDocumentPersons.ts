@@ -108,5 +108,8 @@ export function reconcileAgreementDocumentPersons(
 }
 
 export function areAgreementDocumentsComplete(persons: AgreementPersonDraftState[]): boolean {
-  return persons.length > 0 && persons.every((person) => person.docs.every((doc) => doc.status !== "pending"));
+  return (
+    persons.length > 0 &&
+    persons.every((person) => person.docs.every((doc) => doc.status === "uploaded"))
+  );
 }

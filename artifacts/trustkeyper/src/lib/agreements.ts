@@ -60,6 +60,10 @@ export function getAgreements(): Agreement[] {
   }
 }
 
+export function getAgreementsSyncPayload(): string {
+  return JSON.stringify(getAgreements());
+}
+
 export function updateAgreement(id: string, patch: Partial<Agreement>): void {
   const list = getAgreements();
   const idx = list.findIndex((a) => a.id === id);

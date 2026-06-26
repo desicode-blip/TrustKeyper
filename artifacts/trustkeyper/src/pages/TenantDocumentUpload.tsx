@@ -9,7 +9,14 @@ import {
 } from "@/components/tenant/TenantBrokerOnboardModal";
 import { TenantDocumentManagementFlow } from "@/components/tenant/TenantDocumentManagementFlow";
 import { TenantDocumentUploadFlow } from "@/components/tenant/TenantDocumentUploadFlow";
-import { getActiveSession, profileExistsAsync, signUpSuccess, loginSuccess } from "@/lib/auth";
+import {
+  getActiveSession,
+  loginSuccess,
+  persistSessionToLocalStorage,
+  profileExistsAsync,
+  restoreRememberedSessionFromLocalStorage,
+  signUpSuccess,
+} from "@/lib/auth";
 import {
   fetchDocumentUploadInvite,
   markDocumentUploadStarted,
@@ -27,6 +34,7 @@ import { ensureTenantDashboardSession } from "@/lib/tenantDocumentUploadRedirect
 import { mergeTenantProfileFromInvitePayload } from "@/lib/tenantProfile";
 import { saveTenantWorkspaceFromInvite } from "@/lib/tenantWorkspace";
 import {
+  documentsAlreadySubmittedForInvite,
   resolveReturningTenantAccess,
   shouldOpenDocumentManagement,
 } from "@/lib/tenantReturningAccess";
@@ -61,11 +69,22 @@ export default function TenantDocumentUpload() {
   const [invite, setInvite] = useState<DocumentUploadInvitePayload | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [sendOtpError, setSendOtpError] = useState<string | null>(null);
   const [verifyOtpError, setVerifyOtpError] = useState<string | null>(null);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [session, setSession] = useState<TenantDocumentUploadSession | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [redirectToDashboardAfterAuth, setRedirectToDashboardAfterAuth] = useState(false);
+
+  const redirectToTenantDashboard = useCallback(
+    async (tenantPhone: string) => {
+      const digits = phoneLast10(tenantPhone);
+      await ensureTenantDashboardSession(digits, getActiveSession, loginSuccess);
+      setLocation("/tenant/dashboard");
+    },
+    [setLocation],
+  );
 
   const openWithSession = useCallback(
     (payload: DocumentUploadInvitePayload, nextSession: TenantDocumentUploadSession, phase: PagePhase) => {
@@ -103,10 +122,11 @@ export default function TenantDocumentUpload() {
       return;
     }
 
-    mergeTenantProfileFromInvitePayload(payload);
-    const isManagement = shouldOpenDocumentManagement(payload.status);
+    const alreadySubmitted = documentsAlreadySubmittedForInvite(payload);
 
-    if (isManagement) {
+    if (!alreadySubmitted) {
+      mergeTenantProfileFromInvitePayload(payload);
+    } else {
       saveTenantWorkspaceFromInvite(payload, {
         documentUploadStatus: "documents_submitted",
         documentUploadSubmittedAt: payload.submittedAt ?? Date.now(),
@@ -114,14 +134,23 @@ export default function TenantDocumentUpload() {
     }
 
     const activeSession = getActiveSession();
+    const rememberedSession = restoreRememberedSessionFromLocalStorage();
     const existingUploadSession = getTenantDocumentUploadSession(token);
+    const tenantDigits = phoneLast10(payload.tenantPhone);
+    const rememberedTenantMatch =
+      rememberedSession?.role === "tenant" && phoneLast10(rememberedSession.phone) === tenantDigits;
+
+    const sessionAfterRestore = getActiveSession();
+
     const access = resolveReturningTenantAccess({
       inviteStatus: payload.status,
       tenantPhone: payload.tenantPhone,
-      hasActiveTenantSession: activeSession?.role === "tenant",
-      activeTenantPhone: activeSession?.phone,
+      hasActiveTenantSession: sessionAfterRestore?.role === "tenant",
+      activeTenantPhone: sessionAfterRestore?.phone,
       hasUploadSession: Boolean(existingUploadSession),
       hasTenantAccount: payload.hasTenantAccount,
+      hasRememberedTenantSession: rememberedTenantMatch,
+      rememberedTenantPhone: rememberedSession?.phone,
     });
 
     if (access.kind === "blocked") {
@@ -135,26 +164,29 @@ export default function TenantDocumentUpload() {
     }
 
     if (access.kind === "immediate") {
-      const digits = phoneLast10(payload.tenantPhone);
-      if (access.reason === "active_tenant_session") {
-        await ensureTenantDashboardSession(digits, getActiveSession, loginSuccess);
+      if (access.reason === "active_tenant_session" || rememberedTenantMatch) {
+        await ensureTenantDashboardSession(tenantDigits, getActiveSession, loginSuccess);
       }
+
+      if (alreadySubmitted) {
+        await redirectToTenantDashboard(payload.tenantPhone);
+        return;
+      }
+
       const nextSession = existingUploadSession ?? buildUploadSession(token, payload);
-      const phase: PagePhase = isManagement ? "management" : "upload";
-      openWithSession(payload, nextSession, phase);
-      if (!isManagement) {
-        void markDocumentUploadStarted(token);
-        syncTenantDocumentUploadStatus(payload.tenantPhone, "documents_in_progress", { token });
-      }
+      openWithSession(payload, nextSession, "upload");
+      void markDocumentUploadStarted(token);
+      syncTenantDocumentUploadStatus(payload.tenantPhone, "documents_in_progress", { token });
       return;
     }
 
     setInvite(payload);
     setName(payload.tenantName);
     setPhone(phoneLast10(payload.tenantPhone));
-    setModalPhase(access.reason === "account_exists" ? "welcome" : "welcome");
+    setRedirectToDashboardAfterAuth(alreadySubmitted);
+    setModalPhase("welcome");
     setPagePhase("modal");
-  }, [openWithSession, token]);
+  }, [openWithSession, redirectToTenantDashboard, token]);
 
   useEffect(() => {
     void bootstrap();
@@ -177,39 +209,67 @@ export default function TenantDocumentUpload() {
     }
   };
 
-  const handleOtpVerified = async (success: boolean) => {
+  const handleOtpVerified = async (success: boolean, accessToken?: string | null) => {
     if (!success || !invite) {
       setVerifyOtpError("Invalid or expired OTP. Please try again.");
       return;
     }
 
     const digits = phone.replace(/\D/g, "").slice(-10);
-    const hasAccount = await profileExistsAsync(digits, "tenant");
-    if (!hasAccount) {
-      await signUpSuccess(digits, "tenant", { name: name.trim(), phone: digits });
-    } else {
-      await loginSuccess(digits, "tenant");
-    }
-
     setVerifyOtpError(null);
-    const nextSession: TenantDocumentUploadSession = {
-      token,
-      name: name.trim(),
-      phone: `+91${digits}`,
-      requesterName: invite.requesterName,
-      verifiedAt: Date.now(),
-    };
-    setTenantDocumentUploadSession(nextSession);
-    setSession(nextSession);
-    mergeTenantProfileFromInvitePayload(invite);
 
-    const isManagement = shouldOpenDocumentManagement(invite.status);
-    if (!isManagement) {
+    try {
+      const hasAccount = await profileExistsAsync(digits, "tenant");
+      if (!hasAccount) {
+        await signUpSuccess(
+          digits,
+          "tenant",
+          { name: name.trim(), phone: digits },
+          accessToken ?? undefined,
+        );
+      } else {
+        const loggedIn = await loginSuccess(digits, "tenant");
+        if (!loggedIn) {
+          setVerifyOtpError("Could not sign in. Please try again.");
+          return;
+        }
+      }
+
+      if (rememberMe) {
+        persistSessionToLocalStorage(digits, "tenant");
+      }
+
+      const nextSession: TenantDocumentUploadSession = {
+        token,
+        name: name.trim(),
+        phone: `+91${digits}`,
+        requesterName: invite.requesterName,
+        verifiedAt: Date.now(),
+      };
+      setTenantDocumentUploadSession(nextSession, { remember: rememberMe });
+      setSession(nextSession);
+
+      if (!redirectToDashboardAfterAuth) {
+        mergeTenantProfileFromInvitePayload(invite);
+      }
+
+      if (redirectToDashboardAfterAuth || documentsAlreadySubmittedForInvite(invite)) {
+        saveTenantWorkspaceFromInvite(invite, {
+          documentUploadStatus: "documents_submitted",
+          documentUploadSubmittedAt: invite.submittedAt ?? Date.now(),
+        });
+        await redirectToTenantDashboard(invite.tenantPhone);
+        return;
+      }
+
       void markDocumentUploadStarted(token);
       syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_in_progress", { token });
+      openDocumentFlowAfterVerification(nextSession, invite);
+    } catch (err) {
+      setVerifyOtpError(
+        err instanceof Error ? err.message : "Could not verify your account. Please try again.",
+      );
     }
-
-    openDocumentFlowAfterVerification(nextSession, invite);
   };
 
   const openDocumentFlowAfterVerification = (
@@ -275,12 +335,15 @@ export default function TenantDocumentUpload() {
           phone={phone}
           onNameChange={setName}
           onPhoneChange={setPhone}
-          onOtpVerified={(ok) => void handleOtpVerified(ok)}
+          onOtpVerified={(ok, accessToken) => void handleOtpVerified(ok, accessToken)}
           onAccountSuccessDone={handleAccountSuccessDone}
           sendOtpError={sendOtpError}
           verifyOtpError={verifyOtpError}
           sendingOtp={sendingOtp}
           onSendOtp={handleSendOtp}
+          showRememberMe
+          rememberMe={rememberMe}
+          onRememberMeChange={setRememberMe}
         />
       ) : null}
 

@@ -1,5 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
+import {
+  findAgreementInBlobList,
+  mergeAgreementIntoBlobList,
+  type AgreementBlobRecord,
+} from "@workspace/tenant-workflow";
+import { adaptBlobWrite } from "./blobSyncAdapter.js";
 import { json, readJsonBody } from "./http.js";
 import { assertSyncAccountAuth } from "./syncAuth.js";
 import { releaseEscrowForAgreement } from "./paymentEscrowHandler.js";
@@ -27,6 +33,36 @@ const agreementSnapshotSchema = z.object({
   agreementText: z.string().optional(),
 });
 
+const agreementRecordSchema = z.object({
+  id: z.string().trim().min(1),
+  propertyId: z.string().optional(),
+  propertyTitle: z.string().optional(),
+  ownerName: z.string().optional(),
+  ownerContact: z.string().optional(),
+  tenantId: z.string().optional(),
+  tenantName: z.string().optional(),
+  tenantContact: z.string().optional(),
+  tenantAadhaar: z.string().optional(),
+  tenantPan: z.string().optional(),
+  coTenantName: z.string().optional(),
+  coTenantContact: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  monthlyRent: z.string().optional(),
+  securityDeposit: z.string().optional(),
+  lockInPeriod: z.string().optional(),
+  noticePeriod: z.string().optional(),
+  rentDueDay: z.string().optional(),
+  maintenanceCharges: z.string().optional(),
+  maintenanceIncluded: z.boolean().optional(),
+  brokerageAmount: z.string().optional(),
+  brokeragePaidBy: z.string().optional(),
+  brokerageMode: z.string().optional(),
+  customText: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.number().optional(),
+});
+
 const sendForESignBodySchema = z.object({
   phone: phoneSchema,
   role: z.enum(["owner", "broker"]),
@@ -36,6 +72,7 @@ const sendForESignBodySchema = z.object({
   propertyId: z.string().optional(),
   propertyLabel: z.string().trim().min(1),
   propertyAddress: z.string().optional(),
+  propertyImage: z.string().optional(),
   monthlyRent: z.string().optional(),
   securityDeposit: z.string().optional(),
   propertyType: z.string().optional(),
@@ -45,6 +82,7 @@ const sendForESignBodySchema = z.object({
   requesterRole: z.enum(["owner", "broker"]),
   requesterName: z.string().trim().min(1),
   agreementSnapshot: agreementSnapshotSchema,
+  agreementRecord: agreementRecordSchema.optional(),
 });
 
 const patchWorkspaceBodySchema = z.object({
@@ -53,6 +91,22 @@ const patchWorkspaceBodySchema = z.object({
   preSigningEscrowType: z.enum(["brokerage_tenant", "security_deposit"]).optional(),
   escrowPaymentId: z.string().optional(),
   escrowPaymentStatus: z.enum(["created", "paid", "settled", "failed"]).optional(),
+  tenantName: z.string().trim().min(1).optional(),
+  propertyLabel: z.string().trim().min(1).optional(),
+  propertyId: z.string().optional(),
+  propertyAddress: z.string().optional(),
+  propertyImage: z.string().optional(),
+  monthlyRent: z.string().optional(),
+  securityDeposit: z.string().optional(),
+  propertyType: z.string().optional(),
+  ownerName: z.string().optional(),
+  ownerContact: z.string().optional(),
+  brokerName: z.string().optional(),
+  requesterName: z.string().optional(),
+  requesterRole: z.enum(["owner", "broker"]).optional(),
+  documentUploadToken: z.string().optional(),
+  documentUploadStatus: z.string().optional(),
+  agreementId: z.string().optional(),
 });
 
 const recordPartySignatureBodySchema = z.object({
@@ -281,6 +335,7 @@ type TenantWorkspaceRecord = {
   propertyId?: string;
   propertyLabel: string;
   propertyAddress?: string;
+  propertyImage?: string;
   monthlyRent?: string;
   securityDeposit?: string;
   propertyType?: string;
@@ -290,6 +345,7 @@ type TenantWorkspaceRecord = {
   requesterName?: string;
   requesterRole?: "owner" | "broker";
   agreementId?: string;
+  documentUploadToken?: string;
   documentUploadStatus?: string;
   lifecycleStage?: string;
   preSigningEscrowType?: "brokerage_tenant" | "security_deposit";
@@ -300,13 +356,7 @@ type TenantWorkspaceRecord = {
   updatedAt: number;
 };
 
-type AgreementBlobRow = {
-  id: string;
-  tenantContact?: string;
-  tenantName?: string;
-  ownerContact?: string;
-  status?: string;
-};
+type AgreementBlobRow = AgreementBlobRecord;
 
 function requestAuthorization(req: VercelRequest): string | undefined {
   const header = req.headers.authorization ?? req.headers.Authorization;
@@ -376,6 +426,33 @@ async function readAgreementsBlob(
   }
 }
 
+async function writeAgreementsBlob(
+  requesterPhone: string,
+  requesterRole: string,
+  agreements: AgreementBlobRow[],
+): Promise<void> {
+  const payload = JSON.stringify(agreements);
+  const pool = getPool();
+  await pool.query(
+    `INSERT INTO public.user_data (phone, role, data_key, value, updated_at)
+     VALUES ($1, $2, 'agreements', $3, NOW())
+     ON CONFLICT (phone, role, data_key)
+     DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+    [requesterPhone, requesterRole, payload],
+  );
+  await adaptBlobWrite(requesterPhone, requesterRole, "agreements", payload);
+}
+
+async function upsertAgreementInBlob(
+  requesterPhone: string,
+  requesterRole: string,
+  record: AgreementBlobRow,
+): Promise<void> {
+  const agreements = await readAgreementsBlob(requesterPhone, requesterRole);
+  const next = mergeAgreementIntoBlobList(agreements, record);
+  await writeAgreementsBlob(requesterPhone, requesterRole, next);
+}
+
 async function updateAgreementStatusInBlob(
   requesterPhone: string,
   requesterRole: string,
@@ -385,14 +462,7 @@ async function updateAgreementStatusInBlob(
   const agreements = await readAgreementsBlob(requesterPhone, requesterRole);
   if (agreements.length === 0) return;
   const next = agreements.map((row) => (row.id === agreementId ? { ...row, status } : row));
-  const pool = getPool();
-  await pool.query(
-    `INSERT INTO public.user_data (phone, role, data_key, value, updated_at)
-     VALUES ($1, $2, 'agreements', $3, NOW())
-     ON CONFLICT (phone, role, data_key)
-     DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
-    [requesterPhone, requesterRole, JSON.stringify(next)],
-  );
+  await writeAgreementsBlob(requesterPhone, requesterRole, next);
 }
 
 function mergeSignedPhones(existing: string[] | undefined, phone: string): string[] {
@@ -474,8 +544,12 @@ async function handleSendForESign(req: VercelRequest, res: VercelResponse): Prom
     return;
   }
 
+  if (body.agreementRecord) {
+    await upsertAgreementInBlob(body.phone, body.role, body.agreementRecord);
+  }
+
   const agreements = await readAgreementsBlob(body.phone, body.role);
-  const agreement = agreements.find((row) => row.id === body.agreementId);
+  const agreement = findAgreementInBlobList(agreements, body.agreementId);
   if (!agreement) {
     json(res, 404, { error: "Agreement not found" });
     return;
@@ -497,6 +571,7 @@ async function handleSendForESign(req: VercelRequest, res: VercelResponse): Prom
     propertyId: body.propertyId,
     propertyLabel: body.propertyLabel,
     propertyAddress: body.propertyAddress,
+    propertyImage: body.propertyImage,
     monthlyRent: body.monthlyRent,
     securityDeposit: body.securityDeposit,
     propertyType: body.propertyType,
@@ -555,14 +630,50 @@ async function handlePatchWorkspace(req: VercelRequest, res: VercelResponse): Pr
   }
 
   const existing = await readTenantWorkspace(phoneParsed.data);
+  const patchBody = parsed.data;
+
   if (!existing) {
-    json(res, 404, { error: "Tenant workspace not found" });
+    const tenantName = patchBody.tenantName?.trim() ?? "";
+    const propertyLabel = patchBody.propertyLabel?.trim() ?? "";
+    if (!tenantName || !propertyLabel) {
+      json(res, 404, { error: "Tenant workspace not found" });
+      return;
+    }
+
+    const created: TenantWorkspaceRecord = {
+      phone: phoneParsed.data,
+      tenantName,
+      propertyLabel,
+      propertyId: patchBody.propertyId,
+      propertyAddress: patchBody.propertyAddress,
+      propertyImage: patchBody.propertyImage,
+      monthlyRent: patchBody.monthlyRent,
+      securityDeposit: patchBody.securityDeposit,
+      propertyType: patchBody.propertyType,
+      ownerName: patchBody.ownerName,
+      ownerContact: patchBody.ownerContact,
+      brokerName: patchBody.brokerName,
+      requesterName: patchBody.requesterName,
+      requesterRole: patchBody.requesterRole,
+      documentUploadToken: patchBody.documentUploadToken,
+      documentUploadStatus: patchBody.documentUploadStatus,
+      agreementId: patchBody.agreementId,
+      lifecycleStage: patchBody.lifecycleStage,
+      preSigningEscrowType: patchBody.preSigningEscrowType,
+      escrowPaymentId: patchBody.escrowPaymentId,
+      escrowPaymentStatus: patchBody.escrowPaymentStatus,
+      esignSignedPartyPhones: patchBody.esignSignedPartyPhones,
+      updatedAt: Date.now(),
+    };
+
+    await writeTenantWorkspace(phoneParsed.data, created);
+    json(res, 200, { ok: true, workspace: created });
     return;
   }
 
   const next: TenantWorkspaceRecord = {
     ...existing,
-    ...parsed.data,
+    ...patchBody,
     phone: phoneParsed.data,
     updatedAt: Date.now(),
   };

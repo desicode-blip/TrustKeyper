@@ -113,6 +113,10 @@ async function handleCreate(req: Request, res: Response, store: DocumentUploadSt
     requesterName?: string;
     propertyId?: string;
     propertyLabel?: string;
+    propertyImage?: string;
+    propertyAddress?: string;
+    monthlyRent?: string;
+    securityDeposit?: string;
     agreementDraftId?: string;
   };
 
@@ -143,6 +147,10 @@ async function handleCreate(req: Request, res: Response, store: DocumentUploadSt
     tenantPhone,
     propertyId: body.propertyId,
     propertyLabel: body.propertyLabel,
+    propertyImage: body.propertyImage,
+    propertyAddress: body.propertyAddress,
+    monthlyRent: body.monthlyRent,
+    securityDeposit: body.securityDeposit,
     agreementDraftId: body.agreementDraftId,
     origin: requestOrigin(req),
   });

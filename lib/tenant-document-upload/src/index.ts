@@ -77,6 +77,10 @@ export type DocumentUploadTokenSnapshot = {
   requesterName: string;
   propertyId?: string;
   propertyLabel?: string;
+  propertyImage?: string;
+  propertyAddress?: string;
+  monthlyRent?: string;
+  securityDeposit?: string;
   agreementDraftId?: string;
   requestedDocumentIds: ExtendedDocumentId[];
   status: DocumentUploadInviteStatus;
@@ -170,6 +174,10 @@ export type RegisterDocumentUploadInviteInput = {
   tenantPhone: string;
   propertyId?: string;
   propertyLabel?: string;
+  propertyImage?: string;
+  propertyAddress?: string;
+  monthlyRent?: string;
+  securityDeposit?: string;
   agreementDraftId?: string;
   requestedDocumentIds?: ExtendedDocumentId[];
   origin: string;
@@ -239,6 +247,10 @@ export async function registerDocumentUploadInvite(
     requesterName: input.requesterName.trim() || "Your property manager",
     propertyId: input.propertyId,
     propertyLabel: input.propertyLabel,
+    propertyImage: input.propertyImage,
+    propertyAddress: input.propertyAddress,
+    monthlyRent: input.monthlyRent,
+    securityDeposit: input.securityDeposit,
     agreementDraftId: input.agreementDraftId,
     requestedDocumentIds,
     status: "link_sent",
@@ -470,6 +482,10 @@ export type RequesterDocumentUploadInviteView = {
   tenantPhone: string;
   propertyId?: string;
   propertyLabel?: string;
+  propertyImage?: string;
+  propertyAddress?: string;
+  monthlyRent?: string;
+  securityDeposit?: string;
   status: DocumentUploadInviteStatus;
   tenantDocumentStatus: TenantDocumentUploadStatus;
   requestedDocumentIds: ExtendedDocumentId[];
@@ -491,6 +507,10 @@ function inviteRowToRequesterView(row: InviteRow): RequesterDocumentUploadInvite
     tenantPhone: row.tenantPhone,
     propertyId: row.propertyId,
     propertyLabel: row.propertyLabel,
+    propertyImage: row.propertyImage,
+    propertyAddress: row.propertyAddress,
+    monthlyRent: row.monthlyRent,
+    securityDeposit: row.securityDeposit,
     status: resolveStatus(row),
     tenantDocumentStatus: row.tenantDocumentStatus,
     requestedDocumentIds: row.requestedDocumentIds,
@@ -604,6 +624,10 @@ export async function handleTenantDocumentUploadRequest(
       requesterRole: record.snapshot.requesterRole,
       propertyId: record.snapshot.propertyId,
       propertyLabel: record.snapshot.propertyLabel,
+      propertyImage: record.snapshot.propertyImage,
+      propertyAddress: record.snapshot.propertyAddress,
+      monthlyRent: record.snapshot.monthlyRent,
+      securityDeposit: record.snapshot.securityDeposit,
       requestedDocumentIds: record.snapshot.requestedDocumentIds,
       status,
       tenantDocumentStatus: record.snapshot.tenantDocumentStatus,

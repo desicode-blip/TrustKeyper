@@ -10,10 +10,15 @@ function sessionKey(token: string): string {
   return `tk_tenant_doc_upload_session_${token}`;
 }
 
+function rememberedSessionKey(token: string): string {
+  return `tk_tenant_doc_upload_remember_${token}`;
+}
+
 export function getTenantDocumentUploadSession(token: string): TenantDocumentUploadSession | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem(sessionKey(token));
+    const raw =
+      sessionStorage.getItem(sessionKey(token)) ?? localStorage.getItem(rememberedSessionKey(token));
     if (!raw) return null;
     return JSON.parse(raw) as TenantDocumentUploadSession;
   } catch {
@@ -21,12 +26,19 @@ export function getTenantDocumentUploadSession(token: string): TenantDocumentUpl
   }
 }
 
-export function setTenantDocumentUploadSession(session: TenantDocumentUploadSession): void {
+export function setTenantDocumentUploadSession(
+  session: TenantDocumentUploadSession,
+  options?: { remember?: boolean },
+): void {
   sessionStorage.setItem(sessionKey(session.token), JSON.stringify(session));
+  if (options?.remember) {
+    localStorage.setItem(rememberedSessionKey(session.token), JSON.stringify(session));
+  }
 }
 
 export function clearTenantDocumentUploadSession(token: string): void {
   sessionStorage.removeItem(sessionKey(token));
+  localStorage.removeItem(rememberedSessionKey(token));
 }
 
 function draftKey(token: string): string {

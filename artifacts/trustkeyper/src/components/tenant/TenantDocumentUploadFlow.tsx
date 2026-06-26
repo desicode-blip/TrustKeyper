@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   Eye,
   Loader2,
-  MapPin,
   Plus,
   Trash2,
   Upload,
@@ -37,6 +36,8 @@ import {
   resolveTenantDocumentDataUrl,
 } from "@/lib/tenantProfileDocument";
 import { saveTenantWorkspaceFromInvite } from "@/lib/tenantWorkspace";
+import type { TenantWorkspaceRecord } from "@/lib/tenantWorkspace";
+import { TenantDashboardPropertyCard } from "@/components/tenant/TenantDashboardPropertyCard";
 import {
   clearTenantDocumentUploadDraft,
   getTenantDocumentUploadDraft,
@@ -62,6 +63,22 @@ function fmtFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function inviteToPropertyWorkspace(invite: DocumentUploadInvitePayload): TenantWorkspaceRecord {
+  return {
+    phone: invite.tenantPhone,
+    tenantName: invite.tenantName,
+    propertyId: invite.propertyId,
+    propertyLabel: invite.propertyLabel ?? "Assigned Property",
+    propertyAddress: invite.propertyAddress,
+    propertyImage: invite.propertyImage,
+    monthlyRent: invite.monthlyRent,
+    securityDeposit: invite.securityDeposit,
+    requesterName: invite.requesterName,
+    requesterRole: invite.requesterRole,
+    updatedAt: Date.now(),
+  };
+}
+
 export function TenantDocumentUploadFlow({
   invite,
   session,
@@ -83,29 +100,26 @@ export function TenantDocumentUploadFlow({
 
   useEffect(() => {
     const initial: Partial<Record<ExtendedDocumentId, LocalDocState>> = {};
-    const storedProfile = getTenantAccountProfile();
     for (const id of invite.requestedDocumentIds) {
       const serverStatus = invite.documentStatuses[id] ?? "not_uploaded";
       const serverFile = invite.documents[id];
-      const profileDoc =
-        id === "aadhaar" ? storedProfile.aadhaar : id === "pan" ? storedProfile.pan : undefined;
       if (id === "bank") {
+        const bankUploaded = serverStatus === "uploaded";
         initial.bank = {
-          status: serverStatus === "uploaded" || invite.bankDetails ? "uploaded" : "not_uploaded",
-          fileName: invite.bankDetails ? "Bank Account Details" : undefined,
+          status: bankUploaded ? "uploaded" : "not_uploaded",
+          fileName: bankUploaded ? "Bank Account Details" : undefined,
         };
-        if (invite.bankDetails) {
+        if (bankUploaded && invite.bankDetails) {
           setBankDetails(invite.bankDetails as BankDetailsData);
         }
         continue;
       }
-      const hasUploaded =
-        serverStatus === "uploaded" || profileDoc?.fileName || serverFile?.fileName;
+      const hasUploaded = serverStatus === "uploaded" && Boolean(serverFile?.fileName);
       initial[id] = {
-        status: hasUploaded ? "uploaded" : serverStatus,
-        fileName: profileDoc?.fileName ?? serverFile?.fileName,
-        fileSize: profileDoc?.fileSize ?? serverFile?.fileSize,
-        mimeType: profileDoc?.mimeType ?? serverFile?.mimeType,
+        status: hasUploaded ? "uploaded" : serverStatus === "reupload_required" ? "reupload_required" : "not_uploaded",
+        fileName: hasUploaded ? serverFile?.fileName : undefined,
+        fileSize: hasUploaded ? serverFile?.fileSize : undefined,
+        mimeType: hasUploaded ? serverFile?.mimeType : undefined,
       };
     }
     const draft = getTenantDocumentUploadDraft(session.token);
@@ -538,14 +552,14 @@ export function TenantDocumentUploadFlow({
 
       <main className="flex-1 px-4 sm:px-6 py-6 max-w-2xl mx-auto w-full">
         {invite.propertyLabel ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-4 mb-6 flex gap-3 items-center">
-            <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-              <MapPin size={20} className="text-gray-400" />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900">{invite.propertyLabel}</p>
-              <p className="text-xs text-gray-500">Requested by {invite.requesterName}</p>
-            </div>
+          <div className="mb-6">
+            <TenantDashboardPropertyCard
+              workspace={inviteToPropertyWorkspace(invite)}
+              workflowStage="documents_requested"
+            />
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              Requested by {invite.requesterName}
+            </p>
           </div>
         ) : null}
 

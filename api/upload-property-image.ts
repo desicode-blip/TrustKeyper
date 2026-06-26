@@ -1,46 +1,86 @@
+import { readFile } from "node:fs/promises";
 import { put } from "@vercel/blob";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import formidable from "formidable";
+import { json } from "./_lib/http.js";
 import { assertSyncAccountAuth } from "./_lib/syncAuth.js";
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+function headerValue(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value;
 }
 
-function fieldValue(value: string | File | null): string {
-  if (typeof value === "string") return value;
-  return "";
+function fieldValue(fields: formidable.Fields, name: string): string | undefined {
+  const raw = fields[name];
+  if (Array.isArray(raw)) return raw[0];
+  if (typeof raw === "string") return raw;
+  return undefined;
+}
+
+function fileValue(files: formidable.Files, name: string): formidable.File | undefined {
+  const raw = files[name];
+  if (Array.isArray(raw)) return raw[0];
+  if (raw && typeof raw === "object" && "filepath" in raw) return raw;
+  return undefined;
+}
+
+function isMaxFileSizeError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const code = (err as Error & { code?: number }).code;
+  return code === 1009 || /maxFileSize|max file size/i.test(err.message);
 }
 
 /** Accepts a property image upload and stores it in Vercel Blob. */
-export async function POST(request: Request): Promise<Response> {
-  let formData: FormData;
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+  if (req.method !== "POST") {
+    json(res, 405, { error: "Method not allowed" });
+    return;
+  }
+
+  let fields: formidable.Fields;
+  let files: formidable.Files;
+
   try {
-    formData = await request.formData();
-  } catch {
-    return jsonResponse(400, { error: "Invalid form data" });
+    const form = formidable({
+      maxFileSize: MAX_BYTES,
+      multiples: false,
+      filter: ({ mimetype }) => Boolean(mimetype?.startsWith("image/")),
+    });
+    // @vercel/node pre-buffers the body and replays it on req.on("data"); formidable listens on that stream.
+    [fields, files] = await form.parse(req);
+  } catch (err) {
+    if (isMaxFileSizeError(err)) {
+      json(res, 400, { error: "Image too large — max 2MB" });
+      return;
+    }
+    json(res, 400, { error: "Invalid form data" });
+    return;
   }
 
-  const phone = fieldValue(formData.get("phone"));
+  const phone = fieldValue(fields, "phone");
   if (!phone) {
-    return jsonResponse(400, { error: "Phone is required" });
+    json(res, 400, { error: "Phone is required" });
+    return;
   }
 
-  const auth = await assertSyncAccountAuth(request.headers.get("authorization") ?? undefined, phone);
+  const auth = await assertSyncAccountAuth(headerValue(req.headers.authorization), phone);
   if (!auth.ok) {
-    return jsonResponse(auth.status, { error: auth.error });
+    json(res, auth.status, { error: auth.error });
+    return;
   }
 
-  const imageEntry = formData.get("image");
-  if (!(imageEntry instanceof Blob) || imageEntry.size === 0) {
-    return jsonResponse(400, { error: "Image file is required" });
+  const image = fileValue(files, "image");
+  if (!image?.filepath) {
+    json(res, 400, { error: "Image file is required" });
+    return;
   }
 
-  if (imageEntry.size > MAX_BYTES) {
-    return jsonResponse(400, { error: "Image too large — max 2MB" });
+  const fileSize = image.size ?? 0;
+  if (fileSize > MAX_BYTES) {
+    json(res, 400, { error: "Image too large — max 2MB" });
+    return;
   }
 
   const normalizedPhone = phone.replace(/\D/g, "").slice(-10);
@@ -48,9 +88,10 @@ export async function POST(request: Request): Promise<Response> {
   const pathname = `property-images/${normalizedPhone}/${Date.now()}-${random}.jpg`;
 
   try {
-    const buffer = Buffer.from(await imageEntry.arrayBuffer());
+    const buffer = await readFile(image.filepath);
     if (buffer.length > MAX_BYTES) {
-      return jsonResponse(400, { error: "Image too large — max 2MB" });
+      json(res, 400, { error: "Image too large — max 2MB" });
+      return;
     }
 
     const result = await put(pathname, buffer, {
@@ -58,8 +99,8 @@ export async function POST(request: Request): Promise<Response> {
       contentType: "image/jpeg",
     });
 
-    return jsonResponse(200, { url: result.url });
+    json(res, 200, { url: result.url });
   } catch {
-    return jsonResponse(502, { error: "Image upload failed" });
+    json(res, 502, { error: "Image upload failed" });
   }
 }
