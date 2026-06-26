@@ -4,6 +4,9 @@ export const PROPERTY_IMAGE_JPEG_QUALITY = 0.82;
 /** Keep each stored image under ~500 KB so five photos fit in localStorage. */
 export const MAX_PROPERTY_IMAGE_DATA_URL_LENGTH = 520_000;
 
+const API_BASE =
+  (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
+
 /** Deduplicate and cap property image data URLs. */
 export function normalizePropertyImages(images: string[]): {
   images: string[];
@@ -126,6 +129,58 @@ async function compressImageFileToDataUrl(file: File): Promise<string | null> {
   return compressed ?? raw;
 }
 
+/** Resize a property image client-side and upload it to Vercel Blob. */
+export async function uploadPropertyImageFile(file: File, phone: string): Promise<string> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Only image files can be uploaded");
+  }
+
+  const dataUrl = await compressImageFileToDataUrl(file);
+  if (!dataUrl) {
+    throw new Error("Could not process image for upload");
+  }
+
+  const blob = await fetch(dataUrl).then((response) => response.blob());
+  const normalizedPhone = phone.replace(/\D/g, "").slice(-10);
+  if (normalizedPhone.length !== 10) {
+    throw new Error("Invalid phone number for image upload");
+  }
+
+  const { syncAuthHeaders } = await import("./syncSession");
+  const headers = await syncAuthHeaders();
+  if (!headers) {
+    throw new Error("Sign in required to upload property images");
+  }
+
+  const formData = new FormData();
+  formData.append("image", blob, "property.jpg");
+  formData.append("phone", normalizedPhone);
+
+  const res = await fetch(`${API_BASE}/upload-property-image`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  if (!res.ok) {
+    let message = "Image upload failed";
+    try {
+      const json = (await res.json()) as { error?: string };
+      if (json.error) message = json.error;
+    } catch {
+      /* ignore parse errors */
+    }
+    throw new Error(message);
+  }
+
+  const json = (await res.json()) as { url?: string };
+  if (!json.url || typeof json.url !== "string") {
+    throw new Error("Image upload failed — no URL returned");
+  }
+
+  return json.url;
+}
+
 /** Compress all images before saving a property record. */
 export async function preparePropertyImagesForStorage(images: string[]): Promise<{
   images: string[];
@@ -167,26 +222,39 @@ export async function appendPropertyImagesFromFiles(
     };
   }
 
-  const readResults = await Promise.all(candidates.map((file) => compressImageFileToDataUrl(file)));
+  const { getActiveSession } = await import("./storageKeys");
+  const session = getActiveSession();
+  const phone = session?.phone;
+  if (!phone) {
+    return {
+      images: normalizedExisting.images,
+      imageCount: normalizedExisting.imageCount,
+      addedCount: 0,
+      failedCount: candidates.length,
+      skippedDuplicateCount: 0,
+    };
+  }
+
   const existingSet = new Set(normalizedExisting.images);
   let addedCount = 0;
   let failedCount = 0;
   let skippedDuplicateCount = 0;
   const merged = [...normalizedExisting.images];
 
-  for (const dataUrl of readResults) {
-    if (!dataUrl) {
+  for (const file of candidates) {
+    try {
+      const url = await uploadPropertyImageFile(file, phone);
+      if (existingSet.has(url)) {
+        skippedDuplicateCount += 1;
+        continue;
+      }
+      if (merged.length >= MAX_PROPERTY_IMAGES) break;
+      existingSet.add(url);
+      merged.push(url);
+      addedCount += 1;
+    } catch {
       failedCount += 1;
-      continue;
     }
-    if (existingSet.has(dataUrl)) {
-      skippedDuplicateCount += 1;
-      continue;
-    }
-    if (merged.length >= MAX_PROPERTY_IMAGES) break;
-    existingSet.add(dataUrl);
-    merged.push(dataUrl);
-    addedCount += 1;
   }
 
   const normalized = normalizePropertyImages(merged);

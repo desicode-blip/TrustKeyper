@@ -43,6 +43,7 @@
     "@workspace/db": "workspace:*",
     "@workspace/invitations-store": "workspace:*",
     "@workspace/sync-store": "workspace:*",
+    "formidable": "^3.5.4",
     "pg": "^8.20.0",
     "razorpay": "^2.9.6",
     "zod": "catalog:"
@@ -51,6 +52,7 @@
     "@esbuild/darwin-arm64": "^0.27.3",
     "@rollup/rollup-darwin-arm64": "^4.60.4",
     "@tailwindcss/oxide-win32-x64-msvc": "4.2.4",
+    "@types/formidable": "^3.5.1",
     "@types/node": "catalog:",
     "@types/pg": "^8.18.0",
     "concurrently": "^9.2.1",
