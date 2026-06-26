@@ -309,6 +309,7 @@ export function TenantDocumentUploadFlow({
       saveTenantWorkspaceFromInvite(invite, {
         documentUploadStatus: "documents_submitted",
         documentUploadSubmittedAt: result.submittedAt ?? Date.now(),
+        lifecycleStage: "documents_under_review",
       });
       syncProfileFromLocalState(docs, bankDetails, {
         submitted: true,

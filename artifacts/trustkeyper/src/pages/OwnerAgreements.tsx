@@ -73,6 +73,7 @@ export default function OwnerAgreements() {
               <AgreementDocumentRow
                 key={agreement.id}
                 agreement={agreement}
+                requesterRole="owner"
                 onView={() => setViewing(agreement)}
                 onEditManually={() => setEditingManually(agreement)}
                 onEditDetails={() => {

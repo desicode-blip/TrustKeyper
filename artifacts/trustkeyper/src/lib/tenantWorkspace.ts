@@ -1,5 +1,6 @@
 import type { TenantDocumentUploadStatus } from "@workspace/tenant-document-upload";
 import type { DocumentUploadInvitePayload } from "@/lib/publicAgreementDocumentUpload";
+import { queueCloudSync } from "@/lib/cloudSync";
 import { enrichTenantWorkspaceEcosystem } from "@/lib/tenantEcosystem";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import {
@@ -23,10 +24,33 @@ export type TenantNotificationKind =
   | "documents_under_review"
   | "agreement_being_prepared"
   | "agreement_ready"
+  | "esign_document_upload"
+  | "awaiting_esign_signatures"
   | "agreement_signed"
   | "move_in_scheduled"
   | "maintenance_open"
   | "rent_due";
+
+export type TenantPreSigningEscrowType = "brokerage_tenant" | "security_deposit";
+
+export type TenantEscrowPaymentStatus = "created" | "paid" | "settled" | "failed";
+
+export interface TenantAgreementSnapshot {
+  ownerName: string;
+  ownerContact?: string;
+  tenantName: string;
+  propertyAddress: string;
+  propertyType?: string;
+  leaseStartDate: string;
+  leaseEndDate?: string;
+  monthlyRent: string;
+  securityDeposit: string;
+  rentDueDay: string;
+  lockInPeriod: string;
+  noticePeriod: string;
+  brokerageAmount?: string;
+  agreementText?: string;
+}
 
 export interface TenantWorkspaceRecord {
   phone: string;
@@ -40,6 +64,7 @@ export interface TenantWorkspaceRecord {
   propertyType?: string;
   propertyStatus?: string;
   ownerName?: string;
+  ownerContact?: string;
   brokerName?: string;
   documentUploadToken?: string;
   documentUploadStatus?: TenantDocumentUploadStatus;
@@ -50,9 +75,14 @@ export interface TenantWorkspaceRecord {
   accountCreatedAt?: number;
   rentalRequirementsSubmitted?: boolean;
   lifecycleStage?: TenantWorkflowStage;
+  preSigningEscrowType?: TenantPreSigningEscrowType;
+  escrowPaymentId?: string;
+  escrowPaymentStatus?: TenantEscrowPaymentStatus;
+  agreementSnapshot?: TenantAgreementSnapshot;
   propertyMissing?: boolean;
   agreementCancelled?: boolean;
   relationshipError?: string;
+  esignSignedPartyPhones?: string[];
   updatedAt: number;
 }
 
@@ -99,6 +129,7 @@ export function saveTenantWorkspace(record: TenantWorkspaceRecord): void {
   const session = getActiveSession();
   if (session && phoneDigits(session.phone) === digits && session.role === "tenant") {
     localStorage.setItem(storageKey(digits, "tenant", "tenant_workspace"), payload);
+    queueCloudSync("tenant_workspace", payload);
   }
   broadcastTenantWorkflowUpdated();
 }

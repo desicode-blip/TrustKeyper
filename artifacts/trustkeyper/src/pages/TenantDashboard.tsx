@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import TenantLayout from "@/components/TenantLayout";
+import { TenantAwaitingSignaturesCard } from "@/components/tenant/TenantAwaitingSignaturesCard";
 import { TenantDashboardPropertyCard } from "@/components/tenant/TenantDashboardPropertyCard";
 import { TenantProgressTracker } from "@/components/tenant/TenantProgressTracker";
 import { TenantStatusNotificationCard } from "@/components/tenant/TenantStatusNotificationCard";
@@ -17,6 +18,7 @@ import {
   TENANT_WORKFLOW_UPDATED_EVENT,
   type TenantWorkflowSnapshot,
 } from "@/lib/tenantWorkflowState";
+import { pullTenantWorkspaceFromServer } from "@/lib/tenantWorkflowServer";
 
 export default function TenantDashboard() {
   const [workspace, setWorkspace] = useState<TenantWorkspaceRecord | null>(null);
@@ -39,7 +41,7 @@ export default function TenantDashboard() {
   }, []);
 
   useEffect(() => {
-    refreshDashboard();
+    void pullTenantWorkspaceFromServer().finally(() => refreshDashboard());
     const onUpdate = () => refreshDashboard();
     window.addEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onUpdate);
     window.addEventListener(TENANT_PROFILE_UPDATED_EVENT, onUpdate);
@@ -87,16 +89,20 @@ export default function TenantDashboard() {
             />
           </div>
           <div className="lg:col-span-2">
-            <TenantStatusNotificationCard
-              notification={
-                workflow?.notification ?? {
-                  kind: "no_property",
-                  title: "Loading…",
-                  description: "Fetching your latest rental activity.",
+            {workflow?.stage === "awaiting_esign_signatures" && workflow.signatureStatus ? (
+              <TenantAwaitingSignaturesCard status={workflow.signatureStatus} loading={loading} />
+            ) : (
+              <TenantStatusNotificationCard
+                notification={
+                  workflow?.notification ?? {
+                    kind: "no_property",
+                    title: "Loading…",
+                    description: "Fetching your latest rental activity.",
+                  }
                 }
-              }
-              loading={loading}
-            />
+                loading={loading}
+              />
+            )}
           </div>
         </div>
       </div>

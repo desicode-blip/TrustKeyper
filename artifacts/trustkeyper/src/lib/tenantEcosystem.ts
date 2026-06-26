@@ -67,6 +67,8 @@ export function shouldDisplayBrokerName(
   if (!workspace.brokerName) return false;
   const hideAfterAgreement = [
     "agreement_ready",
+    "esign_document_upload",
+    "awaiting_esign_signatures",
     "agreement_signed",
     "rent_payment_due",
     "move_in_scheduled",

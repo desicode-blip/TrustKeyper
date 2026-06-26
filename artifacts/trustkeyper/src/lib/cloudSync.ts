@@ -8,6 +8,7 @@ import {
 } from "./storageKeys";
 import { syncAuthHeaders } from "./syncSession";
 import { sanitizeDocumentUploadInviteForLocalStorage } from "./agreementDocumentUploadSanitize";
+import { TENANT_WORKFLOW_UPDATED_EVENT } from "./tenantWorkflowState";
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
@@ -37,6 +38,8 @@ export const CLOUD_SYNC_KEYS = [
   "agreement_document_upload_invites",
   "document_submission_notifications",
 ] as const;
+
+export const TENANT_CLOUD_SYNC_KEYS = ["profile", "tenant_workspace"] as const;
 
 export type CloudSyncKey = (typeof CLOUD_SYNC_KEYS)[number];
 
@@ -127,7 +130,9 @@ export function collectBulkSyncEntries(
   const p = normalizePhoneDigits(phone);
   const entries: Record<string, string> = {};
 
-  for (const key of CLOUD_SYNC_KEYS) {
+  const keys = role === "tenant" ? TENANT_CLOUD_SYNC_KEYS : CLOUD_SYNC_KEYS;
+
+  for (const key of keys) {
     const raw = store.getItem(storageKey(p, role, key));
     if (raw) entries[key] = raw;
   }
@@ -203,6 +208,9 @@ export function applyCloudDataToLocal(
       }
     }
     writeLocalForAccount(p, role, dataKey, sanitizedValue, mirror);
+    if (mirror && role === "tenant" && dataKey === "tenant_workspace") {
+      window.dispatchEvent(new CustomEvent(TENANT_WORKFLOW_UPDATED_EVENT));
+    }
   }
 
   if (mirror && data.profile) {
