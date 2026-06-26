@@ -55,6 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       json(res, 400, { error: "Image too large — max 2MB" });
       return;
     }
+    console.error("[upload-property-image] formidable parse failed:", err);
     json(res, 400, { error: "Invalid form data" });
     return;
   }
@@ -94,13 +95,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    if (!token) {
+      console.error("[upload-property-image] BLOB_READ_WRITE_TOKEN not set");
+      json(res, 502, { error: "Image upload failed" });
+      return;
+    }
+
     const result = await put(pathname, buffer, {
       access: "public",
       contentType: "image/jpeg",
+      token,
     });
 
     json(res, 200, { url: result.url });
-  } catch {
+  } catch (err) {
+    console.error("[upload-property-image] blob put failed:", err);
     json(res, 502, { error: "Image upload failed" });
   }
 }
