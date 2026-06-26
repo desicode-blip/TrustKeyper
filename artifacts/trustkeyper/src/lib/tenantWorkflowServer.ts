@@ -19,6 +19,7 @@ export interface SendAgreementForESignInput {
   propertyId?: string;
   propertyLabel: string;
   propertyAddress?: string;
+  propertyImage?: string;
   monthlyRent?: string;
   securityDeposit?: string;
   propertyType?: string;
@@ -165,6 +166,7 @@ export async function upsertTenantWorkspaceOnServer(
     propertyLabel: workspace.propertyLabel,
     propertyId: workspace.propertyId,
     propertyAddress: workspace.propertyAddress,
+    propertyImage: workspace.propertyImage,
     monthlyRent: workspace.monthlyRent,
     securityDeposit: workspace.securityDeposit,
     propertyType: workspace.propertyType,

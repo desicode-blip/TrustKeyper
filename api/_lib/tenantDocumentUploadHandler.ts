@@ -176,6 +176,10 @@ async function handleCreateInvite(req: VercelRequest, res: VercelResponse): Prom
     requesterName?: string;
     propertyId?: string;
     propertyLabel?: string;
+    propertyImage?: string;
+    propertyAddress?: string;
+    monthlyRent?: string;
+    securityDeposit?: string;
     agreementDraftId?: string;
   } | null;
 
@@ -201,6 +205,10 @@ async function handleCreateInvite(req: VercelRequest, res: VercelResponse): Prom
     tenantPhone,
     propertyId: body?.propertyId,
     propertyLabel: body?.propertyLabel,
+    propertyImage: body?.propertyImage,
+    propertyAddress: body?.propertyAddress,
+    monthlyRent: body?.monthlyRent,
+    securityDeposit: body?.securityDeposit,
     agreementDraftId: body?.agreementDraftId,
     origin: requestOrigin(req),
   });
