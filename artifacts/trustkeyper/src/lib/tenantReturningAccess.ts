@@ -24,6 +24,8 @@ export function resolveReturningTenantAccess(input: {
   activeTenantPhone?: string;
   hasUploadSession: boolean;
   hasTenantAccount: boolean;
+  hasRememberedTenantSession?: boolean;
+  rememberedTenantPhone?: string;
 }): ReturningTenantAccessDecision {
   if (input.inviteStatus === "expired") {
     return { kind: "blocked", reason: "expired" };
@@ -34,11 +36,22 @@ export function resolveReturningTenantAccess(input: {
 
   const tenantDigits = phoneLast10(input.tenantPhone);
   const sessionDigits = input.activeTenantPhone ? phoneLast10(input.activeTenantPhone) : "";
+  const rememberedDigits = input.rememberedTenantPhone
+    ? phoneLast10(input.rememberedTenantPhone)
+    : "";
 
   if (
     input.hasActiveTenantSession &&
     sessionDigits.length === 10 &&
     sessionDigits === tenantDigits
+  ) {
+    return { kind: "immediate", reason: "active_tenant_session" };
+  }
+
+  if (
+    input.hasRememberedTenantSession &&
+    rememberedDigits.length === 10 &&
+    rememberedDigits === tenantDigits
   ) {
     return { kind: "immediate", reason: "active_tenant_session" };
   }
@@ -52,6 +65,15 @@ export function resolveReturningTenantAccess(input: {
   }
 
   return { kind: "otp", reason: "new_account" };
+}
+
+export function documentsAlreadySubmittedForInvite(input: {
+  status: string;
+  tenantDocumentStatus?: string;
+}): boolean {
+  return (
+    input.status === "submitted" || input.tenantDocumentStatus === "documents_submitted"
+  );
 }
 
 export function shouldOpenDocumentManagement(inviteStatus: string): boolean {

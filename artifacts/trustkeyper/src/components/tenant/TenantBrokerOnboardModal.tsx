@@ -78,6 +78,9 @@ export function TenantBrokerOnboardModal({
   verifyOtpError,
   sendingOtp,
   onSendOtp,
+  rememberMe = false,
+  onRememberMeChange,
+  showRememberMe = false,
 }: {
   phase: TenantOnboardModalPhase;
   name: string;
@@ -88,12 +91,15 @@ export function TenantBrokerOnboardModal({
   onNameChange: (value: string) => void;
   onPhoneChange: (value: string) => void;
   onClose?: () => void;
-  onOtpVerified: (success: boolean) => void;
+  onOtpVerified: (success: boolean, accessToken?: string | null) => void;
   onAccountSuccessDone: () => void;
   sendOtpError: string | null;
   verifyOtpError: string | null;
   sendingOtp: boolean;
   onSendOtp: () => Promise<boolean>;
+  rememberMe?: boolean;
+  onRememberMeChange?: (value: boolean) => void;
+  showRememberMe?: boolean;
 }) {
   const copy = resolveTenantOnboardModalCopy({ flowContext, requesterName, propertyLabel });
   const [agreed, setAgreed] = useState(false);
@@ -164,7 +170,7 @@ export function TenantBrokerOnboardModal({
         onOtpVerified(false);
         return;
       }
-      onOtpVerified(true);
+      onOtpVerified(true, accessToken);
     } finally {
       setVerifying(false);
     }
@@ -296,10 +302,23 @@ export function TenantBrokerOnboardModal({
                   <OtpVerifyReadyHint seconds={verifyReady} />
                 </div>
               ) : (
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <Checkbox checked={agreed} onCheckedChange={(v) => setAgreed(v === true)} />
-                  <span className="text-sm text-gray-600 leading-snug">{copy.consentLabel}</span>
-                </label>
+                <>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <Checkbox checked={agreed} onCheckedChange={(v) => setAgreed(v === true)} />
+                    <span className="text-sm text-gray-600 leading-snug">{copy.consentLabel}</span>
+                  </label>
+                  {showRememberMe && onRememberMeChange ? (
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <Checkbox
+                        checked={rememberMe}
+                        onCheckedChange={(v) => onRememberMeChange(v === true)}
+                      />
+                      <span className="text-sm text-gray-600 leading-snug">
+                        Remember me on this device
+                      </span>
+                    </label>
+                  ) : null}
+                </>
               )}
             </div>
 

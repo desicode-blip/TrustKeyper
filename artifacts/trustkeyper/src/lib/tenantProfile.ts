@@ -374,6 +374,7 @@ export function mergeTenantProfileFromInvitePayload(
 
   for (const [id, file] of Object.entries(invite.documents ?? {})) {
     const docId = id as ExtendedDocumentId;
+    if (invite.documentStatuses[docId] !== "uploaded") continue;
     const withData = documentsWithData?.[docId];
     const existing =
       docId === "aadhaar"
@@ -403,7 +404,8 @@ export function mergeTenantProfileFromInvitePayload(
     propertyLabel: invite.propertyLabel,
     documentStatuses: invite.documentStatuses,
     documents: mergedDocuments,
-    bankDetails: invite.bankDetails,
+    bankDetails:
+      invite.documentStatuses.bank === "uploaded" ? invite.bankDetails : undefined,
     tenantDocumentStatus: invite.tenantDocumentStatus,
     submitted: invite.status === "submitted",
   });
