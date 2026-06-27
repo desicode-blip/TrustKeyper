@@ -8,6 +8,10 @@ import {
   resolveTenantWorkflowState,
 } from "@/lib/tenantWorkflowState";
 import type { TenantWorkflowStage } from "@/lib/tenantWorkflowState";
+import {
+  mergeInviteIntoTenantWorkspace,
+  shouldSyncInviteWorkspaceToServer,
+} from "@/lib/tenantWorkspaceInviteMerge";
 import { getActiveSession, getSessionItem, storageKey } from "@/lib/storageKeys";
 
 export type TenantDashboardPhase =
@@ -206,8 +210,11 @@ export function saveTenantWorkspaceFromInvite(
     ownerName = ownerName ?? invite.requesterName;
   }
 
-  const record: TenantWorkspaceRecord = enrichTenantWorkspaceEcosystem({
-    phone: invite.tenantPhone,
+  const digits = phoneDigits(invite.tenantPhone);
+  const existing = getTenantWorkspaceForPhone(digits);
+
+  const inviteRecord: TenantWorkspaceRecord = {
+    phone: digits,
     tenantName: invite.tenantName,
     propertyId: invite.propertyId,
     propertyLabel: propertyTitle,
@@ -226,10 +233,16 @@ export function saveTenantWorkspaceFromInvite(
     requesterRole: invite.requesterRole,
     updatedAt: Date.now(),
     ...overrides,
-  });
+  };
+
+  const record = enrichTenantWorkspaceEcosystem(
+    mergeInviteIntoTenantWorkspace(existing, inviteRecord),
+  );
 
   saveTenantWorkspace(record);
-  void import("./tenantWorkflowServer").then((mod) => mod.upsertTenantWorkspaceOnServer(record));
+  if (shouldSyncInviteWorkspaceToServer(existing)) {
+    void import("./tenantWorkflowServer").then((mod) => mod.upsertTenantWorkspaceOnServer(record));
+  }
   return record;
 }
 

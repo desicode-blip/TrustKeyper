@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Bell,
@@ -47,15 +47,18 @@ export default function TenantLayout({ children }: TenantLayoutProps) {
   const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const tenantName = getTenantDisplayName();
+  const authCheckedRef = useRef(false);
 
   useEffect(() => {
+    if (authCheckedRef.current) return;
+    authCheckedRef.current = true;
     restoreRememberedSessionFromLocalStorage();
     const session = getActiveSession();
     if (!session || session.role !== "tenant") {
       sessionStorage.setItem("tk_pending_role", "tenant");
       setLocation("/login");
     }
-  }, [location, setLocation]);
+  }, [setLocation]);
 
   useEffect(() => {
     if (!sidebarOpen) return;

@@ -20,6 +20,7 @@ import TenantDashboard from "@/pages/TenantDashboard";
 import TenantRentPayments from "@/pages/tenant/TenantRentPayments";
 import TenantMaintenance from "@/pages/tenant/TenantMaintenance";
 import TenantDocuments from "@/pages/tenant/TenantDocuments";
+import TenantPaymentsRedirect from "@/pages/tenant/TenantPaymentsRedirect";
 import TenantContact from "@/pages/tenant/TenantContact";
 import TenantProfile from "@/pages/tenant/TenantProfile";
 import TenantSettings from "@/pages/tenant/TenantSettings";
@@ -89,6 +90,7 @@ function Router() {
       <Route path="/upload/documents/:token" component={TenantDocumentUpload} />
       <Route path="/tenant/dashboard" component={TenantDashboard} />
       <Route path="/tenant/rent" component={TenantRentPayments} />
+      <Route path="/tenant/payments" component={TenantPaymentsRedirect} />
       <Route path="/tenant/maintenance" component={TenantMaintenance} />
       <Route path="/tenant/documents" component={TenantDocuments} />
       <Route path="/tenant/agreement" component={TenantAgreementReview} />

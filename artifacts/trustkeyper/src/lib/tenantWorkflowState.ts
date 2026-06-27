@@ -179,7 +179,7 @@ function resolvePostSigningRentNotification(
       description:
         "Your agreement is complete. Pay your first month's rent to confirm move-in.",
       actionLabel: "Pay rent",
-      actionHref: "/tenant/payments",
+      actionHref: "/tenant/rent",
     };
   }
 
@@ -189,7 +189,7 @@ function resolvePostSigningRentNotification(
     description:
       "Your agreement is complete. Pay rent and the security deposit to confirm move-in.",
     actionLabel: "Pay rent and security deposit",
-    actionHref: "/tenant/payments",
+    actionHref: "/tenant/rent",
   };
 }
 
@@ -277,16 +277,16 @@ function buildNotification(
       title: "Documents Submitted",
       description:
         "Your documents have been submitted successfully. They are now being reviewed before agreement generation begins.",
-      actionLabel: "Manage Documents",
-      actionHref: uploadHref ?? "/tenant/documents",
+      actionLabel: "View Documents",
+      actionHref: "/tenant/documents",
     },
     documents_under_review: {
       kind: "documents_under_review",
       title: "Documents Under Review",
       description:
         "Your documents have been submitted successfully and are currently being reviewed. You will be notified once your agreement is ready.",
-      actionLabel: "Manage Documents",
-      actionHref: uploadHref ?? "/tenant/documents",
+      actionLabel: "View Documents",
+      actionHref: "/tenant/documents",
     },
     additional_documents_required: {
       kind: "documents_pending",

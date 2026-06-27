@@ -36,9 +36,19 @@ export function setTenantDocumentUploadSession(
   }
 }
 
-export function clearTenantDocumentUploadSession(token: string): void {
+export function clearTenantDocumentUploadSession(
+  token: string,
+  options?: { preserveRemembered?: boolean },
+): void {
   sessionStorage.removeItem(sessionKey(token));
-  localStorage.removeItem(rememberedSessionKey(token));
+  if (!options?.preserveRemembered) {
+    localStorage.removeItem(rememberedSessionKey(token));
+  }
+}
+
+export function hasRememberedTenantDocumentUploadSession(token: string): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(rememberedSessionKey(token)) !== null;
 }
 
 function draftKey(token: string): string {
