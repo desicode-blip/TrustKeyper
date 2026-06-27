@@ -27,6 +27,7 @@ import { syncTenantDocumentUploadStatus } from "@/lib/tenantDocumentUploadStatus
 import {
   clearTenantDocumentUploadSession,
   getTenantDocumentUploadSession,
+  hasRememberedTenantDocumentUploadSession,
   setTenantDocumentUploadSession,
   type TenantDocumentUploadSession,
 } from "@/lib/tenantDocumentUploadSession";
@@ -81,7 +82,7 @@ export default function TenantDocumentUpload() {
     async (tenantPhone: string) => {
       const digits = phoneLast10(tenantPhone);
       await ensureTenantDashboardSession(digits, getActiveSession, loginSuccess);
-      setLocation("/tenant/dashboard");
+      setLocation("/tenant/dashboard", { replace: true });
     },
     [setLocation],
   );
@@ -298,8 +299,10 @@ export default function TenantDocumentUpload() {
       });
       await ensureTenantDashboardSession(invite.tenantPhone, getActiveSession, loginSuccess);
     }
-    clearTenantDocumentUploadSession(token);
-    setLocation("/tenant/dashboard");
+    clearTenantDocumentUploadSession(token, {
+      preserveRemembered: hasRememberedTenantDocumentUploadSession(token),
+    });
+    setLocation("/tenant/dashboard", { replace: true });
   };
 
   if (pagePhase === "loading") {

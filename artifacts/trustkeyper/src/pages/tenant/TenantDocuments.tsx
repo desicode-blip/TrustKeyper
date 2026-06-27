@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "wouter";
 import { ExternalLink, FileText, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import TenantLayout from "@/components/TenantLayout";
 import { TenantKycStatusBadge } from "@/components/tenant/TenantKycStatusBadge";
 import { documentLabel } from "@workspace/tenant-document-upload";
 import {
@@ -20,6 +21,7 @@ import {
   type TenantDocumentMeta,
 } from "@/lib/tenantProfile";
 import { getActiveTenantWorkspace } from "@/lib/tenantWorkspace";
+import { documentsAlreadySubmittedForInvite } from "@/lib/tenantReturningAccess";
 
 export default function TenantDocuments() {
   const workspace = getActiveTenantWorkspace();
@@ -72,39 +74,52 @@ export default function TenantDocuments() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <Loader2 className="animate-spin text-primary mb-3" size={28} />
-        <p className="text-sm text-gray-500">Loading your documents…</p>
-      </div>
+      <TenantLayout>
+        <div className="flex flex-col items-center justify-center py-16">
+          <Loader2 className="animate-spin text-primary mb-3" size={28} />
+          <p className="text-sm text-gray-500">Loading your documents…</p>
+        </div>
+      </TenantLayout>
     );
   }
 
   if (!token) {
     return (
-      <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center max-w-lg mx-auto">
-        <FileText className="mx-auto text-gray-300 mb-4" size={40} />
-        <h1 className="text-lg font-semibold text-gray-900">No documents yet</h1>
-        <p className="text-sm text-gray-500 mt-2">
-          When your property owner or broker requests documents, they will appear here.
-        </p>
-      </div>
+      <TenantLayout>
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center max-w-lg mx-auto">
+          <FileText className="mx-auto text-gray-300 mb-4" size={40} />
+          <h1 className="text-lg font-semibold text-gray-900">No documents yet</h1>
+          <p className="text-sm text-gray-500 mt-2">
+            When your property owner or broker requests documents, they will appear here.
+          </p>
+        </div>
+      </TenantLayout>
     );
   }
 
   if (error && !invite) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 max-w-lg mx-auto text-center">
-        <p className="text-sm text-red-700">{error}</p>
-        <Button type="button" className="mt-4" variant="outline" onClick={() => void loadDocuments()}>
-          Try again
-        </Button>
-      </div>
+      <TenantLayout>
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 max-w-lg mx-auto text-center">
+          <p className="text-sm text-red-700">{error}</p>
+          <Button type="button" className="mt-4" variant="outline" onClick={() => void loadDocuments()}>
+            Try again
+          </Button>
+        </div>
+      </TenantLayout>
     );
   }
 
-  const manageHref = `/upload/documents/${token}`;
+  const documentsSubmitted =
+    invite &&
+    documentsAlreadySubmittedForInvite({
+      status: invite.status,
+      tenantDocumentStatus: invite.tenantDocumentStatus,
+    });
+  const manageHref = documentsSubmitted ? undefined : `/upload/documents/${token}`;
 
   return (
+    <TenantLayout>
     <div className="space-y-6 max-w-3xl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -113,12 +128,14 @@ export default function TenantDocuments() {
             Review document status and manage uploads for your rental application.
           </p>
         </div>
-        <Link href={manageHref}>
-          <Button type="button" className="w-full sm:w-auto">
-            <ExternalLink size={16} />
-            Manage Documents
-          </Button>
-        </Link>
+        {manageHref ? (
+          <Link href={manageHref}>
+            <Button type="button" className="w-full sm:w-auto">
+              <ExternalLink size={16} />
+              Manage Documents
+            </Button>
+          </Link>
+        ) : null}
       </div>
 
       {workspace?.propertyLabel ? (
@@ -202,5 +219,6 @@ export default function TenantDocuments() {
         })}
       </div>
     </div>
+    </TenantLayout>
   );
 }
