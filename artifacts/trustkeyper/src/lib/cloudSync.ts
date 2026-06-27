@@ -8,6 +8,7 @@ import {
 } from "./storageKeys";
 import { syncAuthHeaders } from "./syncSession";
 import { sanitizeDocumentUploadInviteForLocalStorage } from "./agreementDocumentUploadSanitize";
+import { TENANT_WORKFLOW_UPDATED_EVENT } from "./tenantWorkflowState";
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
@@ -35,11 +36,32 @@ export const CLOUD_SYNC_KEYS = [
   "broker_tenant_onboarding_invites",
   "broker_tenant_onboard_analytics",
   "agreement_document_upload_invites",
+  "document_submission_notifications",
 ] as const;
+
+export const TENANT_CLOUD_SYNC_KEYS = ["profile", "tenant_workspace"] as const;
 
 export type CloudSyncKey = (typeof CLOUD_SYNC_KEYS)[number];
 
 const pushTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function sanitizeProfileValueForRole(role: Role, raw: string): string {
+  if (role !== "owner" && role !== "broker") return raw;
+  try {
+    const parsed = JSON.parse(raw) as {
+      aadhaar?: { dataUrl?: string };
+      pan?: { dataUrl?: string };
+    };
+    const next = {
+      ...parsed,
+      aadhaar: parsed.aadhaar ? { ...parsed.aadhaar, dataUrl: undefined } : parsed.aadhaar,
+      pan: parsed.pan ? { ...parsed.pan, dataUrl: undefined } : parsed.pan,
+    };
+    return JSON.stringify(next);
+  } catch {
+    return raw;
+  }
+}
 
 function accountUrl(phone: string, role: string, suffix = ""): string {
   return `${API_BASE}/sync/accounts/${normalizePhoneDigits(phone)}/${role}${suffix}`;
@@ -108,7 +130,9 @@ export function collectBulkSyncEntries(
   const p = normalizePhoneDigits(phone);
   const entries: Record<string, string> = {};
 
-  for (const key of CLOUD_SYNC_KEYS) {
+  const keys = role === "tenant" ? TENANT_CLOUD_SYNC_KEYS : CLOUD_SYNC_KEYS;
+
+  for (const key of keys) {
     const raw = store.getItem(storageKey(p, role, key));
     if (raw) entries[key] = raw;
   }
@@ -166,9 +190,10 @@ export function applyCloudDataToLocal(
 
   for (const [dataKey, value] of Object.entries(data)) {
     if (typeof value !== "string") continue;
+    const sanitizedValue = dataKey === "profile" ? sanitizeProfileValueForRole(role, value) : value;
     if (dataKey === "agreement_document_upload_invites") {
       try {
-        const invites = JSON.parse(value) as unknown[];
+        const invites = JSON.parse(sanitizedValue) as unknown[];
         if (Array.isArray(invites)) {
           const sanitized = invites.map((row) =>
             sanitizeDocumentUploadInviteForLocalStorage(
@@ -182,12 +207,15 @@ export function applyCloudDataToLocal(
         /* fall through to raw write */
       }
     }
-    writeLocalForAccount(p, role, dataKey, value, mirror);
+    writeLocalForAccount(p, role, dataKey, sanitizedValue, mirror);
+    if (mirror && role === "tenant" && dataKey === "tenant_workspace") {
+      window.dispatchEvent(new CustomEvent(TENANT_WORKFLOW_UPDATED_EVENT));
+    }
   }
 
   if (mirror && data.profile) {
     try {
-      const profile = JSON.parse(data.profile) as Record<string, string>;
+      const profile = JSON.parse(sanitizeProfileValueForRole(role, data.profile)) as Record<string, string>;
       if (profile.name) setSessionItem("name", profile.name);
       if (profile.firm) setSessionItem("firm", profile.firm);
       if (profile.phone) setSessionItem("phone", profile.phone);

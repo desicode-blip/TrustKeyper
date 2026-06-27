@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   Eye,
   Loader2,
-  MapPin,
   Plus,
   Trash2,
   Upload,
@@ -28,7 +27,17 @@ import {
   type DocumentUploadInvitePayload,
 } from "@/lib/publicAgreementDocumentUpload";
 import { syncTenantDocumentUploadStatus } from "@/lib/tenantDocumentUploadStatus";
+import { mergeTenantProfileFromDocumentUpload, getTenantAccountProfile, type TenantDocumentMeta } from "@/lib/tenantProfile";
+import { normalizeTenantKycStatus } from "@/lib/tenantKycStatus";
+import {
+  formatDocumentMimeLabel,
+  formatDocumentUploadedAt,
+  openTenantDocumentPreview,
+  resolveTenantDocumentDataUrl,
+} from "@/lib/tenantProfileDocument";
 import { saveTenantWorkspaceFromInvite } from "@/lib/tenantWorkspace";
+import type { TenantWorkspaceRecord } from "@/lib/tenantWorkspace";
+import { TenantDashboardPropertyCard } from "@/components/tenant/TenantDashboardPropertyCard";
 import {
   clearTenantDocumentUploadDraft,
   getTenantDocumentUploadDraft,
@@ -52,6 +61,22 @@ function fmtFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function inviteToPropertyWorkspace(invite: DocumentUploadInvitePayload): TenantWorkspaceRecord {
+  return {
+    phone: invite.tenantPhone,
+    tenantName: invite.tenantName,
+    propertyId: invite.propertyId,
+    propertyLabel: invite.propertyLabel ?? "Assigned Property",
+    propertyAddress: invite.propertyAddress,
+    propertyImage: invite.propertyImage,
+    monthlyRent: invite.monthlyRent,
+    securityDeposit: invite.securityDeposit,
+    requesterName: invite.requesterName,
+    requesterRole: invite.requesterRole,
+    updatedAt: Date.now(),
+  };
 }
 
 export function TenantDocumentUploadFlow({
@@ -79,20 +104,22 @@ export function TenantDocumentUploadFlow({
       const serverStatus = invite.documentStatuses[id] ?? "not_uploaded";
       const serverFile = invite.documents[id];
       if (id === "bank") {
+        const bankUploaded = serverStatus === "uploaded";
         initial.bank = {
-          status: serverStatus === "uploaded" || invite.bankDetails ? "uploaded" : "not_uploaded",
-          fileName: invite.bankDetails ? "Bank Account Details" : undefined,
+          status: bankUploaded ? "uploaded" : "not_uploaded",
+          fileName: bankUploaded ? "Bank Account Details" : undefined,
         };
-        if (invite.bankDetails) {
+        if (bankUploaded && invite.bankDetails) {
           setBankDetails(invite.bankDetails as BankDetailsData);
         }
         continue;
       }
+      const hasUploaded = serverStatus === "uploaded" && Boolean(serverFile?.fileName);
       initial[id] = {
-        status: serverStatus,
-        fileName: serverFile?.fileName,
-        fileSize: serverFile?.fileSize,
-        mimeType: serverFile?.mimeType,
+        status: hasUploaded ? "uploaded" : serverStatus === "reupload_required" ? "reupload_required" : "not_uploaded",
+        fileName: hasUploaded ? serverFile?.fileName : undefined,
+        fileSize: hasUploaded ? serverFile?.fileSize : undefined,
+        mimeType: hasUploaded ? serverFile?.mimeType : undefined,
       };
     }
     const draft = getTenantDocumentUploadDraft(session.token);
@@ -137,10 +164,60 @@ export function TenantDocumentUploadFlow({
     [session.token],
   );
 
+  const syncProfileFromLocalState = useCallback(
+    (
+      nextDocs: Partial<Record<ExtendedDocumentId, LocalDocState>>,
+      nextBank: BankDetailsData | null,
+      options?: { submitted?: boolean; tenantDocumentStatus?: typeof invite.tenantDocumentStatus },
+    ) => {
+      const documents: Partial<
+        Record<
+          ExtendedDocumentId,
+          { fileName: string; fileSize: number; mimeType: string; dataUrl?: string; uploadedAt?: number }
+        >
+      > = {};
+      const documentStatuses: Partial<Record<ExtendedDocumentId, UploadDocumentStatus>> = {};
+
+      for (const id of invite.requestedDocumentIds) {
+        const doc = nextDocs[id];
+        if (id === "bank") {
+          documentStatuses.bank = doc?.status === "uploaded" || nextBank ? "uploaded" : "not_uploaded";
+          continue;
+        }
+        if (!doc) continue;
+        documentStatuses[id] = doc.status ?? "not_uploaded";
+        if (doc.fileName && doc.mimeType && typeof doc.fileSize === "number") {
+          documents[id] = {
+            fileName: doc.fileName,
+            fileSize: doc.fileSize,
+            mimeType: doc.mimeType,
+            dataUrl: doc.dataUrl,
+            uploadedAt: Date.now(),
+          };
+        }
+      }
+
+      mergeTenantProfileFromDocumentUpload({
+        token: session.token,
+        tenantName: invite.tenantName,
+        tenantPhone: invite.tenantPhone,
+        propertyId: invite.propertyId,
+        propertyLabel: invite.propertyLabel,
+        documentStatuses,
+        documents,
+        bankDetails: nextBank ?? undefined,
+        tenantDocumentStatus: options?.tenantDocumentStatus ?? invite.tenantDocumentStatus,
+        submitted: options?.submitted,
+      });
+    },
+    [invite, session.token],
+  );
+
   useEffect(() => {
     if (Object.keys(docs).length === 0) return;
     persistDraft(docs, bankDetails);
-  }, [docs, bankDetails, persistDraft]);
+    syncProfileFromLocalState(docs, bankDetails);
+  }, [bankDetails, docs, persistDraft, syncProfileFromLocalState]);
 
   const fileDocIds = useMemo(
     () => invite.requestedDocumentIds.filter((id) => isFileDocumentId(id)),
@@ -246,6 +323,11 @@ export function TenantDocumentUploadFlow({
       saveTenantWorkspaceFromInvite(invite, {
         documentUploadStatus: "documents_submitted",
         documentUploadSubmittedAt: result.submittedAt ?? Date.now(),
+        lifecycleStage: "documents_under_review",
+      });
+      syncProfileFromLocalState(docs, bankDetails, {
+        submitted: true,
+        tenantDocumentStatus: "documents_submitted",
       });
       clearTenantDocumentUploadDraft(session.token);
       setSuccessOpen(true);
@@ -275,14 +357,43 @@ export function TenantDocumentUploadFlow({
     syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_in_progress", { token: session.token });
   };
 
-  const handleViewDoc = (id: ExtendedDocumentId) => {
+  const [viewingDoc, setViewingDoc] = useState<ExtendedDocumentId | null>(null);
+
+  const handleViewDoc = async (id: ExtendedDocumentId) => {
     if (id === "bank") {
       setBankModalOpen(true);
       return;
     }
-    const dataUrl = docs[id]?.dataUrl;
-    if (!dataUrl) return;
-    window.open(dataUrl, "_blank", "noopener,noreferrer");
+    const doc = docs[id];
+    const profile = getTenantAccountProfile();
+    const profileMeta = id === "aadhaar" ? profile.aadhaar : id === "pan" ? profile.pan : undefined;
+    const fileName = doc?.fileName ?? profileMeta?.fileName;
+    if (!fileName) return;
+
+    const meta: TenantDocumentMeta = {
+      documentId: id,
+      sourceToken: session.token,
+      fileName,
+      fileSize: doc?.fileSize ?? profileMeta?.fileSize,
+      mimeType: doc?.mimeType ?? profileMeta?.mimeType,
+      uploadedAt: profileMeta?.uploadedAt,
+      dataUrl: doc?.dataUrl ?? profileMeta?.dataUrl,
+      previewAvailable: Boolean(doc?.dataUrl ?? profileMeta?.dataUrl),
+      verificationStatus: normalizeTenantKycStatus(profileMeta?.verificationStatus, "under_review"),
+    };
+
+    setViewingDoc(id);
+    try {
+      const dataUrl = await resolveTenantDocumentDataUrl(meta, session.token, id);
+      if (!dataUrl) {
+        setSubmitError("Could not load document preview. Your upload is still saved.");
+        return;
+      }
+      setSubmitError(null);
+      openTenantDocumentPreview(dataUrl, fileName);
+    } finally {
+      setViewingDoc(null);
+    }
   };
 
   const renderDocRow = (id: ExtendedDocumentId) => {
@@ -316,8 +427,8 @@ export function TenantDocumentUploadFlow({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => handleViewDoc(id)}
-              disabled={doc.status !== "uploaded"}
+              onClick={() => void handleViewDoc(id)}
+              disabled={doc.status !== "uploaded" || viewingDoc === id}
               className={cn(
                 "flex items-center gap-1 text-xs rounded-lg px-3 py-1.5 font-medium border",
                 doc.status === "uploaded"
@@ -325,7 +436,8 @@ export function TenantDocumentUploadFlow({
                   : "text-gray-300 border-gray-200 cursor-not-allowed",
               )}
             >
-              <Eye size={11} /> View
+              {viewingDoc === id ? <Loader2 size={11} className="animate-spin" /> : <Eye size={11} />}
+              View
             </button>
             <button
               type="button"
@@ -373,6 +485,7 @@ export function TenantDocumentUploadFlow({
             <p className="text-xs text-gray-500 mt-0.5 break-words">
               {doc.fileName}
               {doc.fileSize ? ` · ${fmtFileSize(doc.fileSize)}` : ""}
+              {doc.mimeType ? ` · ${formatDocumentMimeLabel(doc.mimeType)}` : ""}
             </p>
           ) : null}
           {doc.status === "uploading" ? <p className="text-xs text-primary mt-0.5">Uploading…</p> : null}
@@ -383,10 +496,12 @@ export function TenantDocumentUploadFlow({
             <>
               <button
                 type="button"
-                onClick={() => handleViewDoc(id)}
-                className="flex items-center gap-1 text-xs rounded-lg px-3 py-1.5 font-medium border border-gray-200 text-gray-600"
+                onClick={() => void handleViewDoc(id)}
+                disabled={doc.status !== "uploaded" || viewingDoc === id}
+                className="flex items-center gap-1 text-xs rounded-lg px-3 py-1.5 font-medium border border-gray-200 text-gray-600 disabled:opacity-40"
               >
-                <Eye size={11} /> View
+                {viewingDoc === id ? <Loader2 size={11} className="animate-spin" /> : <Eye size={11} />}
+                View
               </button>
               <button
                 type="button"
@@ -437,14 +552,14 @@ export function TenantDocumentUploadFlow({
 
       <main className="flex-1 px-4 sm:px-6 py-6 max-w-2xl mx-auto w-full">
         {invite.propertyLabel ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-4 mb-6 flex gap-3 items-center">
-            <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-              <MapPin size={20} className="text-gray-400" />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900">{invite.propertyLabel}</p>
-              <p className="text-xs text-gray-500">Requested by {invite.requesterName}</p>
-            </div>
+          <div className="mb-6">
+            <TenantDashboardPropertyCard
+              workspace={inviteToPropertyWorkspace(invite)}
+              workflowStage="documents_requested"
+            />
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              Requested by {invite.requesterName}
+            </p>
           </div>
         ) : null}
 

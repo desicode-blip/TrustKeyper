@@ -20,9 +20,12 @@ import TenantDashboard from "@/pages/TenantDashboard";
 import TenantRentPayments from "@/pages/tenant/TenantRentPayments";
 import TenantMaintenance from "@/pages/tenant/TenantMaintenance";
 import TenantDocuments from "@/pages/tenant/TenantDocuments";
+import TenantPaymentsRedirect from "@/pages/tenant/TenantPaymentsRedirect";
 import TenantContact from "@/pages/tenant/TenantContact";
 import TenantProfile from "@/pages/tenant/TenantProfile";
 import TenantSettings from "@/pages/tenant/TenantSettings";
+import TenantAgreementReview from "@/pages/tenant/TenantAgreementReview";
+import TenantUploadSignedAgreement from "@/pages/tenant/TenantUploadSignedAgreement";
 import BrokerDeals from "@/pages/BrokerDeals";
 import BrokerCommission from "@/pages/BrokerCommission";
 import BrokerDocuments from "@/pages/BrokerDocuments";
@@ -42,6 +45,7 @@ import OwnerTenants from "@/pages/OwnerTenants";
 import OwnerTenantProfile from "@/pages/OwnerTenantProfile";
 import OwnerTickets from "@/pages/OwnerTickets";
 import OwnerAgreements from "@/pages/OwnerAgreements";
+import OwnerUploadSignedAgreement from "@/pages/owner/OwnerUploadSignedAgreement";
 import OwnerFinances from "@/pages/OwnerFinances";
 import OwnerProfile from "@/pages/OwnerProfile";
 import AdminLogin from "@/pages/admin/AdminLogin";
@@ -86,8 +90,11 @@ function Router() {
       <Route path="/upload/documents/:token" component={TenantDocumentUpload} />
       <Route path="/tenant/dashboard" component={TenantDashboard} />
       <Route path="/tenant/rent" component={TenantRentPayments} />
+      <Route path="/tenant/payments" component={TenantPaymentsRedirect} />
       <Route path="/tenant/maintenance" component={TenantMaintenance} />
       <Route path="/tenant/documents" component={TenantDocuments} />
+      <Route path="/tenant/agreement" component={TenantAgreementReview} />
+      <Route path="/tenant/agreement/upload-signed" component={TenantUploadSignedAgreement} />
       <Route path="/tenant/contact" component={TenantContact} />
       <Route path="/tenant/profile" component={TenantProfile} />
       <Route path="/tenant/settings" component={TenantSettings} />
@@ -107,6 +114,7 @@ function Router() {
       <Route path="/owner/tickets" component={OwnerTickets} />
       <Route path="/owner/agreements" component={OwnerAgreements} />
       <Route path="/owner/agreements/generate" component={GenerateAgreement} />
+      <Route path="/owner/agreements/:agreementId/upload-signed" component={OwnerUploadSignedAgreement} />
       <Route path="/owner/finances" component={OwnerFinances} />
       <Route path="/owner/profile" component={OwnerProfile} />
       <Route path="/broker/dashboard" component={BrokerDashboard} />

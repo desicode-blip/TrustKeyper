@@ -42,6 +42,7 @@ export default function BrokerDocuments() {
             <AgreementDocumentRow
               key={agr.id}
               agreement={agr}
+              requesterRole="broker"
               onView={() => setViewing(agr)}
               onEditManually={() => setEditingManually(agr)}
               onEditDetails={() => {

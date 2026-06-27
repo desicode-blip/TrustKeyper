@@ -2,15 +2,20 @@ import type {
   DocumentUploadRequesterRole,
   RequesterDocumentUploadInviteView,
 } from "@workspace/tenant-document-upload";
+import { applyReceivedInviteToAgreementDocs } from "@/components/agreement/TenantSubmittedDocumentsModal";
+import type { AgreementPersonDraftState } from "./agreementWorkflowDraft";
 import { getActiveSession } from "./storageKeys";
 import { syncAuthHeaders } from "./syncSession";
 import {
   findDocumentUploadInviteByTenantPhone,
   findDocumentUploadInviteByToken,
+  getStoredDocumentUploadInvites,
   mergeStoredDocumentUploadInvites,
   upsertStoredDocumentUploadInvite,
   type StoredDocumentUploadInvite,
 } from "./agreementDocumentUploadStore";
+import type { DocumentUploadInviteForUi } from "./agreementDocumentUploadSanitize";
+import { processIncomingDocumentSubmissions } from "./documentSubmissionSync";
 
 export function buildDocumentUploadShareMessage(tenantName: string, link: string): string {
   return `Hi ${tenantName},
@@ -110,6 +115,10 @@ export async function createAgreementDocumentUploadInvite(input: {
   requesterRole: DocumentUploadRequesterRole;
   propertyId?: string;
   propertyLabel?: string;
+  propertyImage?: string;
+  propertyAddress?: string;
+  monthlyRent?: string;
+  securityDeposit?: string;
   agreementDraftId?: string;
 }): Promise<CreateDocumentUploadInviteResult> {
   const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
@@ -133,6 +142,10 @@ export async function createAgreementDocumentUploadInvite(input: {
           requesterName: input.requesterName,
           propertyId: input.propertyId,
           propertyLabel: input.propertyLabel,
+          propertyImage: input.propertyImage,
+          propertyAddress: input.propertyAddress,
+          monthlyRent: input.monthlyRent,
+          securityDeposit: input.securityDeposit,
           agreementDraftId: input.agreementDraftId,
         }),
       },
@@ -207,6 +220,7 @@ export async function fetchRequesterDocumentUploadInvites(): Promise<
     if (!res.ok || !json.invites) return { ok: false, error: "unauthorized" };
 
     mergeStoredDocumentUploadInvites(json.invites);
+    processIncomingDocumentSubmissions(json.invites, session.role);
     return { ok: true, invites: json.invites };
   } catch {
     return { ok: false, error: "network" };
@@ -236,8 +250,57 @@ export async function fetchRequesterDocumentUploadDetail(token: string): Promise
     if (!res.ok || !json.invite) return { ok: false, error: "unauthorized" };
 
     upsertStoredDocumentUploadInvite(json.invite);
+    processIncomingDocumentSubmissions([json.invite], session.role);
     return { ok: true, invite: json.invite };
   } catch {
     return { ok: false, error: "network" };
   }
+}
+
+function inviteNeedsDocumentUploadDetail(invite: DocumentUploadInviteForUi): boolean {
+  return (
+    invite.tenantDocumentStatus === "documents_submitted" ||
+    invite.tenantDocumentStatus === "documents_in_progress" ||
+    invite.status === "submitted"
+  );
+}
+
+export async function fetchEnrichedRequesterDocumentUploadInvites(): Promise<
+  DocumentUploadInviteForUi[]
+> {
+  const result = await fetchRequesterDocumentUploadInvites();
+  const invites: DocumentUploadInviteForUi[] = result.ok ? result.invites : getStoredDocumentUploadInvites();
+  return Promise.all(
+    invites.map(async (invite) => {
+      if (!inviteNeedsDocumentUploadDetail(invite)) return invite;
+      const detail = await fetchRequesterDocumentUploadDetail(invite.token);
+      return detail.ok ? detail.invite : invite;
+    }),
+  );
+}
+
+function phoneLast10Digits(phone: string): string {
+  return phone.replace(/\D/g, "").slice(-10);
+}
+
+export function applyDocumentUploadInvitesToPersons(
+  persons: AgreementPersonDraftState[],
+  invites: DocumentUploadInviteForUi[],
+): AgreementPersonDraftState[] {
+  if (invites.length === 0) return persons;
+
+  return persons.map((person) => {
+    const invite =
+      (person.documentUploadToken
+        ? invites.find((row) => row.token === person.documentUploadToken)
+        : undefined) ??
+      invites.find((row) => phoneLast10Digits(row.tenantPhone) === phoneLast10Digits(person.contact));
+    if (!invite) return person;
+
+    return {
+      ...person,
+      documentUploadToken: invite.token,
+      docs: applyReceivedInviteToAgreementDocs(person.docs, invite),
+    };
+  });
 }

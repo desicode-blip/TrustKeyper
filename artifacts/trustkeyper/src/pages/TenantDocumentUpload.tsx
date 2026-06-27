@@ -7,8 +7,16 @@ import {
   TenantBrokerOnboardModal,
   type TenantOnboardModalPhase,
 } from "@/components/tenant/TenantBrokerOnboardModal";
+import { TenantDocumentManagementFlow } from "@/components/tenant/TenantDocumentManagementFlow";
 import { TenantDocumentUploadFlow } from "@/components/tenant/TenantDocumentUploadFlow";
-import { getActiveSession, profileExistsAsync, signUpSuccess, loginSuccess } from "@/lib/auth";
+import {
+  getActiveSession,
+  loginSuccess,
+  persistSessionToLocalStorage,
+  profileExistsAsync,
+  restoreRememberedSessionFromLocalStorage,
+  signUpSuccess,
+} from "@/lib/auth";
 import {
   fetchDocumentUploadInvite,
   markDocumentUploadStarted,
@@ -19,19 +27,38 @@ import { syncTenantDocumentUploadStatus } from "@/lib/tenantDocumentUploadStatus
 import {
   clearTenantDocumentUploadSession,
   getTenantDocumentUploadSession,
+  hasRememberedTenantDocumentUploadSession,
   setTenantDocumentUploadSession,
   type TenantDocumentUploadSession,
 } from "@/lib/tenantDocumentUploadSession";
 import { ensureTenantDashboardSession } from "@/lib/tenantDocumentUploadRedirect";
+import { mergeTenantProfileFromInvitePayload } from "@/lib/tenantProfile";
 import { saveTenantWorkspaceFromInvite } from "@/lib/tenantWorkspace";
+import {
+  documentsAlreadySubmittedForInvite,
+  resolveReturningTenantAccess,
+  shouldOpenDocumentManagement,
+} from "@/lib/tenantReturningAccess";
 
-type PagePhase =
-  | "loading"
-  | "invalid"
-  | "expired"
-  | "already_submitted"
-  | "modal"
-  | "upload";
+type PagePhase = "loading" | "invalid" | "expired" | "modal" | "upload" | "management";
+
+function phoneLast10(phone: string): string {
+  return phone.replace(/\D/g, "").slice(-10);
+}
+
+function buildUploadSession(
+  token: string,
+  invite: DocumentUploadInvitePayload,
+): TenantDocumentUploadSession {
+  const digits = phoneLast10(invite.tenantPhone);
+  return {
+    token,
+    name: invite.tenantName,
+    phone: `+91${digits}`,
+    requesterName: invite.requesterName,
+    verifiedAt: Date.now(),
+  };
+}
 
 export default function TenantDocumentUpload() {
   const [, setLocation] = useLocation();
@@ -43,11 +70,32 @@ export default function TenantDocumentUpload() {
   const [invite, setInvite] = useState<DocumentUploadInvitePayload | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [sendOtpError, setSendOtpError] = useState<string | null>(null);
   const [verifyOtpError, setVerifyOtpError] = useState<string | null>(null);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [session, setSession] = useState<TenantDocumentUploadSession | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [redirectToDashboardAfterAuth, setRedirectToDashboardAfterAuth] = useState(false);
+
+  const redirectToTenantDashboard = useCallback(
+    async (tenantPhone: string) => {
+      const digits = phoneLast10(tenantPhone);
+      await ensureTenantDashboardSession(digits, getActiveSession, loginSuccess);
+      setLocation("/tenant/dashboard", { replace: true });
+    },
+    [setLocation],
+  );
+
+  const openWithSession = useCallback(
+    (payload: DocumentUploadInvitePayload, nextSession: TenantDocumentUploadSession, phase: PagePhase) => {
+      setInvite(payload);
+      setSession(nextSession);
+      setTenantDocumentUploadSession(nextSession);
+      setPagePhase(phase);
+    },
+    [],
+  );
 
   const bootstrap = useCallback(async () => {
     if (!token) {
@@ -75,50 +123,71 @@ export default function TenantDocumentUpload() {
       return;
     }
 
-    if (payload.status === "submitted") {
-      clearTenantDocumentUploadSession(token);
+    const alreadySubmitted = documentsAlreadySubmittedForInvite(payload);
+
+    if (!alreadySubmitted) {
+      mergeTenantProfileFromInvitePayload(payload);
+    } else {
       saveTenantWorkspaceFromInvite(payload, {
         documentUploadStatus: "documents_submitted",
         documentUploadSubmittedAt: payload.submittedAt ?? Date.now(),
       });
-      setInvite(payload);
-      setPagePhase("already_submitted");
+    }
+
+    const activeSession = getActiveSession();
+    const rememberedSession = restoreRememberedSessionFromLocalStorage();
+    const existingUploadSession = getTenantDocumentUploadSession(token);
+    const tenantDigits = phoneLast10(payload.tenantPhone);
+    const rememberedTenantMatch =
+      rememberedSession?.role === "tenant" && phoneLast10(rememberedSession.phone) === tenantDigits;
+
+    const sessionAfterRestore = getActiveSession();
+
+    const access = resolveReturningTenantAccess({
+      inviteStatus: payload.status,
+      tenantPhone: payload.tenantPhone,
+      hasActiveTenantSession: sessionAfterRestore?.role === "tenant",
+      activeTenantPhone: sessionAfterRestore?.phone,
+      hasUploadSession: Boolean(existingUploadSession),
+      hasTenantAccount: payload.hasTenantAccount,
+      hasRememberedTenantSession: rememberedTenantMatch,
+      rememberedTenantPhone: rememberedSession?.phone,
+    });
+
+    if (access.kind === "blocked") {
+      setPagePhase(access.reason === "expired" ? "expired" : "invalid");
+      setLoadError(
+        access.reason === "expired"
+          ? "This document upload link has expired"
+          : "Invalid document upload link",
+      );
+      return;
+    }
+
+    if (access.kind === "immediate") {
+      if (access.reason === "active_tenant_session" || rememberedTenantMatch) {
+        await ensureTenantDashboardSession(tenantDigits, getActiveSession, loginSuccess);
+      }
+
+      if (alreadySubmitted) {
+        await redirectToTenantDashboard(payload.tenantPhone);
+        return;
+      }
+
+      const nextSession = existingUploadSession ?? buildUploadSession(token, payload);
+      openWithSession(payload, nextSession, "upload");
+      void markDocumentUploadStarted(token);
+      syncTenantDocumentUploadStatus(payload.tenantPhone, "documents_in_progress", { token });
       return;
     }
 
     setInvite(payload);
-
-    const existingSession = getTenantDocumentUploadSession(token);
-    if (existingSession) {
-      setSession(existingSession);
-      setPagePhase("upload");
-      void markDocumentUploadStarted(token);
-      return;
-    }
-
-    if (payload.hasTenantAccount) {
-      const digits = payload.tenantPhone.replace(/\D/g, "").slice(-10);
-      await ensureTenantDashboardSession(digits, getActiveSession, loginSuccess);
-      const nextSession: TenantDocumentUploadSession = {
-        token,
-        name: payload.tenantName,
-        phone: `+91${digits}`,
-        requesterName: payload.requesterName,
-        verifiedAt: Date.now(),
-      };
-      setTenantDocumentUploadSession(nextSession);
-      setSession(nextSession);
-      void markDocumentUploadStarted(token);
-      syncTenantDocumentUploadStatus(payload.tenantPhone, "documents_in_progress", { token });
-      setPagePhase("upload");
-      return;
-    }
-
     setName(payload.tenantName);
-    setPhone(payload.tenantPhone.replace(/\D/g, "").slice(-10));
+    setPhone(phoneLast10(payload.tenantPhone));
+    setRedirectToDashboardAfterAuth(alreadySubmitted);
     setModalPhase("welcome");
     setPagePhase("modal");
-  }, [token]);
+  }, [openWithSession, redirectToTenantDashboard, token]);
 
   useEffect(() => {
     void bootstrap();
@@ -141,37 +210,81 @@ export default function TenantDocumentUpload() {
     }
   };
 
-  const handleOtpVerified = async (success: boolean) => {
+  const handleOtpVerified = async (success: boolean, accessToken?: string | null) => {
     if (!success || !invite) {
       setVerifyOtpError("Invalid or expired OTP. Please try again.");
       return;
     }
 
     const digits = phone.replace(/\D/g, "").slice(-10);
-    const hasAccount = await profileExistsAsync(digits, "tenant");
-    if (!hasAccount) {
-      await signUpSuccess(digits, "tenant", { name: name.trim(), phone: digits });
-    } else {
-      await loginSuccess(digits, "tenant");
-    }
-
     setVerifyOtpError(null);
-    const nextSession: TenantDocumentUploadSession = {
-      token,
-      name: name.trim(),
-      phone: `+91${digits}`,
-      requesterName: invite.requesterName,
-      verifiedAt: Date.now(),
-    };
-    setTenantDocumentUploadSession(nextSession);
+
+    try {
+      const hasAccount = await profileExistsAsync(digits, "tenant");
+      if (!hasAccount) {
+        await signUpSuccess(
+          digits,
+          "tenant",
+          { name: name.trim(), phone: digits },
+          accessToken ?? undefined,
+        );
+      } else {
+        const loggedIn = await loginSuccess(digits, "tenant");
+        if (!loggedIn) {
+          setVerifyOtpError("Could not sign in. Please try again.");
+          return;
+        }
+      }
+
+      if (rememberMe) {
+        persistSessionToLocalStorage(digits, "tenant");
+      }
+
+      const nextSession: TenantDocumentUploadSession = {
+        token,
+        name: name.trim(),
+        phone: `+91${digits}`,
+        requesterName: invite.requesterName,
+        verifiedAt: Date.now(),
+      };
+      setTenantDocumentUploadSession(nextSession, { remember: rememberMe });
+      setSession(nextSession);
+
+      if (!redirectToDashboardAfterAuth) {
+        mergeTenantProfileFromInvitePayload(invite);
+      }
+
+      if (redirectToDashboardAfterAuth || documentsAlreadySubmittedForInvite(invite)) {
+        saveTenantWorkspaceFromInvite(invite, {
+          documentUploadStatus: "documents_submitted",
+          documentUploadSubmittedAt: invite.submittedAt ?? Date.now(),
+        });
+        await redirectToTenantDashboard(invite.tenantPhone);
+        return;
+      }
+
+      void markDocumentUploadStarted(token);
+      syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_in_progress", { token });
+      openDocumentFlowAfterVerification(nextSession, invite);
+    } catch (err) {
+      setVerifyOtpError(
+        err instanceof Error ? err.message : "Could not verify your account. Please try again.",
+      );
+    }
+  };
+
+  const openDocumentFlowAfterVerification = (
+    nextSession: TenantDocumentUploadSession,
+    payload: DocumentUploadInvitePayload,
+  ) => {
     setSession(nextSession);
-    void markDocumentUploadStarted(token);
-    syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_in_progress", { token });
-    setModalPhase("account_success");
+    setPagePhase(shouldOpenDocumentManagement(payload.status) ? "management" : "upload");
   };
 
   const handleAccountSuccessDone = () => {
-    setPagePhase("upload");
+    if (!invite) return;
+    const nextSession = session ?? buildUploadSession(token, invite);
+    openDocumentFlowAfterVerification(nextSession, invite);
   };
 
   const handleFlowDone = async () => {
@@ -186,8 +299,10 @@ export default function TenantDocumentUpload() {
       });
       await ensureTenantDashboardSession(invite.tenantPhone, getActiveSession, loginSuccess);
     }
-    clearTenantDocumentUploadSession(token);
-    setLocation("/tenant/dashboard");
+    clearTenantDocumentUploadSession(token, {
+      preserveRemembered: hasRememberedTenantDocumentUploadSession(token),
+    });
+    setLocation("/tenant/dashboard", { replace: true });
   };
 
   if (pagePhase === "loading") {
@@ -197,6 +312,10 @@ export default function TenantDocumentUpload() {
         <p className="text-sm text-gray-500">Loading your document request…</p>
       </div>
     );
+  }
+
+  if (pagePhase === "management" && session && invite) {
+    return <TenantDocumentManagementFlow invite={invite} session={session} />;
   }
 
   if (pagePhase === "upload" && session && invite) {
@@ -212,49 +331,37 @@ export default function TenantDocumentUpload() {
       {pagePhase === "modal" && invite ? (
         <TenantBrokerOnboardModal
           phase={modalPhase}
+          flowContext="document_upload"
+          requesterName={invite.requesterName}
+          propertyLabel={invite.propertyLabel}
           name={name}
           phone={phone}
           onNameChange={setName}
           onPhoneChange={setPhone}
-          onOtpVerified={(ok) => void handleOtpVerified(ok)}
+          onOtpVerified={(ok, accessToken) => void handleOtpVerified(ok, accessToken)}
           onAccountSuccessDone={handleAccountSuccessDone}
           sendOtpError={sendOtpError}
           verifyOtpError={verifyOtpError}
           sendingOtp={sendingOtp}
           onSendOtp={handleSendOtp}
+          showRememberMe
+          rememberMe={rememberMe}
+          onRememberMeChange={setRememberMe}
         />
       ) : null}
 
-      {pagePhase === "invalid" || pagePhase === "expired" || pagePhase === "already_submitted" ? (
+      {pagePhase === "invalid" || pagePhase === "expired" ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
             <div className="mx-auto w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-4">
               <AlertCircle className="w-8 h-8 text-red-500" />
             </div>
             <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              {pagePhase === "already_submitted"
-                ? "Documents already submitted"
-                : pagePhase === "expired"
-                  ? "Link expired"
-                  : "Invalid link"}
+              {pagePhase === "expired" ? "Link expired" : "Invalid link"}
             </h2>
-            <p className="text-sm text-gray-500 mb-6">
-              {pagePhase === "already_submitted"
-                ? `Your documents were already shared with ${invite?.requesterName ?? "your property manager"}.`
-                : (loadError ?? "This document upload link is not valid.")}
-            </p>
-            <Button
-              type="button"
-              className="w-full"
-              onClick={async () => {
-                const digits = invite?.tenantPhone.replace(/\D/g, "").slice(-10);
-                if (digits) {
-                  await ensureTenantDashboardSession(digits, getActiveSession, loginSuccess);
-                }
-                setLocation("/tenant/dashboard");
-              }}
-            >
-              Go To Dashboard
+            <p className="text-sm text-gray-500 mb-6">{loadError ?? "This document upload link is not valid."}</p>
+            <Button type="button" className="w-full" onClick={() => setLocation("/login")}>
+              Sign In
             </Button>
           </div>
         </div>

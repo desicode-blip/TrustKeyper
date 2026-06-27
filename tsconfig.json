@@ -26,6 +26,9 @@
     },
     {
       "path": "./lib/tenant-document-upload"
+    },
+    {
+      "path": "./lib/tenant-workflow"
     }
   ]
 }

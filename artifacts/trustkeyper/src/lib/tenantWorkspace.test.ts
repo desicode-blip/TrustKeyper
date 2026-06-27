@@ -83,6 +83,8 @@ describe("tenantWorkspace", () => {
     });
     expect(notification.kind).toBe("documents_under_review");
     expect(notification.title).toBe("Documents Under Review");
+    expect(notification.description).toContain("currently being reviewed");
+    expect(notification.actionHref).toBe("/tenant/documents");
   });
 
   it("returns continue action for in-progress document collection", () => {

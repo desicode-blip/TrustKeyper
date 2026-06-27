@@ -188,18 +188,18 @@ export function applyReceivedInviteToAgreementDocs(
       };
     }
 
-    const file = invite.documents[extId];
-    if (invite.documentStatuses[extId] !== "uploaded" || !file) {
+    if (invite.documentStatuses[extId] !== "uploaded") {
       return doc;
     }
 
+    const file = invite.documents[extId];
     return {
       ...doc,
       status: "uploaded" as const,
-      fileName: file.fileName,
-      fileSize: file.fileSize,
-      uploadedAt: file.uploadedAt,
-      dataUrl: "dataUrl" in file ? file.dataUrl : doc.dataUrl,
+      fileName: file?.fileName ?? doc.fileName ?? "Uploaded",
+      fileSize: file?.fileSize ?? doc.fileSize,
+      uploadedAt: file?.uploadedAt ?? invite.submittedAt ?? doc.uploadedAt ?? Date.now(),
+      dataUrl: file && "dataUrl" in file ? file.dataUrl : doc.dataUrl,
     };
   });
 }

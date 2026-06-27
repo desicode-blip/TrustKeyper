@@ -15,6 +15,10 @@ export type DocumentUploadInvitePayload = {
   requesterRole: "owner" | "broker";
   propertyId?: string;
   propertyLabel?: string;
+  propertyImage?: string;
+  propertyAddress?: string;
+  monthlyRent?: string;
+  securityDeposit?: string;
   requestedDocumentIds: ExtendedDocumentId[];
   status: string;
   tenantDocumentStatus: TenantDocumentUploadStatus;
@@ -61,6 +65,7 @@ export type SubmitDocumentUploadPayload = {
   >;
   bankDetails?: StoredBankDetails;
   draft?: boolean;
+  removeDocumentIds?: ExtendedDocumentId[];
 };
 
 export async function submitDocumentUploadInvite(
@@ -97,6 +102,61 @@ export async function submitDocumentUploadInvite(
       requesterName: json.requesterName ?? "Your property manager",
       requesterRole: json.requesterRole ?? "owner",
       submittedAt: json.submittedAt,
+    };
+  } catch {
+    return { ok: false, error: "Network error. Please try again.", code: "network" };
+  }
+}
+
+export async function fetchTenantUploadedDocumentFile(
+  token: string,
+  documentId: ExtendedDocumentId,
+): Promise<
+  | {
+      ok: true;
+      file: {
+        documentId: ExtendedDocumentId;
+        fileName: string;
+        fileSize: number;
+        mimeType: string;
+        uploadedAt: number;
+        dataUrl: string;
+      };
+    }
+  | { ok: false; error: string; code?: string; status?: number }
+> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/tenant-document-upload/${encodeURIComponent(token)}/file/${encodeURIComponent(documentId)}`,
+    );
+    const json = (await res.json()) as {
+      documentId?: ExtendedDocumentId;
+      fileName?: string;
+      fileSize?: number;
+      mimeType?: string;
+      uploadedAt?: number;
+      dataUrl?: string;
+      error?: string;
+      code?: string;
+    };
+    if (!res.ok || !json.dataUrl || !json.fileName) {
+      return {
+        ok: false,
+        error: json.error ?? "Document file not available",
+        code: json.code,
+        status: res.status,
+      };
+    }
+    return {
+      ok: true,
+      file: {
+        documentId: json.documentId ?? documentId,
+        fileName: json.fileName,
+        fileSize: json.fileSize ?? 0,
+        mimeType: json.mimeType ?? "application/octet-stream",
+        uploadedAt: json.uploadedAt ?? Date.now(),
+        dataUrl: json.dataUrl,
+      },
     };
   } catch {
     return { ok: false, error: "Network error. Please try again.", code: "network" };

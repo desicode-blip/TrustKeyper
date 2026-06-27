@@ -10,6 +10,7 @@ import BrokerPendingFlowBanners from "@/components/BrokerPendingFlowBanners";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import { getTenants, timeAgo } from "@/lib/tenants";
 import { getAgreements } from "@/lib/agreements";
+import { getDocumentSubmissionNotifications } from "@/lib/documentSubmissionNotifications";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -88,6 +89,18 @@ function buildActivities(): ActivityItem[] {
       time: t.createdAt,
       read: false,
     })),
+    ...getDocumentSubmissionNotifications()
+      .filter((row) => row.requesterRole === "broker" && row.status !== "archived")
+      .map((row) => ({
+        id: row.id,
+        type: "agreement" as ActivityType,
+        title: `Documents submitted: ${row.tenantName}`,
+        description: row.propertyLabel
+          ? `${row.propertyLabel} · Ready for agreement review`
+          : "Ready for agreement review",
+        time: row.submittedAt,
+        read: row.status === "read" || row.status === "displayed",
+      })),
     // Static system event always present
     {
       id: "sys-profile",

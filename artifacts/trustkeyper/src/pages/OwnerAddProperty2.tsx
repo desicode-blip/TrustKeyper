@@ -20,6 +20,7 @@ import { FLOW_STICKY_CONTENT_CLASS, FlowStickyActionBar } from "@/components/Flo
 import { FlowClearButton } from "@/components/owner/FlowClearButton";
 import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { addProperty, deriveBedroomsFromUnitSize } from "@/lib/properties";
+import { appendPropertyImagesFromFiles } from "@/lib/propertyMedia";
 import { CITY_LOCALITIES } from "@/lib/tenants";
 import { getSessionItem, removeSessionItem, setSessionItem } from "@/lib/storageKeys";
 
@@ -259,6 +260,8 @@ export default function OwnerAddProperty2() {
 
   // Sub-step 5 – Images & Success
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [pendingImageUploads, setPendingImageUploads] = useState(0);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -338,22 +341,29 @@ export default function OwnerAddProperty2() {
       prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
     );
 
-  const handleFiles = useCallback((files: FileList | null) => {
-    if (!files) return;
-    const remaining = 5 - imageUrls.length;
-    const toAdd = Array.from(files).slice(0, remaining);
-    toAdd.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        if (dataUrl) setImageUrls((prev) => [...prev, dataUrl]);
-      };
-      reader.readAsDataURL(file);
-    });
-  }, [imageUrls]);
+  const handleFiles = useCallback(async (files: FileList | null) => {
+    if (!files || pendingImageUploads > 0) return;
+
+    setImageUploadError(null);
+    setPendingImageUploads(files.length);
+
+    try {
+      const result = await appendPropertyImagesFromFiles(files, imageUrls);
+      setImageUrls(result.images);
+
+      if (result.failedCount > 0) {
+        setImageUploadError("Some photos could not be uploaded. Try again with image files only.");
+      } else if (result.skippedDuplicateCount > 0 && result.addedCount === 0) {
+        setImageUploadError("That photo is already in your gallery.");
+      }
+    } finally {
+      setPendingImageUploads(0);
+    }
+  }, [imageUrls, pendingImageUploads]);
 
   const removeImage = (idx: number) => {
     setImageUrls((prev) => prev.filter((_, i) => i !== idx));
+    setImageUploadError(null);
   };
 
   const parseAddressDetails = (value: string) => {
@@ -799,7 +809,10 @@ export default function OwnerAddProperty2() {
             ))}
           </div>
         )}
-        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
+        {imageUploadError ? (
+          <p className="text-sm text-red-600 mt-2">{imageUploadError}</p>
+        ) : null}
+        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { void handleFiles(e.target.files); e.target.value = ""; }} />
       </div>
     </div>
   );

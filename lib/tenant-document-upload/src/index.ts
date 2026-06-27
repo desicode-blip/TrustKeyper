@@ -19,6 +19,21 @@ export {
   type ExtendedDocumentId,
   type UploadDocumentStatus,
 } from "./documentTypes.js";
+import {
+  archiveDocumentFile,
+  canTenantModifyDocuments,
+  type DocumentHistoryMap,
+  type DocumentVersionHistory,
+  type StoredUploadFileVersion,
+} from "./documentHistory.js";
+
+export {
+  archiveDocumentFile,
+  canTenantModifyDocuments,
+  type DocumentHistoryMap,
+  type DocumentVersionHistory,
+  type StoredUploadFileVersion,
+} from "./documentHistory.js";
 
 export type DocumentUploadRequesterRole = "owner" | "broker";
 
@@ -62,6 +77,10 @@ export type DocumentUploadTokenSnapshot = {
   requesterName: string;
   propertyId?: string;
   propertyLabel?: string;
+  propertyImage?: string;
+  propertyAddress?: string;
+  monthlyRent?: string;
+  securityDeposit?: string;
   agreementDraftId?: string;
   requestedDocumentIds: ExtendedDocumentId[];
   status: DocumentUploadInviteStatus;
@@ -69,11 +88,13 @@ export type DocumentUploadTokenSnapshot = {
   documents: Partial<Record<ExtendedDocumentId, StoredUploadFile>>;
   documentStatuses: Partial<Record<ExtendedDocumentId, UploadDocumentStatus>>;
   bankDetails?: StoredBankDetails;
+  documentHistory?: DocumentHistoryMap;
   createdAt: number;
   expiresAt: number;
   linkSentAt?: number;
   startedAt?: number;
   submittedAt?: number;
+  lastDocumentUpdateAt?: number;
 };
 
 export type DocumentUploadStore = {
@@ -153,6 +174,10 @@ export type RegisterDocumentUploadInviteInput = {
   tenantPhone: string;
   propertyId?: string;
   propertyLabel?: string;
+  propertyImage?: string;
+  propertyAddress?: string;
+  monthlyRent?: string;
+  securityDeposit?: string;
   agreementDraftId?: string;
   requestedDocumentIds?: ExtendedDocumentId[];
   origin: string;
@@ -222,6 +247,10 @@ export async function registerDocumentUploadInvite(
     requesterName: input.requesterName.trim() || "Your property manager",
     propertyId: input.propertyId,
     propertyLabel: input.propertyLabel,
+    propertyImage: input.propertyImage,
+    propertyAddress: input.propertyAddress,
+    monthlyRent: input.monthlyRent,
+    securityDeposit: input.securityDeposit,
     agreementDraftId: input.agreementDraftId,
     requestedDocumentIds,
     status: "link_sent",
@@ -309,6 +338,7 @@ export type SubmitDocumentUploadBody = {
   >;
   bankDetails?: StoredBankDetails;
   draft?: boolean;
+  removeDocumentIds?: ExtendedDocumentId[];
 };
 
 function validateFilePayload(file: {
@@ -362,8 +392,37 @@ export async function submitDocumentUpload(
   }
 
   const snapshot: DocumentUploadTokenSnapshot = { ...record.snapshot };
+  const wasSubmitted =
+    snapshot.status === "submitted" || snapshot.tenantDocumentStatus === "documents_submitted";
+  if (!canTenantModifyDocuments(snapshot) && (body.documents || body.bankDetails || body.removeDocumentIds?.length)) {
+    return {
+      ok: false,
+      error: "Documents cannot be changed after agreement generation",
+      code: "documents_locked",
+    };
+  }
+
   const nextDocuments = { ...snapshot.documents };
   const nextStatuses = { ...snapshot.documentStatuses };
+  const nextHistory: DocumentHistoryMap = { ...(snapshot.documentHistory ?? {}) };
+
+  if (body.removeDocumentIds?.length) {
+    for (const id of body.removeDocumentIds) {
+      if (!snapshot.requestedDocumentIds.includes(id)) continue;
+      if (id === "bank") {
+        snapshot.bankDetails = undefined;
+        nextStatuses.bank = "not_uploaded";
+        continue;
+      }
+      if (!isFileDocumentId(id)) continue;
+      const current = nextDocuments[id];
+      if (current) {
+        nextHistory[id] = archiveDocumentFile(nextHistory[id], current);
+      }
+      delete nextDocuments[id];
+      nextStatuses[id] = "not_uploaded";
+    }
+  }
 
   if (body.documents) {
     for (const [id, file] of Object.entries(body.documents) as [ExtendedDocumentId, NonNullable<SubmitDocumentUploadBody["documents"]>[ExtendedDocumentId]][]) {
@@ -372,6 +431,10 @@ export async function submitDocumentUpload(
       if (!isFileDocumentId(id)) continue;
       const validationError = validateFilePayload(file);
       if (validationError) return { ok: false, error: validationError, code: "invalid_file" };
+      const current = nextDocuments[id];
+      if (current) {
+        nextHistory[id] = archiveDocumentFile(nextHistory[id], current);
+      }
       nextDocuments[id] = {
         fileName: file.fileName,
         fileSize: file.fileSize,
@@ -392,10 +455,20 @@ export async function submitDocumentUpload(
 
   snapshot.documents = nextDocuments;
   snapshot.documentStatuses = nextStatuses;
-  snapshot.status = body.draft ? "in_progress" : "submitted";
-  snapshot.tenantDocumentStatus = body.draft ? "documents_in_progress" : "documents_submitted";
+  snapshot.documentHistory = nextHistory;
+  snapshot.lastDocumentUpdateAt = Date.now();
+
+  if (body.draft) {
+    snapshot.status = wasSubmitted ? "submitted" : "in_progress";
+    snapshot.tenantDocumentStatus = wasSubmitted
+      ? snapshot.tenantDocumentStatus
+      : "documents_in_progress";
+  } else {
+    snapshot.status = "submitted";
+    snapshot.tenantDocumentStatus = "documents_submitted";
+    snapshot.submittedAt = Date.now();
+  }
   snapshot.startedAt = snapshot.startedAt ?? Date.now();
-  if (!body.draft) snapshot.submittedAt = Date.now();
 
   await persistSnapshot(store, record.requesterPhone, record.requesterRole, snapshot);
 
@@ -409,6 +482,10 @@ export type RequesterDocumentUploadInviteView = {
   tenantPhone: string;
   propertyId?: string;
   propertyLabel?: string;
+  propertyImage?: string;
+  propertyAddress?: string;
+  monthlyRent?: string;
+  securityDeposit?: string;
   status: DocumentUploadInviteStatus;
   tenantDocumentStatus: TenantDocumentUploadStatus;
   requestedDocumentIds: ExtendedDocumentId[];
@@ -430,6 +507,10 @@ function inviteRowToRequesterView(row: InviteRow): RequesterDocumentUploadInvite
     tenantPhone: row.tenantPhone,
     propertyId: row.propertyId,
     propertyLabel: row.propertyLabel,
+    propertyImage: row.propertyImage,
+    propertyAddress: row.propertyAddress,
+    monthlyRent: row.monthlyRent,
+    securityDeposit: row.securityDeposit,
     status: resolveStatus(row),
     tenantDocumentStatus: row.tenantDocumentStatus,
     requestedDocumentIds: row.requestedDocumentIds,
@@ -543,6 +624,10 @@ export async function handleTenantDocumentUploadRequest(
       requesterRole: record.snapshot.requesterRole,
       propertyId: record.snapshot.propertyId,
       propertyLabel: record.snapshot.propertyLabel,
+      propertyImage: record.snapshot.propertyImage,
+      propertyAddress: record.snapshot.propertyAddress,
+      monthlyRent: record.snapshot.monthlyRent,
+      securityDeposit: record.snapshot.securityDeposit,
       requestedDocumentIds: record.snapshot.requestedDocumentIds,
       status,
       tenantDocumentStatus: record.snapshot.tenantDocumentStatus,
@@ -626,6 +711,40 @@ export async function handleTenantDocumentUploadRequest(
     };
     await persistSnapshot(store, record.requesterPhone, record.requesterRole, snapshot);
     json(res, 200, { ok: true });
+    return;
+  }
+
+  if (segments[1] === "file" && segments[2]) {
+    if (req.method !== "GET") {
+      json(res, 405, { error: "Method not allowed" });
+      return;
+    }
+
+    const docId = segments[2] as ExtendedDocumentId;
+    const record = await loadTokenSnapshot(store, token);
+    if (!record) {
+      json(res, 404, { error: "Invalid document upload link" });
+      return;
+    }
+    if (resolveStatus(record.snapshot) === "expired") {
+      json(res, 410, { error: "This document upload link has expired", code: "expired" });
+      return;
+    }
+
+    const file = record.snapshot.documents[docId];
+    if (!file?.dataUrl) {
+      json(res, 404, { error: "Document file not found", code: "not_found" });
+      return;
+    }
+
+    json(res, 200, {
+      documentId: docId,
+      fileName: file.fileName,
+      fileSize: file.fileSize,
+      mimeType: file.mimeType,
+      uploadedAt: file.uploadedAt,
+      dataUrl: file.dataUrl,
+    });
     return;
   }
 

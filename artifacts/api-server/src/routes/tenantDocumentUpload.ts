@@ -44,6 +44,8 @@ function uploadPathFromReq(req: Request): string {
   if (!token) return "";
   if (req.path.endsWith("/start")) return `${token}/start`;
   if (req.path.endsWith("/submit")) return `${token}/submit`;
+  const docId = Array.isArray(req.params.docId) ? req.params.docId[0] : req.params.docId;
+  if (docId && req.path.includes("/file/")) return `${token}/file/${docId}`;
   return token;
 }
 
@@ -111,6 +113,10 @@ async function handleCreate(req: Request, res: Response, store: DocumentUploadSt
     requesterName?: string;
     propertyId?: string;
     propertyLabel?: string;
+    propertyImage?: string;
+    propertyAddress?: string;
+    monthlyRent?: string;
+    securityDeposit?: string;
     agreementDraftId?: string;
   };
 
@@ -141,6 +147,10 @@ async function handleCreate(req: Request, res: Response, store: DocumentUploadSt
     tenantPhone,
     propertyId: body.propertyId,
     propertyLabel: body.propertyLabel,
+    propertyImage: body.propertyImage,
+    propertyAddress: body.propertyAddress,
+    monthlyRent: body.monthlyRent,
+    securityDeposit: body.securityDeposit,
     agreementDraftId: body.agreementDraftId,
     origin: requestOrigin(req),
   });
@@ -249,6 +259,7 @@ router.post("/tenant-document-upload/create/:requesterPhone/:requesterRole", run
 router.get("/tenant-document-upload/requester/:requesterPhone/:requesterRole", runHandler);
 router.get("/tenant-document-upload/requester/:requesterPhone/:requesterRole/:token", runHandler);
 router.get("/tenant-document-upload/:token", runHandler);
+router.get("/tenant-document-upload/:token/file/:docId", runHandler);
 router.post("/tenant-document-upload/:token/start", runHandler);
 router.post("/tenant-document-upload/:token/submit", runHandler);
 

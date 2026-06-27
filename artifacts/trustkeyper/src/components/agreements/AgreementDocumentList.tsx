@@ -13,6 +13,7 @@ import {
 import { type Agreement, type AgreementStatus } from "@/lib/agreements";
 import { shareRentalAgreementPdf, type RentalAgreementInput } from "@/lib/rentalAgreementDocument";
 import { whatsAppInviteHref } from "@/lib/ownerTenants";
+import { AgreementSigningInlineActions } from "@/components/agreements/AgreementSigningInlineActions";
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
@@ -275,11 +276,13 @@ export function AgreementDocumentRow({
   onView,
   onEditManually,
   onEditDetails,
+  requesterRole,
 }: {
   agreement: Agreement;
   onView: () => void;
   onEditManually: () => void;
   onEditDetails: () => void;
+  requesterRole?: "owner" | "broker";
 }) {
   const isNew = Date.now() - agreement.createdAt < 24 * 60 * 60 * 1000;
   const [dropOpen, setDropOpen] = useState(false);
@@ -398,6 +401,11 @@ export function AgreementDocumentRow({
           <p className="text-xs text-gray-400 mt-1 break-words">
             Agreement · {formatDate(agreement.createdAt)}
           </p>
+          {requesterRole ? (
+            <div className="mt-2">
+              <AgreementSigningInlineActions agreement={agreement} requesterRole={requesterRole} />
+            </div>
+          ) : null}
         </div>
       </div>
 

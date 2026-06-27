@@ -1,6 +1,17 @@
 import type { TenantDocumentUploadStatus } from "@workspace/tenant-document-upload";
 import type { DocumentUploadInvitePayload } from "@/lib/publicAgreementDocumentUpload";
-import { getProperties } from "@/lib/properties";
+import { queueCloudSync } from "@/lib/cloudSync";
+import { enrichTenantWorkspaceEcosystem } from "@/lib/tenantEcosystem";
+import { getProperties, getPropertyTitle } from "@/lib/properties";
+import {
+  broadcastTenantWorkflowUpdated,
+  resolveTenantWorkflowState,
+} from "@/lib/tenantWorkflowState";
+import type { TenantWorkflowStage } from "@/lib/tenantWorkflowState";
+import {
+  mergeInviteIntoTenantWorkspace,
+  shouldSyncInviteWorkspaceToServer,
+} from "@/lib/tenantWorkspaceInviteMerge";
 import { getActiveSession, getSessionItem, storageKey } from "@/lib/storageKeys";
 
 export type TenantDashboardPhase =
@@ -17,10 +28,33 @@ export type TenantNotificationKind =
   | "documents_under_review"
   | "agreement_being_prepared"
   | "agreement_ready"
+  | "esign_document_upload"
+  | "awaiting_esign_signatures"
   | "agreement_signed"
   | "move_in_scheduled"
   | "maintenance_open"
   | "rent_due";
+
+export type TenantPreSigningEscrowType = "brokerage_tenant" | "security_deposit";
+
+export type TenantEscrowPaymentStatus = "created" | "paid" | "settled" | "failed";
+
+export interface TenantAgreementSnapshot {
+  ownerName: string;
+  ownerContact?: string;
+  tenantName: string;
+  propertyAddress: string;
+  propertyType?: string;
+  leaseStartDate: string;
+  leaseEndDate?: string;
+  monthlyRent: string;
+  securityDeposit: string;
+  rentDueDay: string;
+  lockInPeriod: string;
+  noticePeriod: string;
+  brokerageAmount?: string;
+  agreementText?: string;
+}
 
 export interface TenantWorkspaceRecord {
   phone: string;
@@ -30,12 +64,29 @@ export interface TenantWorkspaceRecord {
   propertyAddress?: string;
   propertyImage?: string;
   monthlyRent?: string;
+  securityDeposit?: string;
+  propertyType?: string;
   propertyStatus?: string;
+  ownerName?: string;
+  ownerContact?: string;
+  brokerName?: string;
   documentUploadToken?: string;
   documentUploadStatus?: TenantDocumentUploadStatus;
   documentUploadSubmittedAt?: number;
   requesterName?: string;
   requesterRole?: "owner" | "broker";
+  agreementId?: string;
+  accountCreatedAt?: number;
+  rentalRequirementsSubmitted?: boolean;
+  lifecycleStage?: TenantWorkflowStage;
+  preSigningEscrowType?: TenantPreSigningEscrowType;
+  escrowPaymentId?: string;
+  escrowPaymentStatus?: TenantEscrowPaymentStatus;
+  agreementSnapshot?: TenantAgreementSnapshot;
+  propertyMissing?: boolean;
+  agreementCancelled?: boolean;
+  relationshipError?: string;
+  esignSignedPartyPhones?: string[];
   updatedAt: number;
 }
 
@@ -61,14 +112,40 @@ function workspaceStorageKey(digits: string): string {
   return `tk_${digits}_tenant_workspace`;
 }
 
-export function saveTenantWorkspace(record: TenantWorkspaceRecord): void {
+function formatPropertyAddress(property: {
+  area: string;
+  city: string;
+}): string {
+  return [property.area, property.city].filter(Boolean).join(", ");
+}
+
+function formatPropertyStatusLabel(status: string): string {
+  if (status === "Rented") return "Occupied";
+  if (status === "Draft") return "Draft";
+  return "Available";
+}
+
+export type SaveTenantWorkspaceOptions = {
+  /** Mirror to sync API — only for legacy bulk restore. Workflow writes use tenant-workflow API. */
+  syncToCloud?: boolean;
+};
+
+export function saveTenantWorkspace(
+  record: TenantWorkspaceRecord,
+  options?: SaveTenantWorkspaceOptions,
+): void {
   const digits = phoneDigits(record.phone);
-  const payload = JSON.stringify({ ...record, phone: digits, updatedAt: Date.now() });
+  const enriched = enrichTenantWorkspaceEcosystem({ ...record, phone: digits, updatedAt: Date.now() });
+  const payload = JSON.stringify(enriched);
   localStorage.setItem(workspaceStorageKey(digits), payload);
   const session = getActiveSession();
   if (session && phoneDigits(session.phone) === digits && session.role === "tenant") {
     localStorage.setItem(storageKey(digits, "tenant", "tenant_workspace"), payload);
+    if (options?.syncToCloud) {
+      queueCloudSync("tenant_workspace", payload);
+    }
   }
+  broadcastTenantWorkflowUpdated();
 }
 
 export function getTenantWorkspaceForPhone(phone: string): TenantWorkspaceRecord | null {
@@ -79,7 +156,8 @@ export function getTenantWorkspaceForPhone(phone: string): TenantWorkspaceRecord
     localStorage.getItem(storageKey(digits, "tenant", "tenant_workspace"));
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as TenantWorkspaceRecord;
+    const parsed = JSON.parse(raw) as TenantWorkspaceRecord;
+    return enrichTenantWorkspaceEcosystem(parsed);
   } catch {
     return null;
   }
@@ -99,26 +177,55 @@ export function saveTenantWorkspaceFromInvite(
   let monthlyRent: string | undefined;
   let propertyAddress: string | undefined;
   let propertyStatus: string | undefined;
+  let securityDeposit: string | undefined;
+  let propertyType: string | undefined;
+  let ownerName: string | undefined;
+  let brokerName: string | undefined;
 
-  if (invite.propertyId) {
-    const property = getProperties().find((row) => row.id === invite.propertyId);
-    if (property) {
-      propertyImage = property.images?.[0];
-      monthlyRent = property.monthlyRent;
-      propertyAddress = [property.area, property.city].filter(Boolean).join(", ");
-      propertyStatus = property.status === "Rented" ? "Occupied" : "Available";
-    }
+  const linkedProperty = invite.propertyId
+    ? getProperties().find((row) => row.id === invite.propertyId)
+    : undefined;
+
+  if (linkedProperty) {
+    propertyImage = linkedProperty.images?.[0];
+    monthlyRent = linkedProperty.monthlyRent;
+    propertyAddress = formatPropertyAddress(linkedProperty);
+    propertyStatus = formatPropertyStatusLabel(linkedProperty.status);
+    securityDeposit = linkedProperty.securityDeposit;
+    propertyType = linkedProperty.propertyType;
+    ownerName = linkedProperty.ownerName;
+  } else {
+    propertyImage = invite.propertyImage;
+    monthlyRent = invite.monthlyRent;
+    propertyAddress = invite.propertyAddress;
+    securityDeposit = invite.securityDeposit;
   }
 
-  const record: TenantWorkspaceRecord = {
-    phone: invite.tenantPhone,
+  const propertyTitle =
+    invite.propertyLabel ?? (linkedProperty ? getPropertyTitle(linkedProperty) : "Assigned Property");
+
+  if (invite.requesterRole === "broker") {
+    brokerName = invite.requesterName;
+  } else {
+    ownerName = ownerName ?? invite.requesterName;
+  }
+
+  const digits = phoneDigits(invite.tenantPhone);
+  const existing = getTenantWorkspaceForPhone(digits);
+
+  const inviteRecord: TenantWorkspaceRecord = {
+    phone: digits,
     tenantName: invite.tenantName,
     propertyId: invite.propertyId,
-    propertyLabel: invite.propertyLabel ?? "Assigned Property",
+    propertyLabel: propertyTitle,
     propertyAddress,
     propertyImage,
     monthlyRent,
+    securityDeposit,
+    propertyType,
     propertyStatus,
+    ownerName,
+    brokerName,
     documentUploadToken: invite.token,
     documentUploadStatus: overrides?.documentUploadStatus ?? invite.tenantDocumentStatus,
     documentUploadSubmittedAt: overrides?.documentUploadSubmittedAt ?? invite.submittedAt,
@@ -127,10 +234,19 @@ export function saveTenantWorkspaceFromInvite(
     updatedAt: Date.now(),
     ...overrides,
   };
+
+  const record = enrichTenantWorkspaceEcosystem(
+    mergeInviteIntoTenantWorkspace(existing, inviteRecord),
+  );
+
   saveTenantWorkspace(record);
+  if (shouldSyncInviteWorkspaceToServer(existing)) {
+    void import("./tenantWorkflowServer").then((mod) => mod.upsertTenantWorkspaceOnServer(record));
+  }
   return record;
 }
 
+/** @deprecated Use resolveTenantWorkflowState instead */
 export function resolveTenantDashboardPhase(
   workspace: TenantWorkspaceRecord | null,
 ): TenantDashboardPhase {
@@ -143,87 +259,18 @@ export function resolveTenantDashboardPhase(
   return "agreement_pending";
 }
 
+/** @deprecated Use resolveTenantWorkflowState instead */
 export function resolveTenantProgressSteps(
   workspace: TenantWorkspaceRecord | null,
 ): TenantProgressStep[] {
-  const status = workspace?.documentUploadStatus;
-  const submitted =
-    status === "documents_submitted" || status === "agreement_ready" || Boolean(workspace?.documentUploadSubmittedAt);
-  const agreementReady = status === "agreement_ready";
-
-  return [
-    {
-      id: "documents",
-      label: "Document Upload",
-      state: submitted ? "complete" : "current",
-    },
-    {
-      id: "agreement",
-      label: "Agreement Generation",
-      state: agreementReady ? "complete" : submitted ? "current" : "upcoming",
-    },
-    {
-      id: "review",
-      label: "Review & Sign",
-      state: agreementReady ? "current" : "upcoming",
-    },
-  ];
+  return resolveTenantWorkflowState(workspace).progressSteps;
 }
 
+/** @deprecated Use resolveTenantWorkflowState instead */
 export function resolveTenantNotification(
   workspace: TenantWorkspaceRecord | null,
 ): TenantNotificationContent {
-  if (!workspace?.propertyLabel) {
-    return {
-      kind: "no_property",
-      title: "No property assigned yet",
-      description:
-        "Once your property owner or broker links you to a rental, your property details and next steps will appear here.",
-    };
-  }
-
-  const status = workspace.documentUploadStatus;
-  const uploadHref = workspace.documentUploadToken
-    ? `/upload/documents/${workspace.documentUploadToken}`
-    : undefined;
-
-  if (!status || status === "document_request_sent" || status === "documents_in_progress") {
-    return {
-      kind: "documents_pending",
-      title: "Documents pending",
-      description:
-        "Upload your required documents using the secure link shared by your property owner or broker to continue.",
-      actionLabel: "Continue Document Collection",
-      actionHref: uploadHref,
-    };
-  }
-
-  if (status === "agreement_ready") {
-    return {
-      kind: "agreement_ready",
-      title: "Agreement ready",
-      description:
-        "Your rental agreement is ready for review. You will receive a notification when it is available to sign.",
-    };
-  }
-
-  if (status === "documents_submitted") {
-    return {
-      kind: "documents_under_review",
-      title: "Documents Under Review",
-      description:
-        "You will receive an email and a dashboard notification once the digital agreement is ready for your signature.",
-      actionLabel: "View Upload Status",
-      actionHref: uploadHref,
-    };
-  }
-
-  return {
-    kind: "agreement_being_prepared",
-    title: "Agreement Being Prepared",
-    description:
-      "Your documents have been received. The property owner or broker is preparing your rental agreement.",
-  };
+  return resolveTenantWorkflowState(workspace).notification;
 }
 
 export function getTenantDisplayName(): string {
