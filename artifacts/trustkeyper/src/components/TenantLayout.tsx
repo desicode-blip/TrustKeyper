@@ -28,7 +28,7 @@ import { getTenantDisplayName } from "@/lib/tenantWorkspace";
 const navItems = [
   { id: "dashboard", label: "Dashboards", icon: LayoutDashboard, href: "/tenant/dashboard" },
   { id: "rent", label: "Rent Payments", icon: Wallet, href: "/tenant/rent" },
-  { id: "maintenance", label: "Maintenance", icon: Wrench, href: "/tenant/maintenance" },
+  { id: "maintenance", label: "Repairs", icon: Wrench, href: "/tenant/maintenance" },
   { id: "documents", label: "Documents", icon: FileCheck, href: "/tenant/documents" },
   { id: "contact", label: "Contact", icon: HandHeart, href: "/tenant/contact" },
 ];
