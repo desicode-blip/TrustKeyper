@@ -1,4 +1,4 @@
-import { TenantComingSoon } from "@/pages/tenant/TenantRentPayments";
+import { TenantComingSoon } from "@/pages/tenant/TenantComingSoon";
 
 export default function TenantContact() {
   return (
