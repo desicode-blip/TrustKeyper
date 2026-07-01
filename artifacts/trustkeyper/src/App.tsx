@@ -46,6 +46,7 @@ import OwnerTenantProfile from "@/pages/OwnerTenantProfile";
 import OwnerTickets from "@/pages/OwnerTickets";
 import OwnerAgreements from "@/pages/OwnerAgreements";
 import OwnerUploadSignedAgreement from "@/pages/owner/OwnerUploadSignedAgreement";
+import OwnerPaymentSetup from "@/pages/owner/OwnerPaymentSetup";
 import OwnerFinances from "@/pages/OwnerFinances";
 import OwnerProfile from "@/pages/OwnerProfile";
 import AdminLogin from "@/pages/admin/AdminLogin";
@@ -107,6 +108,7 @@ function Router() {
       <Route path="/owner/properties/add" component={OwnerAddProperty} />
       <Route path="/owner/properties/add2" component={OwnerAddProperty2} />
       <Route path="/owner/dashboard" component={OwnerDashboard} />
+      <Route path="/owner/payments" component={OwnerPaymentSetup} />
       <Route path="/owner/properties" component={OwnerProperties} />
       <Route path="/owner/properties/:id" component={OwnerPropertyDetails} />
       <Route path="/owner/tenants" component={OwnerTenants} />

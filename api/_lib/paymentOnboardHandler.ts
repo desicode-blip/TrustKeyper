@@ -591,3 +591,59 @@ export async function handlePaymentOnboardCompleteRequest(
     json(res, 500, { error: "Internal server error" });
   }
 }
+
+const onboardStatusQuerySchema = z.object({
+  phone: z
+    .string()
+    .transform((v) => v.replace(/\D/g, "").slice(-10))
+    .refine((v) => v.length === 10, "phone must be a 10-digit number"),
+  role: z.enum(["owner", "broker"]),
+});
+
+export async function handlePaymentOnboardStatusRequest(
+  req: VercelRequest,
+  res: VercelResponse,
+): Promise<void> {
+  if (req.method !== "GET") {
+    json(res, 405, { error: "Method not allowed" });
+    return;
+  }
+
+  const rawPhone = req.query.phone;
+  const rawRole = req.query.role;
+  const phoneParam = Array.isArray(rawPhone) ? rawPhone[0] : rawPhone;
+  const roleParam = Array.isArray(rawRole) ? rawRole[0] : rawRole;
+
+  const parsed = onboardStatusQuerySchema.safeParse({
+    phone: phoneParam ?? "",
+    role: roleParam ?? "",
+  });
+  if (!parsed.success) {
+    const message = parsed.error.issues[0]?.message ?? "Invalid query parameters";
+    json(res, 400, { error: message });
+    return;
+  }
+
+  const { phone, role } = parsed.data;
+  const auth = await assertPaymentAuth(requestAuthorization(req), phone);
+  if (!auth.ok) {
+    json(res, auth.status, { error: auth.error });
+    return;
+  }
+
+  try {
+    const config = await getRecipientConfig(phone, role);
+    json(res, 200, {
+      validationStatus: config?.validation_status ?? "pending",
+      hasLinkedAccount: Boolean(config?.razorpay_linked_account_id),
+      accountId: config?.razorpay_linked_account_id ?? null,
+    });
+  } catch (err) {
+    console.error("Payment onboard status handler error", {
+      phone,
+      role,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    json(res, 500, { error: "Internal server error" });
+  }
+}
