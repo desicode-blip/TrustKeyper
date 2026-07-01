@@ -1,10 +1,11 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TenantRentPaymentsSnapshot } from "@/lib/tenantRentPayments";
 
 export interface TenantMonthlyStatementCardProps {
   snapshot: TenantRentPaymentsSnapshot;
   loading?: boolean;
+  payNowLoading?: boolean;
   onRequestExtension?: () => void;
   onPayNow?: () => void;
 }
@@ -12,6 +13,7 @@ export interface TenantMonthlyStatementCardProps {
 export function TenantMonthlyStatementCard({
   snapshot,
   loading,
+  payNowLoading,
   onRequestExtension,
   onPayNow,
 }: TenantMonthlyStatementCardProps) {
@@ -60,10 +62,20 @@ export function TenantMonthlyStatementCard({
             <Button
               type="button"
               className="h-12 px-5 rounded text-base font-normal gap-2"
+              disabled={payNowLoading}
               onClick={onPayNow}
             >
-              Pay Now
-              <ArrowRight size={16} />
+              {payNowLoading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Processing…
+                </>
+              ) : (
+                <>
+                  Pay Now
+                  <ArrowRight size={16} />
+                </>
+              )}
             </Button>
           </div>
         </div>

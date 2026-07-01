@@ -8,6 +8,11 @@ import { TenantRentExtensionModal } from "@/components/tenant/TenantRentExtensio
 import { TenantRentPaymentReceiptModal } from "@/components/tenant/TenantRentPaymentReceiptModal";
 import { toast } from "@/hooks/use-toast";
 import {
+  computeCurrentRentPeriod,
+  createTenantRentOrder,
+  openRazorpayCheckout,
+} from "@/lib/tenantRentPayment";
+import {
   buildTenantRentPaymentReceipt,
   buildTenantRentPaymentsSnapshot,
   findRentPaymentHistoryRow,
@@ -23,6 +28,7 @@ export default function TenantRentPayments() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<TenantRentPaymentReceipt | null>(null);
   const [extensionOpen, setExtensionOpen] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   const refresh = useCallback(() => {
     try {
@@ -55,6 +61,55 @@ export default function TenantRentPayments() {
     setReceipt(buildTenantRentPaymentReceipt(workspace, row));
   };
 
+  const handlePayNow = useCallback(async () => {
+    const activeWorkspace = getActiveTenantWorkspace();
+    if (!activeWorkspace?.agreementId) {
+      toast({
+        title: "No active agreement found",
+        description: "We could not find an agreement linked to your account.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setPaying(true);
+    try {
+      const rentPeriod = computeCurrentRentPeriod();
+      const order = await createTenantRentOrder({
+        agreementId: activeWorkspace.agreementId,
+        rentPeriod,
+      });
+
+      if (!order.ok) {
+        toast({
+          title: order.fallbackWithoutGateway ? "Payments aren't enabled yet" : "Could not start payment",
+          description: order.fallbackWithoutGateway
+            ? "Payment gateway is not configured for this environment."
+            : order.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const paid = await openRazorpayCheckout(order.checkout);
+      if (!paid.ok) {
+        toast({
+          title: "Payment not completed",
+          description: paid.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Payment successful",
+        description: "It may take a moment to reflect.",
+      });
+    } finally {
+      setPaying(false);
+    }
+  }, []);
+
   return (
     <TenantLayout>
       <div className="max-w-6xl mx-auto space-y-7">
@@ -70,8 +125,9 @@ export default function TenantRentPayments() {
         <TenantMonthlyStatementCard
           snapshot={snapshot ?? buildTenantRentPaymentsSnapshot(null)}
           loading={loading}
+          payNowLoading={paying}
           onRequestExtension={() => setExtensionOpen(true)}
-          onPayNow={() => showPlaceholderToast("Pay now")}
+          onPayNow={() => void handlePayNow()}
         />
 
         <TenantPaymentHistoryCard
