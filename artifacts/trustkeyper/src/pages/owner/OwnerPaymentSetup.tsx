@@ -160,7 +160,7 @@ function PaymentSetupForm({
   onSubmit: () => void;
 }) {
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto mt-8 sm:mt-10 mb-8 sm:mb-10 px-4 sm:px-0 space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold text-gray-900">Set up rent payments</h1>
         <p className="text-sm text-gray-600">
