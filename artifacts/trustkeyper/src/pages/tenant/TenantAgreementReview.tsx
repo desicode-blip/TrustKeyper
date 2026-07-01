@@ -134,7 +134,18 @@ export default function TenantAgreementReview() {
         return;
       }
 
-      const paid = await openRazorpayCheckout(order.checkout);
+      const paid = await openRazorpayCheckout({
+        orderId: order.checkout.orderId,
+        amount: order.checkout.amount,
+        currency: order.checkout.currency,
+        keyId: order.checkout.keyId,
+        description:
+          order.checkout.paymentType === "security_deposit"
+            ? "Security deposit (held in trust)"
+            : order.checkout.paymentType === "brokerage_tenant"
+              ? "Brokerage fee (held in trust)"
+              : "Payment",
+      });
       if (!paid.ok) {
         setPaymentError(paid.error);
         return;
