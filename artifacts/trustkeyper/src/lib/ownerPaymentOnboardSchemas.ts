@@ -77,6 +77,7 @@ export const ownerPaymentSetupFormSchema = z.object({
     .transform((v) => v.toUpperCase())
     .refine((v) => /^[A-Z]{3}P[A-Z]\d{4}[A-Z]$/.test(v), "pan must be a valid personal PAN"),
   street: z.string().trim().min(1, "street is required"),
+  street2: z.string().trim().min(1, "Area / locality is required"),
   city: z.string().trim().min(1, "city is required"),
   state: stateSchema,
   postalCode: postalCodeSchema,
@@ -152,6 +153,7 @@ export function buildOnboardRequestBody(
     email: form.email,
     registeredAddress: {
       street1: form.street,
+      street2: form.street2,
       city: form.city,
       state: form.state,
       postalCode: form.postalCode,
@@ -201,6 +203,7 @@ export function createEmptyOwnerPaymentSetupForm(): OwnerPaymentSetupFormValues 
     email: "",
     pan: "",
     street: "",
+    street2: "",
     city: "",
     state: "",
     postalCode: "",
