@@ -135,6 +135,7 @@ function buildInitialFormValues(): OwnerPaymentSetupFormValues {
     legalName: profile.name?.trim() ?? "",
     email: profile.email?.trim() ?? "",
     street: property?.address?.trim() ?? "",
+    street2: property?.area?.trim() ?? "",
     city: property?.city?.trim() ?? "",
     postalCode: property?.pincode?.trim() ?? "",
     country: normalizeCountryCode(property?.country?.trim() ?? ""),
@@ -222,6 +223,16 @@ function PaymentSetupForm({
             autoComplete="street-address"
           />
           <FieldError message={fieldErrors.street} />
+        </div>
+        <div>
+          <FieldLabel required>Area / Locality / Landmark</FieldLabel>
+          <TextInput
+            value={form.street2}
+            onChange={(value) => onFieldChange("street2", value)}
+            placeholder="Area, locality, or landmark"
+            autoComplete="address-line2"
+          />
+          <FieldError message={fieldErrors.street2} />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
