@@ -111,6 +111,18 @@ export type PaymentRecipientValidationStatus =
 
 export type OwnerPaymentSetupView = "form" | "verifying" | "ready" | "failed";
 
+const COUNTRY_NAME_TO_CODE: Record<string, string> = {
+  india: "IN",
+};
+
+export function normalizeCountryCode(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "IN";
+  const mapped = COUNTRY_NAME_TO_CODE[trimmed.toLowerCase()];
+  if (mapped) return mapped;
+  return trimmed.toUpperCase();
+}
+
 export function deriveOwnerPaymentSetupView(input: {
   validationStatus: PaymentRecipientValidationStatus;
   hasLinkedAccount: boolean;
@@ -143,7 +155,7 @@ export function buildOnboardRequestBody(
       city: form.city,
       state: form.state,
       postalCode: form.postalCode,
-      country: form.country || "IN",
+      country: normalizeCountryCode(form.country),
     },
   });
 }
@@ -164,7 +176,7 @@ export function buildOnboardCompleteRequestBody(
       city: form.city,
       state: form.state,
       postalCode: form.postalCode,
-      country: form.country || "IN",
+      country: normalizeCountryCode(form.country),
     },
     bankAccountNumber: form.bankAccountNumber,
     bankIfsc: form.bankIfsc,

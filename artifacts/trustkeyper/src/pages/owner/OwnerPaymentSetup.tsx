@@ -21,6 +21,7 @@ import {
 import {
   createEmptyOwnerPaymentSetupForm,
   deriveOwnerPaymentSetupView,
+  normalizeCountryCode,
   ownerPaymentSetupFormSchema,
   validateOwnerPaymentSetupField,
   type OwnerPaymentSetupFormValues,
@@ -136,7 +137,7 @@ function buildInitialFormValues(): OwnerPaymentSetupFormValues {
     street: property?.address?.trim() ?? "",
     city: property?.city?.trim() ?? "",
     postalCode: property?.pincode?.trim() ?? "",
-    country: property?.country?.trim() || "IN",
+    country: normalizeCountryCode(property?.country?.trim() ?? ""),
     bankAccountNumber: profile.bankAccountNumber?.trim() ?? "",
     bankIfsc: profile.bankIFSC?.trim().toUpperCase() ?? "",
     bankBeneficiaryName: profile.bankHolderName?.trim() ?? "",
