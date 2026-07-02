@@ -80,6 +80,8 @@ export async function provisionTenantProfileFromWorkspace(
   localStorage.setItem(storageKey(p, "tenant", "profile"), profileJson);
   saveTenantWorkspace({ ...workspace, phone: p });
   await pushAccountKeyToCloud(p, "tenant", "profile", profileJson, accessToken ?? undefined);
+  const workspaceJson = JSON.stringify({ ...workspace, phone: p });
+  await pushAccountKeyToCloud(p, "tenant", "tenant_workspace", workspaceJson, accessToken ?? undefined);
 }
 
 /**
@@ -106,7 +108,7 @@ export async function completeTenantLoginAfterOtp(
     if (localWorkspace) {
       await provisionTenantProfileFromWorkspace(p, localWorkspace, accessToken);
     } else {
-      const serverWorkspace = await pullTenantWorkspaceFromServer(p);
+      const serverWorkspace = await pullTenantWorkspaceFromServer(p, accessToken);
       if (serverWorkspace) {
         await provisionTenantProfileFromWorkspace(p, serverWorkspace, accessToken);
       }

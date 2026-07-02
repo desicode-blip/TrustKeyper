@@ -34,6 +34,7 @@ import {
   type TenantDocumentUploadSession,
 } from "@/lib/tenantDocumentUploadSession";
 import { finalizeTenantDashboardAccess } from "@/lib/tenantDocumentUploadRedirect";
+import { getSupabaseAccessToken } from "@/lib/syncSession";
 import { mergeTenantProfileFromInvitePayload } from "@/lib/tenantProfile";
 import { saveTenantWorkspaceFromInvite } from "@/lib/tenantWorkspace";
 import {
@@ -83,11 +84,12 @@ export default function TenantDocumentUpload() {
   const redirectToTenantDashboard = useCallback(
     async (tenantPhone: string, remember = rememberMe) => {
       const digits = phoneLast10(tenantPhone);
+      const accessToken = await getSupabaseAccessToken();
       const ok = await finalizeTenantDashboardAccess(
         digits,
         getActiveSession,
         loginSuccess,
-        { remember },
+        { remember, accessToken },
       );
       if (!ok) return;
       setLocation("/tenant/dashboard", { replace: true });
@@ -262,6 +264,7 @@ export default function TenantDocumentUpload() {
       setTenantDocumentUploadSession(nextSession, { remember: rememberMe });
       setSession(nextSession);
 
+      saveTenantWorkspaceFromInvite(invite);
       if (!redirectToDashboardAfterAuth) {
         mergeTenantProfileFromInvitePayload(invite);
       }
@@ -310,8 +313,10 @@ export default function TenantDocumentUpload() {
         documentUploadStatus: "documents_submitted",
         documentUploadSubmittedAt: Date.now(),
       });
+      const accessToken = await getSupabaseAccessToken();
       const ok = await finalizeTenantDashboardAccess(invite.tenantPhone, getActiveSession, loginSuccess, {
         remember: rememberMe,
+        accessToken,
       });
       if (!ok) {
         setVerifyOtpError(

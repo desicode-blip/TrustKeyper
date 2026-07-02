@@ -10,7 +10,6 @@ import {
 import type { TenantWorkflowStage } from "@/lib/tenantWorkflowState";
 import {
   mergeInviteIntoTenantWorkspace,
-  shouldSyncInviteWorkspaceToServer,
 } from "@/lib/tenantWorkspaceInviteMerge";
 import { getActiveSession, getSessionItem, storageKey, writeLocalForAccount } from "@/lib/storageKeys";
 
@@ -244,9 +243,9 @@ export function saveTenantWorkspaceFromInvite(
   );
 
   saveTenantWorkspace(record);
-  if (shouldSyncInviteWorkspaceToServer(existing)) {
-    void import("./tenantWorkflowServer").then((mod) => mod.upsertTenantWorkspaceOnServer(record));
-  }
+  void import("./tenantWorkflowServer").then((mod) =>
+    mod.upsertTenantWorkspaceOnServer(record),
+  );
   return record;
 }
 

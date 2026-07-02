@@ -96,7 +96,12 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
       }
       try {
         const data = await store.getAccountData(phone, role);
-        if (!data.profile) {
+        const hasProfile = typeof data.profile === "string" && data.profile.length > 0;
+        const hasTenantWorkspace =
+          role === "tenant" &&
+          typeof data.tenant_workspace === "string" &&
+          data.tenant_workspace.length > 0;
+        if (!hasProfile && !hasTenantWorkspace) {
           json(res, 404, { error: "Account not found" });
           return;
         }

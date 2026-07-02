@@ -62,7 +62,7 @@ describe("ensureTenantDashboardSession", () => {
     );
 
     expect(ok).toBe(true);
-    expect(login).toHaveBeenCalledWith("9876543210", "tenant");
+    expect(login).toHaveBeenCalledWith("9876543210", "tenant", undefined);
     expect(sessionStorage.getItem("tk_pending_role")).toBe("tenant");
   });
 });

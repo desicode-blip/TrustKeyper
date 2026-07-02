@@ -192,6 +192,10 @@ export async function loginSuccess(
       await new Promise((r) => setTimeout(r, 400));
       pulled = await pullAccountFromCloud(p, role);
     }
+    if (!pulled && role === "tenant") {
+      const tenantOk = await completeTenantLoginAfterOtp(p, accessToken);
+      if (tenantOk) return true;
+    }
     migrateLegacyStorage(p, role);
     applyProfileToSession(p, role);
     return true;
