@@ -33,6 +33,8 @@ function readInvites(): StoredDocumentUploadInvite[] {
 function persistInvites(invites: StoredDocumentUploadInvite[]): void {
   try {
     const payload = JSON.stringify(invites);
+    const prev = getItem(DOC_UPLOAD_INVITES_KEY);
+    if (prev === payload) return;
     setItem(DOC_UPLOAD_INVITES_KEY, payload);
     queueCloudSync(DOC_UPLOAD_INVITES_KEY, payload);
     window.dispatchEvent(new CustomEvent(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT));
