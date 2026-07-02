@@ -15,6 +15,7 @@ import {
   persistSessionToLocalStorage,
   profileExistsAsync,
   restoreRememberedSessionFromLocalStorage,
+  setAuthPendingRole,
   signUpSuccess,
   rollbackFailedSignup,
 } from "@/lib/auth";
@@ -32,7 +33,7 @@ import {
   setTenantDocumentUploadSession,
   type TenantDocumentUploadSession,
 } from "@/lib/tenantDocumentUploadSession";
-import { ensureTenantDashboardSession } from "@/lib/tenantDocumentUploadRedirect";
+import { finalizeTenantDashboardAccess } from "@/lib/tenantDocumentUploadRedirect";
 import { mergeTenantProfileFromInvitePayload } from "@/lib/tenantProfile";
 import { saveTenantWorkspaceFromInvite } from "@/lib/tenantWorkspace";
 import {
@@ -80,12 +81,18 @@ export default function TenantDocumentUpload() {
   const [redirectToDashboardAfterAuth, setRedirectToDashboardAfterAuth] = useState(false);
 
   const redirectToTenantDashboard = useCallback(
-    async (tenantPhone: string) => {
+    async (tenantPhone: string, remember = rememberMe) => {
       const digits = phoneLast10(tenantPhone);
-      await ensureTenantDashboardSession(digits, getActiveSession, loginSuccess);
+      const ok = await finalizeTenantDashboardAccess(
+        digits,
+        getActiveSession,
+        loginSuccess,
+        { remember },
+      );
+      if (!ok) return;
       setLocation("/tenant/dashboard", { replace: true });
     },
-    [setLocation],
+    [rememberMe, setLocation],
   );
 
   const openWithSession = useCallback(
@@ -167,7 +174,9 @@ export default function TenantDocumentUpload() {
 
     if (access.kind === "immediate") {
       if (access.reason === "active_tenant_session" || rememberedTenantMatch) {
-        await ensureTenantDashboardSession(tenantDigits, getActiveSession, loginSuccess);
+        await finalizeTenantDashboardAccess(tenantDigits, getActiveSession, loginSuccess, {
+          remember: rememberedTenantMatch,
+        });
       }
 
       if (alreadySubmitted) {
@@ -237,6 +246,8 @@ export default function TenantDocumentUpload() {
         }
       }
 
+      setAuthPendingRole("tenant");
+
       if (rememberMe) {
         persistSessionToLocalStorage(digits, "tenant");
       }
@@ -299,7 +310,9 @@ export default function TenantDocumentUpload() {
         documentUploadStatus: "documents_submitted",
         documentUploadSubmittedAt: Date.now(),
       });
-      await ensureTenantDashboardSession(invite.tenantPhone, getActiveSession, loginSuccess);
+      await finalizeTenantDashboardAccess(invite.tenantPhone, getActiveSession, loginSuccess, {
+        remember: rememberMe,
+      });
     }
     clearTenantDocumentUploadSession(token, {
       preserveRemembered: hasRememberedTenantDocumentUploadSession(token),
@@ -362,7 +375,14 @@ export default function TenantDocumentUpload() {
               {pagePhase === "expired" ? "Link expired" : "Invalid link"}
             </h2>
             <p className="text-sm text-gray-500 mb-6">{loadError ?? "This document upload link is not valid."}</p>
-            <Button type="button" className="w-full" onClick={() => setLocation("/login")}>
+            <Button
+              type="button"
+              className="w-full"
+              onClick={() => {
+                setAuthPendingRole("tenant");
+                setLocation("/login");
+              }}
+            >
               Sign In
             </Button>
           </div>

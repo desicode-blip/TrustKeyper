@@ -318,14 +318,25 @@ export async function pushLocalKeysToCloud(
 export function queueCloudSync(dataKey: string, value: string): void {
   const session = getActiveSession();
   if (!session) return;
-  const timerKey = `${session.phone}:${session.role}:${dataKey}`;
+  queueCloudSyncForAccount(session.phone, session.role as Role, dataKey, value);
+}
+
+/** Debounced push for a specific account — used when tenant data is saved before session is active. */
+export function queueCloudSyncForAccount(
+  phone: string,
+  role: Role,
+  dataKey: string,
+  value: string,
+): void {
+  const p = normalizePhoneDigits(phone);
+  const timerKey = `${p}:${role}:${dataKey}`;
   const existing = pushTimers.get(timerKey);
   if (existing) clearTimeout(existing);
   pushTimers.set(
     timerKey,
     setTimeout(() => {
       pushTimers.delete(timerKey);
-      void pushAccountKeyToCloud(session.phone, session.role as Role, dataKey, value);
+      void pushAccountKeyToCloud(p, role, dataKey, value);
     }, 400),
   );
 }
