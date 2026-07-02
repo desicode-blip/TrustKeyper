@@ -1,4 +1,4 @@
-import { API_BASE } from "@/lib/apiBase";
+import { getApiBase } from "@/lib/apiBase";
 import type { Agreement } from "./agreements";
 import { getActiveSession, normalizePhoneDigits } from "./storageKeys";
 import { syncAuthHeaders } from "./syncSession";
@@ -22,7 +22,7 @@ export interface AgreementSigningPresentation {
 }
 
 function workflowUrl(path: string): string {
-  return `${API_BASE}/tenant-workflow/${path}`;
+  return `${getApiBase()}/tenant-workflow/${path}`;
 }
 
 function phoneDigits(phone: string): string {

@@ -1,4 +1,4 @@
-import { API_BASE } from "@/lib/apiBase";
+import { getApiBase } from "@/lib/apiBase";
 import type { Role } from "./auth";
 import type { Agreement } from "./agreements";
 import { getActiveSession, normalizePhoneDigits } from "./storageKeys";
@@ -32,7 +32,7 @@ export interface SendAgreementForESignInput {
 }
 
 function workflowUrl(path: string): string {
-  return `${API_BASE}/tenant-workflow/${path}`;
+  return `${getApiBase()}/tenant-workflow/${path}`;
 }
 
 export function buildAgreementSnapshotFromAgreement(
@@ -116,7 +116,7 @@ export async function sendAgreementForESign(
     return {
       ok: false,
       error:
-        "Could not reach the tenant workflow API. Start the API server (pnpm run dev:local) or check VITE_API_URL.",
+        "Could not reach the tenant workflow API. Check your connection and try again in a moment.",
     };
   }
 }

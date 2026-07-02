@@ -7,7 +7,7 @@ import {
   type PaymentRecipientValidationStatus,
 } from "./ownerPaymentOnboardSchemas";
 
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
+import { getApiBase } from "@/lib/apiBase";
 
 export type PaymentRecipientStatus = {
   validationStatus: PaymentRecipientValidationStatus;
@@ -52,7 +52,7 @@ export async function fetchPaymentRecipientStatus(): Promise<
       phone: session.phone,
       role: session.role,
     });
-    const res = await fetch(`${API_BASE}/payments-onboard-status?${params.toString()}`, {
+    const res = await fetch(`${getApiBase()}/payments-onboard-status?${params.toString()}`, {
       method: "GET",
       headers,
     });
@@ -94,7 +94,7 @@ export async function submitOwnerPaymentOnboarding(
     const headers = await syncAuthHeaders("application/json");
     if (!headers) return { ok: false, error: "Not authenticated" };
 
-    const onboardRes = await fetch(`${API_BASE}/payments-onboard`, {
+    const onboardRes = await fetch(`${getApiBase()}/payments-onboard`, {
       method: "POST",
       headers,
       body: JSON.stringify(onboardBody),
@@ -104,7 +104,7 @@ export async function submitOwnerPaymentOnboarding(
       return { ok: false, error: formatApiError(onboardJson) };
     }
 
-    const completeRes = await fetch(`${API_BASE}/payments-onboard-complete`, {
+    const completeRes = await fetch(`${getApiBase()}/payments-onboard-complete`, {
       method: "POST",
       headers,
       body: JSON.stringify(completeBody),

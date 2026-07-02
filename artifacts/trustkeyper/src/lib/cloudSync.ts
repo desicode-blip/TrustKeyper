@@ -1,4 +1,4 @@
-import { API_BASE } from "@/lib/apiBase";
+import { getApiBase } from "@/lib/apiBase";
 import type { Role } from "./auth";
 import {
   getActiveSession,
@@ -63,7 +63,7 @@ function sanitizeProfileValueForRole(role: Role, raw: string): string {
 }
 
 function accountUrl(phone: string, role: string, suffix = ""): string {
-  return `${API_BASE}/sync/accounts/${normalizePhoneDigits(phone)}/${role}${suffix}`;
+  return `${getApiBase()}/sync/accounts/${normalizePhoneDigits(phone)}/${role}${suffix}`;
 }
 
 /** Builds the localStorage data key for a property share snapshot. */
@@ -344,7 +344,7 @@ export function queueCloudSyncForAccount(
 export async function fetchCloudRolesForPhone(phone: string): Promise<Role[]> {
   try {
     const p = normalizePhoneDigits(phone);
-    const res = await fetch(`${API_BASE}/sync/accounts/${p}/roles`, {
+    const res = await fetch(`${getApiBase()}/sync/accounts/${p}/roles`, {
       headers: { Accept: "application/json" },
     });
     if (!res.ok) return [];

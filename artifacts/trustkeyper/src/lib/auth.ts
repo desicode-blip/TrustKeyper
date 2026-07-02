@@ -15,6 +15,10 @@ import {
 } from "./cloudSync";
 import { migrateLegacyStorage } from "./storageMigration";
 import {
+  completeTenantLoginAfterOtp,
+  tenantLocalWorkspaceExists,
+} from "./tenantLogin";
+import {
   getActiveSession as readTkActiveSession,
   normalizePhoneDigits,
   setSessionItem,
@@ -173,7 +177,11 @@ export async function rollbackFailedSignup(phone: string, role: Role): Promise<v
 }
 
 /** Called after OTP success on LOGIN — loads account data from server when on a new device. */
-export async function loginSuccess(phone: string, role: Role): Promise<boolean> {
+export async function loginSuccess(
+  phone: string,
+  role: Role,
+  accessToken?: string | null,
+): Promise<boolean> {
   const p = normalizePhoneDigits(phone);
   const cloudLookup = await lookupCloudAccount(p, role);
 
@@ -193,8 +201,14 @@ export async function loginSuccess(phone: string, role: Role): Promise<boolean> 
     setActiveSession(p, role);
     migrateLegacyStorage(p, role);
     applyProfileToSession(p, role);
-    void pushLocalKeysToCloud(p, role);
+    void pushLocalKeysToCloud(p, role, accessToken ?? undefined);
     return true;
+  }
+
+  if (role === "tenant") {
+    if (tenantLocalWorkspaceExists(p) || accessToken) {
+      return completeTenantLoginAfterOtp(p, accessToken);
+    }
   }
 
   return false;
@@ -285,6 +299,10 @@ export async function lookupAccountForAuth(
 ): Promise<AccountLookupResult> {
   const p = normalizePhoneDigits(phone);
   if (profileExists(p, role)) {
+    return { status: "found", source: "local" };
+  }
+
+  if (role === "tenant" && tenantLocalWorkspaceExists(p)) {
     return { status: "found", source: "local" };
   }
 

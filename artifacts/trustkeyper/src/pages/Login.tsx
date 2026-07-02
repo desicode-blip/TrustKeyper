@@ -145,7 +145,7 @@ export default function Login() {
         });
         return;
       }
-      const { error: verifyError } = await verifyPhoneOtp(phoneDigits, otp.join(""));
+      const { error: verifyError, accessToken } = await verifyPhoneOtp(phoneDigits, otp.join(""));
       if (verifyError) {
         toast({
           title: "Invalid OTP. Please try again.",
@@ -153,7 +153,7 @@ export default function Login() {
         });
         return;
       }
-      const ok = await loginSuccess(phoneDigits, loginRole);
+      const ok = await loginSuccess(phoneDigits, loginRole, accessToken);
       if (ok) {
         if (rememberMe) {
           persistSessionToLocalStorage(phoneDigits, loginRole);
