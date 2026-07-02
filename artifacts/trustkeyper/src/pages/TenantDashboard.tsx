@@ -75,14 +75,19 @@ export default function TenantDashboard() {
   }, []);
 
   useEffect(() => {
-    void pullTenantWorkspaceFromServer().finally(() => refreshDashboard());
+    const pull = () => void pullTenantWorkspaceFromServer().finally(() => refreshDashboard());
+    pull();
+    const interval = window.setInterval(pull, 15000);
     const onUpdate = () => refreshDashboard();
+    window.addEventListener("focus", pull);
     window.addEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onUpdate);
     window.addEventListener(TENANT_PROFILE_UPDATED_EVENT, onUpdate);
     window.addEventListener(TENANT_WORKFLOW_UPDATED_EVENT, onUpdate);
     window.addEventListener(TENANT_DOCUMENT_MANAGEMENT_UPDATED_EVENT, onUpdate);
     window.addEventListener("storage", onUpdate);
     return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", pull);
       window.removeEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onUpdate);
       window.removeEventListener(TENANT_PROFILE_UPDATED_EVENT, onUpdate);
       window.removeEventListener(TENANT_WORKFLOW_UPDATED_EVENT, onUpdate);

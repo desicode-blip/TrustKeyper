@@ -16,7 +16,7 @@ import {
   type TenantWorkspaceRecord,
 } from "@/lib/tenantWorkspace";
 import { createTenantEscrowOrder, openRazorpayCheckout } from "@/lib/tenantEscrowPayment";
-import { patchTenantWorkspaceOnServer } from "@/lib/tenantWorkflowServer";
+import { patchTenantWorkspaceOnServer, pullTenantWorkspaceFromServer } from "@/lib/tenantWorkflowServer";
 
 export default function TenantAgreementReview() {
   const [loading, setLoading] = useState(true);
@@ -45,7 +45,7 @@ export default function TenantAgreementReview() {
   }, []);
 
   useEffect(() => {
-    loadReview();
+    void pullTenantWorkspaceFromServer().finally(() => loadReview());
   }, [loadReview]);
 
   const rentalInput = useMemo((): RentalAgreementInput | null => {

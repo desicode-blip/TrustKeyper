@@ -57,6 +57,7 @@ import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { getProperties, getPropertyTitle, updateProperty, type Property } from "@/lib/properties";
 import { ensureTenantFromAgreement, getTenants, resolveTenantKyc, type Tenant } from "@/lib/tenants";
 import { addAgreement, getAgreements, getAgreementsSyncPayload, updateAgreement, type Agreement } from "@/lib/agreements";
+import { broadcastAgreementsUpdated } from "@/components/agreements/AgreementWaitingSignaturesSection";
 import { pushAccountKeyToCloud } from "@/lib/cloudSync";
 import { getActiveSession } from "@/lib/auth";
 import {
@@ -2723,7 +2724,12 @@ export default function GenerateAgreement() {
         );
       }
 
-      if (requesterPhone && tenantPhone.length === 10) {
+      if (tenantPhone.length !== 10) {
+        nextWorkflowError =
+          "Tenant phone is missing or invalid — the tenant will not see this agreement on their dashboard.";
+      } else if (!requesterPhone) {
+        nextWorkflowError = "Could not verify your session — tenant signing workflow was not started.";
+      } else {
         const workflowResult = await sendAgreementForESign({
           phone: requesterPhone,
           role: requesterRole,
@@ -2757,6 +2763,7 @@ export default function GenerateAgreement() {
       setWorkflowError(nextWorkflowError);
       setSubmitting(false);
       setShowSuccess(true);
+      broadcastAgreementsUpdated();
       clearAgreementDraftStorage();
     })();
   };
