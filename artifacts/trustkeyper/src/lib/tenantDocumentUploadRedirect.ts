@@ -16,6 +16,7 @@ export async function ensureTenantDashboardSession(
   phone: string,
   getSession: SessionReader,
   login: LoginFn,
+  accessToken?: string | null,
 ): Promise<boolean> {
   const digits = tenantDigits(phone);
   setAuthPendingRole("tenant");
@@ -25,7 +26,7 @@ export async function ensureTenantDashboardSession(
     return true;
   }
 
-  return login(digits, "tenant");
+  return login(digits, "tenant", accessToken);
 }
 
 /** Establishes tenant login state after document upload and syncs account data to cloud. */
@@ -33,16 +34,16 @@ export async function finalizeTenantDashboardAccess(
   phone: string,
   getSession: SessionReader,
   login: LoginFn,
-  options?: { remember?: boolean },
+  options?: { remember?: boolean; accessToken?: string | null },
 ): Promise<boolean> {
   const digits = tenantDigits(phone);
-  const ok = await ensureTenantDashboardSession(digits, getSession, login);
+  const ok = await ensureTenantDashboardSession(digits, getSession, login, options?.accessToken);
   if (!ok) return false;
 
   setAuthPendingRole("tenant");
   if (options?.remember) {
     persistSessionToLocalStorage(digits, "tenant");
   }
-  void pushLocalKeysToCloud(digits, "tenant");
+  void pushLocalKeysToCloud(digits, "tenant", options?.accessToken ?? undefined);
   return true;
 }

@@ -3,6 +3,7 @@ import {
   canProceedWithLoginLookup,
   describeLoginPhoneHint,
   loginLookupErrorMessage,
+  loginSuccess,
   signUpSuccess,
 } from "./auth";
 import { storageKey } from "./storageKeys";
@@ -25,6 +26,11 @@ vi.mock("./storageMigration", () => ({
   migrateLegacyStorage: vi.fn(),
 }));
 
+vi.mock("./tenantLogin", () => ({
+  completeTenantLoginAfterOtp: vi.fn(),
+  tenantLocalWorkspaceExists: vi.fn(),
+}));
+
 vi.mock("./initAppStorage", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./initAppStorage")>();
   return {
@@ -36,9 +42,11 @@ vi.mock("./initAppStorage", async (importOriginal) => {
 
 import {
   lookupCloudAccount,
+  pullAccountFromCloud,
   pushAccountKeyToCloudDetailed,
   pushLocalKeysToCloud,
 } from "./cloudSync";
+import { completeTenantLoginAfterOtp } from "./tenantLogin";
 
 function createMemoryStorage(): Storage {
   const data = new Map<string, string>();
@@ -121,5 +129,24 @@ describe("signUpSuccess", () => {
     expect(sessionStorage.getItem("tk_active_phone")).toBe("9876543210");
     expect(sessionStorage.getItem("tk_active_role")).toBe("owner");
     expect(localStorage.getItem(storageKey("9876543210", "owner", "profile"))).toContain("Meena");
+  });
+});
+
+describe("loginSuccess", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal("localStorage", createMemoryStorage());
+    vi.stubGlobal("sessionStorage", createMemoryStorage());
+  });
+
+  it("falls back to tenant login when cloud account exists but pull fails", async () => {
+    vi.mocked(lookupCloudAccount).mockResolvedValue({ kind: "exists" });
+    vi.mocked(pullAccountFromCloud).mockResolvedValue(false);
+    vi.mocked(completeTenantLoginAfterOtp).mockResolvedValue(true);
+
+    const ok = await loginSuccess("6369856040", "tenant", "token");
+
+    expect(ok).toBe(true);
+    expect(completeTenantLoginAfterOtp).toHaveBeenCalledWith("6369856040", "token");
   });
 });

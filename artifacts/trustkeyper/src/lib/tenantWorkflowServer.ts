@@ -81,12 +81,13 @@ export function buildAgreementSnapshotFromAgreement(
 
 export async function sendAgreementForESign(
   input: SendAgreementForESignInput,
+  accessToken?: string | null,
 ): Promise<{ ok: true; workspace: TenantWorkspaceRecord } | { ok: false; error: string }> {
+  const url = workflowUrl("send-for-esign");
   try {
-    const headers = await syncAuthHeaders("application/json");
+    const headers = await syncAuthHeaders("application/json", accessToken ?? undefined);
     if (!headers) return { ok: false, error: "Not authenticated" };
 
-    const url = workflowUrl("send-for-esign");
     const res = await fetch(url, {
       method: "POST",
       headers,
@@ -99,7 +100,7 @@ export async function sendAgreementForESign(
     } catch {
       return {
         ok: false,
-        error: `Tenant workflow API returned an invalid response (${res.status}). Ensure the API server is running and VITE_API_URL ends with /api (e.g. http://localhost:8080/api).`,
+        error: `Tenant workflow API returned an invalid response (${res.status}). Check that ${url} is reachable.`,
       };
     }
 
@@ -112,24 +113,26 @@ export async function sendAgreementForESign(
     }
 
     return { ok: true, workspace: json.workspace };
-  } catch {
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
     return {
       ok: false,
-      error:
-        "Could not reach the tenant workflow API. Check your connection and try again in a moment.",
+      error: `Could not reach the tenant workflow API at ${url}. ${detail}`,
     };
   }
 }
 
 export async function pullTenantWorkspaceFromServer(
   phone?: string,
+  accessToken?: string | null,
 ): Promise<TenantWorkspaceRecord | null> {
   const session = getActiveSession();
   const digits = normalizePhoneDigits(phone ?? session?.phone ?? "");
-  if (!digits || session?.role !== "tenant") return null;
+  if (digits.length !== 10) return null;
+  if (!phone && (!session || session.role !== "tenant")) return null;
 
   try {
-    const headers = await syncAuthHeaders();
+    const headers = await syncAuthHeaders(undefined, accessToken ?? undefined);
     if (!headers) return null;
 
     const res = await fetch(workflowUrl(`workspace/${digits}`), { headers });

@@ -4,6 +4,7 @@ import {
   provisionTenantProfileFromWorkspace,
   tenantLocalWorkspaceExists,
 } from "./tenantLogin";
+import { pushAccountKeyToCloud } from "./cloudSync";
 import { storageKey } from "./storageKeys";
 
 vi.mock("./cloudSync", () => ({
@@ -78,6 +79,13 @@ describe("tenantLogin", () => {
 
     const raw = localStorage.getItem(storageKey("6369856040", "tenant", "profile"));
     expect(raw).toContain("Sumit");
+    expect(vi.mocked(pushAccountKeyToCloud)).toHaveBeenCalledWith(
+      "6369856040",
+      "tenant",
+      "tenant_workspace",
+      expect.stringContaining("6369856040"),
+      undefined,
+    );
   });
 
   it("completes login when only workspace exists locally", async () => {
