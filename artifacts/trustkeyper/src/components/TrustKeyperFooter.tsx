@@ -6,9 +6,9 @@ import footerBackground from "@assets/trustkeyper_footer_background.png";
 
 const FOOTER_LINKS = [
   { label: "Terms & Conditions", href: "https://trustkeyper.com/terms-and-conditions" },
-  { label: "About Us", href: "#" },
-  { label: "FAQs", href: "#" },
-  { label: "Privacy Policy", href: "/privacy" },
+  { label: "About Us", href: "https://trustkeyper.com/about-us" },
+  { label: "FAQs", href: "https://trustkeyper.com/faqs" },
+  { label: "Privacy Policy", href: "https://trustkeyper.com/privacy" },
 ] as const;
 
 const NOIDA_ADDRESS =
