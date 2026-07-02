@@ -4,6 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   profileExistsAsync,
   signUpSuccess,
+  rollbackFailedSignup,
   dashboardRouteFor,
   isAuthEntryRole,
   clearRememberedSessionFromLocalStorage,
@@ -116,6 +117,8 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
 
   const handleContinue = async () => {
     if (!isOtpComplete || verifying || !isVerifyReady) return;
+    const pending = sessionStorage.getItem("tk_pending_role") || "broker";
+    const signupRole: Role = isAuthEntryRole(pending) ? pending : "broker";
     setVerifying(true);
     try {
       const verifyResult = await verifyPhoneOtp(phoneDigits, otp.join(""));
@@ -136,9 +139,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
         return;
       }
 
-      const pending = sessionStorage.getItem("tk_pending_role") || "broker";
-      const role: Role = isAuthEntryRole(pending) ? pending : "broker";
-      if (await profileExistsAsync(phoneDigits, role)) {
+      if (await profileExistsAsync(phoneDigits, signupRole)) {
         toast({
           title: "An account already exists for this number.",
           variant: "destructive",
@@ -149,7 +150,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
 
       await signUpSuccess(
         phoneDigits,
-        role,
+        signupRole,
         {
           name: fullName,
           firm,
@@ -166,13 +167,14 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
       );
 
       if (stayLoggedIn) {
-        persistSessionToLocalStorage(phoneDigits, role);
+        persistSessionToLocalStorage(phoneDigits, signupRole);
       } else {
         clearRememberedSessionFromLocalStorage();
       }
       onComplete?.();
-      setLocation(dashboardRouteFor(role));
+      setLocation(dashboardRouteFor(signupRole));
     } catch (err) {
+      await rollbackFailedSignup(phoneDigits, signupRole);
       toast({
         title: "Could not create account",
         description: err instanceof Error ? err.message : "Please try again.",

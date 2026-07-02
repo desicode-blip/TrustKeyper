@@ -16,6 +16,7 @@ import {
   profileExistsAsync,
   restoreRememberedSessionFromLocalStorage,
   signUpSuccess,
+  rollbackFailedSignup,
 } from "@/lib/auth";
 import {
   fetchDocumentUploadInvite,
@@ -267,6 +268,7 @@ export default function TenantDocumentUpload() {
       syncTenantDocumentUploadStatus(invite.tenantPhone, "documents_in_progress", { token });
       openDocumentFlowAfterVerification(nextSession, invite);
     } catch (err) {
+      await rollbackFailedSignup(digits, "tenant");
       setVerifyOtpError(
         err instanceof Error ? err.message : "Could not verify your account. Please try again.",
       );

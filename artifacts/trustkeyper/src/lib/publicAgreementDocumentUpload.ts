@@ -1,11 +1,10 @@
+import { API_BASE } from "@/lib/apiBase";
 import type {
   ExtendedDocumentId,
   StoredBankDetails,
   TenantDocumentUploadStatus,
   UploadDocumentStatus,
 } from "@workspace/tenant-document-upload";
-
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
 export type DocumentUploadInvitePayload = {
   token: string;

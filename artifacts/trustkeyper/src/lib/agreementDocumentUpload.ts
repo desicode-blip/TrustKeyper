@@ -3,6 +3,7 @@ import type {
   RequesterDocumentUploadInviteView,
 } from "@workspace/tenant-document-upload";
 import { applyReceivedInviteToAgreementDocs } from "@/components/agreement/TenantSubmittedDocumentsModal";
+import { API_BASE } from "@/lib/apiBase";
 import type { AgreementPersonDraftState } from "./agreementWorkflowDraft";
 import { getActiveSession } from "./storageKeys";
 import { syncAuthHeaders } from "./syncSession";
@@ -121,7 +122,6 @@ export async function createAgreementDocumentUploadInvite(input: {
   securityDeposit?: string;
   agreementDraftId?: string;
 }): Promise<CreateDocumentUploadInviteResult> {
-  const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
   const session = getActiveSession();
   if (!session || (session.role !== "owner" && session.role !== "broker")) {
     return { ok: false, error: "no_session" };
@@ -211,7 +211,6 @@ export async function fetchRequesterDocumentUploadInvites(): Promise<
     const headers = await syncAuthHeaders();
     if (!headers) return { ok: false, error: "unauthorized" };
 
-    const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
     const res = await fetch(
       `${API_BASE}/tenant-document-upload/requester/${session.phone}/${session.role}`,
       { headers },
@@ -240,7 +239,6 @@ export async function fetchRequesterDocumentUploadDetail(token: string): Promise
     const headers = await syncAuthHeaders();
     if (!headers) return { ok: false, error: "unauthorized" };
 
-    const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
     const res = await fetch(
       `${API_BASE}/tenant-document-upload/requester/${session.phone}/${session.role}/${encodeURIComponent(token)}`,
       { headers },
