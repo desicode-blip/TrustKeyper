@@ -6,7 +6,7 @@ import {
 import { pushLocalKeysToCloud } from "./cloudSync";
 
 type SessionReader = () => { phone: string; role: Role } | null;
-type LoginFn = (phone: string, role: "tenant") => Promise<boolean>;
+type LoginFn = (phone: string, role: "tenant", accessToken?: string | null) => Promise<boolean>;
 
 function tenantDigits(phone: string): string {
   return phone.replace(/\D/g, "").slice(-10);

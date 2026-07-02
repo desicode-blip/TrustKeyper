@@ -239,7 +239,7 @@ export default function TenantDocumentUpload() {
           accessToken ?? undefined,
         );
       } else {
-        const loggedIn = await loginSuccess(digits, "tenant");
+        const loggedIn = await loginSuccess(digits, "tenant", accessToken);
         if (!loggedIn) {
           setVerifyOtpError("Could not sign in. Please try again.");
           return;
@@ -310,9 +310,15 @@ export default function TenantDocumentUpload() {
         documentUploadStatus: "documents_submitted",
         documentUploadSubmittedAt: Date.now(),
       });
-      await finalizeTenantDashboardAccess(invite.tenantPhone, getActiveSession, loginSuccess, {
+      const ok = await finalizeTenantDashboardAccess(invite.tenantPhone, getActiveSession, loginSuccess, {
         remember: rememberMe,
       });
+      if (!ok) {
+        setVerifyOtpError(
+          "Could not sign in to your tenant dashboard. Log in at TrustKeyper with your mobile number.",
+        );
+        return;
+      }
     }
     clearTenantDocumentUploadSession(token, {
       preserveRemembered: hasRememberedTenantDocumentUploadSession(token),

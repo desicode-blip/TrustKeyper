@@ -2,7 +2,7 @@ import { getActiveSession, normalizePhoneDigits } from "./storageKeys";
 import { syncAuthHeaders } from "./syncSession";
 import { openRazorpayCheckout } from "./tenantEscrowPayment";
 
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
+import { getApiBase } from "@/lib/apiBase";
 const RAZORPAY_KEY_ID = (import.meta.env.VITE_RAZORPAY_KEY_ID as string | undefined)?.trim() ?? "";
 
 export interface RentCheckoutDetails {
@@ -43,7 +43,7 @@ export async function createTenantRentOrder(input: {
     const headers = await syncAuthHeaders("application/json");
     if (!headers) return { ok: false, error: "Not authenticated" };
 
-    const res = await fetch(`${API_BASE}/payments-create-rent-order-tenant`, {
+    const res = await fetch(`${getApiBase()}/payments-create-rent-order-tenant`, {
       method: "POST",
       headers,
       body: JSON.stringify({
