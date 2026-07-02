@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import {
   appendPropertyImagesFromFiles,
   dataUrlByteLength,
@@ -6,6 +6,35 @@ import {
   preparePropertyImagesForStorage,
   propertyImagesEqual,
 } from "./propertyMedia";
+
+function createMemoryStorage(): Storage {
+  const data = new Map<string, string>();
+  return {
+    get length() {
+      return data.size;
+    },
+    key(index: number) {
+      return [...data.keys()][index] ?? null;
+    },
+    getItem(key: string) {
+      return data.get(key) ?? null;
+    },
+    setItem(key: string, value: string) {
+      data.set(key, value);
+    },
+    removeItem(key: string) {
+      data.delete(key);
+    },
+    clear() {
+      data.clear();
+    },
+  };
+}
+
+beforeEach(() => {
+  vi.stubGlobal("localStorage", createMemoryStorage());
+  vi.stubGlobal("sessionStorage", createMemoryStorage());
+});
 
 describe("normalizePropertyImages", () => {
   it("deduplicates and caps images", () => {

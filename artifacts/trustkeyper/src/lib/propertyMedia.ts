@@ -1,11 +1,10 @@
+import { API_BASE } from "@/lib/apiBase";
+
 export const MAX_PROPERTY_IMAGES = 5;
 export const MAX_PROPERTY_IMAGE_DIMENSION = 1280;
 export const PROPERTY_IMAGE_JPEG_QUALITY = 0.82;
 /** Keep each stored image under ~500 KB so five photos fit in localStorage. */
 export const MAX_PROPERTY_IMAGE_DATA_URL_LENGTH = 520_000;
-
-const API_BASE =
-  (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
 /** Deduplicate and cap property image data URLs. */
 export function normalizePropertyImages(images: string[]): {

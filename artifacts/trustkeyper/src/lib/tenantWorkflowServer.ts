@@ -1,3 +1,4 @@
+import { API_BASE } from "@/lib/apiBase";
 import type { Role } from "./auth";
 import type { Agreement } from "./agreements";
 import { getActiveSession, normalizePhoneDigits } from "./storageKeys";
@@ -5,8 +6,6 @@ import { syncAuthHeaders } from "./syncSession";
 import { generateRentalAgreementText, type RentalAgreementInput } from "./rentalAgreementDocument";
 import type { TenantAgreementSnapshot, TenantWorkspaceRecord } from "./tenantWorkspace";
 import { saveTenantWorkspace } from "./tenantWorkspace";
-
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
 export type { TenantAgreementSnapshot };
 
@@ -87,13 +86,23 @@ export async function sendAgreementForESign(
     const headers = await syncAuthHeaders("application/json");
     if (!headers) return { ok: false, error: "Not authenticated" };
 
-    const res = await fetch(workflowUrl("send-for-esign"), {
+    const url = workflowUrl("send-for-esign");
+    const res = await fetch(url, {
       method: "POST",
       headers,
       body: JSON.stringify(input),
     });
 
-    const json = (await res.json()) as { workspace?: TenantWorkspaceRecord; error?: string };
+    let json: { workspace?: TenantWorkspaceRecord; error?: string };
+    try {
+      json = (await res.json()) as { workspace?: TenantWorkspaceRecord; error?: string };
+    } catch {
+      return {
+        ok: false,
+        error: `Tenant workflow API returned an invalid response (${res.status}). Ensure the API server is running and VITE_API_URL ends with /api (e.g. http://localhost:8080/api).`,
+      };
+    }
+
     if (!res.ok) {
       return { ok: false, error: json.error ?? "Failed to send agreement for signing" };
     }
@@ -104,7 +113,11 @@ export async function sendAgreementForESign(
 
     return { ok: true, workspace: json.workspace };
   } catch {
-    return { ok: false, error: "Network error while sending agreement" };
+    return {
+      ok: false,
+      error:
+        "Could not reach the tenant workflow API. Start the API server (pnpm run dev:local) or check VITE_API_URL.",
+    };
   }
 }
 

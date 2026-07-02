@@ -1,8 +1,8 @@
+import { API_BASE } from "@/lib/apiBase";
 import { getActiveSession, normalizePhoneDigits } from "./storageKeys";
 import { syncAuthHeaders } from "./syncSession";
 import type { TenantPreSigningEscrowType } from "./tenantWorkspace";
 
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 const RAZORPAY_KEY_ID = (import.meta.env.VITE_RAZORPAY_KEY_ID as string | undefined)?.trim() ?? "";
 
 type RazorpayHandlerResponse = {

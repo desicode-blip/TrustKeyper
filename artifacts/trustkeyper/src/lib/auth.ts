@@ -5,9 +5,12 @@ import {
 import { supabase } from "./supabaseClient";
 import {
   cloudAccountExists,
+  cloudPushFailureMessage,
   fetchCloudRolesForPhone,
+  lookupCloudAccount,
   pullAccountFromCloud,
   pushAccountKeyToCloud,
+  pushAccountKeyToCloudDetailed,
   pushLocalKeysToCloud,
 } from "./cloudSync";
 import { migrateLegacyStorage } from "./storageMigration";
@@ -86,7 +89,7 @@ export function dashboardRouteFor(role: Role): string {
   return routes[role];
 }
 
-/** Called after OTP success on SIGN UP */
+/** Called after OTP success on SIGN UP — cloud save must succeed before session is created. */
 export async function signUpSuccess(
   phone: string,
   role: Role,
@@ -101,22 +104,17 @@ export async function signUpSuccess(
     phone: p,
   };
   const profileJson = JSON.stringify(merged);
-  localStorage.setItem(key, profileJson);
-  setActiveSession(p, role);
-  migrateLegacyStorage(p, role);
-  if (merged.name) setSessionItem("name", merged.name);
-  if (merged.firm) setSessionItem("firm", merged.firm);
-  if (merged.phone) setSessionItem("phone", merged.phone);
-  let profileOk = await pushAccountKeyToCloud(
+
+  let pushResult = await pushAccountKeyToCloudDetailed(
     p,
     role,
     "profile",
     profileJson,
     accessToken ?? undefined,
   );
-  if (!profileOk) {
+  if (!pushResult.ok) {
     await new Promise((r) => setTimeout(r, 500));
-    profileOk = await pushAccountKeyToCloud(
+    pushResult = await pushAccountKeyToCloudDetailed(
       p,
       role,
       "profile",
@@ -124,11 +122,29 @@ export async function signUpSuccess(
       accessToken ?? undefined,
     );
   }
-  if (!profileOk) {
+  if (!pushResult.ok) {
+    throw new Error(cloudPushFailureMessage(pushResult.reason));
+  }
+
+  const cloudLookup = await lookupCloudAccount(p, role);
+  if (cloudLookup.kind === "unreachable") {
     throw new Error(
-      "Could not save your account to the cloud. Check your connection and try again.",
+      "Could not reach the server to verify your account. Check your connection and try again.",
     );
   }
+  if (cloudLookup.kind === "missing") {
+    throw new Error(
+      "Account could not be verified on the server. Try again in a moment.",
+    );
+  }
+
+  localStorage.setItem(key, profileJson);
+  setActiveSession(p, role);
+  migrateLegacyStorage(p, role);
+  if (merged.name) setSessionItem("name", merged.name);
+  if (merged.firm) setSessionItem("firm", merged.firm);
+  if (merged.phone) setSessionItem("phone", merged.phone);
+
   const synced = await pushLocalKeysToCloud(p, role, accessToken ?? undefined);
   if (!synced) {
     await pushAccountKeyToCloud(
@@ -139,20 +155,29 @@ export async function signUpSuccess(
       accessToken ?? undefined,
     );
   }
-  const verified = await cloudAccountExists(p, role);
-  if (!verified) {
-    throw new Error(
-      "Account could not be verified on the server. Try again in a moment.",
-    );
+}
+
+/** Removes partial signup state when cloud save did not complete (legacy or retry cleanup). */
+export async function rollbackFailedSignup(phone: string, role: Role): Promise<void> {
+  const p = normalizePhoneDigits(phone);
+  const cloudLookup = await lookupCloudAccount(p, role);
+  if (cloudLookup.kind === "exists") return;
+
+  localStorage.removeItem(storageKey(p, role, "profile"));
+  const session = getActiveSession();
+  if (session?.phone === p && session.role === role) {
+    sessionStorage.removeItem("tk_active_phone");
+    sessionStorage.removeItem("tk_active_role");
+    clearActiveSessionBackup();
   }
 }
 
 /** Called after OTP success on LOGIN — loads account data from server when on a new device. */
 export async function loginSuccess(phone: string, role: Role): Promise<boolean> {
   const p = normalizePhoneDigits(phone);
-  const cloudExists = await cloudAccountExists(p, role);
+  const cloudLookup = await lookupCloudAccount(p, role);
 
-  if (cloudExists) {
+  if (cloudLookup.kind === "exists") {
     setActiveSession(p, role);
     let pulled = await pullAccountFromCloud(p, role);
     if (!pulled) {
@@ -164,12 +189,11 @@ export async function loginSuccess(phone: string, role: Role): Promise<boolean> 
     return true;
   }
 
-  const localExists = localStorage.getItem(storageKey(p, role, "profile")) !== null;
-  if (localExists) {
+  if (profileExists(p, role)) {
     setActiveSession(p, role);
     migrateLegacyStorage(p, role);
     applyProfileToSession(p, role);
-    await pushLocalKeysToCloud(p, role);
+    void pushLocalKeysToCloud(p, role);
     return true;
   }
 
@@ -249,11 +273,86 @@ export function profileExists(phone: string, role: Role): boolean {
   return localStorage.getItem(storageKey(normalizePhoneDigits(phone), role, "profile")) !== null;
 }
 
+export type AccountLookupResult =
+  | { status: "found"; source: "local" | "cloud" }
+  | { status: "not_found"; otherRoles: Role[] }
+  | { status: "cloud_unavailable" };
+
+/** Resolves whether an account exists for login/signup, with role and connectivity hints. */
+export async function lookupAccountForAuth(
+  phone: string,
+  role: Role,
+): Promise<AccountLookupResult> {
+  const p = normalizePhoneDigits(phone);
+  if (profileExists(p, role)) {
+    return { status: "found", source: "local" };
+  }
+
+  const cloudLookup = await lookupCloudAccount(p, role);
+  if (cloudLookup.kind === "exists") {
+    return { status: "found", source: "cloud" };
+  }
+  if (cloudLookup.kind === "unreachable") {
+    return { status: "cloud_unavailable" };
+  }
+
+  const cloudRoles = await fetchCloudRolesForPhone(p);
+  const otherRoles = cloudRoles.filter((r) => r !== role);
+  return { status: "not_found", otherRoles };
+}
+
+export function canProceedWithLoginLookup(lookup: AccountLookupResult): boolean {
+  return lookup.status === "found" || lookup.status === "cloud_unavailable";
+}
+
+export function loginLookupErrorMessage(lookup: AccountLookupResult): {
+  title: string;
+  description: string;
+} | null {
+  if (canProceedWithLoginLookup(lookup)) return null;
+  if (lookup.status === "not_found" && lookup.otherRoles.length > 0) {
+    const labels = lookup.otherRoles.map((r) => roleDisplayLabel(r)).join(" or ");
+    return {
+      title: "Wrong account type",
+      description: `This number is registered as ${labels}. Go back to signup and choose that role, then log in again.`,
+    };
+  }
+  return {
+    title: "No account found",
+    description: "Sign up first, then log in on any device with the same number.",
+  };
+}
+
+export function describeLoginPhoneHint(
+  lookup: AccountLookupResult | null,
+  role: Role,
+): { helperText: string | null; errorText: string | null } {
+  if (!lookup) {
+    return { helperText: "Enter the number you used to sign up", errorText: null };
+  }
+  if (lookup.status === "found") {
+    return { helperText: "Enter the number you used to sign up", errorText: null };
+  }
+  if (lookup.status === "cloud_unavailable") {
+    return {
+      helperText: "Enter the number you used to sign up. We will verify your account after OTP.",
+      errorText: null,
+    };
+  }
+  if (lookup.status === "not_found" && lookup.otherRoles.length > 0) {
+    const labels = lookup.otherRoles.map((r) => roleDisplayLabel(r)).join(" or ");
+    return {
+      helperText: null,
+      errorText: `This number is registered as ${labels}, not ${roleDisplayLabel(role)}.`,
+    };
+  }
+  return { helperText: null, errorText: "There is no account for this number." };
+}
+
 /** Local or server profile — use before signup / login. */
 export async function profileExistsAsync(phone: string, role: Role): Promise<boolean> {
-  const p = normalizePhoneDigits(phone);
-  if (profileExists(p, role)) return true;
-  return cloudAccountExists(p, role);
+  const lookup = await lookupAccountForAuth(phone, role);
+  return lookup.status === "found";
 }
 
 /** All roles this phone number has signed up for (local; cloud roles merged when session active). */
