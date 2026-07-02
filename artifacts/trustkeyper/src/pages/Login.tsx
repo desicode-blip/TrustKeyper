@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
 import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
-import { AuthGoToSignupLink } from "@/components/AuthFlowFooterLinks";
+import { AuthEntryRoleGrid } from "@/components/auth/AuthEntryRoleGrid";
 import { AuthStepHeading } from "@/components/auth/AuthStepHeading";
 import {
   authMobileScrollPadClass,
@@ -25,12 +25,12 @@ import {
   clearRememberedSessionFromLocalStorage,
   dashboardRouteFor,
   describeLoginPhoneHint,
-  isAuthEntryRole,
   loginLookupErrorMessage,
   loginSuccess,
   lookupAccountForAuth,
   persistSessionToLocalStorage,
   readAuthPendingRole,
+  setAuthPendingRole,
   restoreRememberedSessionFromLocalStorage,
   roleDisplayLabel,
 } from "@/lib/auth";
@@ -42,7 +42,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { OtpVerifyReadyHint, useOtpVerifyReady } from "@/lib/otpVerifyReady";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 
-type Phase = "phone" | "otp";
+type Phase = "role" | "phone" | "otp";
 
 function postAuthRoute(role: Role, phone: string): string {
   if (role === "tenant") return resolveTenantPostLoginRoute(phone);
@@ -53,7 +53,7 @@ function postAuthRoute(role: Role, phone: string): string {
 export default function Login() {
   const [, setLocation] = useLocation();
   const [loginRole, setLoginRole] = useState<AuthEntryRole | null>(() => readAuthPendingRole());
-  const [phase, setPhase] = useState<Phase>("phone");
+  const [phase, setPhase] = useState<Phase>(() => (readAuthPendingRole() ? "phone" : "role"));
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(10);
@@ -72,7 +72,10 @@ export default function Login() {
     resetSessionForAuthEntry();
     clearInvalidAuthPendingRole();
     const pending = readAuthPendingRole();
-    if (pending) setLoginRole(pending);
+    if (pending) {
+      setLoginRole(pending);
+      setPhase((current) => (current === "role" ? "phone" : current));
+    }
   }, [setLocation]);
 
   useEffect(() => {
@@ -103,7 +106,19 @@ export default function Login() {
       setOtp(createEmptyOtp());
       return;
     }
+    if (phase === "phone") {
+      setPhase("role");
+      setPhone("");
+      setAccountLookup(null);
+      return;
+    }
     setLocation("/");
+  };
+
+  const goToPhoneStep = () => {
+    if (!loginRole) return;
+    setAuthPendingRole(loginRole);
+    setPhase("phone");
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -187,6 +202,17 @@ export default function Login() {
     startVerifyReady();
   };
 
+  const rolePickCta = (
+    <Button
+      size="lg"
+      disabled={!loginRole}
+      onClick={goToPhoneStep}
+      className={authPrimaryButtonClass}
+    >
+      Continue &rarr;
+    </Button>
+  );
+
   const requestOtpCta = (
     <Button
       size="lg"
@@ -233,25 +259,36 @@ export default function Login() {
     </Button>
   );
 
-  if (!loginRole || !isAuthEntryRole(loginRole)) {
-    return (
-      <AuthFlowLayout onBack={() => setLocation("/")} backDisabled={false}>
-        <div className={`flex flex-col flex-1 max-w-md w-full ${authMobileScrollPadClass}`}>
-          <div className="auth-step-heading mb-8 border-b border-gray-200 pb-4">
-            <h1 className="text-3xl font-semibold text-gray-900">Login to TrustKeyper</h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Choose Property Owner, Broker, or Tenant on signup first, then return here to log in.
-            </p>
-          </div>
-          <AuthGoToSignupLink className="text-center" />
-        </div>
-      </AuthFlowLayout>
-    );
-  }
-
   return (
     <AuthFlowLayout onBack={handleBack} backDisabled={false}>
       <div className={`flex flex-col flex-1 min-h-0 max-w-md w-full ${authMobileScrollPadClass}`}>
+        {phase === "role" && (
+          <>
+            <AuthStepHeading
+              title="Login to TrustKeyper"
+              subtitle="Select your account type to continue"
+            />
+            <AuthEntryRoleGrid
+              value={loginRole ?? ""}
+              onChange={(role) => {
+                setLoginRole(role);
+                setAuthPendingRole(role);
+              }}
+            />
+            <p className="text-gray-500 mb-2 mt-4 text-sm">
+              Tenants who completed document upload can log in with the same mobile number.
+            </p>
+            <AuthSignupScreenFooter
+              cta={rolePickCta}
+              showTerms={false}
+              linkType="signup"
+              persistRole={loginRole ?? undefined}
+            />
+          </>
+        )}
+
+        {phase !== "role" && loginRole && (
+          <>
         <div className="auth-step-heading mb-8 border-b border-gray-200 pb-4 shrink-0">
           <h1 className="text-3xl font-semibold text-gray-900">
             Login to TrustKeyper as {roleDisplayLabel(loginRole)}
@@ -360,6 +397,8 @@ export default function Login() {
               linkType="signup"
               persistRole={loginRole}
             />
+          </>
+        )}
           </>
         )}
       </div>

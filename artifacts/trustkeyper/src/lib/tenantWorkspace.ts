@@ -1,6 +1,6 @@
 import type { TenantDocumentUploadStatus } from "@workspace/tenant-document-upload";
 import type { DocumentUploadInvitePayload } from "@/lib/publicAgreementDocumentUpload";
-import { queueCloudSync } from "@/lib/cloudSync";
+import { queueCloudSync, queueCloudSyncForAccount } from "@/lib/cloudSync";
 import { enrichTenantWorkspaceEcosystem } from "@/lib/tenantEcosystem";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import {
@@ -12,7 +12,7 @@ import {
   mergeInviteIntoTenantWorkspace,
   shouldSyncInviteWorkspaceToServer,
 } from "@/lib/tenantWorkspaceInviteMerge";
-import { getActiveSession, getSessionItem, storageKey } from "@/lib/storageKeys";
+import { getActiveSession, getSessionItem, storageKey, writeLocalForAccount } from "@/lib/storageKeys";
 
 export type TenantDashboardPhase =
   | "no_property"
@@ -138,12 +138,16 @@ export function saveTenantWorkspace(
   const enriched = enrichTenantWorkspaceEcosystem({ ...record, phone: digits, updatedAt: Date.now() });
   const payload = JSON.stringify(enriched);
   localStorage.setItem(workspaceStorageKey(digits), payload);
+  writeLocalForAccount(digits, "tenant", "tenant_workspace", payload, false);
   const session = getActiveSession();
   if (session && phoneDigits(session.phone) === digits && session.role === "tenant") {
-    localStorage.setItem(storageKey(digits, "tenant", "tenant_workspace"), payload);
     if (options?.syncToCloud) {
       queueCloudSync("tenant_workspace", payload);
+    } else {
+      queueCloudSyncForAccount(digits, "tenant", "tenant_workspace", payload);
     }
+  } else {
+    queueCloudSyncForAccount(digits, "tenant", "tenant_workspace", payload);
   }
   broadcastTenantWorkflowUpdated();
 }
