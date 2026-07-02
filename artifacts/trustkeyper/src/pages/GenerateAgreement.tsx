@@ -1085,17 +1085,31 @@ function Step3Documents({
 
   useEffect(() => {
     applyReceivedInvites(getStoredDocumentUploadInvites());
-    void refreshReceivedDocuments();
-    const interval = window.setInterval(() => void refreshReceivedDocuments(), 60_000);
+    if (!document.hidden) {
+      void refreshReceivedDocuments();
+    }
+
+    const pollIfVisible = () => {
+      if (document.hidden) return;
+      void refreshReceivedDocuments();
+    };
+
+    const interval = window.setInterval(pollIfVisible, 60_000);
     const onStatus = () => void refreshReceivedDocuments();
+    const onVisibilityChange = () => {
+      if (!document.hidden) void refreshReceivedDocuments();
+    };
+
     window.addEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onStatus);
     window.addEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onStatus);
     window.addEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, onStatus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onStatus);
       window.removeEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onStatus);
       window.removeEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, onStatus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [applyReceivedInvites, refreshReceivedDocuments]);
 
@@ -2585,17 +2599,31 @@ export default function GenerateAgreement() {
       });
     };
 
-    void refreshTenantDocuments();
-    const interval = window.setInterval(() => void refreshTenantDocuments(), 15000);
+    if (!document.hidden) {
+      void refreshTenantDocuments();
+    }
+
+    const pollIfVisible = () => {
+      if (document.hidden) return;
+      void refreshTenantDocuments();
+    };
+
+    const interval = window.setInterval(pollIfVisible, 60_000);
     const onStatus = () => void refreshTenantDocuments();
+    const onVisibilityChange = () => {
+      if (!document.hidden) void refreshTenantDocuments();
+    };
+
     window.addEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onStatus);
     window.addEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onStatus);
     window.addEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, onStatus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onStatus);
       window.removeEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onStatus);
       window.removeEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, onStatus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [step]);
 
