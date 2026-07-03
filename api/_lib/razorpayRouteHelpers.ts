@@ -61,6 +61,17 @@ const ACTIVATION_STATUS_MAP: Record<string, string> = {
   failed: "failed",
 };
 
+export function validationStatusFromActivationStatus(
+  activationStatus?: string | null,
+  fallback = "submitted",
+): string {
+  if (activationStatus) {
+    const mapped = ACTIVATION_STATUS_MAP[activationStatus.toLowerCase()];
+    if (mapped) return mapped;
+  }
+  return fallback;
+}
+
 export function validationStatusForRouteWebhook(
   eventType: string,
   activationStatus?: string | null,
