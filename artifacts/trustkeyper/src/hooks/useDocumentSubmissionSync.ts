@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { fetchRequesterDocumentUploadInvites } from "@/lib/agreementDocumentUpload";
+import {
+  fetchRequesterDocumentUploadInvites,
+  hasStoredDocumentUploadInvitesNeedingPoll,
+} from "@/lib/agreementDocumentUpload";
 import { AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT } from "@/lib/agreementDocumentUploadStore";
 import {
   DOCUMENT_SUBMISSION_NOTIFICATION_EVENT,
@@ -46,6 +49,7 @@ export function useDocumentSubmissionSync(): {
 
     const syncIfVisible = () => {
       if (document.hidden) return;
+      if (!hasStoredDocumentUploadInvitesNeedingPoll()) return;
       void syncFromServer();
     };
 

@@ -118,6 +118,7 @@ import {
   fetchEnrichedRequesterDocumentUploadInvites,
   fetchRequesterDocumentUploadDetail,
   fetchRequesterDocumentUploadInvites,
+  hasStoredDocumentUploadInvitesNeedingPoll,
   resolveExistingDocumentUploadInvite,
 } from "@/lib/agreementDocumentUpload";
 import {
@@ -1091,6 +1092,7 @@ function Step3Documents({
 
     const pollIfVisible = () => {
       if (document.hidden) return;
+      if (!hasStoredDocumentUploadInvitesNeedingPoll()) return;
       void refreshReceivedDocuments();
     };
 
@@ -2605,6 +2607,7 @@ export default function GenerateAgreement() {
 
     const pollIfVisible = () => {
       if (document.hidden) return;
+      if (!hasStoredDocumentUploadInvitesNeedingPoll()) return;
       void refreshTenantDocuments();
     };
 
