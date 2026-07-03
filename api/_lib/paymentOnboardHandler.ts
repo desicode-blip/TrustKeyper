@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
 import { json, readJsonBody } from "./http.js";
 import { getRazorpayClient } from "./razorpayClient.js";
+import { validationStatusFromActivationStatus } from "./razorpayRouteHelpers.js";
 import { assertPaymentAuth } from "./syncAuth.js";
 import { getPool } from "./vercelSyncDb.js";
 
@@ -171,13 +172,19 @@ async function updateRecipientProductId(
   );
 }
 
-async function markRecipientSubmitted(phone: string, role: string): Promise<void> {
+async function markRecipientSubmitted(
+  phone: string,
+  role: string,
+  razorpayActivationStatus?: string | null,
+): Promise<string> {
+  const validationStatus = validationStatusFromActivationStatus(razorpayActivationStatus);
   await getPool().query(
     `UPDATE payment_recipient_config
-     SET validation_status = 'submitted', updated_at = NOW()
+     SET validation_status = $3, updated_at = NOW()
      WHERE phone = $1 AND role = $2`,
-    [phone, role],
+    [phone, role, validationStatus],
   );
+  return validationStatus;
 }
 
 async function upsertRecipientKyc(params: {
@@ -364,7 +371,7 @@ export type OnboardCompleteSuccess = {
   accountId: string;
   stakeholderId: string;
   productId: string;
-  validationStatus: "submitted";
+  validationStatus: string;
   stepsRun: {
     stakeholder: boolean;
     product: boolean;
@@ -460,6 +467,15 @@ export async function executePaymentOnboardComplete(
         linkedAccountId,
         { product_name: "route" },
       );
+      console.log("Razorpay product request response", {
+        phone,
+        role: body.role,
+        accountId: linkedAccountId,
+        productId: product.id,
+        activationStatus: product.activation_status,
+        requirements: product.requirements,
+        tnc: product.tnc,
+      });
       productId = product.id;
       await updateRecipientProductId(phone, body.role, productId);
     } catch (err) {
@@ -478,8 +494,9 @@ export async function executePaymentOnboardComplete(
     }
   }
 
+  let validationStatus = "submitted";
   try {
-    await getRazorpayClient().products.edit(linkedAccountId, productId, {
+    const editResult = await getRazorpayClient().products.edit(linkedAccountId, productId, {
       settlements: {
         account_number: body.bankAccountNumber,
         ifsc_code: body.bankIfsc,
@@ -487,7 +504,20 @@ export async function executePaymentOnboardComplete(
       },
       tnc_accepted: true,
     });
-    await markRecipientSubmitted(phone, body.role);
+    console.log("Razorpay product edit response", {
+      phone,
+      role: body.role,
+      accountId: linkedAccountId,
+      productId,
+      activationStatus: editResult.activation_status,
+      requirements: editResult.requirements,
+      tnc: editResult.tnc,
+    });
+    validationStatus = await markRecipientSubmitted(
+      phone,
+      body.role,
+      editResult.activation_status,
+    );
     await upsertRecipientKyc({
       phone,
       role: body.role,
@@ -520,7 +550,7 @@ export async function executePaymentOnboardComplete(
     accountId: linkedAccountId,
     stakeholderId: stakeholderId!,
     productId: productId!,
-    validationStatus: "submitted",
+    validationStatus,
     stepsRun: {
       stakeholder: ranStakeholder,
       product: ranProduct,
