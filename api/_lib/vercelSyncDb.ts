@@ -33,7 +33,8 @@ export function getPool(): pg.Pool {
     pool = new Pool({
       connectionString,
       ssl: { rejectUnauthorized: false },
-      max: 3,
+      // max:1 — serverless functions fan out across many instances; keep per-instance pool minimal and rely on Supabase's transaction pooler for multiplexing.
+      max: 1,
     });
   }
   return pool;
