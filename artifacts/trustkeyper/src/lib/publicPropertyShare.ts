@@ -1,3 +1,4 @@
+import { API_BASE } from "@/lib/apiBase";
 import type { Property } from "@/lib/properties";
 import { getProperties } from "@/lib/properties";
 import { getActiveSession } from "@/lib/storageKeys";
@@ -9,8 +10,6 @@ import {
   shouldMaskOwnerDetails,
   type PropertyShareSource,
 } from "@/lib/propertyShareView";
-
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
 export type SharedPropertyPayload = {
   property: Property;

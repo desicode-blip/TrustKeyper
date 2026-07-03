@@ -99,7 +99,7 @@ Create `artifacts/trustkeyper/.env.local` for Vite:
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 VITE_ADMIN_PHONES=9999999999
-VITE_API_URL=http://localhost:8080
+VITE_API_URL=http://localhost:8080/api
 ```
 
 ### 3. Start development
@@ -145,7 +145,7 @@ This starts:
 | `VITE_SUPABASE_URL` | Yes | Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | Yes | Supabase anon key |
 | `VITE_ADMIN_PHONES` | Yes | Comma-separated admin phone numbers |
-| `VITE_API_URL` | Dev only | API base URL (proxied in production) |
+| `VITE_API_URL` | Dev only | API base URL including `/api` (e.g. `http://localhost:8080/api`; omit in production to use same-origin `/api`) |
 
 ---
 

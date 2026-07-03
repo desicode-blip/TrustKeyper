@@ -8,6 +8,7 @@ import {
   resolveOverallKycStatus,
   saveTenantRentalPreferences,
   tenantProfileCompletionPercent,
+  getTenantAccountProfileForPhone,
   type TenantAccountProfile,
 } from "./tenantProfile";
 
@@ -188,5 +189,26 @@ describe("tenantProfile", () => {
     expect(raw).toContain("foodPreference");
     expect(raw).toContain("prop_2");
     expect(localStorage.getItem("tk_9123456789_tenant_rental_prefs")).toBeNull();
+  });
+
+  it("saves tenant profile by phone without an active session", () => {
+    sessionStorage.clear();
+    mergeTenantProfileFromDocumentUpload({
+      token: "adu_test",
+      tenantName: "Rajesh",
+      tenantPhone: "+919876543210",
+      documentStatuses: { aadhaar: "uploaded" },
+      documents: {
+        aadhaar: {
+          fileName: "aadhaar.pdf",
+          fileSize: 1200,
+          mimeType: "application/pdf",
+        },
+      },
+    });
+
+    const stored = getTenantAccountProfileForPhone("9876543210");
+    expect(stored.name).toBe("Rajesh");
+    expect(localStorage.getItem("tk_9876543210_tenant_profile")).toContain("Rajesh");
   });
 });

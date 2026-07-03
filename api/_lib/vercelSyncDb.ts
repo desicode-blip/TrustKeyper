@@ -41,6 +41,16 @@ export function getPool(): pg.Pool {
 
 export async function accountHasProfile(phone: string, role: string): Promise<boolean> {
   const p = normalizePhone(phone);
+  if (role === "tenant") {
+    const result = await getPool().query<{ ok: number }>(
+      `SELECT 1 AS ok FROM user_data
+       WHERE phone = $1 AND role = 'tenant'
+         AND data_key IN ('profile', 'tenant_workspace')
+       LIMIT 1`,
+      [p],
+    );
+    return result.rowCount !== null && result.rowCount > 0;
+  }
   const result = await getPool().query<{ ok: number }>(
     `SELECT 1 AS ok FROM user_data
      WHERE phone = $1 AND role = $2 AND data_key = 'profile'
@@ -68,7 +78,10 @@ export async function getRolesForPhone(phone: string): Promise<string[]> {
   const p = normalizePhone(phone);
   const result = await getPool().query<{ role: string }>(
     `SELECT DISTINCT role FROM user_data
-     WHERE phone = $1 AND data_key = 'profile'`,
+     WHERE phone = $1 AND (
+       data_key = 'profile'
+       OR (role = 'tenant' AND data_key = 'tenant_workspace')
+     )`,
     [p],
   );
   return result.rows.map((r: { role: string }) => r.role).filter(Boolean);

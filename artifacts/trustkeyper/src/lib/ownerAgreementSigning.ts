@@ -1,8 +1,7 @@
+import { getApiBase } from "@/lib/apiBase";
 import type { Agreement } from "./agreements";
 import { getActiveSession, normalizePhoneDigits } from "./storageKeys";
 import { syncAuthHeaders } from "./syncSession";
-
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
 export interface AgreementSigningStatus {
   agreementId: string;
@@ -23,7 +22,7 @@ export interface AgreementSigningPresentation {
 }
 
 function workflowUrl(path: string): string {
-  return `${API_BASE}/tenant-workflow/${path}`;
+  return `${getApiBase()}/tenant-workflow/${path}`;
 }
 
 function phoneDigits(phone: string): string {

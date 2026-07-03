@@ -16,7 +16,7 @@ import {
   type TenantWorkspaceRecord,
 } from "@/lib/tenantWorkspace";
 import { createTenantEscrowOrder, openRazorpayCheckout } from "@/lib/tenantEscrowPayment";
-import { patchTenantWorkspaceOnServer } from "@/lib/tenantWorkflowServer";
+import { patchTenantWorkspaceOnServer, pullTenantWorkspaceFromServer } from "@/lib/tenantWorkflowServer";
 
 export default function TenantAgreementReview() {
   const [loading, setLoading] = useState(true);
@@ -45,7 +45,7 @@ export default function TenantAgreementReview() {
   }, []);
 
   useEffect(() => {
-    loadReview();
+    void pullTenantWorkspaceFromServer().finally(() => loadReview());
   }, [loadReview]);
 
   const rentalInput = useMemo((): RentalAgreementInput | null => {
@@ -134,7 +134,18 @@ export default function TenantAgreementReview() {
         return;
       }
 
-      const paid = await openRazorpayCheckout(order.checkout);
+      const paid = await openRazorpayCheckout({
+        orderId: order.checkout.orderId,
+        amount: order.checkout.amount,
+        currency: order.checkout.currency,
+        keyId: order.checkout.keyId,
+        description:
+          order.checkout.paymentType === "security_deposit"
+            ? "Security deposit (held in trust)"
+            : order.checkout.paymentType === "brokerage_tenant"
+              ? "Brokerage fee (held in trust)"
+              : "Payment",
+      });
       if (!paid.ok) {
         setPaymentError(paid.error);
         return;

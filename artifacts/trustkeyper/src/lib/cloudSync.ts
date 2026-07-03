@@ -1,3 +1,4 @@
+import { getApiBase } from "@/lib/apiBase";
 import type { Role } from "./auth";
 import {
   getActiveSession,
@@ -9,8 +10,6 @@ import {
 import { syncAuthHeaders } from "./syncSession";
 import { sanitizeDocumentUploadInviteForLocalStorage } from "./agreementDocumentUploadSanitize";
 import { TENANT_WORKFLOW_UPDATED_EVENT } from "./tenantWorkflowState";
-
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
 /** Prefix for per-property public share snapshots (`property_share_<propertyId>`). */
 export const PROPERTY_SHARE_KEY_PREFIX = "property_share_";
@@ -64,7 +63,7 @@ function sanitizeProfileValueForRole(role: Role, raw: string): string {
 }
 
 function accountUrl(phone: string, role: string, suffix = ""): string {
-  return `${API_BASE}/sync/accounts/${normalizePhoneDigits(phone)}/${role}${suffix}`;
+  return `${getApiBase()}/sync/accounts/${normalizePhoneDigits(phone)}/${role}${suffix}`;
 }
 
 /** Builds the localStorage data key for a property share snapshot. */
@@ -150,16 +149,70 @@ export function collectBulkSyncEntries(
   return entries;
 }
 
-export async function cloudAccountExists(phone: string, role: Role): Promise<boolean> {
+export type CloudAccountLookup =
+  | { kind: "exists" }
+  | { kind: "missing" }
+  | { kind: "unreachable" };
+
+/** Distinguishes a missing profile from API/network failures (unlike a bare boolean). */
+export async function lookupCloudAccount(phone: string, role: Role): Promise<CloudAccountLookup> {
   try {
     const res = await fetch(accountUrl(phone, role, "/exists"), {
       headers: { Accept: "application/json" },
     });
-    if (!res.ok) return false;
+    if (!res.ok) return { kind: "unreachable" };
     const json = (await res.json()) as { exists?: boolean };
-    return json.exists === true;
+    return json.exists === true ? { kind: "exists" } : { kind: "missing" };
   } catch {
-    return false;
+    return { kind: "unreachable" };
+  }
+}
+
+export async function cloudAccountExists(phone: string, role: Role): Promise<boolean> {
+  const lookup = await lookupCloudAccount(phone, role);
+  return lookup.kind === "exists";
+}
+
+export type CloudPushFailureReason = "missing_auth" | "network" | "forbidden" | "server" | "unknown";
+
+export type CloudPushResult = { ok: true } | { ok: false; reason: CloudPushFailureReason };
+
+export function cloudPushFailureMessage(reason: CloudPushFailureReason): string {
+  switch (reason) {
+    case "missing_auth":
+      return "Could not verify your phone session. Please enter the OTP again and retry.";
+    case "forbidden":
+      return "Your phone session could not be authorized for cloud sync. Try signing out and verifying OTP again.";
+    case "network":
+      return "Could not reach the server. Check your connection and try again.";
+    case "server":
+      return "The server could not save your account. Try again in a moment.";
+    default:
+      return "Could not save your account to the cloud. Check your connection and try again.";
+  }
+}
+
+export async function pushAccountKeyToCloudDetailed(
+  phone: string,
+  role: Role,
+  dataKey: string,
+  value: string,
+  accessToken?: string,
+): Promise<CloudPushResult> {
+  try {
+    const headers = await syncAuthHeaders("application/json", accessToken);
+    if (!headers) return { ok: false, reason: "missing_auth" };
+    const res = await fetch(accountUrl(phone, role, `/${encodeURIComponent(dataKey)}`), {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ value }),
+    });
+    if (res.ok) return { ok: true };
+    if (res.status === 401 || res.status === 403) return { ok: false, reason: "forbidden" };
+    if (res.status >= 500) return { ok: false, reason: "server" };
+    return { ok: false, reason: "unknown" };
+  } catch {
+    return { ok: false, reason: "network" };
   }
 }
 
@@ -232,18 +285,8 @@ export async function pushAccountKeyToCloud(
   value: string,
   accessToken?: string,
 ): Promise<boolean> {
-  try {
-    const headers = await syncAuthHeaders("application/json", accessToken);
-    if (!headers) return false;
-    const res = await fetch(accountUrl(phone, role, `/${encodeURIComponent(dataKey)}`), {
-      method: "PUT",
-      headers,
-      body: JSON.stringify({ value }),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
+  const result = await pushAccountKeyToCloudDetailed(phone, role, dataKey, value, accessToken);
+  return result.ok;
 }
 
 export async function pushLocalKeysToCloud(
@@ -275,14 +318,25 @@ export async function pushLocalKeysToCloud(
 export function queueCloudSync(dataKey: string, value: string): void {
   const session = getActiveSession();
   if (!session) return;
-  const timerKey = `${session.phone}:${session.role}:${dataKey}`;
+  queueCloudSyncForAccount(session.phone, session.role as Role, dataKey, value);
+}
+
+/** Debounced push for a specific account — used when tenant data is saved before session is active. */
+export function queueCloudSyncForAccount(
+  phone: string,
+  role: Role,
+  dataKey: string,
+  value: string,
+): void {
+  const p = normalizePhoneDigits(phone);
+  const timerKey = `${p}:${role}:${dataKey}`;
   const existing = pushTimers.get(timerKey);
   if (existing) clearTimeout(existing);
   pushTimers.set(
     timerKey,
     setTimeout(() => {
       pushTimers.delete(timerKey);
-      void pushAccountKeyToCloud(session.phone, session.role as Role, dataKey, value);
+      void pushAccountKeyToCloud(p, role, dataKey, value);
     }, 400),
   );
 }
@@ -290,7 +344,7 @@ export function queueCloudSync(dataKey: string, value: string): void {
 export async function fetchCloudRolesForPhone(phone: string): Promise<Role[]> {
   try {
     const p = normalizePhoneDigits(phone);
-    const res = await fetch(`${API_BASE}/sync/accounts/${p}/roles`, {
+    const res = await fetch(`${getApiBase()}/sync/accounts/${p}/roles`, {
       headers: { Accept: "application/json" },
     });
     if (!res.ok) return [];

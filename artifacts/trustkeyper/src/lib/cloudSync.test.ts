@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CLOUD_SYNC_KEYS,
+  cloudPushFailureMessage,
   collectBulkSyncEntries,
   collectPropertyShareEntries,
+  lookupCloudAccount,
   propertyShareDataKey,
   PROPERTY_SHARE_KEY_PREFIX,
 } from "./cloudSync";
@@ -71,5 +73,44 @@ describe("collectBulkSyncEntries", () => {
     const result = collectBulkSyncEntries(phone, role, storage);
     expect(result.owner_property_maintenance).toBe("[]");
     expect(result[shareKey]).toBe('{"property":{"id":"prop_99"}}');
+  });
+});
+
+describe("lookupCloudAccount", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns missing when server reports exists false", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ exists: false }),
+      }),
+    );
+
+    await expect(lookupCloudAccount("9876543210", "owner")).resolves.toEqual({ kind: "missing" });
+  });
+
+  it("returns unreachable on non-OK responses instead of treating as missing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 502,
+      }),
+    );
+
+    await expect(lookupCloudAccount("9876543210", "owner")).resolves.toEqual({
+      kind: "unreachable",
+    });
+  });
+});
+
+describe("cloudPushFailureMessage", () => {
+  it("maps auth failures to actionable copy", () => {
+    expect(cloudPushFailureMessage("missing_auth")).toContain("OTP");
+    expect(cloudPushFailureMessage("network")).toContain("reach the server");
   });
 });

@@ -9,6 +9,7 @@ import BrokerLayout, { getBrokerName } from "@/components/BrokerLayout";
 import { BrokerDashboardHeaderActions, WelcomeEducationCarousel } from "@/components/broker";
 import { BrokerFlowButton } from "@/components/broker/BrokerFlowButton";
 import BrokerPendingFlowBanners from "@/components/BrokerPendingFlowBanners";
+import { AgreementWaitingSignaturesPanel } from "@/components/agreements/AgreementWaitingSignaturesSection";
 import { getProperties, getPropertyTitle } from "@/lib/properties";
 import { getTenants, timeAgo } from "@/lib/tenants";
 import { getAgreements } from "@/lib/agreements";
@@ -43,6 +44,7 @@ function WelcomeDashboard({
   return (
     <div className="max-w-7xl mx-auto space-y-10">
       <BrokerPendingFlowBanners className="mb-2" />
+      <AgreementWaitingSignaturesPanel requesterRole="broker" className="mb-2" />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">
@@ -332,6 +334,7 @@ function ActiveDashboard({
   return (
     <div className="max-w-7xl mx-auto space-y-10">
       <BrokerPendingFlowBanners className="mb-2" />
+      <AgreementWaitingSignaturesPanel requesterRole="broker" className="mb-2" />
       {/* ── Header ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="min-w-0">

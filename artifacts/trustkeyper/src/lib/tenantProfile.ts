@@ -4,9 +4,17 @@ import type {
   TenantDocumentUploadStatus,
   UploadDocumentStatus,
 } from "@workspace/tenant-document-upload";
-import { queueCloudSync } from "./cloudSync";
+import { queueCloudSync, queueCloudSyncForAccount } from "./cloudSync";
 import type { DocumentUploadInvitePayload } from "./publicAgreementDocumentUpload";
-import { getActiveSession, getItem, getSessionItem, setItem, setSessionItem } from "./storageKeys";
+import {
+  getActiveSession,
+  getItem,
+  getSessionItem,
+  setItem,
+  setSessionItem,
+  storageKey,
+  writeLocalForAccount,
+} from "./storageKeys";
 import {
   formatTenantKycStatusLabel,
   normalizeTenantKycStatus,
@@ -193,19 +201,39 @@ function normalizeProfile(stored: Partial<TenantAccountProfile>, digits: string)
   return profile;
 }
 
+function readStoredForPhone(digits: string): TenantAccountProfile {
+  if (typeof window === "undefined") return { ...defaults };
+  try {
+    const raw = localStorage.getItem(storageKey(digits, "tenant", "profile"));
+    const stored = raw ? (JSON.parse(raw) as Partial<TenantAccountProfile>) : {};
+    return normalizeProfile(stored, digits);
+  } catch {
+    return normalizeProfile({}, digits);
+  }
+}
+
 function readStored(): TenantAccountProfile {
   if (typeof window === "undefined") return { ...defaults };
+  const session = getActiveSession();
+  if (session?.role === "tenant") {
+    return readStoredForPhone(phoneDigits(session.phone));
+  }
   try {
     const raw = getItem("profile");
     const stored = raw ? (JSON.parse(raw) as Partial<TenantAccountProfile>) : {};
     const digits = phoneDigits(
-      stored.phone || getSessionItem("phone") || getActiveSession()?.phone || "",
+      stored.phone || getSessionItem("phone") || "",
     );
+    if (digits.length === 10) return normalizeProfile(stored, digits);
     return normalizeProfile(stored, digits);
   } catch {
-    const digits = phoneDigits(getSessionItem("phone") || getActiveSession()?.phone || "");
+    const digits = phoneDigits(getSessionItem("phone") || "");
     return normalizeProfile({}, digits);
   }
+}
+
+export function getTenantAccountProfileForPhone(phone: string): TenantAccountProfile {
+  return readStoredForPhone(phoneDigits(phone));
 }
 
 export function getTenantAccountProfile(): TenantAccountProfile {
@@ -214,6 +242,7 @@ export function getTenantAccountProfile(): TenantAccountProfile {
 
 export function saveTenantAccountProfile(profile: TenantAccountProfile): void {
   const digits = phoneDigits(profile.phone);
+  if (digits.length !== 10) return;
   const payload: TenantAccountProfile = {
     ...profile,
     phone: digits,
@@ -224,10 +253,15 @@ export function saveTenantAccountProfile(profile: TenantAccountProfile): void {
     governmentId: normalizeDocumentMeta(profile.governmentId),
   };
   const json = JSON.stringify(payload);
-  setItem("profile", json);
-  if (payload.name) setSessionItem("name", payload.name);
-  if (digits) setSessionItem("phone", digits);
-  queueCloudSync("profile", json);
+  const session = getActiveSession();
+  if (session?.role === "tenant" && phoneDigits(session.phone) === digits) {
+    setItem("profile", json);
+    if (payload.name) setSessionItem("name", payload.name);
+    if (digits) setSessionItem("phone", digits);
+  } else {
+    writeLocalForAccount(digits, "tenant", "profile", json, false);
+  }
+  queueCloudSyncForAccount(digits, "tenant", "profile", json);
   if (payload.rental) {
     clearLegacyRentalPreferences(digits);
   }
@@ -303,8 +337,11 @@ export function mergeTenantProfileFromDocumentUpload(input: {
   tenantDocumentStatus?: TenantDocumentUploadStatus;
   submitted?: boolean;
 }): TenantAccountProfile {
-  const current = getTenantAccountProfile();
-  const digits = phoneDigits(input.tenantPhone ?? current.phone);
+  const digits = phoneDigits(input.tenantPhone ?? "");
+  const current =
+    digits.length === 10
+      ? getTenantAccountProfileForPhone(digits)
+      : getTenantAccountProfile();
   const tenantDocumentStatus = input.tenantDocumentStatus;
 
   const aadhaar = mergeDocumentMeta(

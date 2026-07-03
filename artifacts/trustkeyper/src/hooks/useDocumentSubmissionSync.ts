@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { fetchRequesterDocumentUploadInvites } from "@/lib/agreementDocumentUpload";
+import {
+  fetchRequesterDocumentUploadInvites,
+  hasStoredDocumentUploadInvitesNeedingPoll,
+} from "@/lib/agreementDocumentUpload";
 import { AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT } from "@/lib/agreementDocumentUploadStore";
 import {
   DOCUMENT_SUBMISSION_NOTIFICATION_EVENT,
@@ -40,10 +43,23 @@ export function useDocumentSubmissionSync(): {
 
   useEffect(() => {
     pickUnreadNotification();
-    void syncFromServer();
+    if (!document.hidden) {
+      void syncFromServer();
+    }
 
-    const interval = window.setInterval(() => void syncFromServer(), POLL_INTERVAL_MS);
+    const syncIfVisible = () => {
+      if (document.hidden) return;
+      if (!hasStoredDocumentUploadInvitesNeedingPoll()) return;
+      void syncFromServer();
+    };
+
+    const interval = window.setInterval(syncIfVisible, POLL_INTERVAL_MS);
     const onRefresh = () => {
+      pickUnreadNotification();
+      void syncFromServer();
+    };
+    const onVisibilityChange = () => {
+      if (document.hidden) return;
       pickUnreadNotification();
       void syncFromServer();
     };
@@ -52,6 +68,7 @@ export function useDocumentSubmissionSync(): {
     window.addEventListener(DOCUMENT_SUBMISSION_NOTIFICATION_EVENT, pickUnreadNotification);
     window.addEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, pickUnreadNotification);
     window.addEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onRefresh);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       window.clearInterval(interval);
@@ -59,6 +76,7 @@ export function useDocumentSubmissionSync(): {
       window.removeEventListener(DOCUMENT_SUBMISSION_NOTIFICATION_EVENT, pickUnreadNotification);
       window.removeEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, pickUnreadNotification);
       window.removeEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onRefresh);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [pickUnreadNotification, syncFromServer]);
 

@@ -14,6 +14,7 @@ import {
   restoreRememberedSessionFromLocalStorage,
   setAuthPendingRole,
   signUpSuccess,
+  rollbackFailedSignup,
 } from "@/lib/auth";
 import { resetSessionForAuthEntry } from "@/lib/authPublicEntry";
 import { clearActiveSessionBackup } from "@/lib/initAppStorage";
@@ -229,6 +230,7 @@ export default function Onboarding() {
                     accessToken,
                   );
                 } catch (err) {
+                  await rollbackFailedSignup(ownerPhoneDigits, r);
                   toast({
                     title: "Could not create account",
                     description: err instanceof Error ? err.message : "Please try again.",

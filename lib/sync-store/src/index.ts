@@ -133,7 +133,11 @@ export async function getAccountData(
 
 export async function accountHasProfile(phone: string, role: string): Promise<boolean> {
   const data = await getAccountData(phone, role);
-  return typeof data.profile === "string" && data.profile.length > 0;
+  if (typeof data.profile === "string" && data.profile.length > 0) return true;
+  if (role === "tenant" && typeof data.tenant_workspace === "string" && data.tenant_workspace.length > 0) {
+    return true;
+  }
+  return false;
 }
 
 export async function setAccountDataKey(

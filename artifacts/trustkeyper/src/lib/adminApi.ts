@@ -1,9 +1,8 @@
 /**
  * Admin API client — typed fetch wrappers for /api/admin/* routes
  */
+import { API_BASE } from "@/lib/apiBase";
 import { getSupabaseAccessToken } from "./syncSession";
-
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
 /** Platform-wide statistics returned by GET /api/admin/stats. */
 export interface AdminStats {

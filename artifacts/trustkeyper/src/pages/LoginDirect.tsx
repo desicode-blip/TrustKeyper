@@ -15,12 +15,17 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { resolveTenantPostLoginRoute } from "@/lib/tenantPostLoginRoute";
 import {
+  type AccountLookupResult,
   type AuthEntryRole,
   type Role,
+  canProceedWithLoginLookup,
   clearInvalidAuthPendingRole,
   dashboardRouteFor,
+  describeLoginPhoneHint,
+  isAuthEntryRole,
+  loginLookupErrorMessage,
   loginSuccess,
-  profileExistsAsync,
+  lookupAccountForAuth,
   readAuthPendingRole,
   roleDisplayLabel,
   setAuthPendingRole,
@@ -43,7 +48,7 @@ export default function LoginDirect() {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(10);
-  const [accountKnown, setAccountKnown] = useState<boolean | null>(null);
+  const [accountLookup, setAccountLookup] = useState<AccountLookupResult | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
 
   useEffect(() => {
@@ -66,12 +71,12 @@ export default function LoginDirect() {
 
   useEffect(() => {
     if (!loginRole || phoneDigits.length !== 10) {
-      setAccountKnown(null);
+      setAccountLookup(null);
       return;
     }
     let cancelled = false;
-    void profileExistsAsync(phoneDigits, loginRole).then((exists) => {
-      if (!cancelled) setAccountKnown(exists);
+    void lookupAccountForAuth(phoneDigits, loginRole).then((lookup) => {
+      if (!cancelled) setAccountLookup(lookup);
     });
     return () => {
       cancelled = true;
@@ -87,7 +92,7 @@ export default function LoginDirect() {
     if (phase === "phone") {
       setPhase("role");
       setPhone("");
-      setAccountKnown(null);
+      setAccountLookup(null);
       return;
     }
     setLocation("/");
@@ -107,11 +112,12 @@ export default function LoginDirect() {
     if (!loginRole) return;
     setLoggingIn(true);
     try {
-      const exists = await profileExistsAsync(phoneDigits, loginRole);
-      if (!exists) {
+      const lookup = await lookupAccountForAuth(phoneDigits, loginRole);
+      const loginError = loginLookupErrorMessage(lookup);
+      if (loginError) {
         toast({
-          title: "No account found",
-          description: "Sign up first, then log in on any device with the same number.",
+          title: loginError.title,
+          description: loginError.description,
           variant: "destructive",
         });
         return;
@@ -122,9 +128,14 @@ export default function LoginDirect() {
         setLocation(postAuthRoute(loginRole, phoneDigits));
         return;
       }
+      const postLoginError = loginLookupErrorMessage(
+        await lookupAccountForAuth(phoneDigits, loginRole),
+      );
       toast({
-        title: "No account found",
-        description: "Sign up first, then log in on any device with the same number.",
+        title: postLoginError?.title ?? "No account found",
+        description:
+          postLoginError?.description ??
+          "Sign up first, then log in on any device with the same number.",
         variant: "destructive",
       });
     } finally {
@@ -138,8 +149,11 @@ export default function LoginDirect() {
     setPhase("phone");
   };
 
-  const accountExistsForLogin = phoneDigits.length === 10 && accountKnown === true;
-  const showNoAccountHint = phoneDigits.length === 10 && accountKnown === false;
+  const phoneHint = loginRole ? describeLoginPhoneHint(accountLookup, loginRole) : null;
+  const accountExistsForLogin =
+    phoneDigits.length === 10 &&
+    accountLookup !== null &&
+    canProceedWithLoginLookup(accountLookup);
   const isOtpComplete = otp.every((d) => d !== "");
 
   const rolePickCta = (
@@ -226,8 +240,8 @@ export default function LoginDirect() {
                 id="logindirect-phone"
                 value={phoneDigits}
                 onChange={setPhone}
-                helperText={showNoAccountHint ? undefined : "Enter the number you used to sign up"}
-                errorText={showNoAccountHint ? "There is no account for this number." : null}
+                helperText={phoneHint?.helperText ?? undefined}
+                errorText={phoneHint?.errorText ?? null}
               />
             </div>
             <AuthSignupScreenFooter

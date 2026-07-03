@@ -1,3 +1,4 @@
+import { API_BASE } from "@/lib/apiBase";
 import type { LeadStatus } from "./tenants";
 import { syncAuthHeaders } from "./syncSession";
 import { normalizePhoneDigits } from "./storageKeys";
@@ -12,8 +13,6 @@ type RegisterInviteError =
   | "unauthorized"
   | "server_error"
   | "network";
-
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
 export type BrokerOnboardInviteStatus =
   | "pending"

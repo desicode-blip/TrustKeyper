@@ -1,8 +1,8 @@
+import { API_BASE } from "@/lib/apiBase";
 import { getActiveSession, normalizePhoneDigits } from "./storageKeys";
 import { syncAuthHeaders } from "./syncSession";
 import type { TenantPreSigningEscrowType } from "./tenantWorkspace";
 
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 const RAZORPAY_KEY_ID = (import.meta.env.VITE_RAZORPAY_KEY_ID as string | undefined)?.trim() ?? "";
 
 type RazorpayHandlerResponse = {
@@ -32,6 +32,14 @@ export interface EscrowCheckoutDetails {
   paymentType: TenantPreSigningEscrowType;
   keyId: string;
 }
+
+export type RazorpayCheckoutInput = {
+  orderId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+  description: string;
+};
 
 export type CreateEscrowOrderResult =
   | { ok: true; checkout: EscrowCheckoutDetails }
@@ -115,7 +123,7 @@ export async function createTenantEscrowOrder(input: {
 }
 
 export async function openRazorpayCheckout(
-  checkout: EscrowCheckoutDetails,
+  checkout: RazorpayCheckoutInput,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!checkout.keyId) {
     return { ok: false, error: "Razorpay is not configured for this environment" };
@@ -134,10 +142,7 @@ export async function openRazorpayCheckout(
         currency: checkout.currency,
         order_id: checkout.orderId,
         name: "TrustKeyper",
-        description:
-          checkout.paymentType === "security_deposit"
-            ? "Security deposit (held in trust)"
-            : "Brokerage fee (held in trust)",
+        description: checkout.description,
         handler: () => resolve({ ok: true }),
         modal: {
           ondismiss: () => resolve({ ok: false, error: "Payment cancelled" }),

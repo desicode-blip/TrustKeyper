@@ -1,3 +1,4 @@
+import { getApiBase } from "@/lib/apiBase";
 import type { Role } from "./auth";
 import type { Agreement } from "./agreements";
 import { getActiveSession, normalizePhoneDigits } from "./storageKeys";
@@ -5,8 +6,6 @@ import { syncAuthHeaders } from "./syncSession";
 import { generateRentalAgreementText, type RentalAgreementInput } from "./rentalAgreementDocument";
 import type { TenantAgreementSnapshot, TenantWorkspaceRecord } from "./tenantWorkspace";
 import { saveTenantWorkspace } from "./tenantWorkspace";
-
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "/api";
 
 export type { TenantAgreementSnapshot };
 
@@ -33,7 +32,7 @@ export interface SendAgreementForESignInput {
 }
 
 function workflowUrl(path: string): string {
-  return `${API_BASE}/tenant-workflow/${path}`;
+  return `${getApiBase()}/tenant-workflow/${path}`;
 }
 
 export function buildAgreementSnapshotFromAgreement(
@@ -82,18 +81,29 @@ export function buildAgreementSnapshotFromAgreement(
 
 export async function sendAgreementForESign(
   input: SendAgreementForESignInput,
+  accessToken?: string | null,
 ): Promise<{ ok: true; workspace: TenantWorkspaceRecord } | { ok: false; error: string }> {
+  const url = workflowUrl("send-for-esign");
   try {
-    const headers = await syncAuthHeaders("application/json");
+    const headers = await syncAuthHeaders("application/json", accessToken ?? undefined);
     if (!headers) return { ok: false, error: "Not authenticated" };
 
-    const res = await fetch(workflowUrl("send-for-esign"), {
+    const res = await fetch(url, {
       method: "POST",
       headers,
       body: JSON.stringify(input),
     });
 
-    const json = (await res.json()) as { workspace?: TenantWorkspaceRecord; error?: string };
+    let json: { workspace?: TenantWorkspaceRecord; error?: string };
+    try {
+      json = (await res.json()) as { workspace?: TenantWorkspaceRecord; error?: string };
+    } catch {
+      return {
+        ok: false,
+        error: `Tenant workflow API returned an invalid response (${res.status}). Check that ${url} is reachable.`,
+      };
+    }
+
     if (!res.ok) {
       return { ok: false, error: json.error ?? "Failed to send agreement for signing" };
     }
@@ -103,20 +113,26 @@ export async function sendAgreementForESign(
     }
 
     return { ok: true, workspace: json.workspace };
-  } catch {
-    return { ok: false, error: "Network error while sending agreement" };
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return {
+      ok: false,
+      error: `Could not reach the tenant workflow API at ${url}. ${detail}`,
+    };
   }
 }
 
 export async function pullTenantWorkspaceFromServer(
   phone?: string,
+  accessToken?: string | null,
 ): Promise<TenantWorkspaceRecord | null> {
   const session = getActiveSession();
   const digits = normalizePhoneDigits(phone ?? session?.phone ?? "");
-  if (!digits || session?.role !== "tenant") return null;
+  if (digits.length !== 10) return null;
+  if (!phone && (!session || session.role !== "tenant")) return null;
 
   try {
-    const headers = await syncAuthHeaders();
+    const headers = await syncAuthHeaders(undefined, accessToken ?? undefined);
     if (!headers) return null;
 
     const res = await fetch(workflowUrl(`workspace/${digits}`), { headers });

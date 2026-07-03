@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";
 import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter";
-import { AuthGoToSignupLink } from "@/components/AuthFlowFooterLinks";
+import { AuthEntryRoleGrid } from "@/components/auth/AuthEntryRoleGrid";
 import { AuthStepHeading } from "@/components/auth/AuthStepHeading";
 import {
   authMobileScrollPadClass,
@@ -17,16 +17,20 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { resolveTenantPostLoginRoute } from "@/lib/tenantPostLoginRoute";
 import {
+  type AccountLookupResult,
   type AuthEntryRole,
   type Role,
+  canProceedWithLoginLookup,
   clearInvalidAuthPendingRole,
   clearRememberedSessionFromLocalStorage,
   dashboardRouteFor,
-  isAuthEntryRole,
+  describeLoginPhoneHint,
+  loginLookupErrorMessage,
   loginSuccess,
+  lookupAccountForAuth,
   persistSessionToLocalStorage,
-  profileExistsAsync,
   readAuthPendingRole,
+  setAuthPendingRole,
   restoreRememberedSessionFromLocalStorage,
   roleDisplayLabel,
 } from "@/lib/auth";
@@ -38,7 +42,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { OtpVerifyReadyHint, useOtpVerifyReady } from "@/lib/otpVerifyReady";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
 
-type Phase = "phone" | "otp";
+type Phase = "role" | "phone" | "otp";
 
 function postAuthRoute(role: Role, phone: string): string {
   if (role === "tenant") return resolveTenantPostLoginRoute(phone);
@@ -49,11 +53,11 @@ function postAuthRoute(role: Role, phone: string): string {
 export default function Login() {
   const [, setLocation] = useLocation();
   const [loginRole, setLoginRole] = useState<AuthEntryRole | null>(() => readAuthPendingRole());
-  const [phase, setPhase] = useState<Phase>("phone");
+  const [phase, setPhase] = useState<Phase>(() => (readAuthPendingRole() ? "phone" : "role"));
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState(createEmptyOtp);
   const [countdown, setCountdown] = useState(10);
-  const [accountKnown, setAccountKnown] = useState<boolean | null>(null);
+  const [accountLookup, setAccountLookup] = useState<AccountLookupResult | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const { verifyReady, startVerifyReady, isVerifyReady } = useOtpVerifyReady();
@@ -68,7 +72,10 @@ export default function Login() {
     resetSessionForAuthEntry();
     clearInvalidAuthPendingRole();
     const pending = readAuthPendingRole();
-    if (pending) setLoginRole(pending);
+    if (pending) {
+      setLoginRole(pending);
+      setPhase((current) => (current === "role" ? "phone" : current));
+    }
   }, [setLocation]);
 
   useEffect(() => {
@@ -81,12 +88,12 @@ export default function Login() {
 
   useEffect(() => {
     if (!loginRole || phoneDigits.length !== 10) {
-      setAccountKnown(null);
+      setAccountLookup(null);
       return;
     }
     let cancelled = false;
-    void profileExistsAsync(phoneDigits, loginRole).then((exists) => {
-      if (!cancelled) setAccountKnown(exists);
+    void lookupAccountForAuth(phoneDigits, loginRole).then((lookup) => {
+      if (!cancelled) setAccountLookup(lookup);
     });
     return () => {
       cancelled = true;
@@ -99,7 +106,19 @@ export default function Login() {
       setOtp(createEmptyOtp());
       return;
     }
+    if (phase === "phone") {
+      setPhase("role");
+      setPhone("");
+      setAccountLookup(null);
+      return;
+    }
     setLocation("/");
+  };
+
+  const goToPhoneStep = () => {
+    if (!loginRole) return;
+    setAuthPendingRole(loginRole);
+    setPhase("phone");
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -116,16 +135,17 @@ export default function Login() {
     if (!loginRole || !isVerifyReady) return;
     setLoggingIn(true);
     try {
-      const exists = await profileExistsAsync(phoneDigits, loginRole);
-      if (!exists) {
+      const lookup = await lookupAccountForAuth(phoneDigits, loginRole);
+      const loginError = loginLookupErrorMessage(lookup);
+      if (loginError) {
         toast({
-          title: "No account found",
-          description: "Sign up first, then log in on any device with the same number.",
+          title: loginError.title,
+          description: loginError.description,
           variant: "destructive",
         });
         return;
       }
-      const { error: verifyError } = await verifyPhoneOtp(phoneDigits, otp.join(""));
+      const { error: verifyError, accessToken } = await verifyPhoneOtp(phoneDigits, otp.join(""));
       if (verifyError) {
         toast({
           title: "Invalid OTP. Please try again.",
@@ -133,7 +153,7 @@ export default function Login() {
         });
         return;
       }
-      const ok = await loginSuccess(phoneDigits, loginRole);
+      const ok = await loginSuccess(phoneDigits, loginRole, accessToken);
       if (ok) {
         if (rememberMe) {
           persistSessionToLocalStorage(phoneDigits, loginRole);
@@ -145,9 +165,14 @@ export default function Login() {
         setLocation(postAuthRoute(loginRole, phoneDigits));
         return;
       }
+      const postLoginError = loginLookupErrorMessage(
+        await lookupAccountForAuth(phoneDigits, loginRole),
+      );
       toast({
-        title: "No account found",
-        description: "Sign up first, then log in on any device with the same number.",
+        title: postLoginError?.title ?? "No account found",
+        description:
+          postLoginError?.description ??
+          "Sign up first, then log in on any device with the same number.",
         variant: "destructive",
       });
     } finally {
@@ -155,8 +180,11 @@ export default function Login() {
     }
   };
 
-  const accountExistsForLogin = phoneDigits.length === 10 && accountKnown === true;
-  const showNoAccountHint = phoneDigits.length === 10 && accountKnown === false;
+  const phoneHint = loginRole ? describeLoginPhoneHint(accountLookup, loginRole) : null;
+  const accountExistsForLogin =
+    phoneDigits.length === 10 &&
+    accountLookup !== null &&
+    canProceedWithLoginLookup(accountLookup);
   const isOtpComplete = otp.every((d) => d !== "");
 
   const resendLoginOtp = async () => {
@@ -173,6 +201,17 @@ export default function Login() {
     setOtp(createEmptyOtp());
     startVerifyReady();
   };
+
+  const rolePickCta = (
+    <Button
+      size="lg"
+      disabled={!loginRole}
+      onClick={goToPhoneStep}
+      className={authPrimaryButtonClass}
+    >
+      Continue &rarr;
+    </Button>
+  );
 
   const requestOtpCta = (
     <Button
@@ -220,25 +259,36 @@ export default function Login() {
     </Button>
   );
 
-  if (!loginRole || !isAuthEntryRole(loginRole)) {
-    return (
-      <AuthFlowLayout onBack={() => setLocation("/")} backDisabled={false}>
-        <div className={`flex flex-col flex-1 max-w-md w-full ${authMobileScrollPadClass}`}>
-          <div className="auth-step-heading mb-8 border-b border-gray-200 pb-4">
-            <h1 className="text-3xl font-semibold text-gray-900">Login to TrustKeyper</h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Choose Property Owner, Broker, or Tenant on signup first, then return here to log in.
-            </p>
-          </div>
-          <AuthGoToSignupLink className="text-center" />
-        </div>
-      </AuthFlowLayout>
-    );
-  }
-
   return (
     <AuthFlowLayout onBack={handleBack} backDisabled={false}>
       <div className={`flex flex-col flex-1 min-h-0 max-w-md w-full ${authMobileScrollPadClass}`}>
+        {phase === "role" && (
+          <>
+            <AuthStepHeading
+              title="Login to TrustKeyper"
+              subtitle="Select your account type to continue"
+            />
+            <AuthEntryRoleGrid
+              value={loginRole ?? ""}
+              onChange={(role) => {
+                setLoginRole(role);
+                setAuthPendingRole(role);
+              }}
+            />
+            <p className="text-gray-500 mb-2 mt-4 text-sm">
+              Tenants who completed document upload can log in with the same mobile number.
+            </p>
+            <AuthSignupScreenFooter
+              cta={rolePickCta}
+              showTerms={false}
+              linkType="signup"
+              persistRole={loginRole ?? undefined}
+            />
+          </>
+        )}
+
+        {phase !== "role" && loginRole && (
+          <>
         <div className="auth-step-heading mb-8 border-b border-gray-200 pb-4 shrink-0">
           <h1 className="text-3xl font-semibold text-gray-900">
             Login to TrustKeyper as {roleDisplayLabel(loginRole)}
@@ -252,8 +302,8 @@ export default function Login() {
                 id="login-phone"
                 value={phoneDigits}
                 onChange={setPhone}
-                helperText={showNoAccountHint ? undefined : "Enter the number you used to sign up"}
-                errorText={showNoAccountHint ? "There is no account for this number." : null}
+                helperText={phoneHint?.helperText ?? undefined}
+                errorText={phoneHint?.errorText ?? null}
               />
             </div>
             <AuthSignupScreenFooter
@@ -347,6 +397,8 @@ export default function Login() {
               linkType="signup"
               persistRole={loginRole}
             />
+          </>
+        )}
           </>
         )}
       </div>

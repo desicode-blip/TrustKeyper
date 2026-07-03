@@ -27,6 +27,9 @@
     "api/payments-create-order.ts": {
       "maxDuration": 30
     },
+    "api/payments-create-rent-order-tenant.ts": {
+      "maxDuration": 30
+    },
     "api/payments-create-escrow-order.ts": {
       "maxDuration": 30
     },

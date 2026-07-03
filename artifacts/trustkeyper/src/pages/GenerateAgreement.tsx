@@ -57,6 +57,7 @@ import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { getProperties, getPropertyTitle, updateProperty, type Property } from "@/lib/properties";
 import { ensureTenantFromAgreement, getTenants, resolveTenantKyc, type Tenant } from "@/lib/tenants";
 import { addAgreement, getAgreements, getAgreementsSyncPayload, updateAgreement, type Agreement } from "@/lib/agreements";
+import { broadcastAgreementsUpdated } from "@/components/agreements/AgreementWaitingSignaturesSection";
 import { pushAccountKeyToCloud } from "@/lib/cloudSync";
 import { getActiveSession } from "@/lib/auth";
 import {
@@ -117,6 +118,7 @@ import {
   fetchEnrichedRequesterDocumentUploadInvites,
   fetchRequesterDocumentUploadDetail,
   fetchRequesterDocumentUploadInvites,
+  hasStoredDocumentUploadInvitesNeedingPoll,
   resolveExistingDocumentUploadInvite,
 } from "@/lib/agreementDocumentUpload";
 import {
@@ -1084,17 +1086,32 @@ function Step3Documents({
 
   useEffect(() => {
     applyReceivedInvites(getStoredDocumentUploadInvites());
-    void refreshReceivedDocuments();
-    const interval = window.setInterval(() => void refreshReceivedDocuments(), 60_000);
+    if (!document.hidden) {
+      void refreshReceivedDocuments();
+    }
+
+    const pollIfVisible = () => {
+      if (document.hidden) return;
+      if (!hasStoredDocumentUploadInvitesNeedingPoll()) return;
+      void refreshReceivedDocuments();
+    };
+
+    const interval = window.setInterval(pollIfVisible, 60_000);
     const onStatus = () => void refreshReceivedDocuments();
+    const onVisibilityChange = () => {
+      if (!document.hidden) void refreshReceivedDocuments();
+    };
+
     window.addEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onStatus);
     window.addEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onStatus);
     window.addEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, onStatus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onStatus);
       window.removeEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onStatus);
       window.removeEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, onStatus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [applyReceivedInvites, refreshReceivedDocuments]);
 
@@ -2584,17 +2601,32 @@ export default function GenerateAgreement() {
       });
     };
 
-    void refreshTenantDocuments();
-    const interval = window.setInterval(() => void refreshTenantDocuments(), 15000);
+    if (!document.hidden) {
+      void refreshTenantDocuments();
+    }
+
+    const pollIfVisible = () => {
+      if (document.hidden) return;
+      if (!hasStoredDocumentUploadInvitesNeedingPoll()) return;
+      void refreshTenantDocuments();
+    };
+
+    const interval = window.setInterval(pollIfVisible, 60_000);
     const onStatus = () => void refreshTenantDocuments();
+    const onVisibilityChange = () => {
+      if (!document.hidden) void refreshTenantDocuments();
+    };
+
     window.addEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onStatus);
     window.addEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onStatus);
     window.addEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, onStatus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener(TENANT_DOCUMENT_STATUS_UPDATED_EVENT, onStatus);
       window.removeEventListener(AGREEMENT_DOCUMENT_UPLOAD_UPDATED_EVENT, onStatus);
       window.removeEventListener(DOCUMENT_SUBMISSION_SYNC_EVENT, onStatus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [step]);
 
@@ -2723,7 +2755,12 @@ export default function GenerateAgreement() {
         );
       }
 
-      if (requesterPhone && tenantPhone.length === 10) {
+      if (tenantPhone.length !== 10) {
+        nextWorkflowError =
+          "Tenant phone is missing or invalid — the tenant will not see this agreement on their dashboard.";
+      } else if (!requesterPhone) {
+        nextWorkflowError = "Could not verify your session — tenant signing workflow was not started.";
+      } else {
         const workflowResult = await sendAgreementForESign({
           phone: requesterPhone,
           role: requesterRole,
@@ -2757,6 +2794,7 @@ export default function GenerateAgreement() {
       setWorkflowError(nextWorkflowError);
       setSubmitting(false);
       setShowSuccess(true);
+      broadcastAgreementsUpdated();
       clearAgreementDraftStorage();
     })();
   };

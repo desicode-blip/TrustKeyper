@@ -8,6 +8,7 @@ import { getProperties, getPropertyTitle, type Property } from "@/lib/properties
 import { PROPERTIES_UPDATED_EVENT } from "@/lib/propertyEditValidation";
 import { getItem } from "@/lib/storageKeys";
 import BrokerPendingFlowBanners from "@/components/BrokerPendingFlowBanners";
+import { AgreementWaitingSignaturesPanel } from "@/components/agreements/AgreementWaitingSignaturesSection";
 
 function filterOwnerProperties(all: Property[], ownerName: string): Property[] {
   const name = ownerName.replace("!", "").trim();
@@ -100,6 +101,8 @@ export default function OwnerDashboard() {
         </div>
 
         <BrokerPendingFlowBanners role="owner" className="mb-6" />
+
+        <AgreementWaitingSignaturesPanel requesterRole="owner" className="mb-6" />
 
         {pendingDraft && (
           <section className="mb-8">
