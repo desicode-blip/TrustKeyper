@@ -263,6 +263,21 @@ function inviteNeedsDocumentUploadDetail(invite: DocumentUploadInviteForUi): boo
   );
 }
 
+export function inviteNeedsDocumentUploadPolling(invite: DocumentUploadInviteForUi): boolean {
+  return (
+    invite.tenantDocumentStatus === "document_request_sent" ||
+    invite.tenantDocumentStatus === "documents_in_progress" ||
+    invite.tenantDocumentStatus === "documents_submitted" ||
+    invite.status === "link_sent" ||
+    invite.status === "in_progress" ||
+    invite.status === "submitted"
+  );
+}
+
+export function hasStoredDocumentUploadInvitesNeedingPoll(): boolean {
+  return getStoredDocumentUploadInvites().some(inviteNeedsDocumentUploadPolling);
+}
+
 export async function fetchEnrichedRequesterDocumentUploadInvites(): Promise<
   DocumentUploadInviteForUi[]
 > {
