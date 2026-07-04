@@ -7,7 +7,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { MarketingCtaButton } from "@/components/marketing/MarketingCtaButton";
-import { MARKETING_CTA } from "@/lib/marketingConstants";
 import { cn } from "@/lib/utils";
 
 interface StepItem {
@@ -59,19 +58,34 @@ export function HowItWorksSection() {
         <h2 className="border-b border-marketing-muted/20 pb-4 text-[40px] font-medium leading-tight text-marketing-navy">
           How it <span className="text-marketing-blue">Works</span>
         </h2>
+      </div>
 
-        <div className="relative mt-10 sm:mt-12">
-          <div
-            className="pointer-events-none absolute left-0 z-0 hidden h-[42px] w-full bg-marketing-blue md:top-10 md:block"
-            aria-hidden
-          />
+      <div className="relative mt-10 overflow-x-clip sm:mt-12">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-10 z-0 hidden md:block"
+          aria-hidden
+        >
+          <div className="mx-auto max-w-[1200px] px-5 sm:px-8 lg:px-12">
+            <div className="relative h-[42px]">
+              <div
+                className={cn(
+                  "absolute inset-y-0 right-0 bg-marketing-blue",
+                  "left-[calc(-1*(max(0px,(100vw-1200px)/2)+1.25rem))]",
+                  "sm:left-[calc(-1*(max(0px,(100vw-1200px)/2)+2rem))]",
+                  "lg:left-[calc(-1*(max(0px,(100vw-1200px)/2)+3rem))]",
+                )}
+              />
+            </div>
+          </div>
+        </div>
 
-          <ol className="relative z-10 grid grid-cols-1 gap-4 md:grid-cols-4 md:gap-4">
+        <div className="relative z-10 mx-auto max-w-[1200px] px-5 sm:px-8 lg:px-12">
+          <ol className="grid grid-cols-1 gap-4 md:grid-cols-4 md:gap-4">
             {STEPS.map((step) => (
               <li
                 key={step.description}
                 className={cn(
-                  "flex flex-col gap-12 rounded-lg p-7",
+                  "relative flex flex-col gap-12 rounded-lg p-7",
                   step.cardClassName,
                   step.dark ? "md:min-h-[288px]" : "md:mt-5",
                 )}
@@ -102,7 +116,7 @@ export function HowItWorksSection() {
                   </p>
                   {step.dark ? (
                     <MarketingCtaButton
-                      href={MARKETING_CTA.signupLogin}
+                      opensAuthModal
                       className="mt-6 w-full text-[16px] font-medium font-sans sm:w-auto"
                     >
                       Get Started

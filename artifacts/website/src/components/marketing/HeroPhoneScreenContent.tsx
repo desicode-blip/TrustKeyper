@@ -1,7 +1,7 @@
 import React from "react";
 import { ArrowRight, Check } from "lucide-react";
 import heroPhoneHouse from "@/assets/marketing/hero/hero-phone-house.png";
-import { MARKETING_CTA } from "@/lib/marketingConstants";
+import { useMarketingAuthModal } from "@/components/auth/MarketingAuthModalContext";
 import { cn } from "@/lib/utils";
 
 export interface HeroPhoneScreenContentProps {
@@ -12,6 +12,7 @@ export interface HeroPhoneScreenContentProps {
 
 export function HeroPhoneScreenContent({ className, variant = "compact" }: HeroPhoneScreenContentProps) {
   const isHero = variant === "hero";
+  const { openAuthModal } = useMarketingAuthModal();
 
   return (
     <div
@@ -65,8 +66,9 @@ export function HeroPhoneScreenContent({ className, variant = "compact" }: HeroP
           Secure rent payments you can rely on, no matter your location.
         </p>
 
-        <a
-          href={MARKETING_CTA.signupLogin}
+        <button
+          type="button"
+          onClick={openAuthModal}
           className={cn(
             "font-marketing-cta mt-[4.5%] inline-flex w-full items-center justify-center gap-1 rounded-md bg-marketing-blue font-medium text-white transition-colors hover:bg-marketing-blue-bright",
             isHero
@@ -80,7 +82,7 @@ export function HeroPhoneScreenContent({ className, variant = "compact" }: HeroP
             strokeWidth={2}
             aria-hidden
           />
-        </a>
+        </button>
       </div>
 
       <img

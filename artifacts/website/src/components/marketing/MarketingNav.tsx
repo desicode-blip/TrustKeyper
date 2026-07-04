@@ -1,7 +1,8 @@
-import React, { useEffect, useId, useState } from "react";
+import React from "react";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { Link } from "wouter";
 import logoDark from "@/assets/marketing/trustkeyper Logo.svg";
+import { MarketingAuthTrigger } from "@/components/auth/MarketingAuthTrigger";
 import { MARKETING_CTA } from "@/lib/marketingConstants";
 import { cn } from "@/lib/utils";
 
@@ -13,8 +14,7 @@ const navCtaClassName = "font-marketing-cta rounded px-5 py-2.5 text-sm font-med
 
 function SignupLoginCta({ className, onClick }: { className?: string; onClick?: () => void }) {
   return (
-    <a
-      href={MARKETING_CTA.signupLogin}
+    <MarketingAuthTrigger
       onClick={onClick}
       className={cn(
         navCtaClassName,
@@ -24,7 +24,7 @@ function SignupLoginCta({ className, onClick }: { className?: string; onClick?: 
     >
       Signup/Login
       <ArrowRight size={16} strokeWidth={2} aria-hidden />
-    </a>
+    </MarketingAuthTrigger>
   );
 }
 
@@ -45,10 +45,10 @@ function ContactUsCta({ className, onClick }: { className?: string; onClick?: ()
 }
 
 export function MarketingNav({ className }: MarketingNavProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuId = useId();
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const menuId = React.useId();
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!menuOpen) {
       return;
     }

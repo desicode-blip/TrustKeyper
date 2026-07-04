@@ -35,7 +35,7 @@ export function HeroSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative overflow-hidden bg-marketing-hero pb-16 pt-12 sm:pb-24 sm:pt-14 lg:pb-32 lg:pt-16"
+      className="relative overflow-hidden bg-marketing-hero pb-0 pt-12 sm:pt-14 lg:pt-16"
     >
       <div className="relative mx-auto max-w-[1200px] px-5 sm:px-8 lg:px-12">
         <div className="mx-auto max-w-3xl text-center">
@@ -49,10 +49,10 @@ export function HeroSection() {
           </p>
         </div>
 
-        <div className="relative mx-auto mt-10 w-full max-w-[1200px] sm:mt-14 lg:mt-16">
+        <div className="relative mx-auto mt-8 w-full max-w-[1200px] sm:mt-10 lg:mt-12">
           <div className="hidden lg:block">
-            <div className="relative h-[720px] w-full">
-              <div className="absolute left-[5%] top-[2%] z-10 w-[30%]">
+            <div className="relative h-[660px] w-full">
+              <div className="absolute left-[12%] top-[8%] z-30 w-[26%]">
                 <HeroFloatingAsset
                   src={heroCardManageProperty}
                   alt="Manage your property with ease"
@@ -61,7 +61,7 @@ export function HeroSection() {
                 />
               </div>
 
-              <div className="absolute left-[9%] top-[44%] z-10 w-[24%]">
+              <div className="absolute left-[10%] top-[48%] z-30 w-[22%]">
                 <HeroFloatingAsset
                   src={heroCardRentDistribution}
                   alt="Rent distribution breakdown"
@@ -70,7 +70,7 @@ export function HeroSection() {
                 />
               </div>
 
-              <div className="absolute left-[69.2%] top-[3.6%] z-10 w-[19%]">
+              <div className="absolute left-[56%] top-[1%] z-30 w-[17%]">
                 <HeroFloatingAsset
                   src={heroCardFindTenants}
                   alt="Find tenants"
@@ -79,7 +79,7 @@ export function HeroSection() {
                 />
               </div>
 
-              <div className="absolute left-[65.6%] top-[10.9%] z-10 w-[13.1%]">
+              <div className="absolute left-[54%] top-[10%] z-30 w-[12%]">
                 <HeroFloatingAsset
                   src={heroCardOnTime}
                   alt="02 days to get rent on time"
@@ -88,7 +88,7 @@ export function HeroSection() {
                 />
               </div>
 
-              <div className="absolute left-[67.1%] top-[34.1%] z-10 w-[32.9%]">
+              <div className="absolute left-[52%] top-[34%] z-30 w-[30%]">
                 <HeroFloatingAsset
                   src={heroCardAddProperty}
                   alt="Add your property seamlessly"
@@ -98,7 +98,7 @@ export function HeroSection() {
               </div>
 
               <div className="absolute inset-x-0 bottom-0 z-20 flex justify-center">
-                <HeroCenterPhone />
+                <HeroCenterPhone phoneClassName="w-[min(100%,430px)]" />
               </div>
             </div>
           </div>
