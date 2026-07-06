@@ -329,13 +329,41 @@ export async function handlePaymentOnboardRequest(
 
     let account;
     try {
+      // TEMPORARY debug logging — Razorpay ticket #19705336 (remove after support closes ticket)
+      console.log("RAZORPAY_DEBUG_REQUEST", {
+        phone,
+        role: body.role,
+        referenceId,
+        payload: razorpayPayload,
+      });
+
       account = await getRazorpayClient().accounts.create(razorpayPayload);
+
+      // TEMPORARY debug logging — Razorpay ticket #19705336 (remove after support closes ticket)
+      console.log("RAZORPAY_DEBUG_RESPONSE", {
+        phone,
+        role: body.role,
+        referenceId,
+        account,
+      });
     } catch (err) {
+      // TEMPORARY debug logging — Razorpay ticket #19705336 (remove after support closes ticket)
+      const razorpayErrorBody =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: unknown } }).response?.data
+          : err && typeof err === "object" && ("error" in err || "statusCode" in err)
+            ? {
+                statusCode: (err as { statusCode?: unknown }).statusCode,
+                body: (err as { error?: unknown }).error,
+              }
+            : err;
+
       console.error("Razorpay accounts.create failed", {
         phone,
         role: body.role,
         referenceId,
         error: err as RazorpayErrorShape,
+        RAZORPAY_DEBUG_ERROR_RESPONSE: razorpayErrorBody,
       });
       json(res, 502, {
         error: "Razorpay account creation failed",
