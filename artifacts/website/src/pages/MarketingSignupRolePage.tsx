@@ -17,6 +17,7 @@ const MOCK_HANDOFF = {
   rememberMe: false,
   verifiedAt: Date.now(),
   accessToken: null,
+  refreshToken: null,
 };
 
 export interface MarketingSignupRolePageProps {

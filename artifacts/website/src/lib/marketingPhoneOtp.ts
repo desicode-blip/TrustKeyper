@@ -12,7 +12,7 @@ export async function sendMarketingPhoneOtp(phoneDigits: string): Promise<string
 export async function verifyMarketingPhoneOtp(
   phoneDigits: string,
   token: string,
-): Promise<{ error: string | null; accessToken: string | null }> {
+): Promise<{ error: string | null; accessToken: string | null; refreshToken: string | null }> {
   const phone = phoneDigits.replace(/\D/g, "").slice(0, 10);
   const { data, error } = await marketingSupabase.auth.verifyOtp({
     phone: "+91" + phone,
@@ -22,5 +22,6 @@ export async function verifyMarketingPhoneOtp(
   return {
     error: error?.message ?? null,
     accessToken: data.session?.access_token ?? null,
+    refreshToken: data.session?.refresh_token ?? null,
   };
 }

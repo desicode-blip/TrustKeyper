@@ -1,10 +1,10 @@
-/** Placeholder CTAs — wire to app routes when ready. */
+/** Placeholder CTAs — in-site auth modal via hash anchors. */
 export const MARKETING_CTA = {
   contactUs: "/contact-us",
-  signupLogin: "https://app.trustkeyper.com",
+  signupLogin: "/#signup",
   signup: "#signup",
   login: "#login",
-  getAccess: "https://app.trustkeyper.com",
+  getAccess: "/#signup",
   getStarted: "#get-started",
 } as const;
 

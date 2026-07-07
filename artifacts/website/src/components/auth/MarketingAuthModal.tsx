@@ -145,13 +145,14 @@ export function MarketingAuthModal({ open, onOpenChange, onAuthVerified }: Marke
     focusOtpInput(Math.min(pasted.length, MARKETING_OTP_LAST_INDEX));
   };
 
-  const routeAfterOtp = async (accessToken: string | null) => {
+  const routeAfterOtp = async (accessToken: string | null, refreshToken: string | null) => {
     const roles = await fetchMarketingRolesForPhone(phoneDigits);
     persistMarketingAuthHandoff({
       phone: phoneDigits,
       rememberMe,
       verifiedAt: Date.now(),
       accessToken,
+      refreshToken,
     });
     close();
     if (roles.length === 0) {
@@ -209,7 +210,7 @@ export function MarketingAuthModal({ open, onOpenChange, onAuthVerified }: Marke
     setVerifyError(null);
     setFlowError(null);
     try {
-      const { error: verifyError, accessToken } = await verifyMarketingPhoneOtp(
+      const { error: verifyError, accessToken, refreshToken } = await verifyMarketingPhoneOtp(
         phoneDigits,
         otp.join(""),
       );
@@ -222,7 +223,7 @@ export function MarketingAuthModal({ open, onOpenChange, onAuthVerified }: Marke
         rememberMe,
         otp: otp.join(""),
       });
-      await routeAfterOtp(accessToken);
+      await routeAfterOtp(accessToken, refreshToken);
     } catch {
       setVerifyError("Invalid OTP. Please try again.");
     } finally {
