@@ -19,6 +19,7 @@ const MOCK_HANDOFF = {
   rememberMe: false,
   verifiedAt: Date.now(),
   accessToken: null,
+  refreshToken: null,
 };
 
 export interface MarketingBrokerSignupPageProps {
@@ -60,6 +61,8 @@ export function MarketingBrokerSignupPage({ mock = false }: MarketingBrokerSignu
       phone: activeHandoff.phone,
       role: "broker" as const,
       rememberMe: activeHandoff.rememberMe,
+      accessToken: activeHandoff.accessToken,
+      refreshToken: activeHandoff.refreshToken,
     };
     clearMarketingAuthHandoff();
     window.location.assign(buildMarketingExistingAccountUrl(params));

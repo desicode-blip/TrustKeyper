@@ -5,6 +5,7 @@ export interface MarketingAuthHandoff {
   rememberMe: boolean;
   verifiedAt: number;
   accessToken?: string | null;
+  refreshToken?: string | null;
 }
 
 export function persistMarketingAuthHandoff(handoff: MarketingAuthHandoff): void {

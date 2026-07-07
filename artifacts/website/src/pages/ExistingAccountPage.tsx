@@ -104,11 +104,18 @@ export function ExistingAccountPage({ mock = false }: ExistingAccountPageProps) 
   }, [mock, phoneDigits, rememberMe, setLocation]);
 
   const finishExistingAccount = (role: MarketingAuthRole) => {
+    const handoff = readMarketingAuthHandoff();
     setContinuingRole(role);
-    clearMarketingAuthHandoff();
     window.location.assign(
-      buildMarketingExistingAccountUrl({ phone: phoneDigits, role, rememberMe }),
+      buildMarketingExistingAccountUrl({
+        phone: phoneDigits,
+        role,
+        rememberMe,
+        accessToken: handoff?.accessToken,
+        refreshToken: handoff?.refreshToken,
+      }),
     );
+    clearMarketingAuthHandoff();
   };
 
   const finishSignupRole = () => {

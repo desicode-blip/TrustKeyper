@@ -34,9 +34,13 @@ jobs:
       - name: Production build (same as Vercel buildCommand)
         run: pnpm run build:deploy
 
+      - name: Build marketing website
+        run: pnpm run build:website
+
       - name: Assert build artifacts exist
         run: |
           test -f lib/broker-tenant-onboarding/dist/index.js || (echo "broker-tenant-onboarding dist missing" && exit 1)
           test -f artifacts/trustkeyper/dist/index.html      || (echo "SPA index.html missing" && exit 1)
           test -f artifacts/api-server/dist/index.mjs          || (echo "API server bundle missing" && exit 1)
+          test -f artifacts/website/dist/index.html          || (echo "marketing website index.html missing" && exit 1)
           echo "Build artifacts verified."
