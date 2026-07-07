@@ -4,6 +4,7 @@ export interface MarketingAuthHandoff {
   phone: string;
   rememberMe: boolean;
   verifiedAt: number;
+  accessToken?: string | null;
 }
 
 export function persistMarketingAuthHandoff(handoff: MarketingAuthHandoff): void {
@@ -30,4 +31,8 @@ export function buildExistingAccountPagePath(phone: string, rememberMe: boolean)
   const params = new URLSearchParams({ phone });
   if (rememberMe) params.set("remember", "1");
   return `/login/existing?${params.toString()}`;
+}
+
+export function buildMarketingSignupRolePath(): string {
+  return "/signup/role";
 }

@@ -1,24 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { MarketingAuthContinueButton } from "@/components/auth/MarketingAuthContinueButton";
-import { MarketingAuthPageLayout } from "@/components/auth/MarketingAuthPageLayout";
-import {
-  MarketingAuthWelcomeBack,
-  type WelcomeBackSelection,
-} from "@/components/auth/MarketingAuthWelcomeBack";
-import { fetchMarketingRolesForPhone } from "@/lib/marketingAuthLookup";
+import { MarketingExistingAccountShell } from "@/components/auth/MarketingExistingAccountShell";
+import { MarketingAuthWelcomeBack } from "@/components/auth/MarketingAuthWelcomeBack";
+import { fetchMarketingAccountSummariesForPhone } from "@/lib/marketingAuthLookup";
 import {
   buildMarketingExistingAccountUrl,
-  buildMarketingNewUserSignupUrl,
-  buildMarketingSignupUrl,
 } from "@/lib/marketingAppRoutes";
 import {
   clearMarketingAuthHandoff,
   readMarketingAuthHandoff,
 } from "@/lib/marketingAuthHandoff";
 import {
+  buildMarketingSignupRoleFormPath,
+  buildMarketingSignupRolePath,
+} from "@/lib/marketingSignupPaths";
+import {
   marketingRolesMissingFrom,
-  toMarketingAccountSummaries,
   type MarketingAccountSummary,
   type MarketingAuthRole,
 } from "@/lib/marketingAuthRoles";
@@ -46,10 +44,9 @@ export function ExistingAccountPage({ mock = false }: ExistingAccountPageProps) 
   const [missingRoles, setMissingRoles] = useState<MarketingAuthRole[]>(
     mock ? MOCK_MISSING_ROLES : [],
   );
-  const [selection, setSelection] = useState<WelcomeBackSelection | null>(
-    mock ? { kind: "existing", role: "owner" } : null,
-  );
-  const [continuing, setContinuing] = useState(false);
+  const [selectedSignupRole, setSelectedSignupRole] = useState<MarketingAuthRole | null>(null);
+  const [continuingRole, setContinuingRole] = useState<MarketingAuthRole | null>(null);
+  const [signupContinuing, setSignupContinuing] = useState(false);
 
   const query = useMemo(() => new URLSearchParams(search), [search]);
 
@@ -82,21 +79,18 @@ export function ExistingAccountPage({ mock = false }: ExistingAccountPageProps) 
       setLoading(true);
       setError(null);
       try {
-        const roles = await fetchMarketingRolesForPhone(phoneDigits);
+        const summaries = await fetchMarketingAccountSummariesForPhone(phoneDigits);
         if (cancelled) return;
-        if (roles.length === 0) {
+        if (summaries.length === 0) {
           clearMarketingAuthHandoff();
-          window.location.assign(buildMarketingNewUserSignupUrl(phoneDigits, rememberMe));
+          setLocation(buildMarketingSignupRolePath());
           return;
         }
 
-        const summaries = toMarketingAccountSummaries(roles);
-        const missing = marketingRolesMissingFrom(roles);
+        const roles = summaries.map((account) => account.role);
         setAccounts(summaries);
-        setMissingRoles(missing);
-        setSelection(
-          summaries.length === 1 ? { kind: "existing", role: summaries[0].role } : null,
-        );
+        setMissingRoles(marketingRolesMissingFrom(roles));
+        setSelectedSignupRole(null);
       } catch {
         if (!cancelled) setError("Could not load your accounts. Please try again.");
       } finally {
@@ -107,31 +101,33 @@ export function ExistingAccountPage({ mock = false }: ExistingAccountPageProps) 
     return () => {
       cancelled = true;
     };
-  }, [mock, phoneDigits, rememberMe]);
+  }, [mock, phoneDigits, rememberMe, setLocation]);
 
-  const finish = () => {
-    if (!selection) return;
-    setContinuing(true);
-    const params = { phone: phoneDigits, role: selection.role, rememberMe };
+  const finishExistingAccount = (role: MarketingAuthRole) => {
+    setContinuingRole(role);
     clearMarketingAuthHandoff();
-    if (selection.kind === "existing") {
-      window.location.assign(buildMarketingExistingAccountUrl(params));
-      return;
-    }
-    window.location.assign(buildMarketingSignupUrl(params));
+    window.location.assign(
+      buildMarketingExistingAccountUrl({ phone: phoneDigits, role, rememberMe }),
+    );
+  };
+
+  const finishSignupRole = () => {
+    if (!selectedSignupRole) return;
+    setSignupContinuing(true);
+    setLocation(buildMarketingSignupRoleFormPath(selectedSignupRole));
   };
 
   if (loading) {
     return (
-      <MarketingAuthPageLayout>
+      <MarketingExistingAccountShell ariaLabel="Your accounts">
         <p className="text-center text-sm text-marketing-muted">Loading your accounts...</p>
-      </MarketingAuthPageLayout>
+      </MarketingExistingAccountShell>
     );
   }
 
   if (error) {
     return (
-      <MarketingAuthPageLayout>
+      <MarketingExistingAccountShell ariaLabel="Your accounts">
         <p className="text-center text-sm text-red-600">{error}</p>
         <button
           type="button"
@@ -140,24 +136,28 @@ export function ExistingAccountPage({ mock = false }: ExistingAccountPageProps) 
         >
           Back to home
         </button>
-      </MarketingAuthPageLayout>
+      </MarketingExistingAccountShell>
     );
   }
 
   return (
-    <MarketingAuthPageLayout>
+    <MarketingExistingAccountShell ariaLabel="Welcome back">
       <MarketingAuthWelcomeBack
         accounts={accounts}
         missingRoles={missingRoles}
-        selection={selection}
-        onSelect={setSelection}
+        selectedSignupRole={selectedSignupRole}
+        continuingRole={continuingRole}
+        onExistingAccountClick={finishExistingAccount}
+        onSignupRoleSelect={setSelectedSignupRole}
       />
 
-      <MarketingAuthContinueButton
-        disabled={!selection}
-        loading={continuing}
-        onClick={finish}
-      />
-    </MarketingAuthPageLayout>
+      {missingRoles.length > 0 ? (
+        <MarketingAuthContinueButton
+          disabled={!selectedSignupRole}
+          loading={signupContinuing}
+          onClick={finishSignupRole}
+        />
+      ) : null}
+    </MarketingExistingAccountShell>
   );
 }

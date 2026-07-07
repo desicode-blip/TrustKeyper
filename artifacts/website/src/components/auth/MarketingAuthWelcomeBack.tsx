@@ -7,22 +7,22 @@ import {
 } from "@/lib/marketingAuthRoles";
 import { cn } from "@/lib/utils";
 
-export type WelcomeBackSelection =
-  | { kind: "existing"; role: MarketingAuthRole }
-  | { kind: "signup"; role: MarketingAuthRole };
-
 export interface MarketingAuthWelcomeBackProps {
   accounts: MarketingAccountSummary[];
   missingRoles: MarketingAuthRole[];
-  selection: WelcomeBackSelection | null;
-  onSelect: (selection: WelcomeBackSelection) => void;
+  selectedSignupRole: MarketingAuthRole | null;
+  continuingRole: MarketingAuthRole | null;
+  onExistingAccountClick: (role: MarketingAuthRole) => void;
+  onSignupRoleSelect: (role: MarketingAuthRole) => void;
 }
 
 export function MarketingAuthWelcomeBack({
   accounts,
   missingRoles,
-  selection,
-  onSelect,
+  selectedSignupRole,
+  continuingRole,
+  onExistingAccountClick,
+  onSignupRoleSelect,
 }: MarketingAuthWelcomeBackProps) {
   return (
     <div>
@@ -32,18 +32,18 @@ export function MarketingAuthWelcomeBack({
 
       <div className="mt-6 space-y-3">
         {accounts.map((account) => {
-          const isSelected =
-            selection?.kind === "existing" && selection.role === account.role;
+          const isContinuing = continuingRole === account.role;
           return (
             <button
               key={account.role}
               type="button"
-              onClick={() => onSelect({ kind: "existing", role: account.role })}
+              disabled={continuingRole !== null}
+              onClick={() => onExistingAccountClick(account.role)}
               className={cn(
                 "flex w-full items-center gap-4 rounded-lg border p-4 text-left transition-colors",
-                isSelected
-                  ? "border-marketing-green bg-[#e8f7f1]"
-                  : "border-[#cbd5e2] bg-white hover:border-marketing-muted/40",
+                "border-[#cbd5e2] bg-white hover:border-marketing-muted/40",
+                isContinuing && "opacity-80",
+                continuingRole !== null && !isContinuing && "cursor-not-allowed opacity-60",
               )}
             >
               <div
@@ -82,8 +82,8 @@ export function MarketingAuthWelcomeBack({
 
           <MarketingAuthDifferentRoleCards
             roles={missingRoles}
-            selectedRole={selection?.kind === "signup" ? selection.role : null}
-            onSelectRole={(role) => onSelect({ kind: "signup", role })}
+            selectedRole={selectedSignupRole}
+            onSelectRole={onSignupRoleSelect}
           />
         </>
       ) : null}

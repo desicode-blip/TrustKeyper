@@ -1,14 +1,18 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { MarketingAuthContinueButton } from "@/components/auth/MarketingAuthContinueButton";
 import { MarketingAuthModalHeader } from "@/components/auth/MarketingAuthModalHeader";
 import type { MarketingAuthVerifiedPayload } from "@/components/auth/MarketingAuthModalContext";
-import { fetchMarketingRolesForPhone } from "@/lib/marketingAuthLookup";
 import {
   buildExistingAccountPagePath,
+  buildMarketingSignupRolePath,
   persistMarketingAuthHandoff,
 } from "@/lib/marketingAuthHandoff";
-import { buildMarketingNewUserSignupUrl } from "@/lib/marketingAppRoutes";
+import { fetchMarketingRolesForPhone } from "@/lib/marketingAuthLookup";
+import {
+  sendMarketingPhoneOtp,
+  verifyMarketingPhoneOtp,
+} from "@/lib/marketingPhoneOtp";
 import {
   createEmptyMarketingOtp,
   formatMarketingPhoneDisplay,
@@ -33,6 +37,7 @@ function focusOtpInput(index: number): void {
 }
 
 export function MarketingAuthModal({ open, onOpenChange, onAuthVerified }: MarketingAuthModalProps) {
+  const [, setLocation] = useLocation();
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const phoneInputRef = useRef<HTMLInputElement>(null);
@@ -140,19 +145,20 @@ export function MarketingAuthModal({ open, onOpenChange, onAuthVerified }: Marke
     focusOtpInput(Math.min(pasted.length, MARKETING_OTP_LAST_INDEX));
   };
 
-  const routeAfterOtp = async () => {
+  const routeAfterOtp = async (accessToken: string | null) => {
     const roles = await fetchMarketingRolesForPhone(phoneDigits);
     persistMarketingAuthHandoff({
       phone: phoneDigits,
       rememberMe,
       verifiedAt: Date.now(),
+      accessToken,
     });
     close();
     if (roles.length === 0) {
-      window.location.assign(buildMarketingNewUserSignupUrl(phoneDigits, rememberMe));
+      setLocation(buildMarketingSignupRolePath());
       return;
     }
-    window.location.assign(buildExistingAccountPagePath(phoneDigits, rememberMe));
+    setLocation(buildExistingAccountPagePath(phoneDigits, rememberMe));
   };
 
   const sendOtp = async () => {
@@ -160,7 +166,11 @@ export function MarketingAuthModal({ open, onOpenChange, onAuthVerified }: Marke
     setSendingOtp(true);
     setSendError(null);
     try {
-      await new Promise((resolve) => window.setTimeout(resolve, 400));
+      const error = await sendMarketingPhoneOtp(phoneDigits);
+      if (error) {
+        setSendError("Could not send OTP. Please try again.");
+        return;
+      }
       setPhase("otp");
       setOtp(createEmptyMarketingOtp());
       setResendSeconds(MARKETING_OTP_RESEND_SECONDS);
@@ -178,7 +188,11 @@ export function MarketingAuthModal({ open, onOpenChange, onAuthVerified }: Marke
     setSendError(null);
     setVerifyError(null);
     try {
-      await new Promise((resolve) => window.setTimeout(resolve, 400));
+      const error = await sendMarketingPhoneOtp(phoneDigits);
+      if (error) {
+        setSendError("Could not resend OTP. Please try again.");
+        return;
+      }
       setOtp(createEmptyMarketingOtp());
       setResendSeconds(MARKETING_OTP_RESEND_SECONDS);
       focusOtpInput(0);
@@ -195,13 +209,20 @@ export function MarketingAuthModal({ open, onOpenChange, onAuthVerified }: Marke
     setVerifyError(null);
     setFlowError(null);
     try {
-      await new Promise((resolve) => window.setTimeout(resolve, 400));
+      const { error: verifyError, accessToken } = await verifyMarketingPhoneOtp(
+        phoneDigits,
+        otp.join(""),
+      );
+      if (verifyError) {
+        setVerifyError("Invalid OTP. Please try again.");
+        return;
+      }
       onAuthVerified?.({
         phone: phoneDigits,
         rememberMe,
         otp: otp.join(""),
       });
-      await routeAfterOtp();
+      await routeAfterOtp(accessToken);
     } catch {
       setVerifyError("Invalid OTP. Please try again.");
     } finally {

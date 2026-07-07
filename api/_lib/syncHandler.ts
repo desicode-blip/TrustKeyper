@@ -15,6 +15,9 @@ type SyncStore = {
   accountHasProfile: (phone: string, role: string) => Promise<boolean>;
   getAccountData: (phone: string, role: string) => Promise<Record<string, string>>;
   getRolesForPhone: (phone: string) => Promise<string[]>;
+  getAccountSummariesForPhone: (
+    phone: string,
+  ) => Promise<Array<{ role: string; displayName: string }>>;
   setAccountDataBulk: (phone: string, role: string, entries: Record<string, string>) => Promise<void>;
   setAccountDataKey: (
     phone: string,
@@ -63,6 +66,20 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
       json(res, 200, { phone, roles });
     } catch (err) {
       json(res, 500, { error: "Failed to list roles", detail: String(err) });
+    }
+    return;
+  }
+
+  if (segments.length === 3 && segments[2] === "summaries") {
+    if (req.method !== "GET") {
+      json(res, 405, { error: "Method not allowed" });
+      return;
+    }
+    try {
+      const accounts = await store.getAccountSummariesForPhone(phone);
+      json(res, 200, { phone, accounts });
+    } catch (err) {
+      json(res, 500, { error: "Failed to list account summaries", detail: String(err) });
     }
     return;
   }

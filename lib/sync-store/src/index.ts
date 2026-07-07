@@ -180,6 +180,32 @@ export async function setAccountDataBulk(
   }
 }
 
+export interface AccountRoleSummary {
+  role: string;
+  displayName: string;
+}
+
+export async function getAccountSummariesForPhone(phone: string): Promise<AccountRoleSummary[]> {
+  const roles = await getRolesForPhone(phone);
+  const summaries: AccountRoleSummary[] = [];
+
+  for (const role of roles) {
+    const data = await getAccountData(phone, role);
+    let displayName = "";
+    if (typeof data.profile === "string" && data.profile.length > 0) {
+      try {
+        const parsed = JSON.parse(data.profile) as { name?: string };
+        displayName = parsed.name?.trim() ?? "";
+      } catch {
+        /* ignore malformed profile */
+      }
+    }
+    summaries.push({ role, displayName });
+  }
+
+  return summaries;
+}
+
 export async function getRolesForPhone(phone: string): Promise<string[]> {
   const p = normalizePhone(phone);
   if (isMockDbEnabled()) {

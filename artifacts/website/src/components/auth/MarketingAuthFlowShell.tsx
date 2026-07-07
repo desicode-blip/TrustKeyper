@@ -1,0 +1,62 @@
+import React from "react";
+import { HomePage } from "@/pages/HomePage";
+import { MarketingAuthModalHeader } from "@/components/auth/MarketingAuthModalHeader";
+import welcomeBackLogoBrand from "@/assets/marketing/welcome-back-logo-brand.png";
+import logoLight from "@/assets/marketing/logo light.svg";
+
+export interface MarketingAuthFlowShellProps {
+  children: React.ReactNode;
+  /** Accessible name for the desktop modal dialog. */
+  ariaLabel: string;
+  /** Desktop modal header — illustration (default) or brand gradient. */
+  headerVariant?: "illustration" | "brand";
+}
+
+/** Post-OTP auth shell: full page on mobile, centered modal over homepage on desktop. */
+export function MarketingAuthFlowShell({
+  children,
+  ariaLabel,
+  headerVariant = "illustration",
+}: MarketingAuthFlowShellProps) {
+  return (
+    <>
+      <div className="hidden lg:fixed lg:inset-0 lg:z-[100] lg:flex lg:items-center lg:justify-center lg:p-6">
+        <div className="absolute inset-0 bg-[#2b2b2b]/70" aria-hidden />
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="min-h-full">
+            <HomePage />
+          </div>
+        </div>
+
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={ariaLabel}
+          className="relative z-10 flex max-h-[96dvh] w-full max-w-[420px] flex-col overflow-hidden rounded-[20px] bg-white shadow-[0_24px_80px_rgba(0,0,0,0.28)]"
+        >
+          <MarketingAuthModalHeader variant={headerVariant} showClose={false} />
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-6 pt-5 sm:px-6 sm:pb-7 sm:pt-6">
+            {children}
+          </div>
+        </div>
+      </div>
+
+      <div className="min-h-[100dvh] bg-white lg:hidden">
+        <header className="flex h-[120px] shrink-0 items-center justify-center bg-gradient-to-b from-[#305eff] to-[#6b93ff] sm:h-[132px]">
+          <img
+            src={welcomeBackLogoBrand}
+            alt="TrustKeyper"
+            className="h-10 w-auto sm:h-11"
+            draggable={false}
+            onError={(event) => {
+              event.currentTarget.src = logoLight;
+            }}
+          />
+        </header>
+        <main className="mx-auto w-full max-w-md px-5 pb-10 pt-6 sm:max-w-lg sm:px-8 sm:pb-12 sm:pt-8">
+          {children}
+        </main>
+      </div>
+    </>
+  );
+}

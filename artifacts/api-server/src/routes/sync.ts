@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import {
   accountHasProfile,
   getAccountData,
+  getAccountSummariesForPhone,
   getRolesForPhone,
   normalizePhone,
   setAccountDataBulk,
@@ -22,6 +23,20 @@ router.get("/sync/accounts/:phone/roles", async (req, res) => {
     res.json({ phone, roles });
   } catch (err) {
     res.status(500).json({ error: "Failed to list roles", detail: String(err) });
+  }
+});
+
+router.get("/sync/accounts/:phone/summaries", async (req, res) => {
+  try {
+    const phone = normalizePhone(String(req.params.phone ?? ""));
+    if (phone.length !== 10) {
+      res.status(400).json({ error: "Invalid phone" });
+      return;
+    }
+    const accounts = await getAccountSummariesForPhone(phone);
+    res.json({ phone, accounts });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to list account summaries", detail: String(err) });
   }
 });
 
