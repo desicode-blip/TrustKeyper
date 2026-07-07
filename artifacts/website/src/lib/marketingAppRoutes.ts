@@ -28,8 +28,8 @@ export function buildMarketingExistingAccountUrl({
   accessToken,
   refreshToken,
 }: MarketingAppHandoffParams): string {
-  const url = new URL(getMarketingAppBase());
-  url.pathname = dashboardPathFor(role);
+  const base = getMarketingAppBase().replace(/\/$/, "");
+  const url = new URL(`${base}${dashboardPathFor(role)}`);
   url.searchParams.set("phone", phone);
   url.searchParams.set("role", role);
   url.searchParams.set("from", "marketing");

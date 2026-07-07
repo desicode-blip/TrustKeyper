@@ -17,9 +17,24 @@ export function getMarketingApiBase(): string {
   return "/api";
 }
 
-export function getMarketingAppBase(): string {
+function readConfiguredAppUrl(): string | null {
   const configured = import.meta.env.VITE_APP_URL;
-  if (configured) return configured.replace(/\/$/, "");
+  if (typeof configured !== "string" || !configured.trim()) return null;
+  return configured.replace(/\/$/, "");
+}
+
+/** App base URL for post-signup dashboard handoff. */
+export function getMarketingAppBase(): string {
+  const configured = readConfiguredAppUrl();
+  if (configured) return configured;
+
+  if (typeof window !== "undefined") {
+    const { hostname, origin } = window.location;
+    if (hostname === "staging.app.trustkeyper.com") {
+      return `${origin}/_app`;
+    }
+  }
+
   return "https://app.trustkeyper.com";
 }
 

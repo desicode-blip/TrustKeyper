@@ -70,4 +70,22 @@ describe("marketingAppRoutes", () => {
     expect(url.origin).toBe("https://staging.app.trustkeyper.com");
     vi.unstubAllEnvs();
   });
+
+  it("uses /_app prefix on staging co-deploy without env var", () => {
+    vi.stubGlobal("window", {
+      location: {
+        hostname: "staging.app.trustkeyper.com",
+        origin: "https://staging.app.trustkeyper.com",
+      },
+    });
+    const url = new URL(
+      buildMarketingExistingAccountUrl({
+        phone: "6369856040",
+        role: "owner",
+        rememberMe: false,
+      }),
+    );
+    expect(url.pathname).toBe("/_app/owner/dashboard");
+    vi.unstubAllGlobals();
+  });
 });

@@ -20,11 +20,24 @@ export interface MarketingHandoffParams {
 }
 
 const SESSION_HASH_PREFIX = "tk_session=";
+const STAGING_APP_HOST = "staging.app.trustkeyper.com";
 
-export function getMarketingSiteUrl(): string | null {
+function readConfiguredMarketingUrl(): string | null {
   const configured = import.meta.env.VITE_MARKETING_URL;
   if (typeof configured !== "string" || !configured.trim()) return null;
   return configured.replace(/\/$/, "");
+}
+
+/** Marketing site URL for auth entry redirects (env or staging co-deploy on same origin). */
+export function getMarketingSiteUrl(): string | null {
+  const configured = readConfiguredMarketingUrl();
+  if (configured) return configured;
+
+  if (typeof window !== "undefined" && window.location.hostname === STAGING_APP_HOST) {
+    return window.location.origin;
+  }
+
+  return null;
 }
 
 export function buildMarketingAuthRedirectUrl(mode: "login" | "signup"): string | null {

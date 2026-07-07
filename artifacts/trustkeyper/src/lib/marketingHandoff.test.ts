@@ -22,11 +22,27 @@ describe("marketingHandoff", () => {
 });
 
 describe("marketingHandoff with VITE_MARKETING_URL", () => {
-  it("builds login and signup redirect urls", () => {
+  it("builds login and signup redirect urls from env", () => {
     vi.stubEnv("VITE_MARKETING_URL", "https://staging.trustkeyper.com");
     expect(getMarketingSiteUrl()).toBe("https://staging.trustkeyper.com");
     expect(buildMarketingAuthRedirectUrl("login")).toBe("https://staging.trustkeyper.com#login");
     expect(buildMarketingAuthRedirectUrl("signup")).toBe("https://staging.trustkeyper.com#signup");
     vi.unstubAllEnvs();
+  });
+});
+
+describe("marketingHandoff on staging co-deploy", () => {
+  it("uses same origin on staging.app without env var", () => {
+    vi.stubGlobal("window", {
+      location: {
+        hostname: "staging.app.trustkeyper.com",
+        origin: "https://staging.app.trustkeyper.com",
+      },
+    });
+    expect(getMarketingSiteUrl()).toBe("https://staging.app.trustkeyper.com");
+    expect(buildMarketingAuthRedirectUrl("signup")).toBe(
+      "https://staging.app.trustkeyper.com#signup",
+    );
+    vi.unstubAllGlobals();
   });
 });

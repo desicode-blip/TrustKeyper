@@ -6,6 +6,7 @@ import { ExistingAccountPage } from "@/pages/ExistingAccountPage";
 import { MarketingSignupRolePage } from "@/pages/MarketingSignupRolePage";
 import { MarketingOwnerSignupPage } from "@/pages/MarketingOwnerSignupPage";
 import { MarketingBrokerSignupPage } from "@/pages/MarketingBrokerSignupPage";
+import { MarketingLoginEntryPage } from "@/pages/MarketingLoginEntryPage";
 import { TermsPage } from "@/pages/TermsPage";
 import { AboutPage } from "@/pages/AboutPage";
 import { ContactPage } from "@/pages/ContactPage";
@@ -28,6 +29,9 @@ export default function App() {
         </Route>
         <Route path="/login/existing">
           <ExistingAccountPage />
+        </Route>
+        <Route path="/login">
+          <MarketingLoginEntryPage />
         </Route>
         <Route path="/signup/role/mock">
           <MarketingSignupRolePage mock />

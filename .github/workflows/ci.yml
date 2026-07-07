@@ -33,14 +33,17 @@ jobs:
 
       - name: Production build (same as Vercel buildCommand)
         run: pnpm run build:deploy
-
-      - name: Build marketing website
-        run: pnpm run build:website
+        env:
+          COMBINED_MARKETING_DEPLOY: ${{ github.ref == 'refs/heads/staging' && '1' || '0' }}
 
       - name: Assert build artifacts exist
         run: |
           test -f lib/broker-tenant-onboarding/dist/index.js || (echo "broker-tenant-onboarding dist missing" && exit 1)
-          test -f artifacts/trustkeyper/dist/index.html      || (echo "SPA index.html missing" && exit 1)
-          test -f artifacts/api-server/dist/index.mjs          || (echo "API server bundle missing" && exit 1)
-          test -f artifacts/website/dist/index.html          || (echo "marketing website index.html missing" && exit 1)
+          test -f dist-vercel/index.html || (echo "dist-vercel index.html missing" && exit 1)
+          test -f artifacts/api-server/dist/index.mjs || (echo "API server bundle missing" && exit 1)
+          if [ "${COMBINED_MARKETING_DEPLOY}" = "1" ]; then
+            test -f dist-vercel/_app/index.html || (echo "combined app index.html missing" && exit 1)
+          fi
           echo "Build artifacts verified."
+        env:
+          COMBINED_MARKETING_DEPLOY: ${{ github.ref == 'refs/heads/staging' && '1' || '0' }}

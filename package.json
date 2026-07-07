@@ -5,7 +5,7 @@
   "packageManager": "pnpm@11.10.0",
   "scripts": {
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "build:deploy": "pnpm run typecheck:deploy && pnpm --filter @workspace/broker-tenant-onboarding run build && pnpm --filter @workspace/tenant-document-upload run build && pnpm --filter @workspace/tenant-workflow run build && pnpm --filter @workspace/trustkeyper run build && pnpm --filter @workspace/api-server run build",
+    "build:deploy": "pnpm run typecheck:deploy && pnpm --filter @workspace/broker-tenant-onboarding run build && pnpm --filter @workspace/tenant-document-upload run build && pnpm --filter @workspace/tenant-workflow run build && pnpm --filter @workspace/api-server run build && node scripts/build-vercel-output.mjs",
     "build:website": "pnpm --filter @workspace/website run build",
     "check:drizzle-singleton": "node scripts/check-drizzle-singleton.mjs",
     "db:down": "docker compose down",

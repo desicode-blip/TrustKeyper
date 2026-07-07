@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm run typecheck:deploy && pnpm --filter @workspace/broker-tenant-onboarding run build && pnpm --filter @workspace/tenant-document-upload run build && pnpm --filter @workspace/tenant-workflow run build && pnpm --filter @workspace/trustkeyper run build",
-  "outputDirectory": "artifacts/trustkeyper/dist",
+  "buildCommand": "pnpm run typecheck:deploy && pnpm --filter @workspace/broker-tenant-onboarding run build && pnpm --filter @workspace/tenant-document-upload run build && pnpm --filter @workspace/tenant-workflow run build && pnpm --filter @workspace/api-server run build && node scripts/build-vercel-output.mjs",
+  "outputDirectory": "dist-vercel",
   "installCommand": "pnpm install",
   "functions": {
     "api/sync.ts": {
@@ -40,6 +40,58 @@
       "maxDuration": 30
     }
   },
+  "redirects": [
+    {
+      "source": "/owner",
+      "destination": "/_app/owner/dashboard",
+      "permanent": false
+    },
+    {
+      "source": "/owner/:path*",
+      "destination": "/_app/owner/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/broker",
+      "destination": "/_app/broker/dashboard",
+      "permanent": false
+    },
+    {
+      "source": "/broker/:path*",
+      "destination": "/_app/broker/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/tenant",
+      "destination": "/_app/tenant/dashboard",
+      "permanent": false
+    },
+    {
+      "source": "/tenant/:path*",
+      "destination": "/_app/tenant/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "/_app/admin/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/share/:path*",
+      "destination": "/_app/share/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/onboard/:path*",
+      "destination": "/_app/onboard/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/upload/:path*",
+      "destination": "/_app/upload/:path*",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/sync/(.*)",
@@ -66,7 +118,11 @@
       "destination": "/api/tenant-workflow?workflowPath=$1"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/_app/:path*",
+      "destination": "/_app/index.html"
+    },
+    {
+      "source": "/((?!api/|_app/).*)",
       "destination": "/index.html"
     }
   ]
