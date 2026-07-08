@@ -1,3 +1,4 @@
+import { getRazorpayClient } from "./razorpayClient.js";
 import { getPool } from "./vercelSyncDb.js";
 
 export type OrderTransferItem = {
@@ -126,6 +127,68 @@ export async function updateRecipientValidationStatus(params: {
     [linkedAccountId ?? null, productId ?? null, validationStatus],
   );
   return result.rowCount ?? 0;
+}
+
+export type SyncRecipientValidationResult = {
+  validationStatus: string;
+  activationStatus: string | null;
+  synced: boolean;
+};
+
+/**
+ * Re-fetch Route product activation from Razorpay and mirror into
+ * payment_recipient_config. Used by status endpoint (missed webhooks)
+ * and one-off repair scripts. Falls back to stored status on Razorpay errors.
+ */
+export async function syncRecipientValidationFromRazorpay(params: {
+  linkedAccountId: string;
+  productId: string;
+  currentValidationStatus: string;
+}): Promise<SyncRecipientValidationResult> {
+  const { linkedAccountId, productId, currentValidationStatus } = params;
+
+  try {
+    const product = await getRazorpayClient().products.fetch(linkedAccountId, productId);
+    const activationStatus =
+      product && typeof product === "object" && typeof product.activation_status === "string"
+        ? product.activation_status
+        : null;
+    const validationStatus = validationStatusFromActivationStatus(
+      activationStatus,
+      currentValidationStatus,
+    );
+
+    if (validationStatus !== currentValidationStatus) {
+      await updateRecipientValidationStatus({
+        linkedAccountId,
+        productId,
+        validationStatus,
+      });
+      return { validationStatus, activationStatus, synced: true };
+    }
+
+    // Backfill activated_at when Razorpay says activated but DB never got the webhook.
+    if (validationStatus === "activated") {
+      await updateRecipientValidationStatus({
+        linkedAccountId,
+        productId,
+        validationStatus,
+      });
+    }
+
+    return { validationStatus, activationStatus, synced: false };
+  } catch (err) {
+    console.error("syncRecipientValidationFromRazorpay failed", {
+      linkedAccountId,
+      productId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return {
+      validationStatus: currentValidationStatus,
+      activationStatus: null,
+      synced: false,
+    };
+  }
 }
 
 /** Attach a Razorpay transfer id to the rent payment row for an order (idempotent). */

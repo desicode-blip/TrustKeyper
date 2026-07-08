@@ -2,7 +2,10 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
 import { json, readJsonBody } from "./http.js";
 import { getRazorpayClient } from "./razorpayClient.js";
-import { validationStatusFromActivationStatus } from "./razorpayRouteHelpers.js";
+import {
+  syncRecipientValidationFromRazorpay,
+  validationStatusFromActivationStatus,
+} from "./razorpayRouteHelpers.js";
 import { assertPaymentAuth } from "./syncAuth.js";
 import { getPool } from "./vercelSyncDb.js";
 
@@ -690,9 +693,20 @@ export async function handlePaymentOnboardStatusRequest(
   }
 
   try {
-    const config = await getRecipientConfig(phone, role);
+    const config = await getFullRecipientConfig(phone, role);
+    let validationStatus = config?.validation_status ?? "pending";
+
+    if (config?.razorpay_linked_account_id && config.razorpay_product_id) {
+      const synced = await syncRecipientValidationFromRazorpay({
+        linkedAccountId: config.razorpay_linked_account_id,
+        productId: config.razorpay_product_id,
+        currentValidationStatus: config.validation_status,
+      });
+      validationStatus = synced.validationStatus;
+    }
+
     json(res, 200, {
-      validationStatus: config?.validation_status ?? "pending",
+      validationStatus,
       hasLinkedAccount: Boolean(config?.razorpay_linked_account_id),
       accountId: config?.razorpay_linked_account_id ?? null,
     });
