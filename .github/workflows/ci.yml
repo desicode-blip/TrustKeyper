@@ -32,6 +32,9 @@ jobs:
         run: pnpm run typecheck:deploy
 
       - name: Test (trustkeyper + website)
+        env:
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: placeholder-anon-key-for-ci-tests-only
         run: pnpm run test:run
 
       - name: Test (Vercel /api routes)
