@@ -31,6 +31,12 @@ jobs:
       - name: Typecheck (libs, Vercel /api routes, artifacts)
         run: pnpm run typecheck:deploy
 
+      - name: Test (trustkeyper + website)
+        run: pnpm run test:run
+
+      - name: Test (Vercel /api routes)
+        run: pnpm run test:api
+
       - name: Production build (same as Vercel buildCommand)
         run: pnpm run build:deploy
 
