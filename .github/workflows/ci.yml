@@ -32,6 +32,7 @@ jobs:
         run: pnpm run typecheck:deploy
 
       - name: Test (trustkeyper + website)
+        # Placeholder Supabase env — satisfies createClient() at import time in vitest
         env:
           VITE_SUPABASE_URL: https://placeholder.supabase.co
           VITE_SUPABASE_ANON_KEY: placeholder-anon-key-for-ci-tests-only
