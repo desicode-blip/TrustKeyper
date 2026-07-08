@@ -52,6 +52,9 @@ Thumbs.db
 # API file-store fallback (dev / no DATABASE_URL)
 .data/
 
+# Vercel combined build output (local artifact)
+dist-vercel/
+
 # Local env (secrets)
 .env
 .env.*
