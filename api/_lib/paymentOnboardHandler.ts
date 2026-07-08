@@ -204,7 +204,7 @@ async function upsertRecipientKyc(params: {
        business_category, business_subcategory, business_type,
        bank_account_number, bank_ifsc, bank_holder_name,
        created_at, updated_at
-     ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'housing', 'real_estate_agents', 'individual', $7, $8, $9, NOW(), NOW())
+     ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'housing', 'space_rental', 'individual', $7, $8, $9, NOW(), NOW())
      ON CONFLICT (phone, role) DO UPDATE SET
        legal_name = EXCLUDED.legal_name,
        email = EXCLUDED.email,
@@ -266,7 +266,7 @@ export function buildRazorpayAccountPayload(body: OnboardBody, referenceId: stri
     business_type: "individual",
     profile: {
       category: "housing",
-      subcategory: "real_estate_agents",
+      subcategory: "space_rental",
       business_model: "Individual property owner collecting monthly rent",
       addresses: {
         registered: {
