@@ -31,6 +31,12 @@ jobs:
       - name: Typecheck (libs, Vercel /api routes, artifacts)
         run: pnpm run typecheck:deploy
 
+      - name: Build workspace libs
+        run: |
+          pnpm --filter @workspace/broker-tenant-onboarding run build
+          pnpm --filter @workspace/tenant-document-upload run build
+          pnpm --filter @workspace/tenant-workflow run build
+
       - name: Test (trustkeyper + website)
         # Placeholder Supabase env — satisfies createClient() at import time in vitest
         env:
