@@ -1,7 +1,16 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { setMarketingCorsHeaders, type MarketingCorsRoute } from "./marketingCors.js";
 
-export function json(res: VercelResponse, status: number, body: unknown): void {
+export function json(
+  res: VercelResponse,
+  status: number,
+  body: unknown,
+  cors?: { origin: string; route: MarketingCorsRoute },
+): void {
   res.status(status).setHeader("Content-Type", "application/json");
+  if (cors) {
+    setMarketingCorsHeaders(res, cors.origin, cors.route);
+  }
   res.end(JSON.stringify(body));
 }
 

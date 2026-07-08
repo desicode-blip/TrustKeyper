@@ -1,6 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { assertSyncAccountAuth } from "./syncAuth.js";
 import { json, readJsonBody } from "./http.js";
+import {
+  getMarketingCorsRoute,
+  handleMarketingCorsPreflight,
+  resolveMarketingCorsOrigin,
+} from "./marketingCors.js";
 import * as vercelDb from "./vercelSyncDb.js";
 
 export function syncPathSegments(req: VercelRequest): string[] {
@@ -38,12 +43,24 @@ function requestAuthorization(req: VercelRequest): string | undefined {
   return header;
 }
 
+function syncCors(
+  req: VercelRequest,
+  segments: string[],
+): { origin: string; route: NonNullable<ReturnType<typeof getMarketingCorsRoute>> } | undefined {
+  const origin = resolveMarketingCorsOrigin(req, segments);
+  const route = getMarketingCorsRoute(segments, req.method);
+  if (!origin || !route) return undefined;
+  return { origin, route };
+}
+
 /**
  * Handles sync routes after vercel.json rewrites /api/sync/* → /api/sync?syncPath=...
  */
 export async function handleSyncRequest(req: VercelRequest, res: VercelResponse): Promise<void> {
   const store = await loadSyncStore();
   const segments = syncPathSegments(req);
+
+  if (handleMarketingCorsPreflight(req, res, segments)) return;
 
   if (segments[0] !== "accounts") {
     json(res, 404, { error: "Not found" });
@@ -57,29 +74,31 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
   }
 
   if (segments.length === 3 && segments[2] === "roles") {
+    const cors = syncCors(req, segments);
     if (req.method !== "GET") {
-      json(res, 405, { error: "Method not allowed" });
+      json(res, 405, { error: "Method not allowed" }, cors);
       return;
     }
     try {
       const roles = await store.getRolesForPhone(phone);
-      json(res, 200, { phone, roles });
+      json(res, 200, { phone, roles }, cors);
     } catch (err) {
-      json(res, 500, { error: "Failed to list roles", detail: String(err) });
+      json(res, 500, { error: "Failed to list roles", detail: String(err) }, cors);
     }
     return;
   }
 
   if (segments.length === 3 && segments[2] === "summaries") {
+    const cors = syncCors(req, segments);
     if (req.method !== "GET") {
-      json(res, 405, { error: "Method not allowed" });
+      json(res, 405, { error: "Method not allowed" }, cors);
       return;
     }
     try {
       const accounts = await store.getAccountSummariesForPhone(phone);
-      json(res, 200, { phone, accounts });
+      json(res, 200, { phone, accounts }, cors);
     } catch (err) {
-      json(res, 500, { error: "Failed to list account summaries", detail: String(err) });
+      json(res, 500, { error: "Failed to list account summaries", detail: String(err) }, cors);
     }
     return;
   }
@@ -155,13 +174,14 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
   }
 
   if (segments.length === 4) {
+    const cors = segments[3] === "profile" ? syncCors(req, segments) : undefined;
     if (req.method !== "PUT") {
-      json(res, 405, { error: "Method not allowed" });
+      json(res, 405, { error: "Method not allowed" }, cors);
       return;
     }
     const auth = await assertSyncAccountAuth(requestAuthorization(req), phone);
     if (!auth.ok) {
-      json(res, auth.status, { error: auth.error });
+      json(res, auth.status, { error: auth.error }, cors);
       return;
     }
     try {
@@ -170,14 +190,14 @@ export async function handleSyncRequest(req: VercelRequest, res: VercelResponse)
       const value = typeof body?.value === "string" ? body.value : null;
 
       if (!dataKey || value === null) {
-        json(res, 400, { error: "Invalid request" });
+        json(res, 400, { error: "Invalid request" }, cors);
         return;
       }
 
       await store.setAccountDataKey(phone, role, dataKey, value);
-      json(res, 200, { ok: true });
+      json(res, 200, { ok: true }, cors);
     } catch (err) {
-      json(res, 500, { error: "Failed to save data", detail: String(err) });
+      json(res, 500, { error: "Failed to save data", detail: String(err) }, cors);
     }
     return;
   }
