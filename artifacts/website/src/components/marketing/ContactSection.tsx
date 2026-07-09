@@ -41,7 +41,11 @@ export function ContactSection() {
           </div>
         </div>
 
-        <ContactForm />
+        <div className="overflow-hidden rounded-[24px] bg-white p-5 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)] sm:p-8 lg:p-10">
+          <div className="[&_>div]:rounded-none [&_>div]:bg-transparent [&_>div]:p-0 [&_>div]:shadow-none [&_>div]:ring-0">
+            <ContactForm />
+          </div>
+        </div>
       </div>
     </section>
   );

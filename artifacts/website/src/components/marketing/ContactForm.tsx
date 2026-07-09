@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ChevronDown, Home, IndianRupee, Loader2, User } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import {
   buildContactSubmitPayload,
   CONTACT_SERVICE_TIMINGS,
@@ -12,7 +12,6 @@ import {
   type ContactFormErrors,
   type ContactFormField,
   type ContactFormValues,
-  type ContactUserRole,
 } from "@/lib/contactFormSchema";
 import { getMarketingApiBase } from "@/lib/marketingAuthLookup";
 import { cn } from "@/lib/utils";
@@ -29,12 +28,6 @@ const EMPTY_VALUES: ContactFormValues = {
 
 type SubmitState = "idle" | "loading" | "success" | "error";
 type SubmitErrorKind = "rate_limit" | "generic";
-
-const ROLE_ICONS: Record<ContactUserRole, typeof User> = {
-  property_owner: User,
-  tenant: Home,
-  broker: IndianRupee,
-};
 
 function FieldLabel({
   children,
@@ -271,9 +264,8 @@ export function ContactForm() {
 
         <div>
           <FieldLabel required>I am A</FieldLabel>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="flex flex-wrap gap-x-[15px] gap-y-3 px-[14px]">
             {CONTACT_USER_ROLES.map((role) => {
-              const Icon = ROLE_ICONS[role.id];
               const selected = values.role === role.id;
 
               return (
@@ -282,24 +274,22 @@ export function ContactForm() {
                   type="button"
                   aria-pressed={selected}
                   onClick={() => updateField("role", role.id)}
-                  className={cn(
-                    "flex min-h-[88px] flex-col items-center justify-center gap-2 rounded-xl border px-3 py-4 text-center transition-colors",
-                    selected
-                      ? "border-0 border-b-2 border-marketing-green bg-marketing-mint-card text-marketing-navy shadow-[1px_2px_5px_rgba(103,103,103,0.08)]"
-                      : "border border-marketing-border bg-[#f8fafc] text-marketing-body hover:border-marketing-muted/40",
-                  )}
+                  className="flex items-center gap-[7px] transition-colors"
                 >
                   <span
                     className={cn(
-                      "flex h-9 w-9 items-center justify-center rounded-full",
-                      selected
-                        ? "bg-marketing-green text-white"
-                        : "bg-white text-marketing-muted",
+                      "flex size-4 shrink-0 items-center justify-center rounded-full border border-[#e3e9ff] bg-marketing-cloud-050",
+                      selected && "border-marketing-green",
                     )}
                   >
-                    <Icon size={18} strokeWidth={1.75} aria-hidden />
+                    <span
+                      className={cn(
+                        "size-2 rounded-full bg-marketing-green transition-opacity",
+                        selected ? "opacity-100" : "opacity-0",
+                      )}
+                    />
                   </span>
-                  <span className="text-sm font-medium">{role.label}</span>
+                  <span className="text-sm text-marketing-neutral-700">{role.label}</span>
                 </button>
               );
             })}
