@@ -65,6 +65,8 @@
   --color-marketing-neutral-1100: #243547;
   --color-marketing-hero-gradient-start: #0c2837;
   --color-marketing-neutral-1300: #0c1927;
+  /* Figma Accent/Cloud */
+  --color-marketing-cloud-050: #edf4f7;
 }
 
 @layer base {
