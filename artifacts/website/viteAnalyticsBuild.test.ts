@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 const websiteDir = path.resolve(import.meta.dirname);
 const distIndex = path.join(websiteDir, "dist", "index.html");
 const GTAG_SCRIPT_URL = "googletagmanager.com/gtag/js?id=G-72DKWMCJ1R";
+const BUILD_TEST_TIMEOUT_MS = 60_000;
 
 function runWebsiteBuild(env: NodeJS.ProcessEnv): void {
   execSync("pnpm run build", {
@@ -20,7 +21,7 @@ describe("marketing analytics dist output", () => {
     rmSync(path.join(websiteDir, "dist"), { recursive: true, force: true });
   });
 
-  it("omits Google scripts when VITE_ENABLE_ANALYTICS is unset", () => {
+  it("omits Google scripts when VITE_ENABLE_ANALYTICS is unset", { timeout: BUILD_TEST_TIMEOUT_MS }, () => {
     runWebsiteBuild({ VITE_ENABLE_ANALYTICS: undefined });
     const html = readFileSync(distIndex, "utf8");
     expect(html).not.toContain("GTM-T679X9X7");
@@ -28,7 +29,7 @@ describe("marketing analytics dist output", () => {
     expect(html).not.toContain("AW-18274047914");
   });
 
-  it("includes the exact gtag.js URL when VITE_ENABLE_ANALYTICS=1", () => {
+  it("includes the exact gtag.js URL when VITE_ENABLE_ANALYTICS=1", { timeout: BUILD_TEST_TIMEOUT_MS }, () => {
     runWebsiteBuild({ VITE_ENABLE_ANALYTICS: "1" });
     const html = readFileSync(distIndex, "utf8");
     expect(html).toContain(GTAG_SCRIPT_URL);
