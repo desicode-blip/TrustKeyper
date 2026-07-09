@@ -29,6 +29,7 @@
     "tailwindcss": "catalog:",
     "vite": "catalog:",
     "vitest": "^3.2.4",
+    "playwright": "^1.52.0",
     "wouter": "catalog:"
   }
 }

@@ -9,10 +9,12 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    fileParallelism: false,
     include: [
       "src/**/*.test.ts",
       "viteAnalyticsPlugin.test.ts",
       "viteAnalyticsBuild.test.ts",
+      "marketingAuthFlowShellDesktop.test.ts",
     ],
   },
 });
