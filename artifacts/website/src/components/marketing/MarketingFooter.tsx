@@ -1,17 +1,43 @@
 import React from "react";
 import { Link } from "wouter";
-import { Mail, Phone } from "lucide-react";
+import { Facebook, Instagram, Linkedin, Mail, MapPin, Phone } from "lucide-react";
 import logoLight from "@/assets/marketing/Property 1=Logo Light.svg";
 import footerBackground from "@/assets/marketing/footer-background.png";
-import { CONTACT, FOOTER_ADDRESSES } from "@/lib/marketingConstants";
+import {
+  CONTACT,
+  FOOTER_ADDRESSES,
+  FOOTER_RENTAL_FUNDS_DISCLAIMER,
+  FOOTER_TAGLINE,
+} from "@/lib/marketingConstants";
 import { cn } from "@/lib/utils";
 
-const FOOTER_LINKS = [
+/** Flip to true once GTM/cookie consent ships and the destination URL is known. */
+const SHOW_COOKIE_PREFERENCES_LINK = false;
+
+const LEGAL_LINKS = [
+  { label: "Privacy Policy", href: "/privacy-policy" },
   { label: "Terms & Conditions", href: "/terms-and-conditions" },
+] as const;
+
+const COMPANY_LINKS = [
   { label: "About Us", href: "/about-us" },
   { label: "FAQs", href: "/faqs" },
-  { label: "Privacy Policy", href: "/privacy-policy" },
 ] as const;
+
+// PLACEHOLDER: bare platform homepages until TrustKeyper company page URLs are confirmed (follow-up PR).
+const FOOTER_SOCIAL_LINKS = [
+  { label: "TrustKeyper on LinkedIn", href: "https://www.linkedin.com/", Icon: Linkedin },
+  { label: "TrustKeyper on Facebook", href: "https://www.facebook.com/", Icon: Facebook },
+  { label: "TrustKeyper on Instagram", href: "https://www.instagram.com/", Icon: Instagram },
+] as const;
+
+const contactRowClassName =
+  "flex items-start gap-3 font-roboto text-base text-marketing-neutral-300 transition-colors hover:text-white";
+
+const footerGroupHeadingClassName = "mb-4 font-roboto text-base font-medium text-white";
+
+const footerLinkClassName =
+  "font-roboto text-base text-marketing-neutral-300 transition-colors hover:text-white";
 
 export interface MarketingFooterProps {
   className?: string;
@@ -29,79 +55,94 @@ export function MarketingFooter({ className }: MarketingFooterProps) {
 
       <div className="relative z-10">
         <div className="mx-auto w-full max-w-[1168px] px-6 py-14 sm:px-8 lg:px-0 lg:py-[62px]">
-          <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 sm:gap-10 lg:grid-cols-12 lg:items-start lg:gap-x-12">
-            <div className="flex items-start sm:col-span-2 lg:col-span-3">
+          <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-16">
+            <div className="max-w-md space-y-5">
               <img
                 src={logoLight}
                 alt="TrustKeyper"
                 className="h-10 w-auto sm:h-12"
                 draggable={false}
               />
-            </div>
 
-            <nav className="flex flex-col gap-4 sm:col-span-1 lg:col-span-2" aria-label="Footer">
-              {FOOTER_LINKS.map((link) => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  className="font-roboto text-base text-marketing-neutral-300 transition-colors hover:text-white"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
+              <p className="font-roboto text-base leading-relaxed text-marketing-neutral-300">
+                {FOOTER_TAGLINE}
+              </p>
 
-            <div className="space-y-6 text-sm leading-[1.65] text-marketing-neutral-500 sm:col-span-1 lg:col-span-3 lg:space-y-6 lg:leading-[1.7]">
-              <div>
-                <p className="mb-2 font-roboto text-base font-medium text-white lg:mb-2.5">
-                  {FOOTER_ADDRESSES.noida.label}
-                </p>
-                <p className="font-roboto">{FOOTER_ADDRESSES.noida.lines}</p>
-              </div>
-              <div>
-                <p className="mb-2 font-roboto text-base font-medium text-white lg:mb-2.5">
-                  {FOOTER_ADDRESSES.bengaluru.label}
-                </p>
-                <p className="font-roboto">{FOOTER_ADDRESSES.bengaluru.lines}</p>
-              </div>
-            </div>
-
-            <div className="space-y-6 text-sm leading-[1.65] text-marketing-neutral-500 sm:col-span-2 lg:col-span-4 lg:space-y-6 lg:leading-[1.7]">
-              <div>
-                <p className="mb-3 font-roboto text-base font-medium text-white lg:mb-4">
-                  Contact :
-                </p>
-                <a
-                  href={CONTACT.phoneHref}
-                  className="mb-2.5 flex items-center gap-3 font-roboto text-base text-marketing-neutral-300 transition-colors hover:text-white lg:mb-3"
-                >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] ring-1 ring-white/10">
-                    <Phone size={14} strokeWidth={2} aria-hidden />
+              <div className="space-y-3">
+                <a href={CONTACT.emailHref} className={contactRowClassName}>
+                  <Mail size={16} strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden />
+                  <span className="underline decoration-white/25 underline-offset-[3px] hover:decoration-white/50">
+                    {CONTACT.email}
                   </span>
+                </a>
+
+                <a href={CONTACT.phoneHref} className={contactRowClassName}>
+                  <Phone size={16} strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden />
                   <span>{CONTACT.phone}</span>
                 </a>
-                <a
-                  href={CONTACT.emailHref}
-                  className="flex items-center gap-3 font-roboto text-base text-marketing-neutral-300 underline decoration-white/25 underline-offset-[3px] transition-colors hover:text-white hover:decoration-white/50"
-                >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] ring-1 ring-white/10">
-                    <Mail size={14} strokeWidth={2} aria-hidden />
-                  </span>
-                  <span>{CONTACT.email}</span>
-                </a>
+
+                <div className="flex items-start gap-3 font-roboto text-base text-marketing-neutral-300">
+                  <MapPin size={16} strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden />
+                  <span>{FOOTER_ADDRESSES.headOffice.lines}</span>
+                </div>
               </div>
-              <div>
-                <p className="mb-2 font-roboto text-base font-medium text-white lg:mb-2.5">
-                  {FOOTER_ADDRESSES.headOffice.label}
-                </p>
-                <p className="font-roboto">{FOOTER_ADDRESSES.headOffice.lines}</p>
+
+              <div className="flex items-center gap-4 pt-1">
+                {FOOTER_SOCIAL_LINKS.map(({ label, href, Icon }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                    className="flex size-9 items-center justify-center rounded-full bg-white/[0.06] text-marketing-neutral-300 ring-1 ring-white/10 transition-colors hover:text-white"
+                  >
+                    <Icon size={16} strokeWidth={2} aria-hidden />
+                  </a>
+                ))}
               </div>
+            </div>
+
+            <div className="flex flex-col gap-8 lg:pt-1">
+              <nav aria-label="Legal">
+                <p className={footerGroupHeadingClassName}>Legal</p>
+                <div className="flex flex-col gap-4">
+                  {LEGAL_LINKS.map((link) => (
+                    <Link key={link.label} href={link.href} className={footerLinkClassName}>
+                      {link.label}
+                    </Link>
+                  ))}
+                  {SHOW_COOKIE_PREFERENCES_LINK ? (
+                    <Link href="/cookie-preferences" className={footerLinkClassName}>
+                      Cookie Preferences
+                    </Link>
+                  ) : null}
+                </div>
+              </nav>
+
+              <nav aria-label="Company">
+                <p className={footerGroupHeadingClassName}>Company</p>
+                <div className="flex flex-col gap-4">
+                  {COMPANY_LINKS.map((link) => (
+                    <Link key={link.label} href={link.href} className={footerLinkClassName}>
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              </nav>
             </div>
           </div>
 
-          <p className="mt-8 border-t border-white/10 pt-6 text-center font-roboto text-xs text-marketing-neutral-500 md:mt-10 md:hidden">
-            © {new Date().getFullYear()} TrustKeyper
-          </p>
+          <div className="mt-10 border-t border-white/10 pt-6 lg:mt-14 lg:pt-8">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
+              <p className="shrink-0 font-roboto text-sm text-marketing-neutral-500">
+                © {new Date().getFullYear()} TrustKeyper. All rights reserved.
+              </p>
+              <p className="max-w-xl font-roboto text-sm leading-relaxed text-marketing-neutral-500 lg:text-right">
+                {FOOTER_RENTAL_FUNDS_DISCLAIMER}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </footer>
