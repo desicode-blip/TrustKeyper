@@ -55,11 +55,11 @@ export function MarketingFooter({ className }: MarketingFooterProps) {
         src={footerDecoration}
         alt=""
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-[40px] hidden h-[353px] w-[560px] max-w-[58%] -translate-x-[8%] select-none lg:block"
+        className="pointer-events-none absolute left-1/2 top-[40px] z-0 hidden h-[353px] w-[min(560px,46vw)] -translate-x-1/2 select-none lg:block"
       />
 
       <div className="relative z-10">
-        <div className="mx-auto w-full max-w-[1168px] px-6 py-14 sm:px-8 lg:px-0 lg:pb-10 lg:pt-[62px]">
+        <div className="mx-auto w-full max-w-[1168px] px-6 py-14 sm:px-8 lg:px-8 lg:pb-10 lg:pt-[62px]">
           <div className="flex flex-col gap-10 lg:min-h-[372px] lg:flex-row lg:items-start lg:justify-between lg:gap-16">
             <div className="max-w-[440px] space-y-5">
               <img
@@ -106,7 +106,7 @@ export function MarketingFooter({ className }: MarketingFooterProps) {
               </div>
             </div>
 
-            <div className="flex flex-col gap-8 lg:ml-auto lg:w-[146px] lg:shrink-0">
+            <div className="relative z-10 flex flex-col gap-8 lg:ml-auto lg:w-[146px] lg:shrink-0">
               <nav aria-label="Legal">
                 <p className={footerGroupHeadingClassName}>Legal</p>
                 <div className="flex flex-col gap-4">
