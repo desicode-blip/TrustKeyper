@@ -21,12 +21,12 @@ export function MarketingAuthFlowShell({
   return (
     <>
       <div className="hidden lg:fixed lg:inset-0 lg:z-[100] lg:flex lg:items-center lg:justify-center lg:p-6">
-        <div className="absolute inset-0 bg-[#2b2b2b]/70" aria-hidden />
-        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden>
           <div className="min-h-full">
             <HomePage />
           </div>
         </div>
+        <div className="absolute inset-0 z-[1] bg-[#2b2b2b]/70" aria-hidden />
 
         <div
           role="dialog"

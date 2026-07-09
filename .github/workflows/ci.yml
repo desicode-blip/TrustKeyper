@@ -37,12 +37,21 @@ jobs:
           pnpm --filter @workspace/tenant-document-upload run build
           pnpm --filter @workspace/tenant-workflow run build
 
-      - name: Test (trustkeyper + website)
+      - name: Test (trustkeyper)
         # Placeholder Supabase env — satisfies createClient() at import time in vitest
         env:
           VITE_SUPABASE_URL: https://placeholder.supabase.co
           VITE_SUPABASE_ANON_KEY: placeholder-anon-key-for-ci-tests-only
-        run: pnpm run test:run
+        run: pnpm --filter @workspace/trustkeyper run test:run
+
+      - name: Install Playwright Chromium (marketing website)
+        run: pnpm --filter @workspace/website exec playwright install chromium --with-deps
+
+      - name: Test (marketing website)
+        env:
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: placeholder-anon-key-for-ci-tests-only
+        run: pnpm --filter @workspace/website run test:run
 
       - name: Test (Vercel /api routes)
         run: pnpm run test:api
