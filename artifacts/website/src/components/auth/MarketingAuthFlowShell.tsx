@@ -41,21 +41,28 @@ export function MarketingAuthFlowShell({
         </div>
       </div>
 
-      <div className="min-h-[100dvh] bg-white lg:hidden">
-        <header className="flex h-[120px] shrink-0 items-center justify-center bg-gradient-to-b from-[#305eff] to-[#6b93ff] sm:h-[132px]">
-          <img
-            src={welcomeBackLogoBrand}
-            alt="TrustKeyper"
-            className="h-10 w-auto sm:h-11"
-            draggable={false}
-            onError={(event) => {
-              event.currentTarget.src = logoLight;
-            }}
-          />
-        </header>
-        <main className="mx-auto w-full max-w-md px-5 pb-10 pt-6 sm:max-w-lg sm:px-8 sm:pb-12 sm:pt-8">
-          {children}
-        </main>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2b2b2b]/70 px-4 py-6 lg:hidden">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={ariaLabel}
+          className="relative flex max-h-[90dvh] w-full max-w-[420px] flex-col overflow-hidden rounded-[20px] bg-white shadow-[0_24px_80px_rgba(0,0,0,0.28)]"
+        >
+          <header className="flex h-[120px] shrink-0 items-center justify-center bg-gradient-to-b from-[#305eff] to-[#6b93ff] sm:h-[132px]">
+            <img
+              src={welcomeBackLogoBrand}
+              alt="TrustKeyper"
+              className="h-10 w-auto sm:h-11"
+              draggable={false}
+              onError={(event) => {
+                event.currentTarget.src = logoLight;
+              }}
+            />
+          </header>
+          <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-6 pt-5 sm:px-6 sm:pb-7 sm:pt-6">
+            {children}
+          </main>
+        </div>
       </div>
     </>
   );

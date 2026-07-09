@@ -104,7 +104,7 @@ export function HeroSection() {
           </div>
 
           <div className="flex flex-col items-center lg:hidden">
-            <HeroCenterPhone className="mb-8 w-full" />
+            <HeroCenterPhone className="mb-6 w-full max-w-[360px] px-2 sm:mb-8 sm:max-w-[397px] sm:px-0" />
 
             <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
               <HeroFloatingAsset
