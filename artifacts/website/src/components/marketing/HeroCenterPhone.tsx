@@ -16,13 +16,18 @@ export function HeroCenterPhone({ className, phoneClassName }: HeroCenterPhonePr
   const { openAuthModal } = useMarketingAuthModal();
 
   return (
-    <div className={cn("relative block leading-none", className)}>
+    <div className={cn("relative mx-auto block w-full leading-none", className)}>
       <div
-        className="pointer-events-none absolute left-1/2 top-[38%] z-0 h-[68%] w-[130%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(48,94,255,0.14)_0%,rgba(48,94,255,0.06)_45%,transparent_72%)]"
+        className="pointer-events-none absolute left-1/2 top-[38%] z-0 h-[62%] w-[108%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(48,94,255,0.14)_0%,rgba(48,94,255,0.06)_45%,transparent_72%)] sm:h-[66%] sm:w-[118%] lg:h-[68%] lg:w-[130%]"
         aria-hidden
       />
 
-      <div className={cn("relative z-10 w-[min(100%,397px)] leading-none", phoneClassName)}>
+      <div
+        className={cn(
+          "relative z-10 mx-auto w-full max-w-[320px] leading-none sm:max-w-[397px]",
+          phoneClassName,
+        )}
+      >
         <img
           src={heroHandPhone}
           alt="TrustKeyper mobile app — Get Rent from Anywhere Effortlessly"
