@@ -246,7 +246,7 @@ export function MarketingAuthModal({ open, onOpenChange, onAuthVerified }: Marke
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-[#2b2b2b]/70 p-0 sm:items-center sm:p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2b2b2b]/70 px-4 py-6 sm:p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}
@@ -256,7 +256,7 @@ export function MarketingAuthModal({ open, onOpenChange, onAuthVerified }: Marke
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative flex max-h-[96dvh] w-full max-w-[420px] flex-col overflow-hidden rounded-t-[20px] bg-white shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:max-h-[90dvh] sm:rounded-[20px]"
+        className="relative flex max-h-[90dvh] w-full max-w-[420px] flex-col overflow-hidden rounded-[20px] bg-white shadow-[0_24px_80px_rgba(0,0,0,0.28)]"
       >
         <MarketingAuthModalHeader variant="illustration" onClose={close} />
 
