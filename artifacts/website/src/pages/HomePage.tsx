@@ -22,7 +22,7 @@ export function HomePage() {
       <HomeownerAccountableTeamSection />
       <HomeownerTransparencySection />
       <HomeownerFaqSection />
-      <div id="get-started">
+      <div id="get-started" className="scroll-mt-[88px] sm:scroll-mt-[96px]">
         <HomeownerContactSection />
       </div>
       <MarketingFooter />

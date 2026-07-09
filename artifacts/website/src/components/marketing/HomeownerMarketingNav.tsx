@@ -6,6 +6,7 @@ import {
   MarketingContactUsCta,
   MarketingSignupLoginCta,
 } from "@/components/marketing/MarketingNavCtas";
+import { MARKETING_CTA } from "@/lib/marketingConstants";
 import { cn } from "@/lib/utils";
 
 export interface HomeownerMarketingNavProps {
@@ -64,7 +65,7 @@ export function HomeownerMarketingNav({ className }: HomeownerMarketingNavProps)
         </nav>
 
         <div className="hidden items-center gap-[18px] md:flex">
-          <MarketingContactUsCta />
+          <MarketingContactUsCta href={MARKETING_CTA.getStarted} />
           <MarketingSignupLoginCta />
         </div>
 
@@ -100,7 +101,11 @@ export function HomeownerMarketingNav({ className }: HomeownerMarketingNavProps)
               </Link>
             </div>
             <div className="flex flex-col gap-3 pt-1">
-              <MarketingContactUsCta className="w-full" onClick={closeMenu} />
+              <MarketingContactUsCta
+                className="w-full"
+                href={MARKETING_CTA.getStarted}
+                onClick={closeMenu}
+              />
               <MarketingSignupLoginCta className="w-full" onClick={closeMenu} />
             </div>
           </nav>

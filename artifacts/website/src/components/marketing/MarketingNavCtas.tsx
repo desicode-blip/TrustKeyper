@@ -7,6 +7,22 @@ import { cn } from "@/lib/utils";
 export const marketingNavCtaClassName =
   "inline-flex items-center justify-center rounded-full px-6 py-3 font-roboto text-base font-medium transition-colors";
 
+const contactUsCtaClassName = cn(
+  marketingNavCtaClassName,
+  "border border-[#b4cdfd] bg-transparent text-marketing-neutral-1100 hover:bg-white/70",
+);
+
+function scrollToHashAnchor(hash: string): void {
+  const targetId = hash.replace(/^#/, "");
+  const target = document.getElementById(targetId);
+  if (!target) {
+    return;
+  }
+
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+  window.history.pushState(null, "", hash);
+}
+
 export function MarketingSignupLoginCta({
   className,
   onClick,
@@ -31,20 +47,30 @@ export function MarketingSignupLoginCta({
 export function MarketingContactUsCta({
   className,
   onClick,
+  href = MARKETING_CTA.contactUs,
 }: {
   className?: string;
   onClick?: () => void;
+  href?: string;
 }) {
+  if (href.startsWith("#")) {
+    return (
+      <a
+        href={href}
+        onClick={(event) => {
+          event.preventDefault();
+          scrollToHashAnchor(href);
+          onClick?.();
+        }}
+        className={cn(contactUsCtaClassName, className)}
+      >
+        Contact Us
+      </a>
+    );
+  }
+
   return (
-    <Link
-      href={MARKETING_CTA.contactUs}
-      onClick={onClick}
-      className={cn(
-        marketingNavCtaClassName,
-        "border border-[#b4cdfd] bg-transparent text-marketing-neutral-1100 hover:bg-white/70",
-        className,
-      )}
-    >
+    <Link href={href} onClick={onClick} className={cn(contactUsCtaClassName, className)}>
       Contact Us
     </Link>
   );
