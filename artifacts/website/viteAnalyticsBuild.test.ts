@@ -5,7 +5,9 @@ import { afterEach, describe, expect, it } from "vitest";
 
 const websiteDir = path.resolve(import.meta.dirname);
 const distIndex = path.join(websiteDir, "dist", "index.html");
-const GTAG_SCRIPT_URL = "googletagmanager.com/gtag/js?id=G-72DKWMCJ1R";
+const GTM_LOADER_PREFIX = "googletagmanager.com/gtm.js?id=";
+const GTM_CONTAINER_ID = "GTM-T679X9X7";
+const GTM_NOSCRIPT_URL = "googletagmanager.com/ns.html?id=GTM-T679X9X7";
 const BUILD_TEST_TIMEOUT_MS = 60_000;
 
 function runWebsiteBuild(env: NodeJS.ProcessEnv): void {
@@ -21,23 +23,25 @@ describe("marketing analytics dist output", () => {
     rmSync(path.join(websiteDir, "dist"), { recursive: true, force: true });
   });
 
-  it("omits Google scripts when VITE_ENABLE_ANALYTICS is unset", { timeout: BUILD_TEST_TIMEOUT_MS }, () => {
+  it("omits GTM when VITE_ENABLE_ANALYTICS is unset", { timeout: BUILD_TEST_TIMEOUT_MS }, () => {
     runWebsiteBuild({ VITE_ENABLE_ANALYTICS: undefined });
     const html = readFileSync(distIndex, "utf8");
     expect(html).not.toContain("GTM-T679X9X7");
-    expect(html).not.toContain(GTAG_SCRIPT_URL);
+    expect(html).not.toContain(GTM_LOADER_PREFIX);
+    expect(html).not.toContain("googletagmanager.com/gtag/js");
+    expect(html).not.toContain("G-72DKWMCJ1R");
     expect(html).not.toContain("AW-18274047914");
   });
 
-  it("includes the exact gtag.js URL when VITE_ENABLE_ANALYTICS=1", { timeout: BUILD_TEST_TIMEOUT_MS }, () => {
+  it("includes GTM when VITE_ENABLE_ANALYTICS=1", { timeout: BUILD_TEST_TIMEOUT_MS }, () => {
     runWebsiteBuild({ VITE_ENABLE_ANALYTICS: "1" });
     const html = readFileSync(distIndex, "utf8");
-    expect(html).toContain(GTAG_SCRIPT_URL);
-    expect(html).not.toContain("googletagmanager.com/gtm/js?id=G-72DKWMCJ1R");
-    expect(html).toContain("GTM-T679X9X7");
-    expect(html).toContain("G-72DKWMCJ1R");
-    expect(html).toContain("AW-18274047914");
-    expect(html).toContain("googletagmanager.com/gtm.js");
+    expect(html).toContain(GTM_LOADER_PREFIX);
+    expect(html).toContain(GTM_CONTAINER_ID);
+    expect(html).toContain(GTM_NOSCRIPT_URL);
+    expect(html).not.toContain("googletagmanager.com/gtag/js");
+    expect(html).not.toContain("G-72DKWMCJ1R");
+    expect(html).not.toContain("AW-18274047914");
     expect(html).toContain("Google Tag Manager (noscript)");
   });
 });
