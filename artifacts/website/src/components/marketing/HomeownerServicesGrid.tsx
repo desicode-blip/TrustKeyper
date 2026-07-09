@@ -2,7 +2,6 @@ import React from "react";
 import {
   CalendarDays,
   ClipboardList,
-  Info,
   UserSearch,
   Wrench,
   type LucideIcon,
@@ -11,7 +10,6 @@ import serviceHomeServicingIllustration from "@/assets/marketing/homeowners/serv
 import serviceRentCollectionIllustration from "@/assets/marketing/homeowners/services/service-rent-collection.png";
 import serviceRepairsIllustration from "@/assets/marketing/homeowners/services/service-repairs.png";
 import serviceTenantScreeningIllustration from "@/assets/marketing/homeowners/services/service-tenant-screening.png";
-import { cn } from "@/lib/utils";
 
 interface ServiceCardData {
   number: string;
@@ -21,8 +19,6 @@ interface ServiceCardData {
   bullets: string[];
   illustration: string;
   illustrationAlt: string;
-  disclaimer?: string;
-  tall?: boolean;
 }
 
 const SERVICE_CARDS: ServiceCardData[] = [
@@ -41,9 +37,6 @@ const SERVICE_CARDS: ServiceCardData[] = [
     ],
     illustration: serviceRentCollectionIllustration,
     illustrationAlt: "Rent collection reminders and payment tracking illustration",
-    disclaimer:
-      "Rental payments are made directly between the tenant and property owner. TrustKeyper assists with reminders, tracking, and coordination and does not hold rental funds.",
-    tall: true,
   },
   {
     number: "02",
@@ -60,7 +53,6 @@ const SERVICE_CARDS: ServiceCardData[] = [
     ],
     illustration: serviceHomeServicingIllustration,
     illustrationAlt: "Regular home servicing and property check-up illustration",
-    tall: true,
   },
   {
     number: "03",
@@ -120,17 +112,9 @@ function ServiceCard({
   bullets,
   illustration,
   illustrationAlt,
-  disclaimer,
-  tall = false,
 }: ServiceCardData) {
   return (
-    <article
-      className={cn(
-        "relative overflow-hidden rounded-3xl bg-white p-8",
-        "shadow-[0_1px_2px_rgba(8,50,42,0.04),0_16px_40px_rgba(8,50,42,0.06)]",
-        tall ? "min-h-[420px] lg:min-h-[517px]" : "min-h-[360px] lg:min-h-[406px]",
-      )}
-    >
+    <article className="relative min-h-[360px] overflow-hidden rounded-3xl bg-white p-8 shadow-[0_1px_2px_rgba(8,50,42,0.04),0_16px_40px_rgba(8,50,42,0.06)] lg:min-h-[406px]">
       <div className="relative z-10 max-w-[calc(100%-7rem)]">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-marketing-green">
@@ -149,13 +133,6 @@ function ServiceCard({
         <div className="mt-5">
           <ServiceBulletList items={bullets} />
         </div>
-
-        {disclaimer ? (
-          <div className="mt-6 flex max-w-[338px] gap-2 rounded-[20px] border border-marketing-blue/20 bg-marketing-blue/[0.09] p-3.5">
-            <Info size={16} strokeWidth={2} className="mt-0.5 shrink-0 text-marketing-navy-dark" aria-hidden />
-            <p className="text-xs leading-4 text-marketing-navy-dark">{disclaimer}</p>
-          </div>
-        ) : null}
       </div>
 
       <img
