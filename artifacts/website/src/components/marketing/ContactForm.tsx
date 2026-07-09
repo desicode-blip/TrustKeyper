@@ -48,10 +48,10 @@ function FieldLabel({
   return (
     <label
       {...(htmlFor ? { htmlFor } : {})}
-      className="mb-2 block text-sm font-medium text-marketing-navy"
+      className="mb-3 block px-[14px] text-sm font-medium text-[#10322b]"
     >
       {children}
-      {required ? <span className="text-marketing-blue"> *</span> : null}
+      {required ? <span className="text-[#c93631]"> *</span> : null}
     </label>
   );
 }
@@ -65,7 +65,10 @@ function FieldError({ message }: { message?: string }) {
 }
 
 const inputClassName =
-  "w-full rounded-lg border border-transparent bg-[#f1f5f9] px-4 py-3 text-sm text-marketing-navy outline-none transition-colors placeholder:text-marketing-muted/70 focus:border-marketing-blue focus:bg-white";
+  "w-full rounded-full border border-[#e3e9ff] bg-marketing-cloud-050 px-[14px] py-3 text-sm text-[#10322b] outline-none transition-colors placeholder:text-marketing-neutral-500 focus:border-marketing-blue focus:bg-white";
+
+const textareaClassName =
+  "w-full resize-none rounded-xl border border-[#e3e9ff] bg-marketing-cloud-050 px-[14px] py-3 text-sm text-[#10322b] outline-none transition-colors placeholder:text-marketing-neutral-500 focus:border-marketing-blue focus:bg-white";
 
 export function ContactForm() {
   const [values, setValues] = useState<ContactFormValues>(EMPTY_VALUES);
@@ -232,8 +235,8 @@ export function ContactForm() {
             <FieldLabel required htmlFor="contact-phone">
               Contact Number
             </FieldLabel>
-            <div className="flex overflow-hidden rounded-lg bg-[#f1f5f9] ring-1 ring-transparent focus-within:bg-white focus-within:ring-marketing-blue">
-              <span className="flex shrink-0 items-center border-r border-[#e2e8f0] px-4 text-sm text-marketing-muted">
+            <div className="flex overflow-hidden rounded-full border border-[#e3e9ff] bg-marketing-cloud-050 focus-within:border-marketing-blue focus-within:bg-white">
+              <span className="flex shrink-0 items-center border-r border-[#e3e9ff] px-[14px] text-sm text-marketing-neutral-500">
                 +91
               </span>
               <input
@@ -244,7 +247,7 @@ export function ContactForm() {
                 value={values.phone}
                 onChange={(event) => updateField("phone", normalizePhoneDigits(event.target.value))}
                 maxLength={10}
-                className="min-w-0 flex-1 bg-transparent px-4 py-3 text-sm text-marketing-navy outline-none placeholder:text-marketing-muted/70"
+                className="min-w-0 flex-1 bg-transparent px-[14px] py-3 text-sm text-[#10322b] outline-none placeholder:text-marketing-neutral-500"
                 aria-invalid={Boolean(errors.phone)}
               />
             </div>
@@ -329,7 +332,7 @@ export function ContactForm() {
             </select>
             <ChevronDown
               size={18}
-              className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-marketing-muted"
+              className="pointer-events-none absolute right-[14px] top-1/2 -translate-y-1/2 text-marketing-neutral-500"
               aria-hidden
             />
           </div>
@@ -346,7 +349,7 @@ export function ContactForm() {
             onChange={(event) => updateField("message", event.target.value)}
             rows={5}
             placeholder="Placeholder"
-            className={cn(inputClassName, "resize-none")}
+            className={textareaClassName}
             aria-invalid={Boolean(errors.message)}
           />
           <FieldError message={errors.message} />
@@ -364,10 +367,10 @@ export function ContactForm() {
             disabled={!canSubmit || submitState === "loading"}
             onClick={() => void handleSubmit()}
             className={cn(
-              "inline-flex min-w-[160px] items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-colors",
+              "inline-flex h-14 w-full items-center justify-center gap-2 rounded-full px-6 font-roboto text-base font-medium transition-colors",
               canSubmit && submitState !== "loading"
-                ? "bg-marketing-blue text-white hover:bg-marketing-blue-bright"
-                : "cursor-not-allowed bg-[#cbd5e1] text-white",
+                ? "bg-marketing-green text-marketing-neutral-1100 hover:brightness-105"
+                : "cursor-not-allowed bg-marketing-neutral-300 text-marketing-neutral-700",
             )}
           >
             {submitState === "loading" ? (
