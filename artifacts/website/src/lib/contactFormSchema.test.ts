@@ -1,11 +1,23 @@
-import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  buildContactMailto,
+  buildContactSubmitPayload,
+  CONTACT_CONVERSION_SEND_TO,
+  CONTACT_MESSAGE_MAX_LENGTH,
+  fireContactConversionEvent,
   isContactFormValid,
   normalizePhoneDigits,
   validateContactForm,
   type ContactFormValues,
 } from "@/lib/contactFormSchema";
+
+const CONTACT_FORM_SCHEMA_SOURCE = readFileSync(
+  path.resolve(import.meta.dirname, "contactFormSchema.ts"),
+  "utf8",
+);
+
+const CONVERSION_SEND_TO_LITERAL = "AW-18274047914/AGBuCNry5sgcEKqv34lE";
 
 const validValues: ContactFormValues = {
   firstName: "Asha",
@@ -65,15 +77,61 @@ describe("validateContactForm", () => {
 
     expect(errors.email).toBeUndefined();
   });
+
+  it("caps message length", () => {
+    const errors = validateContactForm({
+      ...validValues,
+      message: "a".repeat(CONTACT_MESSAGE_MAX_LENGTH + 1),
+    });
+
+    expect(errors.message).toContain(String(CONTACT_MESSAGE_MAX_LENGTH));
+  });
 });
 
-describe("buildContactMailto", () => {
-  it("includes inquiry details in the mailto link", () => {
-    const mailto = buildContactMailto(validValues);
+describe("buildContactSubmitPayload", () => {
+  it("normalizes phone and trims text fields", () => {
+    const payload = buildContactSubmitPayload(
+      {
+        ...validValues,
+        firstName: "  Asha ",
+        lastName: " Sharma ",
+        phone: "+91 9876543210",
+        message: "  Hello there ",
+      },
+      "",
+    );
 
-    expect(mailto.startsWith("mailto:info@trustkeyper.com?")).toBe(true);
-    expect(decodeURIComponent(mailto)).toContain("Property Owner");
-    expect(decodeURIComponent(mailto)).toContain("Within 1 month");
-    expect(decodeURIComponent(mailto)).toContain("9876543210");
+    expect(payload.firstName).toBe("Asha");
+    expect(payload.lastName).toBe("Sharma");
+    expect(payload.phone).toBe("9876543210");
+    expect(payload.message).toBe("Hello there");
+    expect(payload.website).toBe("");
+  });
+});
+
+describe("CONTACT_CONVERSION_SEND_TO on disk", () => {
+  it("pins the Google Ads conversion label as a literal string", () => {
+    expect(CONTACT_FORM_SCHEMA_SOURCE).toContain(CONVERSION_SEND_TO_LITERAL);
+    expect(CONTACT_CONVERSION_SEND_TO).toBe(CONVERSION_SEND_TO_LITERAL);
+  });
+});
+
+describe("fireContactConversionEvent", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("does nothing when window.gtag is undefined", () => {
+    vi.stubGlobal("window", {});
+    expect(() => fireContactConversionEvent()).not.toThrow();
+  });
+
+  it("calls gtag when available", () => {
+    const gtag = vi.fn();
+    vi.stubGlobal("window", { gtag });
+    fireContactConversionEvent();
+    expect(gtag).toHaveBeenCalledWith("event", "conversion", {
+      send_to: CONVERSION_SEND_TO_LITERAL,
+    });
   });
 });
