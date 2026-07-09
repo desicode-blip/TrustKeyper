@@ -136,7 +136,7 @@ describe("MarketingAuthFlowShell desktop backdrop", () => {
           const backdrop = desktopShell?.querySelector(".z-\\[1\\].bg-\\[\\#2b2b2b\\]\\/70");
           const dialog = desktopShell?.querySelector('[role="dialog"][aria-label="Welcome back"]');
           const heroHeading = [...document.querySelectorAll("h1")].find((element) =>
-            element.textContent?.includes("You Own It"),
+            element.textContent?.includes("Property management"),
           );
 
           if (!desktopShell || !homePeek || !backdrop || !dialog || !heroHeading) {

@@ -55,6 +55,16 @@
   --color-marketing-green: #48d08c;
   --color-marketing-teal: #6ca7a1;
   --color-marketing-border: #e5e5e5;
+  /* Figma Neutral/Light scale */
+  --color-marketing-neutral-100: #f1f5fa;
+  --color-marketing-neutral-200: #e3eaf3;
+  --color-marketing-neutral-300: #cbd5e2;
+  --color-marketing-neutral-500: #90a5bb;
+  --color-marketing-neutral-700: #6c849d;
+  --color-marketing-neutral-1000: #2f4256;
+  --color-marketing-neutral-1100: #243547;
+  --color-marketing-hero-gradient-start: #0c2837;
+  --color-marketing-neutral-1300: #0c1927;
 }
 
 @layer base {
