@@ -106,10 +106,8 @@ export function buildContactSubmitPayload(
   };
 }
 
-export const CONTACT_CONVERSION_SEND_TO = "AW-18274047914/AGBuCNry5sgcEKqv34lE";
-
 export function fireContactConversionEvent(): void {
   if (typeof globalThis.window === "undefined") return;
-  if (typeof globalThis.window.gtag !== "function") return;
-  globalThis.window.gtag("event", "conversion", { send_to: CONTACT_CONVERSION_SEND_TO });
+  globalThis.window.dataLayer = globalThis.window.dataLayer ?? [];
+  globalThis.window.dataLayer.push({ event: "contact_form_submit" });
 }

@@ -1,5 +1,5 @@
 /**
- * Build-time injection of Google Tag Manager / gtag snippets for production marketing deploys.
+ * Build-time injection of Google Tag Manager snippets for production marketing deploys.
  */
 import type { Plugin } from "vite";
 
@@ -10,16 +10,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
 })(window,document,'script','dataLayer','GTM-T679X9X7');</script>
 <!-- End Google Tag Manager -->`;
-
-const GTAG_HEAD_SCRIPT = `<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-72DKWMCJ1R"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-72DKWMCJ1R');
-  gtag('config', 'AW-18274047914');
-</script>`;
 
 const GTM_BODY_NOSCRIPT = `<!-- Google Tag Manager (noscript) -->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-T679X9X7"
@@ -42,10 +32,7 @@ export function injectMarketingAnalytics(html: string): string {
   }
 
   const next = html
-    .replace(
-      HEAD_OPEN_TAG,
-      (match) => `${match}\n    ${GTM_HEAD_SCRIPT}\n    ${GTAG_HEAD_SCRIPT}`,
-    )
+    .replace(HEAD_OPEN_TAG, (match) => `${match}\n    ${GTM_HEAD_SCRIPT}`)
     .replace(BODY_OPEN_TAG, (match) => `${match}\n    ${GTM_BODY_NOSCRIPT}`);
 
   return next;

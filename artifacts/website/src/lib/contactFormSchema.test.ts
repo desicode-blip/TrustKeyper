@@ -1,9 +1,6 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildContactSubmitPayload,
-  CONTACT_CONVERSION_SEND_TO,
   CONTACT_MESSAGE_MAX_LENGTH,
   fireContactConversionEvent,
   isContactFormValid,
@@ -11,13 +8,6 @@ import {
   validateContactForm,
   type ContactFormValues,
 } from "@/lib/contactFormSchema";
-
-const CONTACT_FORM_SCHEMA_SOURCE = readFileSync(
-  path.resolve(import.meta.dirname, "contactFormSchema.ts"),
-  "utf8",
-);
-
-const CONVERSION_SEND_TO_LITERAL = "AW-18274047914/AGBuCNry5sgcEKqv34lE";
 
 const validValues: ContactFormValues = {
   firstName: "Asha",
@@ -109,29 +99,20 @@ describe("buildContactSubmitPayload", () => {
   });
 });
 
-describe("CONTACT_CONVERSION_SEND_TO on disk", () => {
-  it("pins the Google Ads conversion label as a literal string", () => {
-    expect(CONTACT_FORM_SCHEMA_SOURCE).toContain(CONVERSION_SEND_TO_LITERAL);
-    expect(CONTACT_CONVERSION_SEND_TO).toBe(CONVERSION_SEND_TO_LITERAL);
-  });
-});
-
 describe("fireContactConversionEvent", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("does nothing when window.gtag is undefined", () => {
+  it("does not throw when window.dataLayer is undefined beforehand", () => {
     vi.stubGlobal("window", {});
     expect(() => fireContactConversionEvent()).not.toThrow();
   });
 
-  it("calls gtag when available", () => {
-    const gtag = vi.fn();
-    vi.stubGlobal("window", { gtag });
+  it("pushes contact_form_submit onto window.dataLayer", () => {
+    const dataLayer: unknown[] = [];
+    vi.stubGlobal("window", { dataLayer });
     fireContactConversionEvent();
-    expect(gtag).toHaveBeenCalledWith("event", "conversion", {
-      send_to: CONVERSION_SEND_TO_LITERAL,
-    });
+    expect(dataLayer).toEqual([{ event: "contact_form_submit" }]);
   });
 });
