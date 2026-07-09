@@ -34,7 +34,3 @@ export const CONTACT = {
 } as const;
 
 export const FOOTER_TAGLINE = "Property management built around accountability." as const;
-
-/** Pending Aman confirmation — remove in its own commit if legal approves dropping this copy. */
-export const FOOTER_RENTAL_FUNDS_DISCLAIMER =
-  "TrustKeyper coordinates property management services and does not hold, collect, or transfer rental funds. Service availability is subject to location and confirmation by TrustKeyper." as const;

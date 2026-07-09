@@ -6,7 +6,6 @@ import footerBackground from "@/assets/marketing/footer-background.png";
 import {
   CONTACT,
   FOOTER_ADDRESSES,
-  FOOTER_RENTAL_FUNDS_DISCLAIMER,
   FOOTER_TAGLINE,
 } from "@/lib/marketingConstants";
 import { cn } from "@/lib/utils";
@@ -134,14 +133,9 @@ export function MarketingFooter({ className }: MarketingFooterProps) {
           </div>
 
           <div className="mt-10 border-t border-white/10 pt-6 lg:mt-14 lg:pt-8">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
-              <p className="shrink-0 font-roboto text-sm text-marketing-neutral-500">
-                © {new Date().getFullYear()} TrustKeyper. All rights reserved.
-              </p>
-              <p className="max-w-xl font-roboto text-sm leading-relaxed text-marketing-neutral-500 lg:text-right">
-                {FOOTER_RENTAL_FUNDS_DISCLAIMER}
-              </p>
-            </div>
+            <p className="font-roboto text-sm text-marketing-neutral-500">
+              © {new Date().getFullYear()} TrustKeyper. All rights reserved.
+            </p>
           </div>
         </div>
       </div>
