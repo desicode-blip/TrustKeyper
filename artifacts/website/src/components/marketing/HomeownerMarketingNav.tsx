@@ -1,6 +1,6 @@
 import React from "react";
 import { Menu, X } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import logoDark from "@/assets/marketing/trustkeyper Logo.svg";
 import {
   MarketingContactUsCta,
@@ -13,7 +13,51 @@ export interface HomeownerMarketingNavProps {
   className?: string;
 }
 
+function AudienceNavLink({
+  href,
+  isActive,
+  children,
+  onClick,
+  className,
+}: {
+  href: string;
+  isActive: boolean;
+  children: React.ReactNode;
+  onClick?: () => void;
+  className?: string;
+}) {
+  if (isActive) {
+    return (
+      <span
+        className={cn(
+          "relative font-marketing-subheading text-[20px] font-semibold leading-[26px] text-marketing-neutral-1100",
+          className,
+        )}
+      >
+        {children}
+        <span className="absolute -bottom-[7px] left-0 h-0.5 w-full rounded-full bg-marketing-green" />
+      </span>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={cn(
+        "font-marketing-heading text-[20px] font-medium leading-[26px] text-marketing-neutral-1100 transition-colors hover:text-marketing-blue",
+        className,
+      )}
+    >
+      {children}
+    </Link>
+  );
+}
+
 export function HomeownerMarketingNav({ className }: HomeownerMarketingNavProps) {
+  const [location] = useLocation();
+  const isHomeownersPage = location === "/";
+  const isBrokersPage = location === "/for-brokers";
   const [menuOpen, setMenuOpen] = React.useState(false);
   const menuId = React.useId();
 
@@ -52,16 +96,12 @@ export function HomeownerMarketingNav({ className }: HomeownerMarketingNavProps)
         </Link>
 
         <nav className="hidden items-center gap-9 lg:flex" aria-label="Audience">
-          <span className="relative font-marketing-subheading text-[20px] font-semibold leading-[26px] text-marketing-neutral-1100">
+          <AudienceNavLink href="/" isActive={isHomeownersPage}>
             For Homeowners
-            <span className="absolute -bottom-[7px] left-0 h-0.5 w-full rounded-full bg-marketing-green" />
-          </span>
-          <Link
-            href="/signup/broker"
-            className="font-marketing-heading text-[20px] font-medium leading-[26px] text-marketing-neutral-1100 transition-colors hover:text-marketing-blue"
-          >
+          </AudienceNavLink>
+          <AudienceNavLink href="/for-brokers" isActive={isBrokersPage}>
             For Brokers
-          </Link>
+          </AudienceNavLink>
         </nav>
 
         <div className="hidden items-center gap-[18px] md:flex">
@@ -89,16 +129,22 @@ export function HomeownerMarketingNav({ className }: HomeownerMarketingNavProps)
             aria-label="Mobile primary"
           >
             <div className="flex flex-col gap-3">
-              <span className="font-marketing-subheading text-lg font-semibold text-marketing-neutral-1100">
-                For Homeowners
-              </span>
-              <Link
-                href="/signup/broker"
+              <AudienceNavLink
+                href="/"
+                isActive={isHomeownersPage}
                 onClick={closeMenu}
-                className="font-marketing-heading text-lg font-medium text-marketing-neutral-1100 transition-colors hover:text-marketing-blue"
+                className="text-lg"
+              >
+                For Homeowners
+              </AudienceNavLink>
+              <AudienceNavLink
+                href="/for-brokers"
+                isActive={isBrokersPage}
+                onClick={closeMenu}
+                className="text-lg"
               >
                 For Brokers
-              </Link>
+              </AudienceNavLink>
             </div>
             <div className="flex flex-col gap-3 pt-1">
               <MarketingContactUsCta
