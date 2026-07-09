@@ -1,5 +1,5 @@
-/** OTP length for marketing site login modal (Figma: 4 boxes). */
-export const MARKETING_OTP_LENGTH = 4;
+/** OTP length for marketing site login modal (Supabase default). */
+export const MARKETING_OTP_LENGTH = 6;
 
 export const MARKETING_OTP_LAST_INDEX = MARKETING_OTP_LENGTH - 1;
 
