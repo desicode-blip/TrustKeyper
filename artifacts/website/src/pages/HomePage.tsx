@@ -11,7 +11,7 @@ import { MarketingLayout } from "@/components/marketing/MarketingLayout";
 
 export function HomePage() {
   return (
-    <MarketingLayout>
+    <MarketingLayout navVariant="homeowner">
       <HomeownerHeroSection />
       <HomeownerTrustBadgesStrip />
       <HomeownerPropertyManagedSection />
