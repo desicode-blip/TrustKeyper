@@ -1,9 +1,11 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "wouter";
 import { ChevronDown, Home, IndianRupee, Loader2, User } from "lucide-react";
 import {
-  buildContactMailto,
+  buildContactSubmitPayload,
   CONTACT_SERVICE_TIMINGS,
   CONTACT_USER_ROLES,
+  fireContactConversionEvent,
   isContactFormValid,
   normalizePhoneDigits,
   validateContactForm,
@@ -12,6 +14,7 @@ import {
   type ContactFormValues,
   type ContactUserRole,
 } from "@/lib/contactFormSchema";
+import { getMarketingApiBase } from "@/lib/marketingAuthLookup";
 import { cn } from "@/lib/utils";
 
 const EMPTY_VALUES: ContactFormValues = {
@@ -25,8 +28,7 @@ const EMPTY_VALUES: ContactFormValues = {
 };
 
 type SubmitState = "idle" | "loading" | "success" | "error";
-
-const SUBMIT_DELAY_MS = 600;
+type SubmitErrorKind = "rate_limit" | "generic";
 
 const ROLE_ICONS: Record<ContactUserRole, typeof User> = {
   property_owner: User,
@@ -34,9 +36,20 @@ const ROLE_ICONS: Record<ContactUserRole, typeof User> = {
   broker: IndianRupee,
 };
 
-function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
+function FieldLabel({
+  children,
+  required,
+  htmlFor,
+}: {
+  children: React.ReactNode;
+  required?: boolean;
+  htmlFor?: string;
+}) {
   return (
-    <label className="mb-2 block text-sm font-medium text-marketing-navy">
+    <label
+      {...(htmlFor ? { htmlFor } : {})}
+      className="mb-2 block text-sm font-medium text-marketing-navy"
+    >
       {children}
       {required ? <span className="text-marketing-blue"> *</span> : null}
     </label>
@@ -56,11 +69,28 @@ const inputClassName =
 
 export function ContactForm() {
   const [values, setValues] = useState<ContactFormValues>(EMPTY_VALUES);
+  const [website, setWebsite] = useState("");
   const [errors, setErrors] = useState<ContactFormErrors>({});
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitErrorKind, setSubmitErrorKind] = useState<SubmitErrorKind>("generic");
+  const conversionFiredRef = useRef(false);
 
   const canSubmit = useMemo(() => isContactFormValid(values), [values]);
+
+  const resetForm = useCallback(() => {
+    setValues(EMPTY_VALUES);
+    setWebsite("");
+    setErrors({});
+    setSubmitState("idle");
+    setSubmitErrorKind("generic");
+    conversionFiredRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    if (submitState !== "success" || conversionFiredRef.current) return;
+    conversionFiredRef.current = true;
+    fireContactConversionEvent();
+  }, [submitState]);
 
   const updateField = useCallback((field: ContactFormField, value: string) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -73,10 +103,12 @@ export function ContactForm() {
       delete next[field];
       return next;
     });
-    setSubmitError(null);
-  }, []);
+    if (submitState === "error") {
+      setSubmitState("idle");
+    }
+  }, [submitState]);
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     const nextErrors = validateContactForm(values);
     setErrors(nextErrors);
 
@@ -85,19 +117,33 @@ export function ContactForm() {
     }
 
     setSubmitState("loading");
-    setSubmitError(null);
+    setSubmitErrorKind("generic");
 
-    window.setTimeout(() => {
-      try {
-        const mailto = buildContactMailto(values);
-        window.location.href = mailto;
-        setSubmitState("success");
-      } catch {
+    try {
+      const response = await fetch(`${getMarketingApiBase()}/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildContactSubmitPayload(values, website)),
+      });
+
+      if (response.status === 429) {
         setSubmitState("error");
-        setSubmitError("Unable to open your email client. Please email us at info@trustkeyper.com.");
+        setSubmitErrorKind("rate_limit");
+        return;
       }
-    }, SUBMIT_DELAY_MS);
-  }, [values]);
+
+      if (!response.ok) {
+        setSubmitState("error");
+        setSubmitErrorKind("generic");
+        return;
+      }
+
+      setSubmitState("success");
+    } catch {
+      setSubmitState("error");
+      setSubmitErrorKind("generic");
+    }
+  }, [values, website]);
 
   if (submitState === "success") {
     return (
@@ -105,40 +151,55 @@ export function ContactForm() {
         className="rounded-2xl bg-white p-8 shadow-[0_8px_40px_rgba(25,40,57,0.08)] ring-1 ring-black/[0.04] sm:p-10"
         role="status"
       >
-        <h2 className="text-2xl font-medium text-marketing-navy">Message ready to send</h2>
+        <h2 className="text-2xl font-medium text-marketing-navy">Thank you for reaching out</h2>
         <p className="mt-3 font-roboto text-sm leading-relaxed text-marketing-muted">
-          Your email app should open with your message pre-filled. If it did not open, email us at{" "}
-          <a
-            href="mailto:info@trustkeyper.com"
-            className="font-medium text-marketing-blue underline decoration-marketing-blue/30 underline-offset-2"
-          >
-            info@trustkeyper.com
-          </a>
-          .
+          We&apos;ve received your message and our team will get back to you shortly.
         </p>
-        <button
-          type="button"
-          onClick={() => {
-            setValues(EMPTY_VALUES);
-            setErrors({});
-            setSubmitState("idle");
-            setSubmitError(null);
-          }}
-          className="mt-6 inline-flex items-center justify-center rounded-lg bg-marketing-blue px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-marketing-blue-bright"
-        >
-          Send another message
-        </button>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={resetForm}
+            className="inline-flex items-center justify-center rounded-lg bg-marketing-blue px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-marketing-blue-bright"
+          >
+            Send another message
+          </button>
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center rounded-lg border border-marketing-border px-6 py-3 text-sm font-semibold text-marketing-navy transition-colors hover:border-marketing-muted/40 hover:bg-[#f8fafc]"
+          >
+            Keep exploring
+          </Link>
+        </div>
       </div>
     );
   }
 
+  const submitErrorMessage =
+    submitErrorKind === "rate_limit"
+      ? "Too many requests. Please try again shortly."
+      : "Something went wrong — email us at info@trustkeyper.com.";
+
   return (
     <div className="rounded-2xl bg-white p-8 shadow-[0_8px_40px_rgba(25,40,57,0.08)] ring-1 ring-black/[0.04] sm:p-10">
       <div className="grid gap-5 sm:gap-6">
+        <input
+          type="text"
+          name="website"
+          value={website}
+          onChange={(event) => setWebsite(event.target.value)}
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          className="hidden"
+        />
+
         <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
           <div>
-            <FieldLabel required>First Name</FieldLabel>
+            <FieldLabel required htmlFor="contact-first-name">
+              First Name
+            </FieldLabel>
             <input
+              id="contact-first-name"
               type="text"
               autoComplete="given-name"
               value={values.firstName}
@@ -150,8 +211,11 @@ export function ContactForm() {
           </div>
 
           <div>
-            <FieldLabel required>Last Name</FieldLabel>
+            <FieldLabel required htmlFor="contact-last-name">
+              Last Name
+            </FieldLabel>
             <input
+              id="contact-last-name"
               type="text"
               autoComplete="family-name"
               value={values.lastName}
@@ -165,12 +229,15 @@ export function ContactForm() {
 
         <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
           <div>
-            <FieldLabel required>Contact Number</FieldLabel>
+            <FieldLabel required htmlFor="contact-phone">
+              Contact Number
+            </FieldLabel>
             <div className="flex overflow-hidden rounded-lg bg-[#f1f5f9] ring-1 ring-transparent focus-within:bg-white focus-within:ring-marketing-blue">
               <span className="flex shrink-0 items-center border-r border-[#e2e8f0] px-4 text-sm text-marketing-muted">
                 +91
               </span>
               <input
+                id="contact-phone"
                 type="tel"
                 inputMode="numeric"
                 autoComplete="tel-national"
@@ -185,8 +252,9 @@ export function ContactForm() {
           </div>
 
           <div>
-            <FieldLabel>Email Address</FieldLabel>
+            <FieldLabel htmlFor="contact-email">Email Address</FieldLabel>
             <input
+              id="contact-email"
               type="email"
               autoComplete="email"
               value={values.email}
@@ -237,9 +305,12 @@ export function ContactForm() {
         </div>
 
         <div>
-          <FieldLabel required>When do you need this service?</FieldLabel>
+          <FieldLabel required htmlFor="contact-service-timing">
+            When do you need this service?
+          </FieldLabel>
           <div className="relative">
             <select
+              id="contact-service-timing"
               value={values.serviceTiming}
               onChange={(event) => updateField("serviceTiming", event.target.value)}
               className={cn(
@@ -266,8 +337,11 @@ export function ContactForm() {
         </div>
 
         <div>
-          <FieldLabel required>Message</FieldLabel>
+          <FieldLabel required htmlFor="contact-message">
+            Message
+          </FieldLabel>
           <textarea
+            id="contact-message"
             value={values.message}
             onChange={(event) => updateField("message", event.target.value)}
             rows={5}
@@ -278,9 +352,9 @@ export function ContactForm() {
           <FieldError message={errors.message} />
         </div>
 
-        {submitState === "error" && submitError ? (
+        {submitState === "error" ? (
           <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
-            {submitError}
+            {submitErrorMessage}
           </p>
         ) : null}
 
@@ -288,7 +362,7 @@ export function ContactForm() {
           <button
             type="button"
             disabled={!canSubmit || submitState === "loading"}
-            onClick={handleSubmit}
+            onClick={() => void handleSubmit()}
             className={cn(
               "inline-flex min-w-[160px] items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-colors",
               canSubmit && submitState !== "loading"
