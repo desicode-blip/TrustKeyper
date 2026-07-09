@@ -34,3 +34,5 @@ export const CONTACT = {
 } as const;
 
 export const FOOTER_TAGLINE = "Property management built around accountability." as const;
+
+export const FOOTER_LOCATION_SHORT = "Bengaluru, Karnataka" as const;

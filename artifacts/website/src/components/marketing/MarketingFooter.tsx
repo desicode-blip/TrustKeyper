@@ -1,11 +1,13 @@
 import React from "react";
 import { Link } from "wouter";
-import { Facebook, Instagram, Linkedin, Mail, MapPin, Phone } from "lucide-react";
+import { Facebook, Instagram, Linkedin, MapPin } from "lucide-react";
 import logoLight from "@/assets/marketing/Property 1=Logo Light.svg";
-import footerBackground from "@/assets/marketing/footer-background.png";
+import footerDecoration from "@/assets/marketing/homeowners/footer/decoration.svg";
+import footerIconMail from "@/assets/marketing/homeowners/footer/icon-mail.svg";
+import footerIconPhone from "@/assets/marketing/homeowners/footer/icon-phone.svg";
 import {
   CONTACT,
-  FOOTER_ADDRESSES,
+  FOOTER_LOCATION_SHORT,
   FOOTER_TAGLINE,
 } from "@/lib/marketingConstants";
 import { cn } from "@/lib/utils";
@@ -30,13 +32,12 @@ const FOOTER_SOCIAL_LINKS = [
   { label: "TrustKeyper on Instagram", href: "https://www.instagram.com/", Icon: Instagram },
 ] as const;
 
-const contactRowClassName =
-  "flex items-start gap-3 font-roboto text-base text-marketing-neutral-300 transition-colors hover:text-white";
+const footerGroupHeadingClassName =
+  "mb-4 font-roboto text-xs font-medium uppercase tracking-[1.2px] text-white";
 
-const footerGroupHeadingClassName = "mb-4 font-roboto text-base font-medium text-white";
+const footerLinkClassName = "text-sm text-white transition-colors hover:text-white/80";
 
-const footerLinkClassName =
-  "font-roboto text-base text-marketing-neutral-300 transition-colors hover:text-white";
+const contactRowClassName = "flex items-center gap-3 text-sm text-white transition-colors hover:text-white/80";
 
 export interface MarketingFooterProps {
   className?: string;
@@ -44,18 +45,23 @@ export interface MarketingFooterProps {
 
 export function MarketingFooter({ className }: MarketingFooterProps) {
   return (
-    <footer className={cn("relative w-full shrink-0 overflow-hidden bg-marketing-neutral-1300", className)}>
+    <footer
+      className={cn(
+        "relative w-full shrink-0 overflow-hidden bg-marketing-neutral-1100 text-white",
+        className,
+      )}
+    >
       <img
-        src={footerBackground}
+        src={footerDecoration}
         alt=""
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-0 hidden h-full w-[min(56%,720px)] object-cover object-right select-none lg:block"
+        className="pointer-events-none absolute left-1/2 top-[40px] hidden h-[353px] w-[560px] max-w-[58%] -translate-x-[8%] select-none lg:block"
       />
 
       <div className="relative z-10">
-        <div className="mx-auto w-full max-w-[1168px] px-6 py-14 sm:px-8 lg:px-0 lg:py-[62px]">
-          <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-16">
-            <div className="max-w-md space-y-5">
+        <div className="mx-auto w-full max-w-[1168px] px-6 py-14 sm:px-8 lg:px-0 lg:pb-10 lg:pt-[62px]">
+          <div className="flex flex-col gap-10 lg:min-h-[372px] lg:flex-row lg:items-start lg:justify-between lg:gap-16">
+            <div className="max-w-[440px] space-y-5">
               <img
                 src={logoLight}
                 alt="TrustKeyper"
@@ -63,26 +69,24 @@ export function MarketingFooter({ className }: MarketingFooterProps) {
                 draggable={false}
               />
 
-              <p className="font-roboto text-base leading-relaxed text-marketing-neutral-300">
+              <p className="max-w-[314px] text-2xl font-medium leading-[33px] text-white">
                 {FOOTER_TAGLINE}
               </p>
 
-              <div className="space-y-3">
+              <div className="space-y-3 pt-1">
                 <a href={CONTACT.emailHref} className={contactRowClassName}>
-                  <Mail size={16} strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden />
-                  <span className="underline decoration-white/25 underline-offset-[3px] hover:decoration-white/50">
-                    {CONTACT.email}
-                  </span>
+                  <img src={footerIconMail} alt="" className="size-4 shrink-0" aria-hidden />
+                  <span>{CONTACT.email}</span>
                 </a>
 
                 <a href={CONTACT.phoneHref} className={contactRowClassName}>
-                  <Phone size={16} strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden />
+                  <img src={footerIconPhone} alt="" className="size-4 shrink-0" aria-hidden />
                   <span>{CONTACT.phone}</span>
                 </a>
 
-                <div className="flex items-start gap-3 font-roboto text-base text-marketing-neutral-300">
-                  <MapPin size={16} strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden />
-                  <span>{FOOTER_ADDRESSES.headOffice.lines}</span>
+                <div className="flex items-center gap-3 text-sm text-white">
+                  <MapPin size={16} strokeWidth={2} className="shrink-0" aria-hidden />
+                  <span>{FOOTER_LOCATION_SHORT}</span>
                 </div>
               </div>
 
@@ -94,7 +98,7 @@ export function MarketingFooter({ className }: MarketingFooterProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={label}
-                    className="flex size-9 items-center justify-center rounded-full bg-white/[0.06] text-marketing-neutral-300 ring-1 ring-white/10 transition-colors hover:text-white"
+                    className="flex size-9 items-center justify-center rounded-full bg-white text-marketing-neutral-1100 transition-opacity hover:opacity-90"
                   >
                     <Icon size={16} strokeWidth={2} aria-hidden />
                   </a>
@@ -102,7 +106,7 @@ export function MarketingFooter({ className }: MarketingFooterProps) {
               </div>
             </div>
 
-            <div className="flex flex-col gap-8 lg:pt-1">
+            <div className="flex flex-col gap-8 lg:ml-auto lg:w-[146px] lg:shrink-0">
               <nav aria-label="Legal">
                 <p className={footerGroupHeadingClassName}>Legal</p>
                 <div className="flex flex-col gap-4">
@@ -132,8 +136,8 @@ export function MarketingFooter({ className }: MarketingFooterProps) {
             </div>
           </div>
 
-          <div className="mt-10 border-t border-white/10 pt-6 lg:mt-14 lg:pt-8">
-            <p className="font-roboto text-sm text-marketing-neutral-500">
+          <div className="mt-10 border-t border-white/15 pt-6 lg:mt-14 lg:h-[81px] lg:pt-0">
+            <p className="font-roboto text-sm text-white lg:pt-[48px]">
               © {new Date().getFullYear()} TrustKeyper. All rights reserved.
             </p>
           </div>
