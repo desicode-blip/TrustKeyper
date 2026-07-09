@@ -3,8 +3,10 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
   getMarketingCorsAllowlist,
   getMarketingCorsRoute,
+  handleContactCorsPreflight,
   handleMarketingCorsPreflight,
   matchMarketingOrigin,
+  setContactCorsHeaders,
   setMarketingCorsHeaders,
 } from "./marketingCors.js";
 
@@ -153,5 +155,65 @@ describe("handleMarketingCorsPreflight", () => {
 
     expect(handled).toBe(false);
     expect(res.ended).toBe(false);
+  });
+});
+
+describe("contact CORS helpers", () => {
+  function mockResponse() {
+    const headers: Record<string, string> = {};
+    let statusCode = 200;
+    let ended = false;
+    const res = {
+      status(code: number) {
+        statusCode = code;
+        return res;
+      },
+      setHeader(name: string, value: string) {
+        headers[name] = value;
+        return res;
+      },
+      end() {
+        ended = true;
+      },
+      get statusCode() {
+        return statusCode;
+      },
+      get headers() {
+        return headers;
+      },
+      get ended() {
+        return ended;
+      },
+    };
+    return res;
+  }
+
+  it("sets POST and Content-Type headers for contact responses", () => {
+    const headers: Record<string, string> = {};
+    const res = {
+      setHeader(name: string, value: string) {
+        headers[name] = value;
+      },
+    } as unknown as VercelResponse;
+
+    setContactCorsHeaders(res, "https://trustkeyper.com");
+
+    expect(headers["Access-Control-Allow-Origin"]).toBe("https://trustkeyper.com");
+    expect(headers["Access-Control-Allow-Methods"]).toBe("POST, OPTIONS");
+    expect(headers["Access-Control-Allow-Headers"]).toContain("Content-Type");
+  });
+
+  it("handles contact OPTIONS preflight for allowed origins", () => {
+    const req = {
+      method: "OPTIONS",
+      headers: { origin: "http://localhost:5174" },
+    } as VercelRequest;
+    const res = mockResponse();
+
+    const handled = handleContactCorsPreflight(req, res as unknown as VercelResponse);
+
+    expect(handled).toBe(true);
+    expect(res.statusCode).toBe(204);
+    expect(res.headers["Access-Control-Allow-Origin"]).toBe("http://localhost:5174");
   });
 });

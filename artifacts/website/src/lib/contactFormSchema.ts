@@ -1,3 +1,5 @@
+export const CONTACT_MESSAGE_MAX_LENGTH = 5000;
+
 export const CONTACT_USER_ROLES = [
   { id: "property_owner", label: "Property Owner" },
   { id: "tenant", label: "Tenant" },
@@ -73,6 +75,8 @@ export function validateContactForm(values: ContactFormValues): ContactFormError
 
   if (!values.message.trim()) {
     errors.message = "Message is required";
+  } else if (values.message.trim().length > CONTACT_MESSAGE_MAX_LENGTH) {
+    errors.message = `Message must be at most ${CONTACT_MESSAGE_MAX_LENGTH} characters`;
   }
 
   return errors;
@@ -82,30 +86,28 @@ export function isContactFormValid(values: ContactFormValues): boolean {
   return Object.keys(validateContactForm(values)).length === 0;
 }
 
-export function buildContactMailto(values: ContactFormValues): string {
-  const roleLabel =
-    CONTACT_USER_ROLES.find((role) => role.id === values.role)?.label ?? values.role;
-  const timingLabel =
-    CONTACT_SERVICE_TIMINGS.find((timing) => timing.value === values.serviceTiming)?.label ??
-    values.serviceTiming;
+export interface ContactFormSubmitPayload extends ContactFormValues {
+  website: string;
+}
 
-  const subject = encodeURIComponent(
-    `Contact inquiry from ${values.firstName.trim()} ${values.lastName.trim()}`,
-  );
+export function buildContactSubmitPayload(
+  values: ContactFormValues,
+  website: string,
+): ContactFormSubmitPayload {
+  return {
+    firstName: values.firstName.trim(),
+    lastName: values.lastName.trim(),
+    phone: normalizePhoneDigits(values.phone),
+    email: values.email.trim(),
+    role: values.role,
+    serviceTiming: values.serviceTiming,
+    message: values.message.trim(),
+    website,
+  };
+}
 
-  const body = encodeURIComponent(
-    [
-      `Name: ${values.firstName.trim()} ${values.lastName.trim()}`,
-      `Phone: +91 ${normalizePhoneDigits(values.phone)}`,
-      values.email.trim() ? `Email: ${values.email.trim()}` : null,
-      `Role: ${roleLabel}`,
-      `Service needed: ${timingLabel}`,
-      "",
-      values.message.trim(),
-    ]
-      .filter(Boolean)
-      .join("\n"),
-  );
-
-  return `mailto:info@trustkeyper.com?subject=${subject}&body=${body}`;
+export function fireContactConversionEvent(): void {
+  if (typeof globalThis.window === "undefined") return;
+  globalThis.window.dataLayer = globalThis.window.dataLayer ?? [];
+  globalThis.window.dataLayer.push({ event: "contact_form_submit" });
 }

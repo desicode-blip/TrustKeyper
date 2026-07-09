@@ -1,6 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  buildContactMailto,
+  buildContactSubmitPayload,
+  CONTACT_MESSAGE_MAX_LENGTH,
+  fireContactConversionEvent,
   isContactFormValid,
   normalizePhoneDigits,
   validateContactForm,
@@ -65,15 +67,52 @@ describe("validateContactForm", () => {
 
     expect(errors.email).toBeUndefined();
   });
+
+  it("caps message length", () => {
+    const errors = validateContactForm({
+      ...validValues,
+      message: "a".repeat(CONTACT_MESSAGE_MAX_LENGTH + 1),
+    });
+
+    expect(errors.message).toContain(String(CONTACT_MESSAGE_MAX_LENGTH));
+  });
 });
 
-describe("buildContactMailto", () => {
-  it("includes inquiry details in the mailto link", () => {
-    const mailto = buildContactMailto(validValues);
+describe("buildContactSubmitPayload", () => {
+  it("normalizes phone and trims text fields", () => {
+    const payload = buildContactSubmitPayload(
+      {
+        ...validValues,
+        firstName: "  Asha ",
+        lastName: " Sharma ",
+        phone: "+91 9876543210",
+        message: "  Hello there ",
+      },
+      "",
+    );
 
-    expect(mailto.startsWith("mailto:info@trustkeyper.com?")).toBe(true);
-    expect(decodeURIComponent(mailto)).toContain("Property Owner");
-    expect(decodeURIComponent(mailto)).toContain("Within 1 month");
-    expect(decodeURIComponent(mailto)).toContain("9876543210");
+    expect(payload.firstName).toBe("Asha");
+    expect(payload.lastName).toBe("Sharma");
+    expect(payload.phone).toBe("9876543210");
+    expect(payload.message).toBe("Hello there");
+    expect(payload.website).toBe("");
+  });
+});
+
+describe("fireContactConversionEvent", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("does not throw when window.dataLayer is undefined beforehand", () => {
+    vi.stubGlobal("window", {});
+    expect(() => fireContactConversionEvent()).not.toThrow();
+  });
+
+  it("pushes contact_form_submit onto window.dataLayer", () => {
+    const dataLayer: unknown[] = [];
+    vi.stubGlobal("window", { dataLayer });
+    fireContactConversionEvent();
+    expect(dataLayer).toEqual([{ event: "contact_form_submit" }]);
   });
 });

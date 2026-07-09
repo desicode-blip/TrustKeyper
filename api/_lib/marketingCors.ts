@@ -94,3 +94,34 @@ export function resolveMarketingCorsOrigin(
   if (!route) return null;
   return matchMarketingOrigin(requestOrigin(req));
 }
+
+export function setContactCorsHeaders(res: VercelResponse, origin: string): void {
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept");
+}
+
+/**
+ * Handles OPTIONS preflight for POST /api/contact.
+ * Returns true when the request was fully handled.
+ */
+export function handleContactCorsPreflight(req: VercelRequest, res: VercelResponse): boolean {
+  if ((req.method ?? "").toUpperCase() !== "OPTIONS") return false;
+
+  const origin = matchMarketingOrigin(requestOrigin(req));
+  if (!origin) {
+    res.status(403).end();
+    return true;
+  }
+
+  setContactCorsHeaders(res, origin);
+  res.status(204).end();
+  return true;
+}
+
+export function resolveContactCorsOrigin(req: VercelRequest): string | null {
+  const method = (req.method ?? "").toUpperCase();
+  if (method !== "POST" && method !== "OPTIONS") return null;
+  return matchMarketingOrigin(requestOrigin(req));
+}
