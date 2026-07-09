@@ -323,7 +323,7 @@ export function MarketingAuthModal({ open, onOpenChange, onAuthVerified }: Marke
                 Sent to {formatMarketingPhoneDisplay(phoneDigits)}
               </p>
 
-              <div className="mt-6 flex justify-center gap-3 sm:gap-3.5">
+              <div className="mt-6 grid grid-cols-6 gap-1.5 sm:gap-2">
                 {otp.map((digit, index) => (
                   <input
                     key={index}
@@ -338,7 +338,7 @@ export function MarketingAuthModal({ open, onOpenChange, onAuthVerified }: Marke
                     onPaste={index === 0 ? handleOtpPaste : undefined}
                     aria-label={`OTP digit ${index + 1}`}
                     className={cn(
-                      "h-14 w-14 rounded-lg border text-center text-xl font-medium text-marketing-navy outline-none transition-colors sm:h-[60px] sm:w-[60px]",
+                      "aspect-square w-full min-w-0 rounded-lg border text-center text-base font-medium text-marketing-navy outline-none transition-colors sm:text-lg",
                       digit
                         ? "border-[#c1eee0] bg-[#e8f7f1]"
                         : "border-[#cbd5e2] bg-white",

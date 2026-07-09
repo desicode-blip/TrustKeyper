@@ -21,8 +21,14 @@ describe("marketingAuthOtp", () => {
     expect(formatMarketingPhoneDisplay("6369856040")).toBe("+91 6369856040");
   });
 
-  it("tracks OTP completion for four digits", () => {
+  it("tracks OTP completion for six digits", () => {
     expect(isMarketingOtpComplete(createEmptyMarketingOtp())).toBe(false);
-    expect(isMarketingOtpComplete(["0", "1", "0", "1"])).toBe(true);
+    expect(isMarketingOtpComplete(["0", "1", "0", "1", "0", "1"])).toBe(true);
+  });
+
+  it("treats fewer than six digits as incomplete", () => {
+    expect(isMarketingOtpComplete(["0", "1", "0", "1"])).toBe(false);
+    expect(isMarketingOtpComplete(["0", "1", "0", "1", "0"])).toBe(false);
+    expect(createEmptyMarketingOtp()).toHaveLength(6);
   });
 });
