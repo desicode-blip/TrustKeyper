@@ -67,7 +67,7 @@ function FaqAccordionItem({
   const buttonId = `broker-faq-button-${item.question}`;
 
   return (
-    <div className="border-b border-[#e3e9ff]">
+    <div className="border-b border-marketing-azure-stroke">
       <button
         type="button"
         id={buttonId}
@@ -112,7 +112,7 @@ export function BrokerFaqSection() {
       <div className="mx-auto max-w-[1228px] px-5 sm:px-8 lg:px-12">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.5fr)] lg:gap-16">
           <div className="lg:sticky lg:top-28 lg:self-start">
-            <p className="text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
+            <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
               Frequently Asked Questions
             </p>
             <h2

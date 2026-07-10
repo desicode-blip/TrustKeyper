@@ -43,7 +43,7 @@ export function BrokerOnboardingSection() {
     <section className="bg-white py-14 sm:py-16 lg:py-[140px]" aria-labelledby="broker-onboarding-heading">
       <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">
         <header className="max-w-[589px]">
-          <p className="text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
+          <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
             Broker Onboarding
           </p>
           <h2
@@ -79,7 +79,7 @@ export function BrokerOnboardingSection() {
 
         <Link
           href="/signup/broker"
-          className="mt-12 inline-flex h-14 items-center justify-center rounded-full bg-marketing-green px-10 text-base font-medium text-marketing-neutral-1100 transition-colors hover:bg-marketing-green/90 lg:mt-[52px]"
+          className="mt-12 inline-flex h-14 items-center justify-center rounded-full bg-marketing-green px-10 font-roboto text-base font-medium text-marketing-neutral-1100 transition-colors hover:bg-marketing-green/90 lg:mt-[52px]"
         >
           Start Broker Registration
         </Link>

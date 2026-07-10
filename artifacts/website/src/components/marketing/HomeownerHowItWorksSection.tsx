@@ -71,7 +71,7 @@ export function HomeownerHowItWorksSection() {
     >
       <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">
         <header className="mx-auto max-w-[938px] text-center">
-          <p className="text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
+          <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
             How It Works
           </p>
           <h2
@@ -104,7 +104,7 @@ export function HomeownerHowItWorksSection() {
           </h3>
           <a
             href={MARKETING_CTA.getStarted}
-            className="mt-6 inline-flex h-14 items-center justify-center rounded-full bg-marketing-green px-10 text-base font-medium text-marketing-neutral-1100 transition-colors hover:bg-marketing-green/90"
+            className="mt-6 inline-flex h-14 items-center justify-center rounded-full bg-marketing-green px-10 font-roboto text-base font-medium text-marketing-neutral-1100 transition-colors hover:bg-marketing-green/90"
           >
             Register your property
           </a>

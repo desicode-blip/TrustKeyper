@@ -43,7 +43,7 @@ export function HomeownerTransparencySection() {
       <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between lg:gap-16 xl:gap-[228px]">
           <div className="max-w-[396px] shrink-0">
-            <p className="text-xs font-medium uppercase tracking-[1.2px] text-marketing-green">
+            <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-green">
               Trust & Security
             </p>
             <h2

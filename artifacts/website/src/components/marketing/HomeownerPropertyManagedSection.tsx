@@ -92,11 +92,11 @@ function ManagedCardItem({
 
 export function HomeownerPropertyManagedSection() {
   return (
-    <section className="bg-marketing-bg py-14 sm:py-16 lg:py-20" aria-labelledby="homeowner-managed-heading">
+    <section className="bg-marketing-neutral-100 py-14 sm:py-16 lg:py-20" aria-labelledby="homeowner-managed-heading">
       <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between lg:gap-16 xl:gap-[226px]">
           <div className="max-w-[398px] shrink-0">
-            <p className="text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
+            <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
               Why TrustKeyper
             </p>
             <h2

@@ -46,7 +46,7 @@ export function BrokerLeadQualitySection() {
       <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">
         <div className="flex flex-col gap-6 md:gap-8 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
           <div className="max-w-[540px] shrink-0">
-            <p className="text-xs font-medium uppercase tracking-[1.2px] text-marketing-green">
+            <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-green">
               Lead Quality
             </p>
             <h2

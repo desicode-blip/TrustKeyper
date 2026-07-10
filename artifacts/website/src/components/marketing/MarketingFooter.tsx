@@ -34,7 +34,7 @@ const FOOTER_SOCIAL_LINKS = [
 const footerGroupHeadingClassName =
   "mb-4 font-roboto text-xs font-medium uppercase tracking-[1.2px] text-white";
 
-const footerLinkClassName = "text-sm text-white transition-colors hover:text-white/80";
+const footerLinkClassName = "font-roboto text-sm text-white transition-colors hover:text-white/80";
 
 const contactRowClassName = "flex items-center gap-3 text-sm text-white transition-colors hover:text-white/80";
 

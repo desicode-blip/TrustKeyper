@@ -44,6 +44,12 @@
   --color-marketing-blue: #305eff;
   --color-marketing-blue-bright: #4d7cff;
   --color-marketing-azure-050: #f5f8ff;
+  /* Figma Primary/Azure/200 */
+  --color-marketing-azure-200: #b4cdfd;
+  /* Unbound Figma paint (no variable) — nav/FAQ/input strokes */
+  --color-marketing-azure-stroke: #e3e9ff;
+  /* Unbound Figma paint (no variable) — form label text */
+  --color-marketing-form-label: #10322b;
   --color-marketing-mint: #d4f5e4;
   --color-marketing-mint-card: #e8f7f1;
   --color-marketing-sky-card: #e8f2f7;

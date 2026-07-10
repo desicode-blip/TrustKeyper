@@ -97,12 +97,12 @@ export function HomeownerHeroSection() {
             <div className="space-y-4">
               <a
                 href={MARKETING_CTA.getStarted}
-                className="inline-flex w-full max-w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-4 text-center text-sm font-medium text-marketing-navy-dark transition-colors hover:bg-white/95 sm:w-auto sm:px-10 sm:text-base"
+                className="inline-flex w-full max-w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-4 text-center font-roboto text-sm font-medium text-marketing-navy-dark transition-colors hover:bg-white/95 sm:w-auto sm:px-10 sm:text-base"
               >
                 Register and we&apos;ll get back to you soon
                 <ArrowRight size={16} strokeWidth={2} aria-hidden />
               </a>
-              <p className="text-xs leading-4 text-marketing-neutral-300">
+              <p className="font-roboto text-xs leading-4 text-marketing-neutral-300">
                 No upfront commitment. Our team will contact you to understand your property
                 requirements.
               </p>

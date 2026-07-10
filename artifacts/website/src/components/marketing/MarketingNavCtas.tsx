@@ -9,7 +9,7 @@ export const marketingNavCtaClassName =
 
 const contactUsCtaClassName = cn(
   marketingNavCtaClassName,
-  "border border-[#b4cdfd] bg-transparent text-marketing-neutral-1100 hover:bg-white/70",
+  "border border-marketing-azure-200 bg-transparent text-marketing-neutral-1100 hover:bg-white/70",
 );
 
 function scrollToHashAnchor(hash: string): void {

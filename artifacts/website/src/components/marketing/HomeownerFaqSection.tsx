@@ -67,11 +67,11 @@ function FaqAccordionItem({
   const buttonId = `homeowner-faq-button-${item.question}`;
 
   return (
-    <div className="border-b border-[#e3e9ff]">
+    <div className="rounded-xl border-b border-marketing-azure-stroke">
       <button
         type="button"
         id={buttonId}
-        className="flex w-full items-center justify-between gap-4 py-5 text-left"
+        className="flex w-full items-center justify-between gap-4 rounded-xl py-5 text-left"
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={onToggle}
@@ -109,13 +109,13 @@ export function HomeownerFaqSection() {
 
   return (
     <section
-      className="bg-marketing-bg py-14 sm:py-16 lg:py-[140px]"
+      className="bg-marketing-neutral-100 py-14 sm:py-16 lg:py-[140px]"
       aria-labelledby="homeowner-faq-heading"
     >
       <div className="mx-auto max-w-[1228px] px-5 sm:px-8 lg:px-12">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.5fr)] lg:gap-16">
           <div className="lg:sticky lg:top-28 lg:self-start">
-            <p className="text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
+            <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
               Frequently Asked Questions
             </p>
             <h2

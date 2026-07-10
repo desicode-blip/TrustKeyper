@@ -37,12 +37,12 @@ export function BrokerHeroSection() {
             <div className="space-y-4">
               <Link
                 href="/signup/broker"
-                className="inline-flex w-full max-w-full items-center justify-center gap-2 rounded-full bg-white px-8 py-4 text-center text-sm font-medium text-marketing-navy-dark transition-colors hover:bg-white/95 sm:w-auto sm:px-8 sm:text-base"
+                className="inline-flex w-full max-w-full items-center justify-center gap-2 rounded-full bg-white px-8 py-4 text-center font-roboto text-sm font-medium text-marketing-navy-dark transition-colors hover:bg-white/95 sm:w-auto sm:px-8 sm:text-base"
               >
                 Register Now
                 <ArrowRight size={16} strokeWidth={2} aria-hidden />
               </Link>
-              <p className="text-xs leading-4 text-marketing-neutral-300">
+              <p className="font-roboto text-xs leading-4 text-marketing-neutral-300">
                 Broker access is subject to profile verification.
               </p>
             </div>

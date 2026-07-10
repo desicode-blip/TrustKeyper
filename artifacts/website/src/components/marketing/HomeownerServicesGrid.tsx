@@ -153,7 +153,7 @@ export function HomeownerServicesGrid() {
     >
       <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">
         <div className="max-w-[673px]">
-          <p className="text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
+          <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
             Services
           </p>
           <h2

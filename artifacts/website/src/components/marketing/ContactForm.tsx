@@ -41,7 +41,7 @@ function FieldLabel({
   return (
     <label
       {...(htmlFor ? { htmlFor } : {})}
-      className="mb-3 block px-[14px] text-sm font-medium text-[#10322b]"
+      className="mb-3 block px-[14px] text-sm font-medium text-marketing-form-label"
     >
       {children}
       {required ? <span className="text-[#c93631]"> *</span> : null}
@@ -58,10 +58,10 @@ function FieldError({ message }: { message?: string }) {
 }
 
 const inputClassName =
-  "w-full rounded-full border border-[#e3e9ff] bg-marketing-cloud-050 px-[14px] py-3 text-sm text-[#10322b] outline-none transition-colors placeholder:text-marketing-neutral-500 focus:border-marketing-blue focus:bg-white";
+  "w-full rounded-full border border-marketing-azure-stroke bg-marketing-cloud-050 px-[14px] py-3 text-sm text-marketing-form-label outline-none transition-colors placeholder:text-marketing-neutral-500 focus:border-marketing-blue focus:bg-white";
 
 const textareaClassName =
-  "w-full resize-none rounded-xl border border-[#e3e9ff] bg-marketing-cloud-050 px-[14px] py-3 text-sm text-[#10322b] outline-none transition-colors placeholder:text-marketing-neutral-500 focus:border-marketing-blue focus:bg-white";
+  "w-full resize-none rounded-xl border border-marketing-azure-stroke bg-marketing-cloud-050 px-[14px] py-3 text-sm text-marketing-form-label outline-none transition-colors placeholder:text-marketing-neutral-500 focus:border-marketing-blue focus:bg-white";
 
 export function ContactForm() {
   const [values, setValues] = useState<ContactFormValues>(EMPTY_VALUES);
@@ -228,8 +228,8 @@ export function ContactForm() {
             <FieldLabel required htmlFor="contact-phone">
               Contact Number
             </FieldLabel>
-            <div className="flex overflow-hidden rounded-full border border-[#e3e9ff] bg-marketing-cloud-050 focus-within:border-marketing-blue focus-within:bg-white">
-              <span className="flex shrink-0 items-center border-r border-[#e3e9ff] px-[14px] text-sm text-marketing-neutral-500">
+            <div className="flex overflow-hidden rounded-full border border-marketing-azure-stroke bg-marketing-cloud-050 focus-within:border-marketing-blue focus-within:bg-white">
+              <span className="flex shrink-0 items-center border-r border-marketing-azure-stroke px-[14px] text-sm text-marketing-neutral-500">
                 +91
               </span>
               <input
@@ -240,7 +240,7 @@ export function ContactForm() {
                 value={values.phone}
                 onChange={(event) => updateField("phone", normalizePhoneDigits(event.target.value))}
                 maxLength={10}
-                className="min-w-0 flex-1 bg-transparent px-[14px] py-3 text-sm text-[#10322b] outline-none placeholder:text-marketing-neutral-500"
+                className="min-w-0 flex-1 bg-transparent px-[14px] py-3 text-sm text-marketing-form-label outline-none placeholder:text-marketing-neutral-500"
                 aria-invalid={Boolean(errors.phone)}
               />
             </div>
@@ -278,7 +278,7 @@ export function ContactForm() {
                 >
                   <span
                     className={cn(
-                      "flex size-4 shrink-0 items-center justify-center rounded-full border border-[#e3e9ff] bg-marketing-cloud-050",
+                      "flex size-4 shrink-0 items-center justify-center rounded-full border border-marketing-azure-stroke bg-marketing-cloud-050",
                       selected && "border-marketing-green",
                     )}
                   >

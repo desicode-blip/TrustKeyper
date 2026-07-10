@@ -81,7 +81,7 @@ export function HomeownerMarketingNav({ className }: HomeownerMarketingNavProps)
   return (
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50 border-b border-[#e3e9ff]/60 bg-marketing-cloud-050/90 backdrop-blur-[6px]",
+        "fixed inset-x-0 top-0 z-50 border-b border-marketing-azure-stroke/60 bg-marketing-cloud-050/90 backdrop-blur-[6px]",
         className,
       )}
     >
@@ -122,7 +122,7 @@ export function HomeownerMarketingNav({ className }: HomeownerMarketingNavProps)
       </div>
 
       {menuOpen ? (
-        <div className="border-t border-[#e3e9ff]/60 bg-marketing-cloud-050/95 md:hidden">
+        <div className="border-t border-marketing-azure-stroke/60 bg-marketing-cloud-050/95 md:hidden">
           <nav
             id={menuId}
             className="mx-auto flex max-w-[1168px] flex-col gap-4 px-6 py-5"
