@@ -4,7 +4,7 @@ import brokerPortalDashboard from "@/assets/marketing/brokers/portal-preview/bro
 export function BrokerPortalPreviewSection() {
   return (
     <section
-      className="bg-marketing-bg py-14 sm:py-16 lg:py-[140px]"
+      className="bg-marketing-cloud-050 py-14 sm:py-16 lg:py-[140px]"
       aria-labelledby="broker-portal-preview-heading"
     >
       <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">

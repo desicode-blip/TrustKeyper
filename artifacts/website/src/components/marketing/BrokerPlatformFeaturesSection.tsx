@@ -67,11 +67,11 @@ const PLATFORM_FEATURES: PlatformFeature[] = [
 function PlatformFeatureCard({ iconSrc, title, description }: PlatformFeature) {
   return (
     <article className="flex gap-4 rounded-3xl bg-white p-5 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)] sm:p-5">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-marketing-neutral-200">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-marketing-green">
         <img src={iconSrc} alt="" width={20} height={20} className="h-5 w-5" aria-hidden />
       </span>
       <div className="min-w-0">
-        <h3 className="text-base font-medium leading-6 text-marketing-navy-dark">{title}</h3>
+        <h3 className="font-roboto text-base font-medium leading-6 text-marketing-navy-dark">{title}</h3>
         <p className="mt-3 font-roboto text-sm leading-5 text-marketing-neutral-1000">{description}</p>
       </div>
     </article>
@@ -81,7 +81,7 @@ function PlatformFeatureCard({ iconSrc, title, description }: PlatformFeature) {
 export function BrokerPlatformFeaturesSection() {
   return (
     <section
-      className="bg-marketing-bg py-14 sm:py-16 lg:py-[140px]"
+      className="bg-marketing-cloud-050 py-14 sm:py-16 lg:py-[140px]"
       aria-labelledby="broker-platform-features-heading"
     >
       <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">

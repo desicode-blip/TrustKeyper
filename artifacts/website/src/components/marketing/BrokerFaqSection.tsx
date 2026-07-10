@@ -67,11 +67,11 @@ function FaqAccordionItem({
   const buttonId = `broker-faq-button-${item.question}`;
 
   return (
-    <div className="border-b border-marketing-azure-stroke">
+    <div className="rounded-xl border-b border-marketing-azure-stroke">
       <button
         type="button"
         id={buttonId}
-        className="flex w-full items-center justify-between gap-4 py-5 text-left"
+        className="flex w-full items-center justify-between gap-4 rounded-xl py-5 text-left"
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={onToggle}
@@ -108,7 +108,7 @@ export function BrokerFaqSection() {
   const [openIndex, setOpenIndex] = React.useState(0);
 
   return (
-    <section className="bg-marketing-bg py-14 sm:py-16 lg:py-[140px]" aria-labelledby="broker-faq-heading">
+    <section className="bg-marketing-neutral-100 py-14 sm:py-16 lg:py-[140px]" aria-labelledby="broker-faq-heading">
       <div className="mx-auto max-w-[1228px] px-5 sm:px-8 lg:px-12">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.5fr)] lg:gap-16">
           <div className="lg:sticky lg:top-28 lg:self-start">
