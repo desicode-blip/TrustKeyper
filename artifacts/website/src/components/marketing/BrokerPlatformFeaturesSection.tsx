@@ -1,56 +1,74 @@
 import React from "react";
-import { Check } from "lucide-react";
+import iconBrokerProfile from "@/assets/marketing/brokers/features/icon-07-broker-profile.svg";
+import iconFollowUp from "@/assets/marketing/brokers/features/icon-04-follow-up.svg";
+import iconLeadPipeline from "@/assets/marketing/brokers/features/icon-03-lead-pipeline.svg";
+import iconNotifications from "@/assets/marketing/brokers/features/icon-06-notifications.svg";
+import iconPerformance from "@/assets/marketing/brokers/features/icon-08-performance.svg";
+import iconPropertyDetails from "@/assets/marketing/brokers/features/icon-05-property-details.svg";
+import iconSmartFilters from "@/assets/marketing/brokers/features/icon-02-smart-filters.svg";
+import iconSupport from "@/assets/marketing/brokers/features/icon-09-support.svg";
+import iconVerifiedLeadFeed from "@/assets/marketing/brokers/features/icon-01-verified-lead-feed.svg";
 
 interface PlatformFeature {
+  iconSrc: string;
   title: string;
   description: string;
 }
 
 const PLATFORM_FEATURES: PlatformFeature[] = [
   {
+    iconSrc: iconVerifiedLeadFeed,
     title: "Verified Lead Feed",
     description: "Access newly available property opportunities with verification indicators.",
   },
   {
+    iconSrc: iconSmartFilters,
     title: "Smart Lead Filters",
     description: "Filter by locality, property type, budget, requirement, availability, and recency.",
   },
   {
+    iconSrc: iconLeadPipeline,
     title: "Lead Pipeline",
     description:
       "Move leads through New, Contacted, Qualified, Visit Scheduled, Negotiation, Closed, and Archived.",
   },
   {
+    iconSrc: iconFollowUp,
     title: "Follow-Up Tasks",
     description: "Set reminders and track pending actions.",
   },
   {
+    iconSrc: iconPropertyDetails,
     title: "Property Details",
     description: "Review essential property information and owner requirements before contacting.",
   },
   {
+    iconSrc: iconNotifications,
     title: "Notifications",
     description: "Receive alerts for matching opportunities and important follow-ups.",
   },
   {
+    iconSrc: iconBrokerProfile,
     title: "Broker Profile",
     description: "Manage service locations, property categories, business details, and availability.",
   },
   {
+    iconSrc: iconPerformance,
     title: "Performance Insights",
     description: "Monitor lead activity, response time, site visits, and closures.",
   },
   {
+    iconSrc: iconSupport,
     title: "Broker Support",
     description: "Access support for lead issues, verification questions, and account assistance.",
   },
 ];
 
-function PlatformFeatureCard({ title, description }: PlatformFeature) {
+function PlatformFeatureCard({ iconSrc, title, description }: PlatformFeature) {
   return (
     <article className="flex gap-4 rounded-3xl bg-white p-5 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)] sm:p-5">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-marketing-neutral-200">
-        <Check size={20} strokeWidth={2.5} className="text-marketing-green" aria-hidden />
+        <img src={iconSrc} alt="" width={20} height={20} className="h-5 w-5" aria-hidden />
       </span>
       <div className="min-w-0">
         <h3 className="text-base font-medium leading-6 text-marketing-navy-dark">{title}</h3>

@@ -1,7 +1,7 @@
 import React from "react";
 import { ArrowRight } from "lucide-react";
 import { Link } from "wouter";
-import heroBlueCurve from "@/assets/marketing/brokers/hero/hero-blue-curve.png";
+import heroBlueCurve from "@/assets/marketing/brokers/hero/hero-blue-curve.svg";
 import heroPhoneMockup from "@/assets/marketing/brokers/hero/hero-phone-mockup.png";
 
 export function BrokerHeroSection() {

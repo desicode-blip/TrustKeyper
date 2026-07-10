@@ -1,37 +1,39 @@
 import React from "react";
-import { LayoutGrid, ShieldCheck, Timer, type LucideIcon } from "lucide-react";
+import iconFaster from "@/assets/marketing/brokers/why/icon-faster.svg";
+import iconVerified from "@/assets/marketing/brokers/why/icon-verified.svg";
+import iconWorkflow from "@/assets/marketing/brokers/why/icon-workflow.svg";
 import { cn } from "@/lib/utils";
 
 interface WhyBrokerCard {
-  icon: LucideIcon;
+  iconSrc: string;
   title: string;
   description: string;
 }
 
 const WHY_BROKER_CARDS: WhyBrokerCard[] = [
   {
-    icon: ShieldCheck,
+    iconSrc: iconVerified,
     title: "Verified Opportunities",
     description:
       "Review property opportunities with owner and property information checked through TrustKeyper's verification process.",
   },
   {
-    icon: Timer,
+    iconSrc: iconFaster,
     title: "Faster Qualification",
     description: "See essential property and requirement details before beginning your follow-up.",
   },
   {
-    icon: LayoutGrid,
+    iconSrc: iconWorkflow,
     title: "One Organised Workflow",
     description: "Track each opportunity from new lead to site visit, negotiation, and closure.",
   },
 ];
 
-function WhyBrokerCardItem({ icon: Icon, title, description }: WhyBrokerCard) {
+function WhyBrokerCardItem({ iconSrc, title, description }: WhyBrokerCard) {
   return (
     <article className="rounded-3xl bg-white p-8 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)]">
       <span className="flex h-12 w-12 items-center justify-center rounded-full bg-marketing-neutral-200">
-        <Icon size={24} strokeWidth={2} className="text-marketing-navy-dark" aria-hidden />
+        <img src={iconSrc} alt="" width={24} height={24} className="h-6 w-6" aria-hidden />
       </span>
       <h3 className="mt-5 text-base font-medium leading-6 text-marketing-navy-dark">{title}</h3>
       <p className="mt-4 font-roboto text-sm leading-5 text-marketing-neutral-1000">{description}</p>

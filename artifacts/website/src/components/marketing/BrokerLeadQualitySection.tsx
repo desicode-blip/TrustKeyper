@@ -1,14 +1,20 @@
 import React from "react";
-import { Check } from "lucide-react";
+import iconAvailability from "@/assets/marketing/brokers/lead-quality/icon-04-availability.svg";
+import iconDuplicates from "@/assets/marketing/brokers/lead-quality/icon-05-duplicates.svg";
+import iconIssueReporting from "@/assets/marketing/brokers/lead-quality/icon-07-issue-reporting.svg";
+import iconOutdated from "@/assets/marketing/brokers/lead-quality/icon-06-outdated.svg";
+import iconOwnerIdentity from "@/assets/marketing/brokers/lead-quality/icon-01-owner-identity.svg";
+import iconPropertyDetails from "@/assets/marketing/brokers/lead-quality/icon-02-property-details.svg";
+import iconRequirement from "@/assets/marketing/brokers/lead-quality/icon-03-requirement.svg";
 
 const LEAD_QUALITY_BADGES = [
-  "Owner identity reviewed",
-  "Property details checked",
-  "Requirement confirmed",
-  "Property availability reviewed",
-  "Duplicate leads reduced",
-  "Outdated opportunities flagged",
-  "Lead issue-reporting process available",
+  { label: "Owner identity reviewed", iconSrc: iconOwnerIdentity },
+  { label: "Property details checked", iconSrc: iconPropertyDetails },
+  { label: "Requirement confirmed", iconSrc: iconRequirement },
+  { label: "Property availability reviewed", iconSrc: iconAvailability },
+  { label: "Duplicate leads reduced", iconSrc: iconDuplicates },
+  { label: "Outdated opportunities flagged", iconSrc: iconOutdated },
+  { label: "Lead issue-reporting process available", iconSrc: iconIssueReporting },
 ] as const;
 
 /**
@@ -20,11 +26,11 @@ const LEAD_QUALITY_DISCLAIMER = {
   body: "While we verify all leads for intent and accuracy, TrustKeyper does not guarantee lead conversion or final sale outcomes.",
 } as const;
 
-function LeadQualityBadge({ label }: { label: string }) {
+function LeadQualityBadge({ label, iconSrc }: { label: string; iconSrc: string }) {
   return (
     <li className="flex min-h-[80px] items-center gap-4 rounded-[52px] border border-white/10 bg-marketing-neutral-1050 px-5 py-5 sm:px-6">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-marketing-green">
-        <Check size={18} strokeWidth={2.5} className="text-white" aria-hidden />
+        <img src={iconSrc} alt="" width={18} height={18} className="h-[18px] w-[18px]" aria-hidden />
       </span>
       <span className="font-roboto text-base font-medium leading-6 text-white">{label}</span>
     </li>
@@ -59,8 +65,8 @@ export function BrokerLeadQualitySection() {
         </div>
 
         <ul className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:mt-[60px] lg:grid-cols-4 lg:gap-4">
-          {LEAD_QUALITY_BADGES.map((label) => (
-            <LeadQualityBadge key={label} label={label} />
+          {LEAD_QUALITY_BADGES.map((badge) => (
+            <LeadQualityBadge key={badge.label} label={badge.label} iconSrc={badge.iconSrc} />
           ))}
         </ul>
 
