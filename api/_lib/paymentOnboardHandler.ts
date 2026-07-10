@@ -7,6 +7,7 @@ import {
   validationStatusFromActivationStatus,
 } from "./razorpayRouteHelpers.js";
 import { assertPaymentAuth } from "./syncAuth.js";
+import { sanitizeErrorForLog } from "./sanitizeErrorForLog.js";
 import { getPool } from "./vercelSyncDb.js";
 
 const onboardBodySchema = z.object({
@@ -121,31 +122,6 @@ function parseRazorpayError(err: unknown): string {
   if (shaped.error?.description) return shaped.error.description;
   if (err instanceof Error) return err.message;
   return "Unknown Razorpay error";
-}
-
-/** Log-safe error fields only — never metadata or nested Razorpay payloads. */
-function sanitizeErrorForLog(err: unknown): { message: string; code?: string } {
-  const shaped = err as RazorpayErrorShape;
-  const razorpayCode = shaped.error?.code;
-  const topLevelCode =
-    typeof err === "object" &&
-    err !== null &&
-    "code" in err &&
-    typeof (err as { code: unknown }).code === "string"
-      ? (err as { code: string }).code
-      : undefined;
-  const code = razorpayCode ?? topLevelCode;
-
-  let message: string;
-  if (shaped.error?.description) {
-    message = shaped.error.description;
-  } else if (err instanceof Error) {
-    message = err.message;
-  } else {
-    message = String(err);
-  }
-
-  return code ? { message, code } : { message };
 }
 
 export async function getRecipientConfig(

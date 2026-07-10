@@ -3,6 +3,7 @@ import { put } from "@vercel/blob";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import formidable from "formidable";
 import { json } from "./_lib/http.js";
+import { sanitizeErrorForLog } from "./_lib/sanitizeErrorForLog.js";
 import { assertSyncAccountAuth } from "./_lib/syncAuth.js";
 
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -24,20 +25,6 @@ function fileValue(files: formidable.Files, name: string): formidable.File | und
   if (Array.isArray(raw)) return raw[0];
   if (raw && typeof raw === "object" && "filepath" in raw) return raw;
   return undefined;
-}
-
-/** Log-safe error fields only — never nested payloads. */
-function sanitizeErrorForLog(err: unknown): { message: string; code?: string } {
-  const topLevelCode =
-    typeof err === "object" &&
-    err !== null &&
-    "code" in err &&
-    typeof (err as { code: unknown }).code === "string"
-      ? (err as { code: string }).code
-      : undefined;
-
-  const message = err instanceof Error ? err.message : String(err);
-  return topLevelCode ? { message, code: topLevelCode } : { message };
 }
 
 function isMaxFileSizeError(err: unknown): boolean {
