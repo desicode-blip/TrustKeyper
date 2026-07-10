@@ -32,7 +32,7 @@ const WHY_BROKER_CARDS: WhyBrokerCard[] = [
 function WhyBrokerCardItem({ iconSrc, title, description }: WhyBrokerCard) {
   return (
     <article className="rounded-3xl bg-white p-8 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)]">
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-marketing-icon-circle">
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-marketing-icon-circle/10">
         <img src={iconSrc} alt="" width={24} height={24} className="h-6 w-6" aria-hidden />
       </span>
       <h3 className="mt-5 text-xl font-semibold leading-[26px] text-marketing-navy-dark">{title}</h3>
