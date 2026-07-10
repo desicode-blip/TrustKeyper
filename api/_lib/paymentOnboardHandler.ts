@@ -470,15 +470,6 @@ export async function executePaymentOnboardComplete(
         linkedAccountId,
         { product_name: "route" },
       );
-      console.log("Razorpay product request response", {
-        phone,
-        role: body.role,
-        accountId: linkedAccountId,
-        productId: product.id,
-        activationStatus: product.activation_status,
-        requirements: product.requirements,
-        tnc: product.tnc,
-      });
       productId = product.id;
       await updateRecipientProductId(phone, body.role, productId);
     } catch (err) {
@@ -506,15 +497,6 @@ export async function executePaymentOnboardComplete(
         beneficiary_name: body.bankBeneficiaryName,
       },
       tnc_accepted: true,
-    });
-    console.log("Razorpay product edit response", {
-      phone,
-      role: body.role,
-      accountId: linkedAccountId,
-      productId,
-      activationStatus: editResult.activation_status,
-      requirements: editResult.requirements,
-      tnc: editResult.tnc,
     });
     validationStatus = await markRecipientSubmitted(
       phone,
