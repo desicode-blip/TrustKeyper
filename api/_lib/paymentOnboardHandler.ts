@@ -332,41 +332,13 @@ export async function handlePaymentOnboardRequest(
 
     let account;
     try {
-      // TEMPORARY debug logging — Razorpay ticket #19705336 (remove after support closes ticket)
-      console.log("RAZORPAY_DEBUG_REQUEST", {
-        phone,
-        role: body.role,
-        referenceId,
-        payload: razorpayPayload,
-      });
-
       account = await getRazorpayClient().accounts.create(razorpayPayload);
-
-      // TEMPORARY debug logging — Razorpay ticket #19705336 (remove after support closes ticket)
-      console.log("RAZORPAY_DEBUG_RESPONSE", {
-        phone,
-        role: body.role,
-        referenceId,
-        account,
-      });
     } catch (err) {
-      // TEMPORARY debug logging — Razorpay ticket #19705336 (remove after support closes ticket)
-      const razorpayErrorBody =
-        err && typeof err === "object" && "response" in err
-          ? (err as { response?: { data?: unknown } }).response?.data
-          : err && typeof err === "object" && ("error" in err || "statusCode" in err)
-            ? {
-                statusCode: (err as { statusCode?: unknown }).statusCode,
-                body: (err as { error?: unknown }).error,
-              }
-            : err;
-
       console.error("Razorpay accounts.create failed", {
         phone,
         role: body.role,
         referenceId,
         error: err as RazorpayErrorShape,
-        RAZORPAY_DEBUG_ERROR_RESPONSE: razorpayErrorBody,
       });
       json(res, 502, {
         error: "Razorpay account creation failed",
@@ -498,15 +470,6 @@ export async function executePaymentOnboardComplete(
         linkedAccountId,
         { product_name: "route" },
       );
-      console.log("Razorpay product request response", {
-        phone,
-        role: body.role,
-        accountId: linkedAccountId,
-        productId: product.id,
-        activationStatus: product.activation_status,
-        requirements: product.requirements,
-        tnc: product.tnc,
-      });
       productId = product.id;
       await updateRecipientProductId(phone, body.role, productId);
     } catch (err) {
@@ -534,15 +497,6 @@ export async function executePaymentOnboardComplete(
         beneficiary_name: body.bankBeneficiaryName,
       },
       tnc_accepted: true,
-    });
-    console.log("Razorpay product edit response", {
-      phone,
-      role: body.role,
-      accountId: linkedAccountId,
-      productId,
-      activationStatus: editResult.activation_status,
-      requirements: editResult.requirements,
-      tnc: editResult.tnc,
     });
     validationStatus = await markRecipientSubmitted(
       phone,
