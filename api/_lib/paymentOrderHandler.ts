@@ -4,6 +4,7 @@ import { json, readJsonBody } from "./http.js";
 import { getRazorpayClient } from "./razorpayClient.js";
 import { extractTransfersFromOrder } from "./razorpayRouteHelpers.js";
 import { assertPaymentAuth } from "./syncAuth.js";
+import { sanitizeErrorForLog } from "./sanitizeErrorForLog.js";
 import { getPool, normalizePhone } from "./vercelSyncDb.js";
 
 const createOrderBodySchema = z.object({
@@ -516,7 +517,7 @@ export async function handleTenantRentOrderRequest(
       keyId: process.env.RAZORPAY_KEY_ID?.trim() ?? "",
     });
   } catch (err) {
-    console.error("payments-create-rent-order-tenant unexpected error", { error: err });
+    console.error("payments-create-rent-order-tenant unexpected error", sanitizeErrorForLog(err));
     json(res, 500, { error: "Internal server error" });
   }
 }
@@ -629,7 +630,7 @@ export async function handlePaymentCreateOrderRequest(
         rentPeriod: body.rentPeriod,
         phone,
         role: body.role,
-        error: err as RazorpayErrorShape,
+        ...sanitizeErrorForLog(err),
       });
       json(res, 502, {
         error: "Failed to create payment order",
@@ -662,7 +663,7 @@ export async function handlePaymentCreateOrderRequest(
         orderId: order.id,
         agreementId: body.agreementId,
         rentPeriod: body.rentPeriod,
-        error: err,
+        ...sanitizeErrorForLog(err),
       });
       json(res, 500, { error: "Failed to record payment order" });
       return;
@@ -678,7 +679,7 @@ export async function handlePaymentCreateOrderRequest(
       rentPeriod: body.rentPeriod,
     });
   } catch (err) {
-    console.error("payments-create-order unexpected error", { error: err });
+    console.error("payments-create-order unexpected error", sanitizeErrorForLog(err));
     json(res, 500, { error: "Internal server error" });
   }
 }

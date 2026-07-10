@@ -7,6 +7,7 @@ import {
   validationStatusFromActivationStatus,
 } from "./razorpayRouteHelpers.js";
 import { assertPaymentAuth } from "./syncAuth.js";
+import { sanitizeErrorForLog } from "./sanitizeErrorForLog.js";
 import { getPool } from "./vercelSyncDb.js";
 
 const onboardBodySchema = z.object({
@@ -338,7 +339,7 @@ export async function handlePaymentOnboardRequest(
         phone,
         role: body.role,
         referenceId,
-        error: err as RazorpayErrorShape,
+        ...sanitizeErrorForLog(err),
       });
       json(res, 502, {
         error: "Razorpay account creation failed",
@@ -453,7 +454,7 @@ export async function executePaymentOnboardComplete(
         phone,
         role: body.role,
         linkedAccountId,
-        error: err as RazorpayErrorShape,
+        ...sanitizeErrorForLog(err),
       });
       return {
         ok: false,
@@ -477,7 +478,7 @@ export async function executePaymentOnboardComplete(
         phone,
         role: body.role,
         linkedAccountId,
-        error: err as RazorpayErrorShape,
+        ...sanitizeErrorForLog(err),
       });
       return {
         ok: false,
@@ -520,7 +521,7 @@ export async function executePaymentOnboardComplete(
       role: body.role,
       linkedAccountId,
       productId,
-      error: err as RazorpayErrorShape,
+      ...sanitizeErrorForLog(err),
     });
     return {
       ok: false,

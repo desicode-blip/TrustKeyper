@@ -3,6 +3,7 @@ import { put } from "@vercel/blob";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import formidable from "formidable";
 import { json } from "./_lib/http.js";
+import { sanitizeErrorForLog } from "./_lib/sanitizeErrorForLog.js";
 import { assertSyncAccountAuth } from "./_lib/syncAuth.js";
 
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -55,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       json(res, 400, { error: "Image too large — max 2MB" });
       return;
     }
-    console.error("[upload-property-image] formidable parse failed:", err);
+    console.error("[upload-property-image] formidable parse failed:", sanitizeErrorForLog(err));
     json(res, 400, { error: "Invalid form data" });
     return;
   }
@@ -110,7 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     json(res, 200, { url: result.url });
   } catch (err) {
-    console.error("[upload-property-image] blob put failed:", err);
+    console.error("[upload-property-image] blob put failed:", sanitizeErrorForLog(err));
     json(res, 502, { error: "Image upload failed" });
   }
 }
