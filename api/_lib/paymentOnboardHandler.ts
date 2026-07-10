@@ -2,7 +2,12 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
 import { json, readJsonBody } from "./http.js";
 import { getRazorpayClient } from "./razorpayClient.js";
+import {
+  syncRecipientValidationFromRazorpay,
+  validationStatusFromActivationStatus,
+} from "./razorpayRouteHelpers.js";
 import { assertPaymentAuth } from "./syncAuth.js";
+import { sanitizeErrorForLog } from "./sanitizeErrorForLog.js";
 import { getPool } from "./vercelSyncDb.js";
 
 const onboardBodySchema = z.object({
@@ -171,13 +176,19 @@ async function updateRecipientProductId(
   );
 }
 
-async function markRecipientSubmitted(phone: string, role: string): Promise<void> {
+async function markRecipientSubmitted(
+  phone: string,
+  role: string,
+  razorpayActivationStatus?: string | null,
+): Promise<string> {
+  const validationStatus = validationStatusFromActivationStatus(razorpayActivationStatus);
   await getPool().query(
     `UPDATE payment_recipient_config
-     SET validation_status = 'submitted', updated_at = NOW()
+     SET validation_status = $3, updated_at = NOW()
      WHERE phone = $1 AND role = $2`,
-    [phone, role],
+    [phone, role, validationStatus],
   );
+  return validationStatus;
 }
 
 async function upsertRecipientKyc(params: {
@@ -197,7 +208,7 @@ async function upsertRecipientKyc(params: {
        business_category, business_subcategory, business_type,
        bank_account_number, bank_ifsc, bank_holder_name,
        created_at, updated_at
-     ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'housing', 'real_estate_agents', 'individual', $7, $8, $9, NOW(), NOW())
+     ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'housing', 'space_rental', 'individual', $7, $8, $9, NOW(), NOW())
      ON CONFLICT (phone, role) DO UPDATE SET
        legal_name = EXCLUDED.legal_name,
        email = EXCLUDED.email,
@@ -259,7 +270,7 @@ export function buildRazorpayAccountPayload(body: OnboardBody, referenceId: stri
     business_type: "individual",
     profile: {
       category: "housing",
-      subcategory: "real_estate_agents",
+      subcategory: "space_rental",
       business_model: "Individual property owner collecting monthly rent",
       addresses: {
         registered: {
@@ -328,7 +339,7 @@ export async function handlePaymentOnboardRequest(
         phone,
         role: body.role,
         referenceId,
-        error: err as RazorpayErrorShape,
+        ...sanitizeErrorForLog(err),
       });
       json(res, 502, {
         error: "Razorpay account creation failed",
@@ -364,7 +375,7 @@ export type OnboardCompleteSuccess = {
   accountId: string;
   stakeholderId: string;
   productId: string;
-  validationStatus: "submitted";
+  validationStatus: string;
   stepsRun: {
     stakeholder: boolean;
     product: boolean;
@@ -443,7 +454,7 @@ export async function executePaymentOnboardComplete(
         phone,
         role: body.role,
         linkedAccountId,
-        error: err as RazorpayErrorShape,
+        ...sanitizeErrorForLog(err),
       });
       return {
         ok: false,
@@ -467,7 +478,7 @@ export async function executePaymentOnboardComplete(
         phone,
         role: body.role,
         linkedAccountId,
-        error: err as RazorpayErrorShape,
+        ...sanitizeErrorForLog(err),
       });
       return {
         ok: false,
@@ -478,8 +489,9 @@ export async function executePaymentOnboardComplete(
     }
   }
 
+  let validationStatus = "submitted";
   try {
-    await getRazorpayClient().products.edit(linkedAccountId, productId, {
+    const editResult = await getRazorpayClient().products.edit(linkedAccountId, productId, {
       settlements: {
         account_number: body.bankAccountNumber,
         ifsc_code: body.bankIfsc,
@@ -487,7 +499,11 @@ export async function executePaymentOnboardComplete(
       },
       tnc_accepted: true,
     });
-    await markRecipientSubmitted(phone, body.role);
+    validationStatus = await markRecipientSubmitted(
+      phone,
+      body.role,
+      editResult.activation_status,
+    );
     await upsertRecipientKyc({
       phone,
       role: body.role,
@@ -505,7 +521,7 @@ export async function executePaymentOnboardComplete(
       role: body.role,
       linkedAccountId,
       productId,
-      error: err as RazorpayErrorShape,
+      ...sanitizeErrorForLog(err),
     });
     return {
       ok: false,
@@ -520,7 +536,7 @@ export async function executePaymentOnboardComplete(
     accountId: linkedAccountId,
     stakeholderId: stakeholderId!,
     productId: productId!,
-    validationStatus: "submitted",
+    validationStatus,
     stepsRun: {
       stakeholder: ranStakeholder,
       product: ranProduct,
@@ -632,9 +648,20 @@ export async function handlePaymentOnboardStatusRequest(
   }
 
   try {
-    const config = await getRecipientConfig(phone, role);
+    const config = await getFullRecipientConfig(phone, role);
+    let validationStatus = config?.validation_status ?? "pending";
+
+    if (config?.razorpay_linked_account_id && config.razorpay_product_id) {
+      const synced = await syncRecipientValidationFromRazorpay({
+        linkedAccountId: config.razorpay_linked_account_id,
+        productId: config.razorpay_product_id,
+        currentValidationStatus: config.validation_status,
+      });
+      validationStatus = synced.validationStatus;
+    }
+
     json(res, 200, {
-      validationStatus: config?.validation_status ?? "pending",
+      validationStatus,
       hasLinkedAccount: Boolean(config?.razorpay_linked_account_id),
       accountId: config?.razorpay_linked_account_id ?? null,
     });

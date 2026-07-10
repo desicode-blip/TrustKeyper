@@ -33,7 +33,8 @@ export function getPool(): pg.Pool {
     pool = new Pool({
       connectionString,
       ssl: { rejectUnauthorized: false },
-      max: 3,
+      // max:1 — serverless functions fan out across many instances; keep per-instance pool minimal and rely on Supabase's transaction pooler for multiplexing.
+      max: 1,
     });
   }
   return pool;
@@ -85,6 +86,28 @@ export async function getRolesForPhone(phone: string): Promise<string[]> {
     [p],
   );
   return result.rows.map((r: { role: string }) => r.role).filter(Boolean);
+}
+
+export async function getAccountSummariesForPhone(
+  phone: string,
+): Promise<Array<{ role: string; displayName: string }>> {
+  const p = normalizePhone(phone);
+  const result = await getPool().query<{ role: string; value: string }>(
+    `SELECT role, value FROM user_data
+     WHERE phone = $1 AND data_key = 'profile'`,
+    [p],
+  );
+
+  return result.rows.map((row) => {
+    let displayName = "";
+    try {
+      const parsed = JSON.parse(row.value) as { name?: string };
+      displayName = parsed.name?.trim() ?? "";
+    } catch {
+      /* ignore malformed profile */
+    }
+    return { role: row.role, displayName };
+  });
 }
 
 export async function setAccountDataKey(

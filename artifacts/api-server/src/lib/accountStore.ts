@@ -1,6 +1,7 @@
 export {
   accountHasProfile,
   getAccountData,
+  getAccountSummariesForPhone,
   getRolesForPhone,
   normalizePhone,
   setAccountDataBulk,
