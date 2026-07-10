@@ -20,11 +20,16 @@ export function HomeownerContactSection() {
             <ContactForm />
           </div>
 
-          <div className="mt-6 overflow-hidden rounded-xl shadow-[0_1px_2px_rgba(8,50,42,0.04),0_16px_40px_rgba(8,50,42,0.06)] lg:mt-0">
+          <div className="relative mt-6 aspect-[396/580] overflow-hidden rounded-xl shadow-[0_1px_2px_rgba(8,50,42,0.04),0_16px_40px_rgba(8,50,42,0.06)] lg:mt-0 lg:aspect-auto lg:h-full">
+            {/*
+              Asset has ~8.5% baked white/dark junk at the bottom (rows ~617–673 of 673).
+              Oversize the img from the top so overflow-hidden clips that band at every width.
+              Stacked layout uses the clean-content aspect; lg stretches to the form column height.
+            */}
             <img
               src={contactIllustration}
               alt=""
-              className="h-full w-full object-cover"
+              className="absolute inset-x-0 top-0 h-[115%] w-full max-w-none object-cover object-top"
               loading="lazy"
             />
           </div>
