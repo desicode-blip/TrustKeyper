@@ -26,6 +26,20 @@ function fileValue(files: formidable.Files, name: string): formidable.File | und
   return undefined;
 }
 
+/** Log-safe error fields only — never nested payloads. */
+function sanitizeErrorForLog(err: unknown): { message: string; code?: string } {
+  const topLevelCode =
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    typeof (err as { code: unknown }).code === "string"
+      ? (err as { code: string }).code
+      : undefined;
+
+  const message = err instanceof Error ? err.message : String(err);
+  return topLevelCode ? { message, code: topLevelCode } : { message };
+}
+
 function isMaxFileSizeError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   const code = (err as Error & { code?: number }).code;
@@ -55,7 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       json(res, 400, { error: "Image too large — max 2MB" });
       return;
     }
-    console.error("[upload-property-image] formidable parse failed:", err);
+    console.error("[upload-property-image] formidable parse failed:", sanitizeErrorForLog(err));
     json(res, 400, { error: "Invalid form data" });
     return;
   }
@@ -110,7 +124,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     json(res, 200, { url: result.url });
   } catch (err) {
-    console.error("[upload-property-image] blob put failed:", err);
+    console.error("[upload-property-image] blob put failed:", sanitizeErrorForLog(err));
     json(res, 502, { error: "Image upload failed" });
   }
 }

@@ -123,6 +123,31 @@ function parseRazorpayError(err: unknown): string {
   return "Unknown Razorpay error";
 }
 
+/** Log-safe error fields only — never metadata or nested Razorpay payloads. */
+function sanitizeErrorForLog(err: unknown): { message: string; code?: string } {
+  const shaped = err as RazorpayErrorShape;
+  const razorpayCode = shaped.error?.code;
+  const topLevelCode =
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    typeof (err as { code: unknown }).code === "string"
+      ? (err as { code: string }).code
+      : undefined;
+  const code = razorpayCode ?? topLevelCode;
+
+  let message: string;
+  if (shaped.error?.description) {
+    message = shaped.error.description;
+  } else if (err instanceof Error) {
+    message = err.message;
+  } else {
+    message = String(err);
+  }
+
+  return code ? { message, code } : { message };
+}
+
 export async function getRecipientConfig(
   phone: string,
   role: string,
@@ -338,7 +363,7 @@ export async function handlePaymentOnboardRequest(
         phone,
         role: body.role,
         referenceId,
-        error: err as RazorpayErrorShape,
+        ...sanitizeErrorForLog(err),
       });
       json(res, 502, {
         error: "Razorpay account creation failed",
@@ -453,7 +478,7 @@ export async function executePaymentOnboardComplete(
         phone,
         role: body.role,
         linkedAccountId,
-        error: err as RazorpayErrorShape,
+        ...sanitizeErrorForLog(err),
       });
       return {
         ok: false,
@@ -477,7 +502,7 @@ export async function executePaymentOnboardComplete(
         phone,
         role: body.role,
         linkedAccountId,
-        error: err as RazorpayErrorShape,
+        ...sanitizeErrorForLog(err),
       });
       return {
         ok: false,
@@ -520,7 +545,7 @@ export async function executePaymentOnboardComplete(
       role: body.role,
       linkedAccountId,
       productId,
-      error: err as RazorpayErrorShape,
+      ...sanitizeErrorForLog(err),
     });
     return {
       ok: false,

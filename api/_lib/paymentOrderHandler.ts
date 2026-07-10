@@ -77,6 +77,31 @@ function parseRazorpayError(err: unknown): string {
   return "Unknown Razorpay error";
 }
 
+/** Log-safe error fields only — never metadata or nested Razorpay payloads. */
+function sanitizeErrorForLog(err: unknown): { message: string; code?: string } {
+  const shaped = err as RazorpayErrorShape;
+  const razorpayCode = shaped.error?.code;
+  const topLevelCode =
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    typeof (err as { code: unknown }).code === "string"
+      ? (err as { code: string }).code
+      : undefined;
+  const code = razorpayCode ?? topLevelCode;
+
+  let message: string;
+  if (shaped.error?.description) {
+    message = shaped.error.description;
+  } else if (err instanceof Error) {
+    message = err.message;
+  } else {
+    message = String(err);
+  }
+
+  return code ? { message, code } : { message };
+}
+
 function tenantPhoneFromContact(tenantContact: string): string {
   return normalizePhone(tenantContact);
 }
@@ -516,7 +541,7 @@ export async function handleTenantRentOrderRequest(
       keyId: process.env.RAZORPAY_KEY_ID?.trim() ?? "",
     });
   } catch (err) {
-    console.error("payments-create-rent-order-tenant unexpected error", { error: err });
+    console.error("payments-create-rent-order-tenant unexpected error", sanitizeErrorForLog(err));
     json(res, 500, { error: "Internal server error" });
   }
 }
@@ -629,7 +654,7 @@ export async function handlePaymentCreateOrderRequest(
         rentPeriod: body.rentPeriod,
         phone,
         role: body.role,
-        error: err as RazorpayErrorShape,
+        ...sanitizeErrorForLog(err),
       });
       json(res, 502, {
         error: "Failed to create payment order",
@@ -662,7 +687,7 @@ export async function handlePaymentCreateOrderRequest(
         orderId: order.id,
         agreementId: body.agreementId,
         rentPeriod: body.rentPeriod,
-        error: err,
+        ...sanitizeErrorForLog(err),
       });
       json(res, 500, { error: "Failed to record payment order" });
       return;
@@ -678,7 +703,7 @@ export async function handlePaymentCreateOrderRequest(
       rentPeriod: body.rentPeriod,
     });
   } catch (err) {
-    console.error("payments-create-order unexpected error", { error: err });
+    console.error("payments-create-order unexpected error", sanitizeErrorForLog(err));
     json(res, 500, { error: "Internal server error" });
   }
 }
