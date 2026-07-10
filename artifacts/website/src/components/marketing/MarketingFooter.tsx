@@ -25,11 +25,10 @@ const COMPANY_LINKS = [
   { label: "FAQs", href: "/faqs" },
 ] as const;
 
-// PLACEHOLDER: bare platform homepages until TrustKeyper company page URLs are confirmed (follow-up PR).
 const FOOTER_SOCIAL_LINKS = [
-  { label: "TrustKeyper on LinkedIn", href: "https://www.linkedin.com/", Icon: Linkedin },
-  { label: "TrustKeyper on Facebook", href: "https://www.facebook.com/", Icon: Facebook },
-  { label: "TrustKeyper on Instagram", href: "https://www.instagram.com/", Icon: Instagram },
+  { label: "TrustKeyper on LinkedIn", href: "https://www.linkedin.com/company/trustkeyper/", Icon: Linkedin },
+  { label: "TrustKeyper on Facebook", href: "https://www.facebook.com/people/Trustkeyper/61591036335907/", Icon: Facebook },
+  { label: "TrustKeyper on Instagram", href: "https://www.instagram.com/trustkeyper", Icon: Instagram },
 ] as const;
 
 const footerGroupHeadingClassName =
