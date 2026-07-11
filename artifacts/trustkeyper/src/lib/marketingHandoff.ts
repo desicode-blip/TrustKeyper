@@ -91,7 +91,7 @@ export async function applyMarketingHandoff(
     return { ok: false, error: "Phone verification mismatch. Please log in again." };
   }
 
-  const loggedIn = await loginSuccess(handoff.phone, handoff.role);
+  const loggedIn = await loginSuccess(handoff.phone, handoff.role, handoff.tokens.access_token);
   if (!loggedIn) {
     return { ok: false, error: "Could not load your account. Please try again." };
   }
