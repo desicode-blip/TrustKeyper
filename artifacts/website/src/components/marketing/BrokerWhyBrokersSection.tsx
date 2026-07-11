@@ -31,7 +31,7 @@ const WHY_BROKER_CARDS: WhyBrokerCard[] = [
 
 function WhyBrokerCardItem({ iconSrc, title, description }: WhyBrokerCard) {
   return (
-    <article className="rounded-3xl bg-white p-8 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)]">
+    <article className="rounded-3xl bg-white p-5 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)] sm:p-8">
       <span className="flex h-12 w-12 items-center justify-center rounded-full bg-marketing-icon-circle/10">
         <img src={iconSrc} alt="" width={24} height={24} className="h-6 w-6" aria-hidden />
       </span>
@@ -43,8 +43,8 @@ function WhyBrokerCardItem({ iconSrc, title, description }: WhyBrokerCard) {
 
 export function BrokerWhyBrokersSection() {
   return (
-    <section className="bg-white py-14 sm:py-16 lg:py-[140px]" aria-labelledby="broker-why-heading">
-      <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">
+    <section className="bg-white py-16 lg:py-[140px]" aria-labelledby="broker-why-heading">
+      <div className="mx-auto max-w-[1168px] px-6 sm:px-8 lg:px-12">
         <div className="flex flex-col gap-6 md:gap-8 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
           <div className="max-w-[368px] shrink-0">
             <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
@@ -52,7 +52,7 @@ export function BrokerWhyBrokersSection() {
             </p>
             <h2
               id="broker-why-heading"
-              className="mt-5 text-[32px] font-medium leading-tight text-marketing-navy-dark sm:text-[40px] sm:leading-[46px]"
+              className="mt-5 text-[40px] font-medium leading-[46px] text-marketing-navy-dark"
             >
               Spend less time
               <br />

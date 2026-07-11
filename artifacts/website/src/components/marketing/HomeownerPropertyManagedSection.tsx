@@ -50,7 +50,7 @@ function ManagedCardItem({
   return (
     <article
       className={cn(
-        "rounded-3xl p-8",
+        "flex flex-row items-start gap-5 rounded-3xl p-5 sm:flex-col sm:gap-0 sm:p-8",
         variant === "surface" &&
           "bg-white shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)]",
         variant === "muted" && "bg-marketing-neutral-200",
@@ -58,7 +58,7 @@ function ManagedCardItem({
     >
       <span
         className={cn(
-          "flex h-11 w-11 items-center justify-center rounded-full",
+          "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
           iconSurface === "muted" && "bg-marketing-neutral-200",
           iconSurface === "surface" && "bg-white",
         )}
@@ -70,30 +70,32 @@ function ManagedCardItem({
           aria-hidden
         />
       </span>
-      <h3
-        className={cn(
-          "mt-6 text-xl font-semibold leading-[26px]",
-          variant === "muted" ? "text-marketing-neutral-1100" : "text-marketing-navy-dark",
-        )}
-      >
-        {title}
-      </h3>
-      <p
-        className={cn(
-          "mt-4 font-roboto text-sm leading-5",
-          variant === "muted" ? "text-marketing-neutral-1100" : "text-marketing-navy-dark",
-        )}
-      >
-        {description}
-      </p>
+      <div className="min-w-0 flex-1 sm:mt-6">
+        <h3
+          className={cn(
+            "text-xl font-semibold leading-[26px]",
+            variant === "muted" ? "text-marketing-neutral-1100" : "text-marketing-navy-dark",
+          )}
+        >
+          {title}
+        </h3>
+        <p
+          className={cn(
+            "mt-3 font-roboto text-sm leading-5 sm:mt-4",
+            variant === "muted" ? "text-marketing-neutral-1100" : "text-marketing-navy-dark",
+          )}
+        >
+          {description}
+        </p>
+      </div>
     </article>
   );
 }
 
 export function HomeownerPropertyManagedSection() {
   return (
-    <section className="bg-marketing-neutral-100 py-14 sm:py-16 lg:py-20" aria-labelledby="homeowner-managed-heading">
-      <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">
+    <section className="bg-marketing-neutral-100 py-16 lg:py-20" aria-labelledby="homeowner-managed-heading">
+      <div className="mx-auto max-w-[1168px] px-6 sm:px-8 lg:px-12">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between lg:gap-16 xl:gap-[226px]">
           <div className="max-w-[398px] shrink-0">
             <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
@@ -101,7 +103,7 @@ export function HomeownerPropertyManagedSection() {
             </p>
             <h2
               id="homeowner-managed-heading"
-              className="mt-5 text-[32px] font-medium leading-tight text-marketing-navy-dark sm:text-[40px] sm:leading-[46px]"
+              className="mt-5 text-[40px] font-medium leading-[46px] text-marketing-navy-dark"
             >
               Your property.
               <br />

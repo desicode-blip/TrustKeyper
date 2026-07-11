@@ -75,8 +75,8 @@ export function BrokerFaqSection() {
   const [openIndex, setOpenIndex] = React.useState(0);
 
   return (
-    <section className="bg-marketing-neutral-100 py-14 sm:py-16 lg:py-[140px]" aria-labelledby="broker-faq-heading">
-      <div className="mx-auto max-w-[1228px] px-5 sm:px-8 lg:px-12">
+    <section className="bg-white py-16 sm:bg-marketing-neutral-100 lg:py-[140px]" aria-labelledby="broker-faq-heading">
+      <div className="mx-auto max-w-[1228px] px-6 sm:px-8 lg:px-12">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.5fr)] lg:gap-16">
           <div className="lg:sticky lg:top-28 lg:self-start">
             <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
@@ -84,7 +84,7 @@ export function BrokerFaqSection() {
             </p>
             <h2
               id="broker-faq-heading"
-              className="mt-5 text-[32px] font-medium leading-tight text-marketing-navy-dark sm:text-[40px] sm:leading-[46px]"
+              className="mt-5 text-[40px] font-medium leading-[46px] text-marketing-navy-dark"
             >
               Common questions
               <br />

@@ -66,7 +66,7 @@ const PLATFORM_FEATURES: PlatformFeature[] = [
 
 function PlatformFeatureCard({ iconSrc, title, description }: PlatformFeature) {
   return (
-    <article className="flex gap-4 rounded-3xl bg-white p-5 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)] sm:p-5">
+    <article className="flex gap-4 rounded-3xl bg-white p-3 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)] sm:p-5">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-marketing-green">
         <img src={iconSrc} alt="" width={20} height={20} className="h-5 w-5" aria-hidden />
       </span>
@@ -81,17 +81,17 @@ function PlatformFeatureCard({ iconSrc, title, description }: PlatformFeature) {
 export function BrokerPlatformFeaturesSection() {
   return (
     <section
-      className="bg-marketing-cloud-050 py-14 sm:py-16 lg:py-[140px]"
+      className="bg-marketing-cloud-050 py-16 lg:py-[140px]"
       aria-labelledby="broker-platform-features-heading"
     >
-      <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">
+      <div className="mx-auto max-w-[1168px] px-6 sm:px-8 lg:px-12">
         <header className="max-w-[751px]">
           <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
             Platform Features
           </p>
           <h2
             id="broker-platform-features-heading"
-            className="mt-5 text-[32px] font-medium leading-tight text-marketing-navy-dark sm:text-[40px] sm:leading-[46px]"
+            className="mt-5 text-[40px] font-medium leading-[46px] text-marketing-navy-dark"
           >
             Everything brokers need
             <br />

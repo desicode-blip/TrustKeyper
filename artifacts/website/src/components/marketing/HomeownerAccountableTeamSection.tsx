@@ -13,17 +13,17 @@ const TEAM_RESPONSIBILITIES = [
 export function HomeownerAccountableTeamSection() {
   return (
     <section
-      className="bg-marketing-neutral-100 py-14 sm:py-16 lg:py-[140px]"
+      className="bg-marketing-neutral-100 py-16 lg:py-[140px]"
       aria-labelledby="homeowner-accountable-team-heading"
     >
-      <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">
+      <div className="mx-auto max-w-[1168px] px-6 sm:px-8 lg:px-12">
         <div className="max-w-[482px]">
           <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
             Dedicated Support
           </p>
           <h2
             id="homeowner-accountable-team-heading"
-            className="mt-5 text-[32px] font-medium leading-tight text-marketing-navy-dark sm:text-[40px] sm:leading-[46px]"
+            className="mt-5 text-[40px] font-medium leading-[46px] text-marketing-navy-dark"
           >
             One accountable team
             <br />
@@ -32,7 +32,7 @@ export function HomeownerAccountableTeamSection() {
         </div>
 
         <div className="relative mt-12 lg:mt-[60px]">
-          <div className="relative aspect-[1168/581] overflow-hidden rounded-3xl rounded-tr-[120px] bg-marketing-cloud-050 sm:rounded-tr-[200px] lg:rounded-tr-[400px]">
+          <div className="relative h-[164px] overflow-hidden rounded-3xl rounded-tr-[120px] bg-marketing-cloud-050 sm:aspect-[1168/581] sm:h-auto sm:rounded-tr-[200px] lg:rounded-tr-[400px]">
             <img
               src={teamPhoto}
               alt="TrustKeyper property manager conducting a property inspection visit"
@@ -41,7 +41,7 @@ export function HomeownerAccountableTeamSection() {
             />
           </div>
 
-          <aside className="relative z-10 mx-auto -mt-10 max-w-[539px] rounded-3xl bg-white p-5 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)] sm:p-6 lg:absolute lg:bottom-6 lg:left-5 lg:mx-0 lg:mt-0">
+          <aside className="relative z-10 mx-auto mt-0 max-w-[539px] rounded-3xl bg-white p-6 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)] sm:-mt-10 sm:p-6 lg:absolute lg:bottom-6 lg:left-5 lg:mx-0 lg:mt-0">
             <p className="font-roboto text-base font-medium leading-6 text-marketing-navy-dark">
               <span className="text-marketing-green">Your TrustKeyper team </span>
               understands your property and coordinates the people, services, and updates required

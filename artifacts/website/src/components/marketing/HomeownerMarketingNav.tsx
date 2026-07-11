@@ -85,12 +85,12 @@ export function HomeownerMarketingNav({ className }: HomeownerMarketingNavProps)
         className,
       )}
     >
-      <div className="mx-auto flex max-w-[1168px] items-center justify-between gap-6 px-6 py-[15px] lg:px-8 xl:px-0">
+      <div className="mx-auto flex max-w-[1168px] items-center justify-between gap-6 px-6 py-3.5 sm:py-[15px] lg:px-8 xl:px-0">
         <Link href="/" className="shrink-0" onClick={closeMenu}>
           <img
             src={logoDark}
             alt="TrustKeyper"
-            className="h-10 w-auto"
+            className="h-[30px] w-auto sm:h-10"
             draggable={false}
           />
         </Link>

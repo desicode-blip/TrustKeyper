@@ -7,7 +7,7 @@ import heroPhoneMockup from "@/assets/marketing/brokers/hero/hero-phone-mockup.p
 export function BrokerHeroSection() {
   return (
     <section className="px-4 pb-6 pt-4 sm:px-6 sm:pb-8 lg:px-8 lg:pb-10">
-      <div className="relative mx-auto max-w-[1400px] overflow-hidden rounded-[28px] bg-marketing-neutral-1300 sm:rounded-[36px] lg:rounded-[44px]">
+      <div className="relative mx-auto max-w-[1400px] overflow-hidden rounded-[24px] bg-marketing-neutral-1300 sm:rounded-[36px] lg:rounded-[44px]">
         <div
           className="pointer-events-none absolute -right-32 bottom-[-10%] hidden h-[min(50vw,480px)] w-[min(90vw,1168px)] rotate-[-22deg] lg:block"
           aria-hidden
@@ -37,7 +37,7 @@ export function BrokerHeroSection() {
             <div className="space-y-4">
               <Link
                 href="/signup/broker"
-                className="inline-flex w-full max-w-full items-center justify-center gap-2 rounded-full bg-white px-8 py-4 text-center font-roboto text-sm font-medium text-marketing-navy-dark transition-colors hover:bg-white/95 sm:w-auto sm:px-8 sm:text-base"
+                className="inline-flex h-14 w-full max-w-full items-center justify-center gap-2 rounded-full bg-white px-8 text-center font-roboto text-sm font-medium text-marketing-navy-dark transition-colors hover:bg-white/95 sm:h-auto sm:w-auto sm:px-8 sm:py-4 sm:text-base"
               >
                 Register Now
                 <ArrowRight size={16} strokeWidth={2} aria-hidden />

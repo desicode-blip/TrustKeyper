@@ -28,11 +28,13 @@ const LEAD_QUALITY_DISCLAIMER = {
 
 function LeadQualityBadge({ label, iconSrc }: { label: string; iconSrc: string }) {
   return (
-    <li className="flex min-h-[80px] items-center gap-4 rounded-[52px] border border-white/10 bg-marketing-neutral-1050 px-5 py-5 sm:px-6">
+    <li className="flex min-h-[60px] items-center gap-2 rounded-[52px] border border-white/10 bg-marketing-neutral-1050 px-3 py-3 sm:min-h-[80px] sm:gap-4 sm:px-6 sm:py-5">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-marketing-green">
         <img src={iconSrc} alt="" width={18} height={18} className="h-[18px] w-[18px]" aria-hidden />
       </span>
-      <span className="font-roboto text-base font-medium leading-6 text-white">{label}</span>
+      <span className="font-roboto text-[10px] font-medium leading-3 text-white sm:text-base sm:leading-6">
+        {label}
+      </span>
     </li>
   );
 }
@@ -40,10 +42,10 @@ function LeadQualityBadge({ label, iconSrc }: { label: string; iconSrc: string }
 export function BrokerLeadQualitySection() {
   return (
     <section
-      className="bg-marketing-neutral-1100 py-14 sm:py-16 lg:py-[140px]"
+      className="bg-marketing-neutral-1100 py-16 lg:py-[140px]"
       aria-labelledby="broker-lead-quality-heading"
     >
-      <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">
+      <div className="mx-auto max-w-[1168px] px-6 sm:px-8 lg:px-12">
         <div className="flex flex-col gap-6 md:gap-8 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
           <div className="max-w-[540px] shrink-0">
             <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-green">
@@ -51,7 +53,7 @@ export function BrokerLeadQualitySection() {
             </p>
             <h2
               id="broker-lead-quality-heading"
-              className="mt-5 text-[32px] font-medium leading-tight text-marketing-azure-050 sm:text-[40px] sm:leading-[46px]"
+              className="mt-5 text-[40px] font-medium leading-[46px] text-marketing-azure-050"
             >
               Better information
               <br />
@@ -64,7 +66,7 @@ export function BrokerLeadQualitySection() {
           </p>
         </div>
 
-        <ul className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:mt-[60px] lg:grid-cols-4 lg:gap-4">
+        <ul className="mt-12 grid grid-cols-2 gap-1.5 sm:grid-cols-2 sm:gap-4 lg:mt-[60px] lg:grid-cols-4 lg:gap-4">
           {LEAD_QUALITY_BADGES.map((badge) => (
             <LeadQualityBadge key={badge.label} label={badge.label} iconSrc={badge.iconSrc} />
           ))}

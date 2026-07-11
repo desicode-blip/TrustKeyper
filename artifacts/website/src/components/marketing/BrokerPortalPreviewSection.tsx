@@ -4,17 +4,17 @@ import brokerPortalDashboard from "@/assets/marketing/brokers/portal-preview/bro
 export function BrokerPortalPreviewSection() {
   return (
     <section
-      className="bg-marketing-cloud-050 py-14 sm:py-16 lg:py-[140px]"
+      className="bg-marketing-cloud-050 py-16 lg:py-[140px]"
       aria-labelledby="broker-portal-preview-heading"
     >
-      <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">
-        <header className="mx-auto max-w-[489px] text-center">
+      <div className="mx-auto max-w-[1168px] px-6 sm:px-8 lg:px-12">
+        <header className="mx-auto max-w-[489px] text-left sm:text-center">
           <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
             The Broker Portal
           </p>
           <h2
             id="broker-portal-preview-heading"
-            className="mt-5 text-[32px] font-medium leading-tight text-marketing-navy-dark sm:text-[40px] sm:leading-[46px]"
+            className="mt-5 text-[40px] font-medium leading-[46px] text-marketing-navy-dark"
           >
             Every opportunity,
             <br />

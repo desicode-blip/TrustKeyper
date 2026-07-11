@@ -40,15 +40,15 @@ function StepBadge({ number }: { number: number }) {
 
 export function BrokerOnboardingSection() {
   return (
-    <section className="bg-white py-14 sm:py-16 lg:py-[140px]" aria-labelledby="broker-onboarding-heading">
-      <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">
-        <header className="max-w-[589px]">
+    <section className="bg-white py-16 lg:py-[140px]" aria-labelledby="broker-onboarding-heading">
+      <div className="mx-auto max-w-[1168px] px-6 sm:px-8 lg:px-12">
+        <header className="mx-auto max-w-[589px] text-center sm:mx-0 sm:text-left">
           <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
             Broker Onboarding
           </p>
           <h2
             id="broker-onboarding-heading"
-            className="mt-5 text-[32px] font-medium leading-tight text-marketing-navy-dark sm:text-[40px] sm:leading-[46px]"
+            className="mt-5 text-[40px] font-medium leading-[46px] text-marketing-navy-dark"
           >
             Start receiving relevant
             <br />
@@ -57,6 +57,7 @@ export function BrokerOnboardingSection() {
         </header>
 
         <div className="relative mt-12 lg:mt-[52px]">
+          {/* Desktop connector only — same lg:-gated pattern as HomeownerHowItWorksSection */}
           <div
             className="pointer-events-none absolute left-[40px] right-[40px] top-5 hidden h-px bg-marketing-neutral-200 lg:block"
             aria-hidden
@@ -64,7 +65,10 @@ export function BrokerOnboardingSection() {
 
           <ol className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
             {ONBOARDING_STEPS.map((step) => (
-              <li key={step.number} className="flex flex-col gap-5">
+              <li
+                key={step.number}
+                className="flex flex-col items-center gap-5 text-center sm:items-start sm:text-left"
+              >
                 <StepBadge number={step.number} />
                 <div className="space-y-3">
                   <h3 className="font-roboto text-base font-medium leading-6 text-marketing-navy-dark">
@@ -77,12 +81,14 @@ export function BrokerOnboardingSection() {
           </ol>
         </div>
 
-        <Link
-          href="/signup/broker"
-          className="mt-12 inline-flex h-14 items-center justify-center rounded-full bg-marketing-green px-10 font-roboto text-base font-medium text-marketing-neutral-1100 transition-colors hover:bg-marketing-green/90 lg:mt-[52px]"
-        >
-          Start Broker Registration
-        </Link>
+        <div className="mt-12 flex justify-center sm:justify-start lg:mt-[52px]">
+          <Link
+            href="/signup/broker"
+            className="inline-flex h-14 items-center justify-center rounded-full bg-marketing-green px-10 font-roboto text-base font-medium text-marketing-neutral-1100 transition-colors hover:bg-marketing-green/90"
+          >
+            Start Broker Registration
+          </Link>
+        </div>
       </div>
     </section>
   );

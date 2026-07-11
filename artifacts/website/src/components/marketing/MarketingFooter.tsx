@@ -58,7 +58,7 @@ export function MarketingFooter({ className }: MarketingFooterProps) {
       />
 
       <div className="relative z-10">
-        <div className="mx-auto w-full max-w-[1168px] px-6 py-14 sm:px-8 lg:px-8 lg:pb-10 lg:pt-[62px]">
+        <div className="mx-auto w-full max-w-[1168px] px-6 py-16 sm:px-8 sm:py-14 lg:px-8 lg:pb-10 lg:pt-[62px]">
           <div className="flex flex-col gap-10 lg:min-h-[372px] lg:flex-row lg:items-start lg:justify-between lg:gap-16">
             <div className="max-w-[440px] space-y-5">
               <img

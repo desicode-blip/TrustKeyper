@@ -61,7 +61,7 @@ function PropertyStatusCard({ className }: { className?: string }) {
 export function HomeownerHeroSection() {
   return (
     <section className="px-4 pb-6 pt-4 sm:px-6 sm:pb-8 lg:px-8 lg:pb-10">
-      <div className="relative mx-auto max-w-[1400px] overflow-hidden rounded-[28px] bg-marketing-neutral-1300 sm:rounded-[36px] lg:rounded-[44px]">
+      <div className="relative mx-auto max-w-[1400px] overflow-hidden rounded-[24px] bg-marketing-neutral-1300 sm:rounded-[36px] lg:rounded-[44px]">
         <div className="absolute inset-0">
           <img
             src={heroPropertyPhoto}
@@ -97,7 +97,7 @@ export function HomeownerHeroSection() {
             <div className="space-y-4">
               <a
                 href={MARKETING_CTA.getStarted}
-                className="inline-flex w-full max-w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-4 text-center font-roboto text-sm font-medium text-marketing-navy-dark transition-colors hover:bg-white/95 sm:w-auto sm:px-10 sm:text-base"
+                className="inline-flex h-14 w-full max-w-full items-center justify-center gap-2 rounded-full bg-white px-6 text-center font-roboto text-sm font-medium text-marketing-navy-dark transition-colors hover:bg-white/95 sm:h-auto sm:w-auto sm:px-10 sm:py-4 sm:text-base"
               >
                 Register and we&apos;ll get back to you soon
                 <ArrowRight size={16} strokeWidth={2} aria-hidden />

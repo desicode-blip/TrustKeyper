@@ -114,7 +114,7 @@ function ServiceCard({
   illustrationAlt,
 }: ServiceCardData) {
   return (
-    <article className="relative min-h-[360px] overflow-hidden rounded-3xl bg-white p-8 shadow-[0_1px_2px_rgba(8,50,42,0.04),0_16px_40px_rgba(8,50,42,0.06)] lg:min-h-[406px]">
+    <article className="relative min-h-0 overflow-hidden rounded-3xl bg-white p-5 shadow-[0_1px_2px_rgba(8,50,42,0.04),0_16px_40px_rgba(8,50,42,0.06)] sm:min-h-[360px] sm:p-8 lg:min-h-[406px]">
       <div className="relative z-10 max-w-[calc(100%-7rem)]">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-marketing-green">
@@ -148,17 +148,17 @@ function ServiceCard({
 export function HomeownerServicesGrid() {
   return (
     <section
-      className="bg-marketing-cloud-050 py-14 sm:py-16 lg:py-[140px]"
+      className="bg-marketing-cloud-050 py-16 lg:py-[140px]"
       aria-labelledby="homeowner-services-heading"
     >
-      <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">
+      <div className="mx-auto max-w-[1168px] px-6 sm:px-8 lg:px-12">
         <div className="max-w-[673px]">
           <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
             Services
           </p>
           <h2
             id="homeowner-services-heading"
-            className="mt-5 text-[32px] font-medium leading-tight text-marketing-navy-dark sm:text-[40px] sm:leading-[46px]"
+            className="mt-5 text-[40px] font-medium leading-[46px] text-marketing-navy-dark"
           >
             Everything your property needs,
             <br />

@@ -7,7 +7,7 @@ export function HomeownerContactSection() {
     <section className="bg-marketing-neutral-1100 px-6 py-16 sm:px-8 sm:py-20 lg:px-8 lg:py-[140px]">
       <div className="mx-auto max-w-[1076px]">
         <div className="mx-auto max-w-[646px] text-center">
-          <h2 className="font-marketing-heading text-[32px] font-medium leading-[1.15] tracking-tight text-marketing-azure-050 sm:text-[40px] sm:leading-[46px]">
+          <h2 className="font-marketing-heading text-[40px] font-medium leading-[46px] tracking-tight text-marketing-azure-050">
             Tell us about your property.
           </h2>
           <p className="mt-5 font-roboto text-sm leading-6 text-white/85 sm:text-base">
@@ -20,7 +20,7 @@ export function HomeownerContactSection() {
             <ContactForm />
           </div>
 
-          <div className="mt-6 overflow-hidden rounded-xl shadow-[0_1px_2px_rgba(8,50,42,0.04),0_16px_40px_rgba(8,50,42,0.06)] lg:mt-0 lg:h-full">
+          <div className="mt-6 hidden overflow-hidden rounded-xl shadow-[0_1px_2px_rgba(8,50,42,0.04),0_16px_40px_rgba(8,50,42,0.06)] lg:mt-0 lg:block lg:h-full">
             <img
               src={contactIllustration}
               alt=""

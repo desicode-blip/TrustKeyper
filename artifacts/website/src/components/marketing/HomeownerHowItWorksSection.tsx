@@ -52,7 +52,13 @@ function StepBadge({ number }: { number: number }) {
 
 function HowItWorksStepItem({ number, title, description, align, desktopClassName }: HowItWorksStep) {
   return (
-    <li className={cn("flex flex-col gap-5", desktopClassName, align === "right" ? "lg:items-end lg:text-right" : "lg:items-start lg:text-left")}>
+    <li
+      className={cn(
+        "flex flex-col items-center gap-5 text-center sm:items-stretch sm:text-left",
+        desktopClassName,
+        align === "right" ? "lg:items-end lg:text-right" : "lg:items-start lg:text-left",
+      )}
+    >
       <StepBadge number={number} />
       <div className={cn("space-y-3", align === "right" ? "lg:text-right" : "lg:text-left")}>
         <h3 className="font-roboto text-base font-medium leading-6 text-marketing-navy-dark">{title}</h3>
@@ -66,17 +72,17 @@ export function HomeownerHowItWorksSection() {
   return (
     <section
       id="how-it-works"
-      className="bg-white py-14 sm:py-16 lg:py-[140px]"
+      className="bg-white py-16 lg:py-[140px]"
       aria-labelledby="homeowner-how-it-works-heading"
     >
-      <div className="mx-auto max-w-[1168px] px-5 sm:px-8 lg:px-12">
+      <div className="mx-auto max-w-[1168px] px-6 sm:px-8 lg:px-12">
         <header className="mx-auto max-w-[938px] text-center">
           <p className="font-roboto text-xs font-medium uppercase tracking-[1.2px] text-marketing-neutral-1100">
             How It Works
           </p>
           <h2
             id="homeowner-how-it-works-heading"
-            className="mt-5 text-[32px] font-medium leading-tight text-marketing-navy-dark sm:text-[40px] sm:leading-[46px]"
+            className="mt-5 text-[40px] font-medium leading-[46px] text-marketing-navy-dark"
           >
             From registration to complete property care
           </h2>
@@ -99,7 +105,7 @@ export function HomeownerHowItWorksSection() {
         </div>
 
         <div className="mx-auto mt-14 max-w-[575px] text-center lg:mt-[60px]">
-          <h3 className="text-[32px] font-medium leading-tight text-marketing-navy-dark sm:text-[40px] sm:leading-[46px]">
+          <h3 className="text-xl font-medium leading-[26px] text-marketing-navy-dark sm:text-[40px] sm:leading-[46px]">
             Ready to simplify property management?
           </h3>
           <a

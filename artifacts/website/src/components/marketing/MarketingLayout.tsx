@@ -16,10 +16,13 @@ export function MarketingLayout({
   hideNav = false,
   navVariant = "default",
 }: MarketingLayoutProps) {
+  const mainOffsetClassName =
+    navVariant === "homeowner" ? "pt-[58px] sm:pt-[96px]" : "pt-[88px] sm:pt-[96px]";
+
   return (
     <div className={cn("flex min-h-screen flex-col bg-marketing-bg", className)}>
       {!hideNav ? (navVariant === "homeowner" ? <HomeownerMarketingNav /> : <MarketingNav />) : null}
-      <main className={cn("flex flex-1 flex-col", !hideNav && "pt-[88px] sm:pt-[96px]")}>
+      <main className={cn("flex flex-1 flex-col", !hideNav && mainOffsetClassName)}>
         {children}
       </main>
     </div>
