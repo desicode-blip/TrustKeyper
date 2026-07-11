@@ -6,7 +6,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppAuthEntryRedirect } from "@/components/AppAuthEntryRedirect";
-import { MarketingHandoffHandler } from "@/components/MarketingHandoffHandler";
+import { MarketingHandoffGate } from "@/components/MarketingHandoffGate";
 import SharedProperty from "@/pages/SharedProperty";
 import Onboarding from "@/pages/Onboarding";
 import Login from "@/pages/Login";
@@ -152,7 +152,6 @@ function Router() {
       <Route component={NotFound} />
     </Switch>
     <FeedbackWidget />
-    <MarketingHandoffHandler />
     </>
   );
 }
@@ -161,9 +160,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
+        <MarketingHandoffGate>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Router />
+          </WouterRouter>
+        </MarketingHandoffGate>
         <Toaster />
         <SpeedInsights />
       </TooltipProvider>
