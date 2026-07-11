@@ -4,55 +4,50 @@ import { cn } from "@/lib/utils";
 
 interface FaqItem {
   question: string;
-  answer: string | null;
+  answer: string;
 }
 
 const FAQ_ITEMS: FaqItem[] = [
   {
-    question: "What types of properties does TrustKeyper manage?",
+    question: "Does TrustKeyper collect or hold rent?",
     answer:
-      "TrustKeyper manages apartments, villas, and independent houses across active service areas in Hyderabad. We support both vacant and tenant-occupied residential properties.",
+      "We collect rent but never hold it. It goes directly to Owner's account. Payments are made on the TrustKeyper platform, so every transaction is recorded and we send reminders if a payment is delayed.",
   },
   {
-    question: "Does TrustKeyper collect or hold rent?",
-    answer: null,
+    question: "What happens if my tenant leaves before the year ends?",
+    answer: "We find a replacement at no extra charge.",
   },
   {
     question: "How are tenants screened?",
-    answer: null,
+    answer:
+      "Before the lease is signed, every tenant goes through social verification: employment check, CIBIL score and LinkedIn check. Police verification is completed within a month of signing. We also do reference checks where applicable.",
   },
   {
     question: "How are repair expenses approved?",
-    answer: null,
+    answer:
+      "Repairs under Rs. 1,000 are fixed right away and reimbursed by the owner later. Anything above Rs. 1,000 comes to you first, with cost estimates, for approval.",
   },
   {
     question: "Can TrustKeyper manage my property if I live outside Hyderabad or India?",
-    answer: null,
+    answer:
+      "Yes. This is why most NRI and out-of-city owners choose us. Approvals, updates and payments are fully digital, so you can manage your property remotely without a local point of contact.",
   },
   {
-    question: "How frequently will I receive property updates?",
-    answer: null,
-  },
-  {
-    question: "Which Hyderabad areas are supported?",
-    answer: null,
+    question: "How often will I receive updates?",
+    answer:
+      "You get a monthly summary covering rent status, maintenance and tenant updates. For anything urgent, we reach out immediately.",
   },
   {
     question: "Can TrustKeyper manage a vacant property?",
-    answer: null,
-  },
-  {
-    question: "Is there a minimum service period?",
-    answer: null,
+    answer:
+      "Yes. We handle listing, tenant sourcing, screening, background verification and move-in formalities. We also help with your current tenant's move-out.",
   },
   {
     question: "How do I get started?",
-    answer: null,
+    answer:
+      "Three steps: share your property details, we schedule a walkthrough, and we onboard your property. If it is vacant, tenant placement is included.",
   },
 ];
-
-const PLACEHOLDER_ANSWER =
-  "Answer pending — please provide copy from the design team before launch.";
 
 function FaqAccordionItem({
   item,
@@ -90,14 +85,7 @@ function FaqAccordionItem({
 
       {isOpen ? (
         <div id={panelId} role="region" aria-labelledby={buttonId} className="pb-5">
-          <p
-            className={cn(
-              "font-roboto text-sm leading-5",
-              item.answer ? "text-marketing-neutral-1000" : "text-marketing-muted italic",
-            )}
-          >
-            {item.answer ?? PLACEHOLDER_ANSWER}
-          </p>
+          <p className="font-roboto text-sm leading-5 text-marketing-neutral-1000">{item.answer}</p>
         </div>
       ) : null}
     </div>

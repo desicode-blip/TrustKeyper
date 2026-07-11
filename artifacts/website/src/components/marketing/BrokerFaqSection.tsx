@@ -4,55 +4,29 @@ import { cn } from "@/lib/utils";
 
 interface FaqItem {
   question: string;
-  answer: string | null;
+  answer: string;
 }
 
 const FAQ_ITEMS: FaqItem[] = [
   {
-    question: "What types of properties does TrustKeyper manage?",
+    question: "How does the broker partnership work for finding tenants?",
     answer:
-      "TrustKeyper manages apartments, villas, and independent houses across active service areas in Hyderabad. We support both vacant and tenant-occupied residential properties.",
+      "Once onboarded, you get unlimited access to all available properties and can find tenants at your convenience. The brokerage you charge the tenant is fully yours. TrustKeyper takes nothing from it.",
   },
   {
-    question: "Does TrustKeyper collect or hold rent?",
-    answer: null,
+    question: "Can I refer both property owners and tenants?",
+    answer: "Yes. You can refer owners for management services and tenants looking for a property.",
   },
   {
-    question: "How are tenants screened?",
-    answer: null,
+    question: "Which areas can I refer properties from?",
+    answer: "Any area of your choice, along with TrustKeyper's active service areas in Hyderabad.",
   },
   {
-    question: "How are repair expenses approved?",
-    answer: null,
-  },
-  {
-    question: "Can TrustKeyper manage my property if I live outside Hyderabad or India?",
-    answer: null,
-  },
-  {
-    question: "How frequently will I receive property updates?",
-    answer: null,
-  },
-  {
-    question: "Which Hyderabad areas are supported?",
-    answer: null,
-  },
-  {
-    question: "Can TrustKeyper manage a vacant property?",
-    answer: null,
-  },
-  {
-    question: "Is there a minimum service period?",
-    answer: null,
-  },
-  {
-    question: "How do I get started?",
-    answer: null,
+    question: "How do I sign up as a partner broker?",
+    answer:
+      "Sign up on the website and complete a quick onboarding step and then you're ready to earn. Onboarding usually takes less than an hour.",
   },
 ];
-
-const PLACEHOLDER_ANSWER =
-  "Answer pending — please provide copy from the design team before launch.";
 
 function FaqAccordionItem({
   item,
@@ -90,14 +64,7 @@ function FaqAccordionItem({
 
       {isOpen ? (
         <div id={panelId} role="region" aria-labelledby={buttonId} className="pb-5">
-          <p
-            className={cn(
-              "font-roboto text-sm leading-5",
-              item.answer ? "text-marketing-neutral-1000" : "text-marketing-muted italic",
-            )}
-          >
-            {item.answer ?? PLACEHOLDER_ANSWER}
-          </p>
+          <p className="font-roboto text-sm leading-5 text-marketing-neutral-1000">{item.answer}</p>
         </div>
       ) : null}
     </div>
