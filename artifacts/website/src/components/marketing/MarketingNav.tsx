@@ -1,47 +1,15 @@
 import React from "react";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Link } from "wouter";
 import logoDark from "@/assets/marketing/trustkeyper Logo.svg";
-import { MarketingAuthTrigger } from "@/components/auth/MarketingAuthTrigger";
-import { MARKETING_CTA } from "@/lib/marketingConstants";
+import {
+  MarketingContactUsCta,
+  MarketingSignupLoginCta,
+} from "@/components/marketing/MarketingNavCtas";
 import { cn } from "@/lib/utils";
 
 export interface MarketingNavProps {
   className?: string;
-}
-
-const navCtaClassName = "font-marketing-cta rounded px-5 py-2.5 text-sm font-medium sm:text-base";
-
-function SignupLoginCta({ className, onClick }: { className?: string; onClick?: () => void }) {
-  return (
-    <MarketingAuthTrigger
-      onClick={onClick}
-      className={cn(
-        navCtaClassName,
-        "inline-flex items-center justify-center gap-2 bg-marketing-blue text-white transition-colors hover:bg-marketing-blue-bright",
-        className,
-      )}
-    >
-      Signup/Login
-      <ArrowRight size={16} strokeWidth={2} aria-hidden />
-    </MarketingAuthTrigger>
-  );
-}
-
-function ContactUsCta({ className, onClick }: { className?: string; onClick?: () => void }) {
-  return (
-    <Link
-      href={MARKETING_CTA.contactUs}
-      onClick={onClick}
-      className={cn(
-        navCtaClassName,
-        "inline-flex items-center justify-center border border-[#cbd5e2] bg-white text-marketing-navy transition-colors hover:bg-marketing-muted-bg",
-        className,
-      )}
-    >
-      Contact Us
-    </Link>
-  );
 }
 
 export function MarketingNav({ className }: MarketingNavProps) {
@@ -78,9 +46,9 @@ export function MarketingNav({ className }: MarketingNavProps) {
             />
           </Link>
 
-          <nav className="hidden items-center gap-3 md:flex md:gap-4" aria-label="Primary">
-            <ContactUsCta />
-            <SignupLoginCta />
+          <nav className="hidden items-center gap-[18px] md:flex" aria-label="Primary">
+            <MarketingContactUsCta />
+            <MarketingSignupLoginCta />
           </nav>
 
           <button
@@ -101,8 +69,8 @@ export function MarketingNav({ className }: MarketingNavProps) {
             className="flex flex-col gap-3 border-t border-black/[0.06] px-6 pb-4 pt-3 md:hidden"
             aria-label="Mobile primary"
           >
-            <SignupLoginCta className="w-full" onClick={closeMenu} />
-            <ContactUsCta className="w-full" onClick={closeMenu} />
+            <MarketingContactUsCta className="w-full" onClick={closeMenu} />
+            <MarketingSignupLoginCta className="w-full" onClick={closeMenu} />
           </nav>
         ) : null}
       </div>

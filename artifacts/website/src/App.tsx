@@ -1,6 +1,7 @@
 import { Route, Switch } from "wouter";
 import { MarketingAuthModalProvider } from "@/components/auth/MarketingAuthModalContext";
 import { useMarketingScrollToTop } from "@/hooks/useMarketingScrollToTop";
+import { BrokersPage } from "@/pages/BrokersPage";
 import { HomePage } from "@/pages/HomePage";
 import { ExistingAccountPage } from "@/pages/ExistingAccountPage";
 import { MarketingSignupRolePage } from "@/pages/MarketingSignupRolePage";
@@ -23,6 +24,7 @@ export default function App() {
       <MarketingScrollToTop />
       <Switch>
         <Route path="/" component={HomePage} />
+        <Route path="/for-brokers" component={BrokersPage} />
         <Route path="/login/existing/mock">
           <ExistingAccountPage mock />
         </Route>

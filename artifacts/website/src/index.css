@@ -43,6 +43,15 @@
   --color-marketing-muted-bg: #fafafa;
   --color-marketing-blue: #305eff;
   --color-marketing-blue-bright: #4d7cff;
+  --color-marketing-azure-050: #f5f8ff;
+  /* Figma Primary/Azure/200 */
+  --color-marketing-azure-200: #b4cdfd;
+  /* Unbound Figma paint (no variable) — nav/FAQ/input strokes */
+  --color-marketing-azure-stroke: #e3e9ff;
+  /* Unbound Figma paint (no variable) — form label text */
+  --color-marketing-form-label: #10322b;
+  /* Unbound Figma paint (no variable) — why-brokers icon circle fill */
+  --color-marketing-icon-circle: #213f4f;
   --color-marketing-mint: #d4f5e4;
   --color-marketing-mint-card: #e8f7f1;
   --color-marketing-sky-card: #e8f2f7;
@@ -55,6 +64,19 @@
   --color-marketing-green: #48d08c;
   --color-marketing-teal: #6ca7a1;
   --color-marketing-border: #e5e5e5;
+  /* Figma Neutral/Light scale */
+  --color-marketing-neutral-100: #f1f5fa;
+  --color-marketing-neutral-200: #e3eaf3;
+  --color-marketing-neutral-300: #cbd5e2;
+  --color-marketing-neutral-500: #90a5bb;
+  --color-marketing-neutral-700: #6c849d;
+  --color-marketing-neutral-1000: #2f4256;
+  --color-marketing-neutral-1050: #324e5d;
+  --color-marketing-neutral-1100: #243547;
+  --color-marketing-hero-gradient-start: #0c2837;
+  --color-marketing-neutral-1300: #0c1927;
+  /* Figma Accent/Cloud */
+  --color-marketing-cloud-050: #edf4f7;
 }
 
 @layer base {
