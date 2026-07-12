@@ -69,9 +69,9 @@ After phone OTP on the marketing site, the browser is redirected to the app with
 
 Tokens stay in the **hash** so they are not sent as Referer query params to third parties; metadata stays in the **query** for routing.
 
-**`MarketingHandoffGate`** (`artifacts/trustkeyper/src/components/MarketingHandoffGate.tsx`) wraps **above** `WouterRouter` in `App.tsx`. While a handoff URL is present it shows a loading state and **does not mount** route layouts.
+**`MarketingHandoffGate`** (`artifacts/trustkeyper/src/components/MarketingHandoffGate.tsx`) wraps **above** `WouterRouter` in `App.tsx` and **blocks all route rendering** until the handoff resolves (loading UI only while pending).
 
-**Race it fixes:** Previously a sibling/layout-level handoff handler ran *after* `OwnerLayout` / `BrokerLayout` / `TenantLayout` mounted. Those guards saw no `tk_active_phone` / `tk_active_role` yet and called `setLocation("/login")` via wouter `pushState`, which **wiped query + hash** before tokens could be applied. The gate must sit above the router so layouts never mount until `applyMarketingHandoff` succeeds (or fails cleanly to `/login` with an error banner).
+**Race it fixes (PR #143):** `OwnerLayout` / `BrokerLayout` / `TenantLayout` guard effects ran **before** the handoff could apply. Seeing no `tk_active_phone` / `tk_active_role`, they called `setLocation("/login")`; wouter’s `pushState` then **discarded the URL query and hash**, wiping the session tokens before they were consumed. The gate must wrap the router so those layouts never mount until `applyMarketingHandoff` succeeds (or fails cleanly to `/login` with an error banner).
 
 Details and the dual auth-entry debt: [docs/auth.md](./docs/auth.md).
 
@@ -371,14 +371,14 @@ The sync store supports multiple backends, selected by environment:
 
 | Environment | Branch | Supabase Project | Database | App URL | Marketing URL |
 |---|---|---|---|---|---|
-| App production | `main` | `trustkeyper-prod` | Supabase Postgres (prod) | app.trustkeyper.com | — |
-| Marketing production | `staging` | same as app staging/prod per deploy config | — | — | trustkeyper.com |
+| App production | `main` | `trustkeyper-prod` (`dsqhifabykbtqvzvogdt`) | Supabase Postgres (prod) | app.trustkeyper.com | — |
+| Marketing production | `staging` | **same prod project** `dsqhifabykbtqvzvogdt` | — | — | trustkeyper.com |
 | App staging | `staging` | `trustkeyper-staging` | Supabase Postgres (staging) | staging.app.trustkeyper.com | (preview / alias when configured) |
 | Local dev | any | Either (or local PGLite) | PGLite or Docker | localhost:5173 | localhost:5174 |
 
 Staging is a full mirror of production with separate data for the **app**. Marketing Production tracks the `staging` branch on project `trustkeyper-website` so public-site changes can ship without merging to `main`.
 
-**Flag / verify in Vercel if unsure:** which Supabase project the marketing Production build points at (`VITE_SUPABASE_*` on `trustkeyper-website`) — confirm in the Vercel dashboard rather than assuming it always matches app staging.
+**Shared production Supabase:** `trustkeyper-website` Production and app Production both use Supabase project `dsqhifabykbtqvzvogdt` (verified from the marketing Production bundle’s `VITE_SUPABASE_URL`). Marketing previously pointed at the **staging** Supabase project; switching it to production is what made cross-origin login/handoff work (same Auth project as the app).
 
 ---
 

@@ -1,6 +1,6 @@
 # Auth — marketing and app
 
-TrustKeyper currently has **two browser auth entry systems** against the **same** Supabase production/staging Auth project (phone OTP). This is intentional for the marketing launch and is known architectural debt.
+TrustKeyper currently has **two browser auth entry systems** against the **same** Supabase Auth project in production (phone OTP). Marketing Production and app Production both use project `dsqhifabykbtqvzvogdt`. This is intentional for the marketing launch and is known architectural debt.
 
 ## Two systems
 
@@ -27,9 +27,9 @@ Implemented in:
 - **Query:** `from=marketing`, `phone`, `role`, optional `remember=1` (and signup flags where applicable)
 - **Hash:** `#tk_session=<urlencoded base64 JSON>` with `access_token` and optional `refresh_token`
 
-**Gate placement:** `MarketingHandoffGate` wraps **above** `WouterRouter` in `App.tsx`. While a handoff is pending, children (router + role layouts) do not mount. On success it applies the session then `history.replaceState` to pathname only. On failure it clears the URL, stores `tk_marketing_handoff_error`, and navigates to `/login`.
+**Gate placement:** `MarketingHandoffGate` wraps **above** `WouterRouter` in `App.tsx` and blocks all route rendering until the handoff resolves. On success it applies the session then `history.replaceState` to pathname only. On failure it clears the URL, stores `tk_marketing_handoff_error`, and navigates to `/login`.
 
-**Why the gate exists:** Role layouts (`OwnerLayout`, `BrokerLayout`, `TenantLayout`) redirect unauthenticated users to `/login` via wouter navigation. If they mount before handoff applies, that navigation **destroys query + hash** and the session tokens are lost. The gate removes that race.
+**Why the gate exists (PR #143):** `OwnerLayout` / `BrokerLayout` / `TenantLayout` guard effects ran before handoff applied, called `setLocation("/login")`, and wouter’s `pushState` discarded the query/hash (session tokens lost). The gate prevents those layouts from mounting until handoff finishes.
 
 ## App `/login` as recovery
 

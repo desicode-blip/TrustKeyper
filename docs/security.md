@@ -66,9 +66,9 @@ Razorpay Route responses can include stakeholder **KYC and bank PII**. Server ha
 
 | Variable | Scope |
 |----------|--------|
-| `VITE_SUPABASE_URL` | Browser (app and/or marketing project) |
+| `VITE_SUPABASE_URL` | Browser (app and marketing). Marketing Production and app Production both use Supabase project `dsqhifabykbtqvzvogdt` (verified from the marketing Production bundle). Marketing previously used staging Supabase; the switch to prod is required for cross-origin login/handoff. |
 | `VITE_SUPABASE_ANON_KEY` | Browser |
-| `SUPABASE_URL` | Server (app project; JWT verify) |
+| `SUPABASE_URL` | Server (app project; JWT verify — same prod project in Production) |
 | `SUPABASE_ANON_KEY` | Server (JWT verify only) |
 | `DATABASE_URL` | Server only |
 | `MARKETING_STAGING_ORIGIN` | Server only (CORS) |
