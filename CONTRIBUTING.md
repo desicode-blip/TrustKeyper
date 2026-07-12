@@ -34,9 +34,30 @@ refactor/normalise-property-schema
 
 ### Branch rules (enforced via GitHub)
 
-- **`main`** — no direct pushes. PR required. All CI checks must pass. Sumit's approval required.
+- **`main`** — no direct pushes. **PR + review required** (branch protection). All CI checks must pass. Sumit's approval required.
 - **`staging`** — no direct pushes. PR required. All CI checks must pass.
 - All other branches — free to push directly.
+
+### Deploy targets (two Vercel projects)
+
+| Project | What ships | Production branch |
+|---|---|---|
+| `trustkeyper` | App SPA + API | `main` → app.trustkeyper.com |
+| `trustkeyper-website` | Marketing SPA | `staging` → trustkeyper.com |
+
+Merging to `staging` updates **marketing Production** and **app staging**. Merging `staging` → `main` updates **app Production** only. Do not assume one deploy covers both surfaces.
+
+### Environment variable scoping
+
+Put vars on the project that actually consumes them:
+
+| Scope | Examples |
+|---|---|
+| App project (`trustkeyper`) — server | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ADMIN_PHONES`, `RESEND_*`, Razorpay keys, `MARKETING_STAGING_ORIGIN` (CORS) |
+| App project — browser (`VITE_*`) | `VITE_SUPABASE_*`, `VITE_ADMIN_PHONES`, optional `VITE_API_URL` |
+| Marketing project (`trustkeyper-website`) — browser | `VITE_SUPABASE_*`, `VITE_API_URL` (app API base for cross-origin), `VITE_APP_URL` (app origin for handoff links), `VITE_ENABLE_ANALYTICS` |
+
+**`VITE_MARKETING_URL` on the app project:** Must stay **unset on app Production** until the marketing→app handoff is fully validated in production. When set, `AppAuthEntryRedirect` sends `/login` and `/signup` visitors to the marketing site. If handoff fails, users can loop: app `/login` → marketing → failed handoff → app `/login` again. Staging may set it for integration testing; Production must not until the gate path is proven.
 
 ---
 
