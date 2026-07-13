@@ -119,3 +119,103 @@ export async function handleTenantPaymentHistoryRequest(
     json(res, 500, { error: "Internal server error" });
   }
 }
+
+type OwnerPaymentHistoryRow = {
+  id: string;
+  rent_period: string | null;
+  amount_paise: number | string;
+  owner_settlement_paise: number | string | null;
+  commission_paise: number | string;
+  status: string;
+  payment_method: string | null;
+  paid_at: Date | string | null;
+  created_at: Date | string;
+  transfer_failed_at: Date | string | null;
+};
+
+/** Map a DB row to the owner-facing payment history item (includes settlement split). */
+export function mapOwnerPaymentHistoryItem(row: OwnerPaymentHistoryRow): {
+  id: string;
+  rentPeriod: string | null;
+  amountPaise: number | string;
+  ownerSettlementPaise: number | string | null;
+  commissionPaise: number | string;
+  status: string;
+  paymentMethod: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  transferFailedAt: string | null;
+} {
+  return {
+    id: row.id,
+    rentPeriod: row.rent_period,
+    amountPaise: row.amount_paise,
+    ownerSettlementPaise: row.owner_settlement_paise,
+    commissionPaise: row.commission_paise,
+    status: row.status,
+    paymentMethod: row.payment_method,
+    paidAt: toIsoString(row.paid_at),
+    createdAt: toIsoString(row.created_at) ?? new Date(0).toISOString(),
+    transferFailedAt: toIsoString(row.transfer_failed_at),
+  };
+}
+
+/**
+ * GET /api/payments-owner-history?phone=
+ * Returns rent payments for agreements owned by the caller (includes settlement split).
+ */
+export async function handleOwnerPaymentHistoryRequest(
+  req: VercelRequest,
+  res: VercelResponse,
+): Promise<void> {
+  if (req.method !== "GET") {
+    json(res, 405, { error: "Method not allowed" });
+    return;
+  }
+
+  const parsed = phoneQuerySchema.safeParse({
+    phone: queryParam(req.query.phone),
+  });
+  if (!parsed.success) {
+    const message = parsed.error.issues[0]?.message ?? "Invalid query parameters";
+    json(res, 400, { error: message });
+    return;
+  }
+
+  const { phone } = parsed.data;
+  const auth = await assertPaymentAuth(requestAuthorization(req), phone);
+  if (!auth.ok) {
+    json(res, auth.status, { error: auth.error });
+    return;
+  }
+
+  try {
+    const result = await getPool().query<OwnerPaymentHistoryRow>(
+      `SELECT
+         rp.id,
+         rp.rent_period,
+         rp.amount_paise,
+         rp.owner_settlement_paise,
+         rp.commission_paise,
+         rp.status,
+         rp.payment_method,
+         rp.paid_at,
+         rp.created_at,
+         rp.transfer_failed_at
+       FROM public.rent_payments rp
+       INNER JOIN public.agreements a ON a.id = rp.agreement_id
+       WHERE RIGHT(regexp_replace(COALESCE(a.account_phone, ''), '\\D', '', 'g'), 10) = $1
+         AND a.account_role = 'owner'
+         AND rp.payment_type = 'rent'
+       ORDER BY rp.created_at DESC`,
+      [phone],
+    );
+
+    json(res, 200, {
+      payments: result.rows.map(mapOwnerPaymentHistoryItem),
+    });
+  } catch (err) {
+    console.error("payments-owner-history unexpected error", sanitizeErrorForLog(err));
+    json(res, 500, { error: "Internal server error" });
+  }
+}

@@ -17,7 +17,12 @@ vi.mock("./syncAuth.js", () => ({
   assertPaymentAuth: assertPaymentAuthMock,
 }));
 
-import { handleTenantPaymentHistoryRequest, mapTenantPaymentHistoryItem } from "./paymentReadHandler.js";
+import {
+  handleOwnerPaymentHistoryRequest,
+  handleTenantPaymentHistoryRequest,
+  mapOwnerPaymentHistoryItem,
+  mapTenantPaymentHistoryItem,
+} from "./paymentReadHandler.js";
 
 function createMockResponse() {
   let statusCode = 200;
@@ -154,6 +159,122 @@ describe("handleTenantPaymentHistoryRequest", () => {
           paymentMethod: "upi",
           paidAt: "2026-07-13T05:26:33.000Z",
           createdAt: "2026-07-13T05:23:43.000Z",
+        },
+      ],
+    });
+  });
+});
+
+describe("mapOwnerPaymentHistoryItem", () => {
+  it("maps DB columns including settlement split and transfer failure", () => {
+    const item = mapOwnerPaymentHistoryItem({
+      id: "rp_1",
+      rent_period: "2026-07",
+      amount_paise: 500,
+      owner_settlement_paise: 500,
+      commission_paise: 0,
+      status: "paid",
+      payment_method: "upi",
+      paid_at: new Date("2026-07-13T05:26:33.000Z"),
+      created_at: new Date("2026-07-13T05:23:43.000Z"),
+      transfer_failed_at: null,
+    });
+
+    expect(item).toEqual({
+      id: "rp_1",
+      rentPeriod: "2026-07",
+      amountPaise: 500,
+      ownerSettlementPaise: 500,
+      commissionPaise: 0,
+      status: "paid",
+      paymentMethod: "upi",
+      paidAt: "2026-07-13T05:26:33.000Z",
+      createdAt: "2026-07-13T05:23:43.000Z",
+      transferFailedAt: null,
+    });
+  });
+});
+
+describe("handleOwnerPaymentHistoryRequest", () => {
+  afterEach(() => {
+    queryMock.mockReset();
+    assertPaymentAuthMock.mockReset();
+  });
+
+  it("returns 401 when auth fails", async () => {
+    assertPaymentAuthMock.mockResolvedValue({ ok: false, status: 401, error: "Unauthorized" });
+    const mock = createMockResponse();
+
+    await handleOwnerPaymentHistoryRequest(
+      historyRequest({ phone: "9000000001" }, "Bearer bad"),
+      mock.res,
+    );
+
+    expect(mock.statusCode).toBe(401);
+    expect(mock.parsedBody).toEqual({ error: "Unauthorized" });
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it("returns empty payments array when owner has none", async () => {
+    assertPaymentAuthMock.mockResolvedValue({ ok: true, user: { phone: "9000000001" } });
+    queryMock.mockResolvedValue({ rows: [] });
+    const mock = createMockResponse();
+
+    await handleOwnerPaymentHistoryRequest(
+      historyRequest({ phone: "9000000001" }, "Bearer tok"),
+      mock.res,
+    );
+
+    expect(mock.statusCode).toBe(200);
+    expect(mock.parsedBody).toEqual({ payments: [] });
+    const sql = String(queryMock.mock.calls[0]?.[0] ?? "");
+    expect(sql).toContain("account_phone");
+    expect(sql).toContain("account_role = 'owner'");
+    expect(sql).toContain("owner_settlement_paise");
+    expect(sql).toContain("transfer_failed_at");
+    expect(queryMock.mock.calls[0]?.[1]).toEqual(["9000000001"]);
+  });
+
+  it("returns mapped payments with settlement fields", async () => {
+    assertPaymentAuthMock.mockResolvedValue({ ok: true, user: { phone: "9000000001" } });
+    queryMock.mockResolvedValue({
+      rows: [
+        {
+          id: "rp_own",
+          rent_period: "2026-07",
+          amount_paise: "500",
+          owner_settlement_paise: "500",
+          commission_paise: "0",
+          status: "paid",
+          payment_method: "upi",
+          paid_at: new Date("2026-07-13T05:26:33.000Z"),
+          created_at: new Date("2026-07-13T05:23:43.000Z"),
+          transfer_failed_at: null,
+        },
+      ],
+    });
+    const mock = createMockResponse();
+
+    await handleOwnerPaymentHistoryRequest(
+      historyRequest({ phone: "+91 9000000001" }, "Bearer tok"),
+      mock.res,
+    );
+
+    expect(assertPaymentAuthMock).toHaveBeenCalledWith("Bearer tok", "9000000001");
+    expect(mock.statusCode).toBe(200);
+    expect(mock.parsedBody).toEqual({
+      payments: [
+        {
+          id: "rp_own",
+          rentPeriod: "2026-07",
+          amountPaise: "500",
+          ownerSettlementPaise: "500",
+          commissionPaise: "0",
+          status: "paid",
+          paymentMethod: "upi",
+          paidAt: "2026-07-13T05:26:33.000Z",
+          createdAt: "2026-07-13T05:23:43.000Z",
+          transferFailedAt: null,
         },
       ],
     });

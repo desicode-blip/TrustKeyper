@@ -36,6 +36,9 @@
     "api/payments-tenant-history.ts": {
       "maxDuration": 30
     },
+    "api/payments-owner-history.ts": {
+      "maxDuration": 30
+    },
     "api/payments-create-escrow-order.ts": {
       "maxDuration": 30
     },
