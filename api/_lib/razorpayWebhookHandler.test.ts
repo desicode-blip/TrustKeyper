@@ -21,8 +21,12 @@ vi.mock("./razorpayRouteHelpers.js", () => ({
 
 import { razorpayWebhookHandlerTestApi } from "./razorpayWebhookHandler.js";
 
-const { handleTransferFailed, handleSettlementProcessed, processWebhookEvent } =
-  razorpayWebhookHandlerTestApi;
+const {
+  handlePaymentCaptured,
+  handleTransferFailed,
+  handleSettlementProcessed,
+  processWebhookEvent,
+} = razorpayWebhookHandlerTestApi;
 
 function baseEvent(
   eventName: string,
@@ -49,6 +53,72 @@ function parentTransferFailedUpdates(): unknown[][] {
     return sql.includes("rent_payments") && sql.includes("transfer_failed_at");
   });
 }
+
+describe("handlePaymentCaptured", () => {
+  afterEach(() => {
+    queryMock.mockReset();
+  });
+
+  it("sets payment_method from the webhook payload when marking paid", async () => {
+    queryMock
+      .mockResolvedValueOnce({
+        rows: [{ id: "rp_1", status: "created" }],
+      })
+      .mockResolvedValueOnce({ rowCount: 1 })
+      .mockResolvedValueOnce({ rowCount: 1 });
+
+    const rentPaymentId = await handlePaymentCaptured(
+      baseEvent("payment.captured", {
+        payment: {
+          entity: {
+            id: "pay_abc",
+            order_id: "order_abc",
+            method: "upi",
+          },
+        },
+      }),
+      "rzp_evt_payment_captured",
+    );
+
+    expect(rentPaymentId).toBe("rp_1");
+
+    const paidUpdate = queryMock.mock.calls.find((call) => {
+      const sql = String(call[0] ?? "");
+      return sql.includes("status = 'paid'") && sql.includes("payment_method");
+    });
+    expect(paidUpdate).toBeDefined();
+    expect(String(paidUpdate?.[0] ?? "")).toContain(
+      "payment_method = COALESCE($3, payment_method)",
+    );
+    expect(paidUpdate?.[1]).toEqual(["rp_1", "pay_abc", "upi"]);
+  });
+
+  it("does not update payment_method when status is already paid", async () => {
+    queryMock
+      .mockResolvedValueOnce({
+        rows: [{ id: "rp_1", status: "paid" }],
+      })
+      .mockResolvedValueOnce({ rowCount: 1 });
+
+    await handlePaymentCaptured(
+      baseEvent("payment.captured", {
+        payment: {
+          entity: {
+            id: "pay_abc",
+            order_id: "order_abc",
+            method: "card",
+          },
+        },
+      }),
+      "rzp_evt_payment_captured_idempotent",
+    );
+
+    const paidUpdates = queryMock.mock.calls.filter((call) =>
+      String(call[0] ?? "").includes("status = 'paid'"),
+    );
+    expect(paidUpdates).toHaveLength(0);
+  });
+});
 
 describe("handleTransferFailed", () => {
   afterEach(() => {
