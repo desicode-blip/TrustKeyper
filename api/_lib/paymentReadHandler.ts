@@ -1,12 +1,22 @@
 /**
  * Read APIs for rent payment history (tenant / owner).
+ * On-read transfer reconciliation heals missed transfer.* webhooks.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
 import { json } from "./http.js";
+import { getRazorpayClient } from "./razorpayClient.js";
+import {
+  applyTransferFailed,
+  applyTransferProcessed,
+} from "./razorpayWebhookHandler.js";
 import { assertPaymentAuth } from "./syncAuth.js";
 import { sanitizeErrorForLog } from "./sanitizeErrorForLog.js";
 import { getPool, normalizePhone } from "./vercelSyncDb.js";
+
+const RECONCILE_MIN_AGE_SQL = "INTERVAL '2 minutes'";
+const RECONCILE_MAX_AGE_SQL = "INTERVAL '7 days'";
+const RECONCILE_COOLDOWN_SQL = "INTERVAL '2 minutes'";
 
 const phoneQuerySchema = z.object({
   phone: z
@@ -25,6 +35,11 @@ type TenantPaymentHistoryRow = {
   created_at: Date | string;
 };
 
+type StaleTransferCandidate = {
+  rent_payment_id: string;
+  razorpay_transfer_id: string;
+};
+
 function requestAuthorization(req: VercelRequest): string | undefined {
   const header = req.headers.authorization ?? req.headers.Authorization;
   if (Array.isArray(header)) return header[0];
@@ -41,6 +56,117 @@ function toIsoString(value: Date | string | null): string | null {
   if (value instanceof Date) return value.toISOString();
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return undefined;
+}
+
+function transferStatus(entity: Record<string, unknown> | undefined): string | null {
+  const status = entity?.status;
+  return typeof status === "string" ? status : null;
+}
+
+/**
+ * On-read self-heal for missed transfer.processed / transfer.failed webhooks.
+ * Mirrors syncRecipientValidationFromRazorpay: re-fetch Razorpay, apply shared
+ * settle/fail helpers. No Razorpay calls when there are no candidates.
+ *
+ * Idempotent: applyTransferProcessed / applyTransferFailed already skip when
+ * the child is already in the terminal status.
+ */
+export async function reconcileStaleTransfers(
+  phone: string,
+  role: "tenant" | "owner",
+): Promise<void> {
+  const scopeSql =
+    role === "tenant"
+      ? `RIGHT(regexp_replace(COALESCE(a.tenant_contact, ''), '\\D', '', 'g'), 10) = $1`
+      : `RIGHT(regexp_replace(COALESCE(a.account_phone, ''), '\\D', '', 'g'), 10) = $1
+         AND a.account_role = 'owner'`;
+
+  const candidates = await getPool().query<StaleTransferCandidate>(
+    `SELECT DISTINCT
+       rp.id AS rent_payment_id,
+       t.razorpay_transfer_id
+     FROM public.rent_payments rp
+     INNER JOIN public.agreements a ON a.id = rp.agreement_id
+     INNER JOIN public.rent_payment_transfers t ON t.rent_payment_id = rp.id
+     WHERE ${scopeSql}
+       AND rp.payment_type = 'rent'
+       AND rp.status = 'paid'
+       AND t.razorpay_transfer_id IS NOT NULL
+       AND t.status NOT IN ('processed', 'failed')
+       AND rp.paid_at IS NOT NULL
+       AND rp.paid_at < NOW() - ${RECONCILE_MIN_AGE_SQL}
+       AND rp.paid_at > NOW() - ${RECONCILE_MAX_AGE_SQL}
+       AND (
+         rp.last_reconciled_at IS NULL
+         OR rp.last_reconciled_at < NOW() - ${RECONCILE_COOLDOWN_SQL}
+       )`,
+    [phone],
+  );
+
+  if (candidates.rows.length === 0) {
+    return;
+  }
+
+  const attemptedPaymentIds = new Set<string>();
+
+  for (const row of candidates.rows) {
+    attemptedPaymentIds.add(row.rent_payment_id);
+    const transferId = row.razorpay_transfer_id;
+
+    try {
+      const fetched = await getRazorpayClient().transfers.fetch(transferId);
+      const entity = asRecord(fetched);
+      const status = transferStatus(entity);
+
+      if (status === "processed") {
+        await applyTransferProcessed(transferId, entity);
+      } else if (status === "failed") {
+        await applyTransferFailed(transferId, entity);
+      }
+    } catch (err) {
+      console.error("reconcileStaleTransfers transfer fetch/apply failed", {
+        transferId,
+        rentPaymentId: row.rent_payment_id,
+        error: sanitizeErrorForLog(err),
+      });
+    }
+  }
+
+  const paymentIds = [...attemptedPaymentIds];
+  if (paymentIds.length > 0) {
+    try {
+      await getPool().query(
+        `UPDATE public.rent_payments
+         SET last_reconciled_at = NOW(),
+             updated_at = NOW()
+         WHERE id = ANY($1::text[])`,
+        [paymentIds],
+      );
+    } catch (err) {
+      console.error("reconcileStaleTransfers last_reconciled_at update failed", {
+        error: sanitizeErrorForLog(err),
+      });
+    }
+  }
+}
+
+async function runReconcileBestEffort(phone: string, role: "tenant" | "owner"): Promise<void> {
+  try {
+    await reconcileStaleTransfers(phone, role);
+  } catch (err) {
+    console.error("reconcileStaleTransfers unexpected error", {
+      phone,
+      role,
+      error: sanitizeErrorForLog(err),
+    });
+  }
 }
 
 /** Map a DB row to the tenant-facing payment history item (no commission fields). */
@@ -94,6 +220,8 @@ export async function handleTenantPaymentHistoryRequest(
   }
 
   try {
+    await runReconcileBestEffort(phone, "tenant");
+
     const result = await getPool().query<TenantPaymentHistoryRow>(
       `SELECT
          rp.id,
@@ -190,6 +318,8 @@ export async function handleOwnerPaymentHistoryRequest(
   }
 
   try {
+    await runReconcileBestEffort(phone, "owner");
+
     const result = await getPool().query<OwnerPaymentHistoryRow>(
       `SELECT
          rp.id,
