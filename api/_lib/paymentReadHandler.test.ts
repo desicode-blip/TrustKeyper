@@ -1,9 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const { queryMock, assertPaymentAuthMock } = vi.hoisted(() => ({
+const {
+  queryMock,
+  assertPaymentAuthMock,
+  transfersFetchMock,
+  applyTransferProcessedMock,
+  applyTransferFailedMock,
+} = vi.hoisted(() => ({
   queryMock: vi.fn(),
   assertPaymentAuthMock: vi.fn(),
+  transfersFetchMock: vi.fn(),
+  applyTransferProcessedMock: vi.fn(),
+  applyTransferFailedMock: vi.fn(),
 }));
 
 vi.mock("./vercelSyncDb.js", () => ({
@@ -17,11 +26,25 @@ vi.mock("./syncAuth.js", () => ({
   assertPaymentAuth: assertPaymentAuthMock,
 }));
 
+vi.mock("./razorpayClient.js", () => ({
+  getRazorpayClient: () => ({
+    transfers: {
+      fetch: transfersFetchMock,
+    },
+  }),
+}));
+
+vi.mock("./razorpayWebhookHandler.js", () => ({
+  applyTransferProcessed: applyTransferProcessedMock,
+  applyTransferFailed: applyTransferFailedMock,
+}));
+
 import {
   handleOwnerPaymentHistoryRequest,
   handleTenantPaymentHistoryRequest,
   mapOwnerPaymentHistoryItem,
   mapTenantPaymentHistoryItem,
+  reconcileStaleTransfers,
 } from "./paymentReadHandler.js";
 
 function createMockResponse() {
@@ -93,6 +116,9 @@ describe("handleTenantPaymentHistoryRequest", () => {
   afterEach(() => {
     queryMock.mockReset();
     assertPaymentAuthMock.mockReset();
+    transfersFetchMock.mockReset();
+    applyTransferProcessedMock.mockReset();
+    applyTransferFailedMock.mockReset();
   });
 
   it("returns 401 when auth fails", async () => {
@@ -111,7 +137,9 @@ describe("handleTenantPaymentHistoryRequest", () => {
 
   it("returns empty payments array when tenant has none", async () => {
     assertPaymentAuthMock.mockResolvedValue({ ok: true, user: { phone: "9000000030" } });
-    queryMock.mockResolvedValue({ rows: [] });
+    queryMock
+      .mockResolvedValueOnce({ rows: [] }) // reconcile candidates
+      .mockResolvedValueOnce({ rows: [] }); // history
     const mock = createMockResponse();
 
     await handleTenantPaymentHistoryRequest(
@@ -121,25 +149,28 @@ describe("handleTenantPaymentHistoryRequest", () => {
 
     expect(mock.statusCode).toBe(200);
     expect(mock.parsedBody).toEqual({ payments: [] });
-    expect(String(queryMock.mock.calls[0]?.[0] ?? "")).toContain("agreements");
-    expect(queryMock.mock.calls[0]?.[1]).toEqual(["9000000030"]);
+    expect(transfersFetchMock).not.toHaveBeenCalled();
+    expect(String(queryMock.mock.calls[1]?.[0] ?? "")).toContain("agreements");
+    expect(queryMock.mock.calls[1]?.[1]).toEqual(["9000000030"]);
   });
 
   it("returns mapped payments and normalizes phone for auth", async () => {
     assertPaymentAuthMock.mockResolvedValue({ ok: true, user: { phone: "9000000030" } });
-    queryMock.mockResolvedValue({
-      rows: [
-        {
-          id: "rp_new",
-          rent_period: "2026-07",
-          amount_paise: 500,
-          status: "paid",
-          payment_method: "upi",
-          paid_at: new Date("2026-07-13T05:26:33.000Z"),
-          created_at: new Date("2026-07-13T05:23:43.000Z"),
-        },
-      ],
-    });
+    queryMock
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: "rp_new",
+            rent_period: "2026-07",
+            amount_paise: 500,
+            status: "paid",
+            payment_method: "upi",
+            paid_at: new Date("2026-07-13T05:26:33.000Z"),
+            created_at: new Date("2026-07-13T05:23:43.000Z"),
+          },
+        ],
+      });
     const mock = createMockResponse();
 
     await handleTenantPaymentHistoryRequest(
@@ -199,6 +230,9 @@ describe("handleOwnerPaymentHistoryRequest", () => {
   afterEach(() => {
     queryMock.mockReset();
     assertPaymentAuthMock.mockReset();
+    transfersFetchMock.mockReset();
+    applyTransferProcessedMock.mockReset();
+    applyTransferFailedMock.mockReset();
   });
 
   it("returns 401 when auth fails", async () => {
@@ -217,7 +251,7 @@ describe("handleOwnerPaymentHistoryRequest", () => {
 
   it("returns empty payments array when owner has none", async () => {
     assertPaymentAuthMock.mockResolvedValue({ ok: true, user: { phone: "9000000001" } });
-    queryMock.mockResolvedValue({ rows: [] });
+    queryMock.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] });
     const mock = createMockResponse();
 
     await handleOwnerPaymentHistoryRequest(
@@ -227,32 +261,34 @@ describe("handleOwnerPaymentHistoryRequest", () => {
 
     expect(mock.statusCode).toBe(200);
     expect(mock.parsedBody).toEqual({ payments: [] });
-    const sql = String(queryMock.mock.calls[0]?.[0] ?? "");
+    const sql = String(queryMock.mock.calls[1]?.[0] ?? "");
     expect(sql).toContain("account_phone");
     expect(sql).toContain("account_role = 'owner'");
     expect(sql).toContain("owner_settlement_paise");
     expect(sql).toContain("transfer_failed_at");
-    expect(queryMock.mock.calls[0]?.[1]).toEqual(["9000000001"]);
+    expect(queryMock.mock.calls[1]?.[1]).toEqual(["9000000001"]);
   });
 
   it("returns mapped payments with settlement fields", async () => {
     assertPaymentAuthMock.mockResolvedValue({ ok: true, user: { phone: "9000000001" } });
-    queryMock.mockResolvedValue({
-      rows: [
-        {
-          id: "rp_own",
-          rent_period: "2026-07",
-          amount_paise: "500",
-          owner_settlement_paise: "500",
-          commission_paise: "0",
-          status: "paid",
-          payment_method: "upi",
-          paid_at: new Date("2026-07-13T05:26:33.000Z"),
-          created_at: new Date("2026-07-13T05:23:43.000Z"),
-          transfer_failed_at: null,
-        },
-      ],
-    });
+    queryMock
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: "rp_own",
+            rent_period: "2026-07",
+            amount_paise: "500",
+            owner_settlement_paise: "500",
+            commission_paise: "0",
+            status: "paid",
+            payment_method: "upi",
+            paid_at: new Date("2026-07-13T05:26:33.000Z"),
+            created_at: new Date("2026-07-13T05:23:43.000Z"),
+            transfer_failed_at: null,
+          },
+        ],
+      });
     const mock = createMockResponse();
 
     await handleOwnerPaymentHistoryRequest(
@@ -278,5 +314,95 @@ describe("handleOwnerPaymentHistoryRequest", () => {
         },
       ],
     });
+  });
+});
+
+describe("reconcileStaleTransfers", () => {
+  afterEach(() => {
+    queryMock.mockReset();
+    transfersFetchMock.mockReset();
+    applyTransferProcessedMock.mockReset();
+    applyTransferFailedMock.mockReset();
+  });
+
+  it("skips Razorpay when there are no candidates", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+
+    await reconcileStaleTransfers("9000000030", "tenant");
+
+    expect(transfersFetchMock).not.toHaveBeenCalled();
+    expect(applyTransferProcessedMock).not.toHaveBeenCalled();
+    expect(applyTransferFailedMock).not.toHaveBeenCalled();
+    expect(queryMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("applies processed/failed via shared helpers and updates last_reconciled_at", async () => {
+    queryMock
+      .mockResolvedValueOnce({
+        rows: [
+          { rent_payment_id: "rp_1", razorpay_transfer_id: "trf_ok" },
+          { rent_payment_id: "rp_1", razorpay_transfer_id: "trf_bad" },
+        ],
+      })
+      .mockResolvedValueOnce({ rowCount: 1 });
+    transfersFetchMock
+      .mockResolvedValueOnce({ id: "trf_ok", status: "processed", source: "order_1" })
+      .mockResolvedValueOnce({ id: "trf_bad", status: "failed", source: "order_1" });
+    applyTransferProcessedMock.mockResolvedValue("rp_1");
+    applyTransferFailedMock.mockResolvedValue("rp_1");
+
+    await reconcileStaleTransfers("9000000001", "owner");
+
+    expect(applyTransferProcessedMock).toHaveBeenCalledWith("trf_ok", {
+      id: "trf_ok",
+      status: "processed",
+      source: "order_1",
+    });
+    expect(applyTransferFailedMock).toHaveBeenCalledWith("trf_bad", {
+      id: "trf_bad",
+      status: "failed",
+      source: "order_1",
+    });
+
+    const updateSql = String(queryMock.mock.calls[1]?.[0] ?? "");
+    expect(updateSql).toContain("last_reconciled_at");
+    expect(queryMock.mock.calls[1]?.[1]).toEqual([["rp_1"]]);
+  });
+
+  it("continues after a per-transfer Razorpay failure", async () => {
+    queryMock
+      .mockResolvedValueOnce({
+        rows: [
+          { rent_payment_id: "rp_1", razorpay_transfer_id: "trf_boom" },
+          { rent_payment_id: "rp_2", razorpay_transfer_id: "trf_ok" },
+        ],
+      })
+      .mockResolvedValueOnce({ rowCount: 1 });
+    transfersFetchMock
+      .mockRejectedValueOnce(new Error("razorpay down"))
+      .mockResolvedValueOnce({ id: "trf_ok", status: "processed" });
+    applyTransferProcessedMock.mockResolvedValue("rp_2");
+
+    await reconcileStaleTransfers("9000000030", "tenant");
+
+    expect(applyTransferProcessedMock).toHaveBeenCalledWith("trf_ok", {
+      id: "trf_ok",
+      status: "processed",
+    });
+    expect(applyTransferFailedMock).not.toHaveBeenCalled();
+  });
+
+  it("leaves pending transfers alone without calling apply*", async () => {
+    queryMock
+      .mockResolvedValueOnce({
+        rows: [{ rent_payment_id: "rp_1", razorpay_transfer_id: "trf_pending" }],
+      })
+      .mockResolvedValueOnce({ rowCount: 1 });
+    transfersFetchMock.mockResolvedValueOnce({ id: "trf_pending", status: "pending" });
+
+    await reconcileStaleTransfers("9000000030", "tenant");
+
+    expect(applyTransferProcessedMock).not.toHaveBeenCalled();
+    expect(applyTransferFailedMock).not.toHaveBeenCalled();
   });
 });
