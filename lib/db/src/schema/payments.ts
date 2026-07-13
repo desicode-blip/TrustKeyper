@@ -79,6 +79,7 @@ export const rentPaymentsTable = pgTable(
     status: text("status").notNull().default("created"),
     paidAt: timestamp("paid_at", { withTimezone: true, mode: "date" }),
     settledAt: timestamp("settled_at", { withTimezone: true, mode: "date" }),
+    transferFailedAt: timestamp("transfer_failed_at", { withTimezone: true, mode: "date" }),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
   },

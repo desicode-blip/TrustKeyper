@@ -20,6 +20,7 @@ type RazorpayWebhookEvent = {
     payment?: { entity: Record<string, unknown> };
     transfer?: { entity: Record<string, unknown> };
     order?: { entity: Record<string, unknown> };
+    settlement?: { entity: Record<string, unknown> };
     account?: { entity: Record<string, unknown> };
     product?: { entity: Record<string, unknown> };
   };
@@ -346,14 +347,20 @@ async function handleTransferFailed(
 ): Promise<string | null> {
   const transfer = event.payload.transfer?.entity;
   const razorpayTransferId = asString(transfer?.id);
+  // transfer.error (description/reason) is preserved in razorpay_webhook_events.payload.
+  // rent_payment_transfers has no error/reason column — do not invent one.
 
   let rentPaymentId: string | null = null;
 
   if (razorpayTransferId) {
     rentPaymentId = await resolveTransferRentPaymentId(razorpayTransferId, transfer);
 
-    const found = await getPool().query<{ id: string; rent_payment_id: string }>(
-      `SELECT id, rent_payment_id
+    const found = await getPool().query<{
+      id: string;
+      rent_payment_id: string;
+      status: string;
+    }>(
+      `SELECT id, rent_payment_id, status
        FROM public.rent_payment_transfers
        WHERE razorpay_transfer_id = $1
        LIMIT 1`,
@@ -362,12 +369,22 @@ async function handleTransferFailed(
     const row = found.rows[0];
     if (row) {
       rentPaymentId = row.rent_payment_id;
+      if (row.status !== "failed") {
+        await getPool().query(
+          `UPDATE public.rent_payment_transfers
+           SET status = 'failed',
+               processed_at = NOW()
+           WHERE id = $1`,
+          [row.id],
+        );
+      }
+      // Flag parent for ops; do not change rent_payments.status (tenant paid).
       await getPool().query(
-        `UPDATE public.rent_payment_transfers
-         SET status = 'failed',
-             processed_at = NOW()
+        `UPDATE public.rent_payments
+         SET transfer_failed_at = COALESCE(transfer_failed_at, NOW()),
+             updated_at = NOW()
          WHERE id = $1`,
-        [row.id],
+        [row.rent_payment_id],
       );
     }
   }
@@ -377,6 +394,23 @@ async function handleTransferFailed(
     rentPaymentId,
   });
   return rentPaymentId;
+}
+
+async function handleSettlementProcessed(
+  event: RazorpayWebhookEvent,
+  razorpayEventId: string,
+): Promise<string | null> {
+  // Parent-merchant settlement entity typically includes:
+  // id, entity, amount, status, fees, tax, utr, created_at.
+  // No merchant-settlement ledger table exists — acknowledge only so the event
+  // is recorded as processed (full payload already stored as jsonb).
+  const settlement = event.payload.settlement?.entity;
+  asString(settlement?.id);
+
+  await markWebhookEvent(razorpayEventId, {
+    processingStatus: "processed",
+  });
+  return null;
 }
 
 async function processWebhookEvent(
@@ -398,6 +432,9 @@ async function processWebhookEvent(
       return;
     case "transfer.failed":
       await handleTransferFailed(event, razorpayEventId);
+      return;
+    case "settlement.processed":
+      await handleSettlementProcessed(event, razorpayEventId);
       return;
     case "product.route.activated":
     case "product.route.on_hold":
@@ -481,3 +518,10 @@ export async function handleRazorpayWebhookRequest(
     json(res, 200, { ok: false, status: "failed", error: message });
   }
 }
+
+/** Exported for unit tests only. */
+export const razorpayWebhookHandlerTestApi = {
+  handleTransferFailed,
+  handleSettlementProcessed,
+  processWebhookEvent,
+};
