@@ -1,3 +1,4 @@
+import type { TenantPaymentRow } from "./tenantRentPayment";
 import type { TenantWorkspaceRecord } from "./tenantWorkspace";
 
 export type TenantRentPaymentHistoryRow = {
@@ -6,6 +7,7 @@ export type TenantRentPaymentHistoryRow = {
   amountLabel: string;
   paidOnLabel: string;
   paymentMode: string;
+  statusLabel: string;
 };
 
 export type TenantRentPaymentReceipt = {
@@ -25,24 +27,25 @@ export type TenantRentPaymentsSnapshot = {
   currentDueDateLabel: string;
   minimumExtensionDate: string;
   monthlyRentAmountLabel: string;
-  breakdown: {
-    totalPropertyRentLabel: string;
-    tenantShareLabel: string;
-    maintenanceFeeLabel: string;
-    totalPayableLabel: string;
-  };
-  history: TenantRentPaymentHistoryRow[];
-  hasMoreHistory: boolean;
 };
-
-function formatInr(amount: number): string {
-  return `₹${amount.toLocaleString("en-IN")}`;
-}
 
 function parseAmount(value?: string): number {
   if (!value) return 0;
   const amount = Number(value);
   return Number.isFinite(amount) && amount > 0 ? amount : 0;
+}
+
+/** Format paise as INR with integer math (no float drift). */
+export function formatPaiseToInr(amountPaise: string | number): string {
+  const paise = Math.round(Number(amountPaise));
+  if (!Number.isFinite(paise)) return "—";
+  const rupees = Math.floor(paise / 100);
+  const remainder = paise % 100;
+  const rupeesLabel = rupees.toLocaleString("en-IN");
+  if (remainder > 0) {
+    return `₹${rupeesLabel}.${remainder.toString().padStart(2, "0")}`;
+  }
+  return `₹${rupeesLabel}`;
 }
 
 function formatDueByLabel(rentDueDay?: string): string {
@@ -88,14 +91,73 @@ function minimumExtensionDateInput(rentDueDay?: string): string {
   return formatDateInputValue(nextDay);
 }
 
+/** Format rent period "2026-07" → "Jul 2026". */
+export function formatRentPeriodLabel(rentPeriod: string): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(rentPeriod.trim());
+  if (!match) return rentPeriod || "—";
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  if (!Number.isFinite(year) || monthIndex < 0 || monthIndex > 11) return rentPeriod;
+  const label = new Date(year, monthIndex, 1).toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+  });
+  return label;
+}
+
+export function formatPaymentMethodLabel(method: string | null): string {
+  if (!method) return "—";
+  const normalized = method.trim().toLowerCase();
+  if (normalized === "upi") return "UPI";
+  if (normalized === "card") return "Card";
+  if (normalized === "netbanking") return "Net Banking";
+  if (normalized === "wallet") return "Wallet";
+  return method;
+}
+
+export function formatPaidAtLabel(paidAt: string | null): string {
+  if (!paidAt) return "—";
+  const date = new Date(paidAt);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export function formatStatusLabel(status: string): string {
+  const normalized = status.trim().toLowerCase();
+  if (normalized === "paid") return "Paid";
+  if (normalized === "settled") return "Settled";
+  if (normalized === "created") return "Pending";
+  if (normalized === "failed") return "Failed";
+  return status || "—";
+}
+
+export function mapTenantPaymentRowToHistoryRow(
+  row: TenantPaymentRow,
+): TenantRentPaymentHistoryRow {
+  return {
+    id: row.id,
+    monthLabel: formatRentPeriodLabel(row.rentPeriod),
+    amountLabel: formatPaiseToInr(row.amountPaise),
+    paidOnLabel: formatPaidAtLabel(row.paidAt),
+    paymentMode: formatPaymentMethodLabel(row.paymentMethod),
+    statusLabel: formatStatusLabel(row.status),
+  };
+}
+
+/**
+ * Statement card snapshot from workspace monthly rent only — no mock breakdown/history.
+ */
 export function buildTenantRentPaymentsSnapshot(
   workspace: TenantWorkspaceRecord | null,
 ): TenantRentPaymentsSnapshot {
-  const monthlyRent = parseAmount(workspace?.monthlyRent ?? workspace?.agreementSnapshot?.monthlyRent);
-  const tenantShare = monthlyRent > 0 ? Math.max(monthlyRent - 2000, 11000) : 11000;
-  const maintenanceFee = 2000;
-  const totalPropertyRent = tenantShare * 2 + maintenanceFee;
-  const totalPayable = monthlyRent > 0 ? monthlyRent : 13000;
+  const monthlyRentRupees = parseAmount(
+    workspace?.monthlyRent ?? workspace?.agreementSnapshot?.monthlyRent,
+  );
+  const monthlyRentPaise = Math.round(monthlyRentRupees * 100);
   const daysLeft = computeDaysLeft(workspace?.agreementSnapshot?.rentDueDay);
   const rentDueDay = workspace?.agreementSnapshot?.rentDueDay;
 
@@ -104,23 +166,7 @@ export function buildTenantRentPaymentsSnapshot(
     dueByLabel: formatDueByLabel(rentDueDay),
     currentDueDateLabel: formatCurrentDueDateLabel(rentDueDay),
     minimumExtensionDate: minimumExtensionDateInput(rentDueDay),
-    monthlyRentAmountLabel: formatInr(totalPayable),
-    breakdown: {
-      totalPropertyRentLabel: formatInr(totalPropertyRent > 0 ? totalPropertyRent : 26000),
-      tenantShareLabel: formatInr(tenantShare),
-      maintenanceFeeLabel: formatInr(maintenanceFee),
-      totalPayableLabel: formatInr(totalPayable),
-    },
-    history: [
-      {
-        id: "rent-mar-2026",
-        monthLabel: "Mar 2026",
-        amountLabel: formatInr(totalPayable),
-        paidOnLabel: "Mar 1, 2026",
-        paymentMode: "Net Banking",
-      },
-    ],
-    hasMoreHistory: true,
+    monthlyRentAmountLabel: formatPaiseToInr(monthlyRentPaise),
   };
 }
 
@@ -159,8 +205,8 @@ export function buildTenantRentPaymentReceipt(
 }
 
 export function findRentPaymentHistoryRow(
-  snapshot: TenantRentPaymentsSnapshot,
+  rows: TenantRentPaymentHistoryRow[],
   rowId: string,
 ): TenantRentPaymentHistoryRow | undefined {
-  return snapshot.history.find((row) => row.id === rowId);
+  return rows.find((row) => row.id === rowId);
 }
