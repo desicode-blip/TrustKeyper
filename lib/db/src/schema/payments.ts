@@ -74,6 +74,7 @@ export const rentPaymentsTable = pgTable(
     razorpayOrderId: text("razorpay_order_id"),
     razorpayPaymentId: text("razorpay_payment_id"),
     razorpayTransferIds: jsonb("razorpay_transfer_ids"),
+    paymentMethod: text("payment_method"),
     initiatedBy: text("initiated_by"),
     payerPhone: text("payer_phone"),
     status: text("status").notNull().default("created"),

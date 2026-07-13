@@ -203,6 +203,7 @@ async function handlePaymentCaptured(
   const payment = event.payload.payment?.entity;
   const razorpayPaymentId = asString(payment?.id);
   const razorpayOrderId = asString(payment?.order_id);
+  const method = asString(payment?.method);
 
   let rentPaymentId: string | null = null;
 
@@ -222,10 +223,11 @@ async function handlePaymentCaptured(
           `UPDATE public.rent_payments
            SET status = 'paid',
                razorpay_payment_id = COALESCE($2, razorpay_payment_id),
+               payment_method = COALESCE($3, payment_method),
                paid_at = NOW(),
                updated_at = NOW()
            WHERE id = $1`,
-          [row.id, razorpayPaymentId],
+          [row.id, razorpayPaymentId, method],
         );
       }
     }
@@ -521,6 +523,7 @@ export async function handleRazorpayWebhookRequest(
 
 /** Exported for unit tests only. */
 export const razorpayWebhookHandlerTestApi = {
+  handlePaymentCaptured,
   handleTransferFailed,
   handleSettlementProcessed,
   processWebhookEvent,
