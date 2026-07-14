@@ -2,6 +2,7 @@
 
 Property management platform for NRI and remote owners of Indian residential property. Owners manage tenants, rent, documents, and maintenance — entirely remotely.
 
+**Marketing site:** [trustkeyper.com](https://trustkeyper.com)  
 **Live app:** [app.trustkeyper.com](https://app.trustkeyper.com)
 
 ---
@@ -15,7 +16,7 @@ Property management platform for NRI and remote owners of Indian residential pro
 | Backend | Vercel serverless functions (`api/`) |
 | Local dev server | Express (`artifacts/api-server/`) |
 | Database | Supabase PostgreSQL + Drizzle ORM |
-| Auth | Supabase Phone OTP (Vonage SMS) |
+| Auth | Supabase Phone OTP (SMS via Twilio Verify; Indian DLT registered) |
 | Email | Resend |
 | Session recording | Microsoft Clarity |
 | Monorepo | pnpm workspaces |
@@ -34,11 +35,16 @@ Property management platform for NRI and remote owners of Indian residential pro
 │   ├── managed-interest.ts     # Managed plan interest email
 │   └── admin/                  # Admin-only endpoints
 ├── artifacts/
-│   ├── trustkeyper/            # Main SPA (React + Vite)
+│   ├── trustkeyper/            # App SPA (React + Vite) → app.trustkeyper.com
 │   │   └── src/
 │   │       ├── pages/          # Route-level page components
 │   │       ├── components/     # Shared UI components
 │   │       └── lib/            # Auth, sync, storage utilities
+│   ├── website/                # Marketing site (React + Vite) → trustkeyper.com
+│   │   └── src/
+│   │       ├── pages/          # Marketing + auth entry pages
+│   │       ├── components/     # Marketing UI + auth modal
+│   │       └── lib/            # Marketing auth, handoff, contact form
 │   └── api-server/             # Express server (local dev mirror)
 ├── lib/
 │   ├── db/                     # Drizzle schema + migrations
@@ -48,6 +54,19 @@ Property management platform for NRI and remote owners of Indian residential pro
 └── supabase/
     └── migrations/             # SQL migration files
 ```
+
+### Two Vercel projects
+
+The monorepo deploys as **two separate Vercel projects** (not one combined deploy):
+
+| Project | Source | Production domain | Production branch |
+|---|---|---|---|
+| `trustkeyper` | `artifacts/trustkeyper` + `api/` | app.trustkeyper.com | `main` |
+| `trustkeyper-website` | `artifacts/website` | trustkeyper.com | `staging` |
+
+**Why separate:** Marketing Production must track `staging` (so redesigned pages can ship and iterate before the app release train), while the app Production stays on `main`. A single Vercel project can only have one Production branch, so a combined deploy was rejected.
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for cross-origin API, CORS, and marketing→app auth handoff.
 
 ---
 
@@ -206,7 +225,9 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for full schema details.
 
 ## Deployment
 
-Deployments are handled automatically by Vercel:
+Deployments are handled automatically by Vercel across **two projects**:
+
+### App (`trustkeyper`)
 
 | Branch | Environment | URL |
 |---|---|---|
@@ -214,7 +235,14 @@ Deployments are handled automatically by Vercel:
 | `staging` | Staging | staging.app.trustkeyper.com |
 | Any PR | Preview | auto-generated Vercel URL |
 
-Production deploys require all CI checks to pass and a PR approval.
+### Marketing (`trustkeyper-website`)
+
+| Branch | Environment | URL |
+|---|---|---|
+| `staging` | Production (marketing) | trustkeyper.com |
+| Other / PR | Preview | auto-generated Vercel URL |
+
+App production deploys require all CI checks to pass and a PR approval. Marketing production tracks `staging` so marketing can ship independently of the app release to `main`.
 
 ---
 

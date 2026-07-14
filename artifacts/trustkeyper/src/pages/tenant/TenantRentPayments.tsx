@@ -6,16 +6,20 @@ import { TenantPaymentHistoryCard } from "@/components/tenant/TenantPaymentHisto
 import { TenantRentBackLink } from "@/components/tenant/TenantRentBackLink";
 import { TenantRentExtensionModal } from "@/components/tenant/TenantRentExtensionModal";
 import { TenantRentPaymentReceiptModal } from "@/components/tenant/TenantRentPaymentReceiptModal";
+import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import {
   computeCurrentRentPeriod,
   createTenantRentOrder,
+  fetchTenantPaymentHistory,
   openRazorpayCheckout,
 } from "@/lib/tenantRentPayment";
 import {
   buildTenantRentPaymentReceipt,
   buildTenantRentPaymentsSnapshot,
   findRentPaymentHistoryRow,
+  mapTenantPaymentRowToHistoryRow,
+  type TenantRentPaymentHistoryRow,
   type TenantRentPaymentReceipt,
   type TenantRentPaymentsSnapshot,
 } from "@/lib/tenantRentPayments";
@@ -24,28 +28,44 @@ import { getActiveTenantWorkspace } from "@/lib/tenantWorkspace";
 export default function TenantRentPayments() {
   const [snapshot, setSnapshot] = useState<TenantRentPaymentsSnapshot | null>(null);
   const [workspace, setWorkspace] = useState<ReturnType<typeof getActiveTenantWorkspace>>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [historyRows, setHistoryRows] = useState<TenantRentPaymentHistoryRow[]>([]);
+  const [statementLoading, setStatementLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<TenantRentPaymentReceipt | null>(null);
   const [extensionOpen, setExtensionOpen] = useState(false);
   const [paying, setPaying] = useState(false);
 
-  const refresh = useCallback(() => {
+  const loadStatement = useCallback(() => {
     try {
       const activeWorkspace = getActiveTenantWorkspace();
       setWorkspace(activeWorkspace);
       setSnapshot(buildTenantRentPaymentsSnapshot(activeWorkspace));
-      setLoadError(null);
     } catch {
-      setLoadError("Could not load your rent payments. Please refresh the page.");
+      setSnapshot(buildTenantRentPaymentsSnapshot(null));
     } finally {
-      setLoading(false);
+      setStatementLoading(false);
     }
   }, []);
 
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    setHistoryError(null);
+    const result = await fetchTenantPaymentHistory();
+    if (!result.ok) {
+      setHistoryRows([]);
+      setHistoryError("Couldn't load payment history");
+      setHistoryLoading(false);
+      return;
+    }
+    setHistoryRows(result.payments.map(mapTenantPaymentRowToHistoryRow));
+    setHistoryLoading(false);
+  }, []);
+
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    loadStatement();
+    void loadHistory();
+  }, [loadStatement, loadHistory]);
 
   const showPlaceholderToast = (title: string) => {
     toast({
@@ -55,8 +75,7 @@ export default function TenantRentPayments() {
   };
 
   const handleViewReceipt = (rowId: string) => {
-    if (!snapshot) return;
-    const row = findRentPaymentHistoryRow(snapshot, rowId);
+    const row = findRentPaymentHistoryRow(historyRows, rowId);
     if (!row) return;
     setReceipt(buildTenantRentPaymentReceipt(workspace, row));
   };
@@ -105,35 +124,48 @@ export default function TenantRentPayments() {
         title: "Payment successful",
         description: "It may take a moment to reflect.",
       });
+      void loadHistory();
     } finally {
       setPaying(false);
     }
-  }, []);
+  }, [loadHistory]);
+
+  const fallbackSnapshot = buildTenantRentPaymentsSnapshot(null);
 
   return (
     <TenantLayout>
       <div className="max-w-6xl mx-auto space-y-7">
         <TenantRentBackLink />
 
-        {loadError ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex gap-3 items-start">
-            <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5" />
-            <p className="text-sm text-red-700">{loadError}</p>
-          </div>
-        ) : null}
-
         <TenantMonthlyStatementCard
-          snapshot={snapshot ?? buildTenantRentPaymentsSnapshot(null)}
-          loading={loading}
+          snapshot={snapshot ?? fallbackSnapshot}
+          loading={statementLoading}
           payNowLoading={paying}
           onRequestExtension={() => setExtensionOpen(true)}
           onPayNow={() => void handlePayNow()}
         />
 
+        {historyError ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+            <div className="flex gap-3 items-start">
+              <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700">{historyError}</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 px-3 text-sm border-red-300 text-red-700 hover:bg-red-100"
+              onClick={() => void loadHistory()}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : null}
+
         <TenantPaymentHistoryCard
-          rows={snapshot?.history ?? []}
-          loading={loading}
-          hasMore={snapshot?.hasMoreHistory}
+          rows={historyRows}
+          loading={historyLoading}
+          hasMore={false}
           onDownloadAll={() => showPlaceholderToast("Download all receipts")}
           onViewReceipt={handleViewReceipt}
           onDownloadReceipt={() => showPlaceholderToast("Download receipt")}
@@ -149,11 +181,9 @@ export default function TenantRentPayments() {
 
       <TenantRentExtensionModal
         open={extensionOpen}
-        currentDueDateLabel={
-          snapshot?.currentDueDateLabel ?? buildTenantRentPaymentsSnapshot(null).currentDueDateLabel
-        }
+        currentDueDateLabel={snapshot?.currentDueDateLabel ?? fallbackSnapshot.currentDueDateLabel}
         minimumExtensionDate={
-          snapshot?.minimumExtensionDate ?? buildTenantRentPaymentsSnapshot(null).minimumExtensionDate
+          snapshot?.minimumExtensionDate ?? fallbackSnapshot.minimumExtensionDate
         }
         onClose={() => setExtensionOpen(false)}
         onSubmitted={() => {

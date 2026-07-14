@@ -36,11 +36,13 @@ import {
   X,
   CheckCircle2,
   Wallet,
+  Banknote,
 } from "lucide-react";
 
 const navItems = [
   { id: "dashboards", label: "Dashboards", icon: LayoutDashboard, href: "/owner/dashboard" },
-  { id: "payments", label: "Payments", icon: Wallet, href: "/owner/payments" },
+  { id: "finances", label: "Finances", icon: Banknote, href: "/owner/finances" },
+  { id: "payments", label: "Payment Setup", icon: Wallet, href: "/owner/payments" },
   { id: "properties", label: "Properties", icon: Building2, href: "/owner/properties" },
   { id: "tenants", label: "Tenants", icon: Users, href: "/owner/tenants" },
   { id: "maintenance", label: "Maintenance", icon: Wrench, href: "/owner/tickets" },

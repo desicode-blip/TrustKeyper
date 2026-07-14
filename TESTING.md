@@ -309,7 +309,7 @@ Use these phone numbers on staging — they are seeded in the staging database:
 
 ### OTP in staging
 
-Staging uses Supabase's test phone numbers feature for OTP bypass. The OTP for all test numbers is `123456`. This does not consume Vonage SMS credits.
+Staging uses Supabase's test phone numbers feature for OTP bypass. The OTP for all test numbers is `123456`. This does not consume Twilio Verify SMS credits (provider bypass).
 
 Real phone numbers on staging go through real OTP — use sparingly.
 

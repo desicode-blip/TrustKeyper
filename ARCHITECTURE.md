@@ -6,38 +6,78 @@ This document describes the system design, data model, key architectural decisio
 
 ## System Overview
 
-TrustKeyper is a property management platform for NRI and remote property owners. It is a local-first SPA with cloud sync, served via Vercel, backed by Supabase PostgreSQL.
+TrustKeyper is a property management platform for NRI and remote property owners. It comprises:
+
+1. **App SPA** (`artifacts/trustkeyper`) — local-first product UI with cloud sync, at **app.trustkeyper.com**
+2. **Marketing site** (`artifacts/website`) — public marketing + auth entry, at **trustkeyper.com**
+3. **Shared API** (`api/`) — Vercel serverless functions hosted on the **app** project; the marketing site calls selected endpoints **cross-origin**
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     Browser (SPA)                        │
-│                                                          │
-│  React + Vite + Tailwind                                 │
-│  Local state: localStorage + sessionStorage              │
-│  Auth: Supabase Phone OTP                                │
-│  Sync: periodic push/pull to /api/sync                   │
-└──────────────┬──────────────────────────────────────────┘
-               │ HTTPS
-               ▼
-┌─────────────────────────────────────────────────────────┐
-│               Vercel Edge / Serverless                   │
-│                                                          │
-│  /api/sync          — data sync (JWT protected)          │
-│  /api/invitations   — tenant invitations                 │
-│  /api/feedback      — feedback + Gemini AI               │
-│  /api/managed-interest — managed plan interest email     │
-│  /api/admin/*       — admin portal (allowlist protected) │
-└──────────────┬──────────────────────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────────────────────┐
-│                  Supabase                                │
-│                                                          │
-│  PostgreSQL — user_data, tenant_invitations, feedback    │
-│  Auth — Phone OTP (SMS via Vonage)                       │
-│  RLS — API-only access (no direct client DB access)      │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────┐     ┌──────────────────────────────┐
+│  Marketing (trustkeyper.com) │     │  App (app.trustkeyper.com)    │
+│  artifacts/website           │     │  artifacts/trustkeyper        │
+│  Auth modal + signup/login   │────▶│  Role dashboards + sync       │
+│  entry routes                │     │  Local-first + cloud sync     │
+└──────────────┬───────────────┘     └──────────────┬────────────────┘
+               │ cross-origin                        │ same-origin
+               │ (CORS allowlist)                    │
+               ▼                                     ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│               Vercel serverless (app project: trustkeyper)           │
+│  /api/sync, /api/invitations, /api/contact, /api/admin/*, …         │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  Supabase — PostgreSQL + Phone OTP (Twilio Verify / DLT)             │
+└─────────────────────────────────────────────────────────────────────┘
 ```
+
+### Two Vercel projects (why not one)
+
+| Project | Deploys | Production domain | Production git branch |
+|---|---|---|---|
+| `trustkeyper` | App SPA + `api/` | app.trustkeyper.com | `main` |
+| `trustkeyper-website` | Marketing SPA only | trustkeyper.com | `staging` |
+
+A **combined single-project deploy was rejected** because Vercel Production can track only one git branch. Marketing needs Production on `staging` (iterate and ship the public site ahead of app releases); the app must keep Production on `main`. Separate projects are the only way to give each surface its own production branch and domain.
+
+### Cross-origin marketing → API
+
+The marketing site does **not** host its own serverless API. Browser calls from `trustkeyper.com` (and local `http://localhost:5174`) hit the app API with CORS headers from `api/_lib/marketingCors.ts`.
+
+**Allowlisted origins:**
+- `https://trustkeyper.com` (production marketing)
+- `http://localhost:5174` (local marketing Vite)
+- optional `MARKETING_STAGING_ORIGIN` (stable staging/alias URL when set on the app server)
+
+**CORS-scoped routes** (not the entire sync API):
+- `GET /api/sync/accounts/:phone/roles`
+- `GET /api/sync/accounts/:phone/summaries`
+- `PUT /api/sync/accounts/:phone/:role/profile` (+ OPTIONS preflight)
+- `POST /api/contact` (+ OPTIONS preflight)
+
+Per-deployment Vercel **preview URLs are not allowlisted** — only the stable production domain, localhost, and an optional configured staging origin. See [docs/security.md](./docs/security.md).
+
+### Marketing → app auth handoff
+
+After phone OTP on the marketing site, the browser is redirected to the app with:
+
+| Location | Contents |
+|---|---|
+| Query string | Metadata: `from=marketing`, `phone`, `role`, optional `remember=1`, signup flags |
+| URL hash | Session tokens: `#tk_session=<base64 JSON { access_token, refresh_token? }>` |
+
+Tokens stay in the **hash** so they are not sent as Referer query params to third parties; metadata stays in the **query** for routing.
+
+**`MarketingHandoffGate`** (`artifacts/trustkeyper/src/components/MarketingHandoffGate.tsx`) wraps **above** `WouterRouter` in `App.tsx` and **blocks all route rendering** until the handoff resolves (loading UI only while pending).
+
+**Race it fixes (PR #143):** `OwnerLayout` / `BrokerLayout` / `TenantLayout` guard effects ran **before** the handoff could apply. Seeing no `tk_active_phone` / `tk_active_role`, they called `setLocation("/login")`; wouter’s `pushState` then **discarded the URL query and hash**, wiping the session tokens before they were consumed. The gate must wrap the router so those layouts never mount until `applyMarketingHandoff` succeeds (or fails cleanly to `/login` with an error banner).
+
+Details and the dual auth-entry debt: [docs/auth.md](./docs/auth.md).
+
+### Marketing analytics (GTM)
+
+GTM is injected into the marketing build only when `VITE_ENABLE_ANALYTICS === "1"`. The flag is read via Vite `loadEnv()` in `artifacts/website/vite.config.ts` at **build time** (not runtime). Unset → no GTM in `dist`.
 
 ---
 
@@ -168,12 +208,14 @@ There are no foreign key constraints in the database. Logical relationships are:
 
 ### Provider: Supabase Phone OTP
 
+SMS delivery is configured in the Supabase project (Twilio Verify with Indian DLT registration). The app code calls Supabase Auth only — it does not talk to Twilio directly. Staging test numbers use Supabase’s OTP allowlist and bypass the SMS provider (see [docs/payments.md](./docs/payments.md) and [TESTING.md](./TESTING.md)).
+
 ```
 User enters phone
       ↓
 supabase.auth.signInWithOtp({ phone: "+91" + digits })
       ↓
-SMS sent via Vonage
+SMS via Twilio Verify (or staging test-number bypass)
       ↓
 User enters OTP
       ↓
@@ -181,15 +223,17 @@ supabase.auth.verifyOtp({ phone, token, type: "sms" })
       ↓
 Returns access_token (JWT)
       ↓
-JWT stored in localStorage (tk-auth-session)
+JWT stored in localStorage (tk-auth-session) — per browser origin
 JWT sent as Bearer token on all protected API calls
 ```
+
+**Two auth UIs:** The marketing site and the app each implement OTP entry flows against the **same** Supabase project. This duplication is documented in [docs/auth.md](./docs/auth.md).
 
 ### Session storage
 
 | Key | Storage | Contents |
 |---|---|---|
-| `tk-auth-session` | localStorage | Supabase JWT session |
+| `tk-auth-session` | localStorage | Supabase JWT session (per-origin; marketing and app do not share storage) |
 | `tk_active_phone` | sessionStorage (or localStorage if remember-me) | Active user phone |
 | `tk_active_role` | sessionStorage (or localStorage if remember-me) | Active user role |
 | `tk_pending_role` | sessionStorage | Role context during login/signup flow |
@@ -325,13 +369,16 @@ The sync store supports multiple backends, selected by environment:
 
 ## Environments
 
-| Environment | Branch | Supabase Project | Database | URL |
-|---|---|---|---|---|
-| Production | `main` | `trustkeyper-prod` | Supabase Postgres (prod) | app.trustkeyper.com |
-| Staging | `staging` | `trustkeyper-staging` | Supabase Postgres (staging) | staging.app.trustkeyper.com |
-| Local dev | any | Either (or local PGLite) | PGLite or Docker | localhost:5173 |
+| Environment | Branch | Supabase Project | Database | App URL | Marketing URL |
+|---|---|---|---|---|---|
+| App production | `main` | `trustkeyper-prod` (`dsqhifabykbtqvzvogdt`) | Supabase Postgres (prod) | app.trustkeyper.com | — |
+| Marketing production | `staging` | **same prod project** `dsqhifabykbtqvzvogdt` | — | — | trustkeyper.com |
+| App staging | `staging` | `trustkeyper-staging` | Supabase Postgres (staging) | staging.app.trustkeyper.com | (preview / alias when configured) |
+| Local dev | any | Either (or local PGLite) | PGLite or Docker | localhost:5173 | localhost:5174 |
 
-Staging is a full mirror of production with separate data. All changes are tested on staging before production release.
+Staging is a full mirror of production with separate data for the **app**. Marketing Production tracks the `staging` branch on project `trustkeyper-website` so public-site changes can ship without merging to `main`.
+
+**Shared production Supabase:** `trustkeyper-website` Production and app Production both use Supabase project `dsqhifabykbtqvzvogdt` (verified from the marketing Production bundle’s `VITE_SUPABASE_URL`). Marketing previously pointed at the **staging** Supabase project; switching it to production is what made cross-origin login/handoff work (same Auth project as the app).
 
 ---
 
@@ -341,6 +388,7 @@ These are documented issues to address in future sprints:
 
 | Issue | Priority | Notes |
 |---|---|---|
+| Dual auth UIs (marketing modal + app `/login`) | Medium | Same Supabase OTP; consolidate later — see docs/auth.md. Keep app `/login` as recovery until marketing path is proven in prod |
 | `owner_tenant_invites` not in bulk sync | High | Can cause data loss on new device login |
 | `tenant_invitations` API not wired to frontend | High | Backend is complete, SPA still uses localStorage + WhatsApp only |
 | Public share link reads from viewer's localStorage | High | Broken for actual recipients |
@@ -350,6 +398,7 @@ These are documented issues to address in future sprints:
 | `OwnerTenantProfile` is hardcoded mock data | Medium | "Karthik M." placeholder |
 | `OwnerFinances` redirects to dashboard | Low | Stub, needs real implementation |
 | `BrokerCommission` shows static zeros | Low | Stub, needs real implementation |
+| No rate limiting on public `/roles` / `/summaries` | Medium | Enumerable discovery endpoints; rate limiting deferred — see docs/security.md |
 | No rate limiting on feedback endpoint | Low | Placeholder in code, needs Redis/Upstash |
 
 ---
@@ -372,13 +421,14 @@ GitHub Actions (ci.yml)
               ↓
          Merge to staging
               ↓
-         Vercel deploys to staging.app.trustkeyper.com
+         Vercel: app → staging.app.trustkeyper.com
+         Vercel: marketing (trustkeyper-website) → Production trustkeyper.com
               ↓
          Manual E2E testing
               ↓
-         PR: staging → main
+         PR: staging → main  (app release only)
               ↓
-         Vercel deploys to app.trustkeyper.com
+         Vercel: app → app.trustkeyper.com
 ```
 
 **Planned additions to CI:**

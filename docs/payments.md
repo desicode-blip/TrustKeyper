@@ -6,6 +6,19 @@ surprises us in staging or production.
 
 ---
 
+## Phone OTP provider (related ops)
+
+Auth SMS is **not** part of Razorpay, but it shares the same staging/production
+ops surface. Phone OTP migrated from **Vonage** to **Twilio Verify** (with
+Indian DLT registration), configured in the Supabase Auth SMS settings — app
+code still only calls Supabase.
+
+Supabase’s **test phone number allowlist** bypasses the SMS provider entirely
+(staging OTP `123456`). See TESTING.md. Do not expect Twilio delivery for
+allowlisted numbers.
+
+---
+
 ## Invalid housing subcategory (`real_estate_agents`)
 
 **Reference:** Razorpay ticket #19705336 · PRs #130, #131 · 2026-07-08

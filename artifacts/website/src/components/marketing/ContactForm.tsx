@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ChevronDown, Home, IndianRupee, Loader2, User } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import {
   buildContactSubmitPayload,
   CONTACT_SERVICE_TIMINGS,
@@ -12,7 +12,6 @@ import {
   type ContactFormErrors,
   type ContactFormField,
   type ContactFormValues,
-  type ContactUserRole,
 } from "@/lib/contactFormSchema";
 import { getMarketingApiBase } from "@/lib/marketingAuthLookup";
 import { cn } from "@/lib/utils";
@@ -30,12 +29,6 @@ const EMPTY_VALUES: ContactFormValues = {
 type SubmitState = "idle" | "loading" | "success" | "error";
 type SubmitErrorKind = "rate_limit" | "generic";
 
-const ROLE_ICONS: Record<ContactUserRole, typeof User> = {
-  property_owner: User,
-  tenant: Home,
-  broker: IndianRupee,
-};
-
 function FieldLabel({
   children,
   required,
@@ -48,10 +41,10 @@ function FieldLabel({
   return (
     <label
       {...(htmlFor ? { htmlFor } : {})}
-      className="mb-2 block text-sm font-medium text-marketing-navy"
+      className="mb-3 block px-[14px] text-sm font-medium text-marketing-form-label"
     >
       {children}
-      {required ? <span className="text-marketing-blue"> *</span> : null}
+      {required ? <span className="text-[#c93631]"> *</span> : null}
     </label>
   );
 }
@@ -65,7 +58,10 @@ function FieldError({ message }: { message?: string }) {
 }
 
 const inputClassName =
-  "w-full rounded-lg border border-transparent bg-[#f1f5f9] px-4 py-3 text-sm text-marketing-navy outline-none transition-colors placeholder:text-marketing-muted/70 focus:border-marketing-blue focus:bg-white";
+  "w-full rounded-full border border-marketing-azure-stroke bg-marketing-cloud-050 px-[14px] py-3 text-sm text-marketing-form-label outline-none transition-colors placeholder:text-marketing-neutral-500 focus:border-marketing-blue focus:bg-white";
+
+const textareaClassName =
+  "w-full resize-none rounded-xl border border-marketing-azure-stroke bg-marketing-cloud-050 px-[14px] py-3 text-sm text-marketing-form-label outline-none transition-colors placeholder:text-marketing-neutral-500 focus:border-marketing-blue focus:bg-white";
 
 export function ContactForm() {
   const [values, setValues] = useState<ContactFormValues>(EMPTY_VALUES);
@@ -232,8 +228,8 @@ export function ContactForm() {
             <FieldLabel required htmlFor="contact-phone">
               Contact Number
             </FieldLabel>
-            <div className="flex overflow-hidden rounded-lg bg-[#f1f5f9] ring-1 ring-transparent focus-within:bg-white focus-within:ring-marketing-blue">
-              <span className="flex shrink-0 items-center border-r border-[#e2e8f0] px-4 text-sm text-marketing-muted">
+            <div className="flex overflow-hidden rounded-full border border-marketing-azure-stroke bg-marketing-cloud-050 focus-within:border-marketing-blue focus-within:bg-white">
+              <span className="flex shrink-0 items-center border-r border-marketing-azure-stroke px-[14px] text-sm text-marketing-neutral-500">
                 +91
               </span>
               <input
@@ -244,7 +240,7 @@ export function ContactForm() {
                 value={values.phone}
                 onChange={(event) => updateField("phone", normalizePhoneDigits(event.target.value))}
                 maxLength={10}
-                className="min-w-0 flex-1 bg-transparent px-4 py-3 text-sm text-marketing-navy outline-none placeholder:text-marketing-muted/70"
+                className="min-w-0 flex-1 bg-transparent px-[14px] py-3 text-sm text-marketing-form-label outline-none placeholder:text-marketing-neutral-500"
                 aria-invalid={Boolean(errors.phone)}
               />
             </div>
@@ -268,9 +264,8 @@ export function ContactForm() {
 
         <div>
           <FieldLabel required>I am A</FieldLabel>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="flex flex-wrap gap-x-[15px] gap-y-3 px-[14px]">
             {CONTACT_USER_ROLES.map((role) => {
-              const Icon = ROLE_ICONS[role.id];
               const selected = values.role === role.id;
 
               return (
@@ -279,24 +274,22 @@ export function ContactForm() {
                   type="button"
                   aria-pressed={selected}
                   onClick={() => updateField("role", role.id)}
-                  className={cn(
-                    "flex min-h-[88px] flex-col items-center justify-center gap-2 rounded-xl border px-3 py-4 text-center transition-colors",
-                    selected
-                      ? "border-0 border-b-2 border-marketing-green bg-marketing-mint-card text-marketing-navy shadow-[1px_2px_5px_rgba(103,103,103,0.08)]"
-                      : "border border-marketing-border bg-[#f8fafc] text-marketing-body hover:border-marketing-muted/40",
-                  )}
+                  className="flex items-center gap-[7px] transition-colors"
                 >
                   <span
                     className={cn(
-                      "flex h-9 w-9 items-center justify-center rounded-full",
-                      selected
-                        ? "bg-marketing-green text-white"
-                        : "bg-white text-marketing-muted",
+                      "flex size-4 shrink-0 items-center justify-center rounded-full border border-marketing-azure-stroke bg-marketing-cloud-050",
+                      selected && "border-marketing-green",
                     )}
                   >
-                    <Icon size={18} strokeWidth={1.75} aria-hidden />
+                    <span
+                      className={cn(
+                        "size-2 rounded-full bg-marketing-green transition-opacity",
+                        selected ? "opacity-100" : "opacity-0",
+                      )}
+                    />
                   </span>
-                  <span className="text-sm font-medium">{role.label}</span>
+                  <span className="text-sm text-marketing-neutral-700">{role.label}</span>
                 </button>
               );
             })}
@@ -329,7 +322,7 @@ export function ContactForm() {
             </select>
             <ChevronDown
               size={18}
-              className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-marketing-muted"
+              className="pointer-events-none absolute right-[14px] top-1/2 -translate-y-1/2 text-marketing-neutral-500"
               aria-hidden
             />
           </div>
@@ -346,7 +339,7 @@ export function ContactForm() {
             onChange={(event) => updateField("message", event.target.value)}
             rows={5}
             placeholder="Placeholder"
-            className={cn(inputClassName, "resize-none")}
+            className={textareaClassName}
             aria-invalid={Boolean(errors.message)}
           />
           <FieldError message={errors.message} />
@@ -364,10 +357,10 @@ export function ContactForm() {
             disabled={!canSubmit || submitState === "loading"}
             onClick={() => void handleSubmit()}
             className={cn(
-              "inline-flex min-w-[160px] items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-colors",
+              "inline-flex h-14 w-full items-center justify-center gap-2 rounded-full px-6 font-roboto text-base font-medium transition-colors",
               canSubmit && submitState !== "loading"
-                ? "bg-marketing-blue text-white hover:bg-marketing-blue-bright"
-                : "cursor-not-allowed bg-[#cbd5e1] text-white",
+                ? "bg-marketing-green text-marketing-neutral-1100 hover:brightness-105"
+                : "cursor-not-allowed bg-marketing-neutral-300 text-marketing-neutral-700",
             )}
           >
             {submitState === "loading" ? (
