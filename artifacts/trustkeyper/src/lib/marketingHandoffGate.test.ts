@@ -312,7 +312,7 @@ describe("marketing handoff gate race regression", () => {
     expect(historyCalls.some((call) => call.url === "/login")).toBe(false);
   });
 
-  it("on failure replaces the URL with /login and keeps a real error message", async () => {
+  it("on failure clears URL and redirects to marketing login (not /login)", async () => {
     vi.mocked(supabase.auth.setSession).mockResolvedValue({
       data: { session: null, user: null },
       error: { message: "invalid" },
@@ -325,13 +325,30 @@ describe("marketing handoff gate race regression", () => {
     if (result.ok) throw new Error("expected failure");
 
     clearMarketingHandoffFromUrl();
-    window.history.replaceState({}, "", "/login");
     sessionStorageMock.setItem("tk_marketing_handoff_error", result.error);
 
-    expect(historyCalls.some((call) => call.url === "/login")).toBe(true);
+    const replaceSpy = vi.fn();
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { ...originalLocation, replace: replaceSpy, href: originalLocation.href },
+    });
+
+    const { redirectToMarketingAuth } = await import("./marketingHandoff");
+    redirectToMarketingAuth("login");
+
+    expect(replaceSpy).toHaveBeenCalled();
+    const redirectTarget = String(replaceSpy.mock.calls[0]?.[0] ?? "");
+    expect(redirectTarget.endsWith("#login")).toBe(true);
+    expect(redirectTarget.includes("/login")).toBe(false);
     expect(sessionStorageMock.getItem("tk_marketing_handoff_error")).toBe(
       "Could not restore your session. Please log in again.",
     );
     expect(sessionStorageMock.getItem("tk_active_phone")).toBeNull();
+
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: originalLocation,
+    });
   });
 });

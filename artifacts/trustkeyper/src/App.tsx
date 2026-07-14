@@ -8,9 +8,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppAuthEntryRedirect } from "@/components/AppAuthEntryRedirect";
 import { MarketingHandoffGate } from "@/components/MarketingHandoffGate";
 import SharedProperty from "@/pages/SharedProperty";
-import Onboarding from "@/pages/Onboarding";
-import Login from "@/pages/Login";
-import LoginDirect from "@/pages/LoginDirect";
 import BrokerDashboard from "@/pages/BrokerDashboard";
 import BrokerProperties from "@/pages/BrokerProperties";
 import BrokerTenants from "@/pages/BrokerTenants";
@@ -102,18 +99,12 @@ function Router() {
       <Route path="/tenant/profile" component={TenantProfile} />
       <Route path="/tenant/settings" component={TenantSettings} />
       <Route path="/login">
-        <AppAuthEntryRedirect mode="login">
-          <Login />
-        </AppAuthEntryRedirect>
+        <AppAuthEntryRedirect mode="login" />
       </Route>
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />
-      {/* Role-card login — not linked in UI; enable navigation when needed */}
-      <Route path="/Logindirect" component={LoginDirect} />
       <Route path="/">
-        <AppAuthEntryRedirect mode="signup">
-          <Onboarding />
-        </AppAuthEntryRedirect>
+        <AppAuthEntryRedirect mode="signup" />
       </Route>
       <Route path="/owner/properties/add" component={OwnerAddProperty} />
       <Route path="/owner/properties/add2" component={OwnerAddProperty2} />

@@ -21,6 +21,7 @@ import { FlowChipButton } from "@/components/FlowChipButton";
 import { AddPropertyProgressBar } from "@/components/AddPropertyProgressBar";
 import { useScrollToTopOnChange } from "@/hooks/useScrollToTopOnChange";
 import { getActiveSession } from "@/lib/auth";
+import { redirectToMarketingAuth } from "@/lib/marketingHandoff";
 import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { addProperty, deriveBedroomsFromUnitSize } from "@/lib/properties";
 import { appendPropertyImagesFromFiles, preparePropertyImagesForStorage } from "@/lib/propertyMedia";
@@ -414,7 +415,7 @@ export default function AddProperty() {
     if (!getActiveSession()) {
       toast({ title: "Please sign in to save properties", variant: "destructive" });
       sessionStorage.setItem("tk_pending_role", "broker");
-      setLocation("/login");
+      redirectToMarketingAuth("login");
       return;
     }
     if (isSaving || pendingImageUploads > 0) return;

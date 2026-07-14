@@ -22,6 +22,7 @@ import {
   logout,
   restoreRememberedSessionFromLocalStorage,
 } from "@/lib/auth";
+import { redirectToMarketingAuth } from "@/lib/marketingHandoff";
 import {
   LayoutDashboard,
   Building2,
@@ -100,7 +101,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
     const session = getActiveSession();
     if (!session || session.role !== "owner") {
       sessionStorage.setItem("tk_pending_role", "owner");
-      setLocation("/login");
+      redirectToMarketingAuth("login");
       return;
     }
   }, [location, setLocation]);
@@ -357,7 +358,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
                     onClick={() => {
                       logout();
                       closeSidebar();
-                      setLocation("/");
+                      redirectToMarketingAuth("login");
                     }}
                     className="flex items-center gap-3 h-10 px-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 w-full text-left"
                   >

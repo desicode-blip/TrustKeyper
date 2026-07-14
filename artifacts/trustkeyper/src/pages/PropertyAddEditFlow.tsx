@@ -1201,7 +1201,7 @@ export default function PropertyAddEditFlow({ role }: { role: PropertyAddEditRol
       } catch {
         /* ignore */
       }
-      setLocation("/");
+      setLocation("/owner/dashboard", { replace: true });
     } else {
       setLocation(isBroker ? "/broker/properties" : "/owner/properties");
     }

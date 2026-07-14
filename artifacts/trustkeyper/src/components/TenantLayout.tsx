@@ -23,6 +23,7 @@ import {
   logout,
   restoreRememberedSessionFromLocalStorage,
 } from "@/lib/auth";
+import { redirectToMarketingAuth } from "@/lib/marketingHandoff";
 import { getTenantDisplayName } from "@/lib/tenantWorkspace";
 
 const navItems = [
@@ -56,7 +57,7 @@ export default function TenantLayout({ children }: TenantLayoutProps) {
     const session = getActiveSession();
     if (!session || session.role !== "tenant") {
       sessionStorage.setItem("tk_pending_role", "tenant");
-      setLocation("/login");
+      redirectToMarketingAuth("login");
     }
   }, [setLocation]);
 
@@ -195,7 +196,7 @@ export default function TenantLayout({ children }: TenantLayoutProps) {
                     onClick={() => {
                       logout();
                       closeSidebar();
-                      setLocation("/");
+                      redirectToMarketingAuth("login");
                     }}
                     className="flex items-center gap-3 h-10 px-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 w-full text-left"
                   >

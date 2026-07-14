@@ -23,6 +23,7 @@ import { AddPropertyProgressBar } from "@/components/AddPropertyProgressBar";
 import { useScrollToTopOnChange } from "@/hooks/useScrollToTopOnChange";
 import { toast } from "@/hooks/use-toast";
 import { getActiveSession } from "@/lib/auth";
+import { redirectToMarketingAuth } from "@/lib/marketingHandoff";
 import { todayLocalDateInputMin } from "@/lib/dateInput";
 import { broadcastBrokerPendingFlowsUpdated } from "@/lib/brokerPendingFlows";
 import { addProperty, deriveBedroomsFromUnitSize } from "@/lib/properties";
@@ -412,7 +413,7 @@ export default function AddProperty2() {
     if (!getActiveSession()) {
       toast({ title: "Please sign in to save properties", variant: "destructive" });
       sessionStorage.setItem("tk_pending_role", "broker");
-      setLocation("/login");
+      redirectToMarketingAuth("login");
       return;
     }
     if (isSaving || pendingImageUploads > 0) return;
