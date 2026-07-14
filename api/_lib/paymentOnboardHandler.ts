@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
 import { json, readJsonBody } from "./http.js";
@@ -9,6 +10,10 @@ import {
 import { assertPaymentAuth } from "./syncAuth.js";
 import { sanitizeErrorForLog } from "./sanitizeErrorForLog.js";
 import { getPool } from "./vercelSyncDb.js";
+
+const REFERENCE_ID_MIN_LEN = 3;
+const REFERENCE_ID_MAX_LEN = 20;
+const REFERENCE_ID_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 const onboardBodySchema = z.object({
   phone: z
@@ -113,8 +118,49 @@ function requestAuthorization(req: VercelRequest): string | undefined {
   return header;
 }
 
+function roleCharForReferenceId(role: string): string {
+  const normalized = role.trim().toLowerCase();
+  if (normalized === "owner") return "o";
+  if (normalized === "tenant") return "t";
+  if (normalized === "broker") return "b";
+  throw new Error(`Unsupported role for Razorpay reference_id: ${role}`);
+}
+
+function cryptoRandomBase36(length: number): string {
+  if (length <= 0) return "";
+  const bytes = randomBytes(length);
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += REFERENCE_ID_ALPHABET[bytes[i]! % 36];
+  }
+  return out;
+}
+
+/**
+ * Per-attempt unique Razorpay linked-account reference_id (≤20 chars).
+ * Format: {roleChar}{phone10}{random} — e.g. o8860826738a3f9k2x1q
+ * Not reconstructable; stored in payment_recipient_config.razorpay_reference_id.
+ */
 export function razorpayReferenceId(phone: string, role: string): string {
-  return `tk-${phone}-${role}`;
+  const phone10 = phone.replace(/\D/g, "").slice(-10);
+  if (phone10.length !== 10) {
+    throw new Error(
+      `phone must normalize to exactly 10 digits for Razorpay reference_id (got "${phone}")`,
+    );
+  }
+
+  const roleChar = roleCharForReferenceId(role);
+  const prefix = `${roleChar}${phone10}`;
+  const randomLen = REFERENCE_ID_MAX_LEN - prefix.length;
+  const id = `${prefix}${cryptoRandomBase36(randomLen)}`;
+
+  if (id.length < REFERENCE_ID_MIN_LEN || id.length > REFERENCE_ID_MAX_LEN) {
+    throw new Error(
+      `Razorpay reference_id length out of bounds: ${id.length} (must be ${REFERENCE_ID_MIN_LEN}–${REFERENCE_ID_MAX_LEN})`,
+    );
+  }
+
+  return id;
 }
 
 function parseRazorpayError(err: unknown): string {

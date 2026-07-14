@@ -35,6 +35,29 @@ function assertStagingDatabase(url: string): void {
   }
 }
 
+/** Shape: {roleChar}{phone10}{9 random base36} — exactly 20 chars. */
+function assertReferenceIdShape(id: string, phone: string, role: string): void {
+  const phone10 = phone.replace(/\D/g, "").slice(-10);
+  const roleChar =
+    role === "owner" ? "o" : role === "tenant" ? "t" : role === "broker" ? "b" : null;
+  if (!roleChar || phone10.length !== 10) {
+    console.error("Cannot assert reference_id shape: bad phone/role", { phone, role });
+    process.exit(1);
+  }
+  const expectedPrefix = `${roleChar}${phone10}`;
+  if (
+    id.length !== 20 ||
+    !id.startsWith(expectedPrefix) ||
+    !/^[otb]\d{10}[0-9a-z]{9}$/.test(id)
+  ) {
+    console.error(
+      `REFERENCE_ID shape invalid (want ${expectedPrefix} + 9 base36, len 20):`,
+      id,
+    );
+    process.exit(1);
+  }
+}
+
 function maskDatabaseUrl(url: string): string {
   return url.replace(/:([^:@/]+)@/, ":***@");
 }
@@ -78,6 +101,7 @@ async function main() {
   // Razorpay rejects names that look like abbreviations / contain digits (e.g. "E2E").
   const legalName = "Test Owner Alpha";
   const referenceId = razorpayReferenceId(testPhone, TEST_ROLE);
+  assertReferenceIdShape(referenceId, testPhone, TEST_ROLE);
 
   console.log("=== test-onboard-e2e-fresh ===");
   console.log("DATABASE_URL:", maskDatabaseUrl(databaseUrl));
