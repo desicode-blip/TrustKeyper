@@ -107,6 +107,7 @@ export function TrustKeyperFooter({ className }: TrustKeyperFooterProps) {
                 </p>
                 <p>{BENGALURU_ADDRESS}</p>
               </div>
+              <p>TrustKeyper — A Brand by Paravent | GST: 09AKVPM7660B1ZP</p>
             </div>
           </div>
         </div>
