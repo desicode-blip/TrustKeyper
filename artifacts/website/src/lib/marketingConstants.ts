@@ -31,6 +31,7 @@ export const CONTACT = {
   phoneHref: "tel:+918088516875",
   email: "info@trustkeyper.com",
   emailHref: "mailto:info@trustkeyper.com",
+  brandLine: "TrustKeyper — A Brand by Paravent | GST: 09AKVPM7660B1ZP",
 } as const;
 
 export const FOOTER_TAGLINE = "Property management built around accountability." as const;
