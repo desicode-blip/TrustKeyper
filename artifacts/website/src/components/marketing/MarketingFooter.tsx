@@ -87,6 +87,8 @@ export function MarketingFooter({ className }: MarketingFooterProps) {
                   <MapPin size={16} strokeWidth={2} className="shrink-0" aria-hidden />
                   <span>{FOOTER_LOCATION_SHORT}</span>
                 </div>
+
+                <p className="text-sm text-white">{CONTACT.brandLine}</p>
               </div>
 
               <div className="flex items-center gap-4 pt-1">
