@@ -15,21 +15,26 @@ describe("marketingCors allowlist", () => {
     delete process.env.MARKETING_STAGING_ORIGIN;
   });
 
-  it("includes production and local marketing origins by default", () => {
-    expect(getMarketingCorsAllowlist()).toEqual([
-      "https://trustkeyper.com",
-      "http://localhost:5174",
-    ]);
+  it("includes production, local, and built-in staging marketing origins by default", () => {
+    const list = getMarketingCorsAllowlist();
+    expect(list).toContain("https://trustkeyper.com");
+    expect(list).toContain("http://localhost:5174");
+    expect(list).toContain("https://staging.trustkeyper.com");
+    expect(list).toContain("https://www.trustkeyper.com");
+    expect(list).toContain("https://trustkeyper-website.vercel.app");
   });
 
   it("adds MARKETING_STAGING_ORIGIN when set", () => {
-    process.env.MARKETING_STAGING_ORIGIN = "https://trustkeyper-marketing.vercel.app/";
-    expect(getMarketingCorsAllowlist()).toContain("https://trustkeyper-marketing.vercel.app");
+    process.env.MARKETING_STAGING_ORIGIN = "https://custom-staging.example.com/";
+    expect(getMarketingCorsAllowlist()).toContain("https://custom-staging.example.com");
   });
 
   it("matches allowed origins exactly and rejects wildcards", () => {
     expect(matchMarketingOrigin("https://trustkeyper.com")).toBe("https://trustkeyper.com");
     expect(matchMarketingOrigin("http://localhost:5174")).toBe("http://localhost:5174");
+    expect(matchMarketingOrigin("https://staging.trustkeyper.com")).toBe(
+      "https://staging.trustkeyper.com",
+    );
     expect(matchMarketingOrigin("https://evil.example.com")).toBeNull();
     expect(matchMarketingOrigin("*")).toBeNull();
   });
@@ -119,6 +124,25 @@ describe("handleMarketingCorsPreflight", () => {
     expect(res.headers["Access-Control-Allow-Origin"]).toBe("http://localhost:5174");
     expect(res.headers["Access-Control-Allow-Methods"]).toBe("PUT, OPTIONS");
     expect(res.ended).toBe(true);
+  });
+
+  it("returns preflight headers for staging.trustkeyper.com", () => {
+    const req = {
+      method: "OPTIONS",
+      headers: { origin: "https://staging.trustkeyper.com" },
+    } as VercelRequest;
+    const res = mockResponse();
+
+    const handled = handleMarketingCorsPreflight(req, res as unknown as VercelResponse, [
+      "accounts",
+      "6369856040",
+      "owner",
+      "profile",
+    ]);
+
+    expect(handled).toBe(true);
+    expect(res.statusCode).toBe(204);
+    expect(res.headers["Access-Control-Allow-Origin"]).toBe("https://staging.trustkeyper.com");
   });
 
   it("rejects preflight for disallowed origins", () => {

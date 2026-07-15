@@ -27,8 +27,12 @@ Cross-origin browser calls from the marketing site are gated by `api/_lib/market
 
 **Allowed origins:**
 - `https://trustkeyper.com`
+- `https://www.trustkeyper.com`
+- `https://staging.trustkeyper.com`
+- `https://trustkeyper-website.vercel.app`
+- `https://trustkeyper-marketing.vercel.app`
 - `http://localhost:5174`
-- optional `MARKETING_STAGING_ORIGIN` (server env on the app project — stable staging/alias URL)
+- optional `MARKETING_STAGING_ORIGIN` (server env on the app project — extra stable staging/alias URL)
 
 **Allowed route surface (not the full API):**
 - `GET /api/sync/accounts/:phone/roles`
@@ -36,7 +40,7 @@ Cross-origin browser calls from the marketing site are gated by `api/_lib/market
 - `PUT /api/sync/accounts/:phone/:role/profile` (and OPTIONS)
 - `POST /api/contact` (and OPTIONS)
 
-**Known limitation:** Per-deployment Vercel **preview URLs are not allowlisted**. Only the production marketing domain, local marketing origin, and an optional configured staging origin work. Preview-branch marketing builds that call the app API will fail CORS unless they use an allowlisted origin.
+**Known limitation:** Per-deployment Vercel **preview URLs are not allowlisted** unless listed above or set via `MARKETING_STAGING_ORIGIN`. Preview-branch marketing builds that call the app API will fail CORS unless they use an allowlisted origin.
 
 ## Public discovery endpoints (open item)
 

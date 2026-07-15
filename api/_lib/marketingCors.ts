@@ -3,6 +3,13 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 const PRODUCTION_MARKETING_ORIGIN = "https://trustkeyper.com";
 const LOCAL_MARKETING_ORIGIN = "http://localhost:5174";
 
+/** Stable staging / alias hosts — always allowlisted (env can still add extras). */
+const BUILTIN_STAGING_MARKETING_ORIGINS = [
+  "https://staging.trustkeyper.com",
+  "https://www.trustkeyper.com",
+  "https://trustkeyper-website.vercel.app",
+] as const;
+
 export type MarketingCorsRoute = "roles" | "summaries" | "profile";
 
 function normalizeOrigin(origin: string): string {
@@ -10,10 +17,14 @@ function normalizeOrigin(origin: string): string {
 }
 
 export function getMarketingCorsAllowlist(): readonly string[] {
-  const origins: string[] = [PRODUCTION_MARKETING_ORIGIN, LOCAL_MARKETING_ORIGIN];
+  const origins = new Set<string>([
+    PRODUCTION_MARKETING_ORIGIN,
+    LOCAL_MARKETING_ORIGIN,
+    ...BUILTIN_STAGING_MARKETING_ORIGINS,
+  ]);
   const staging = process.env.MARKETING_STAGING_ORIGIN?.trim();
-  if (staging) origins.push(normalizeOrigin(staging));
-  return origins;
+  if (staging) origins.add(normalizeOrigin(staging));
+  return [...origins];
 }
 
 export function requestOrigin(req: VercelRequest): string | undefined {
