@@ -8,7 +8,6 @@ const BUILTIN_STAGING_MARKETING_ORIGINS = [
   "https://staging.trustkeyper.com",
   "https://www.trustkeyper.com",
   "https://trustkeyper-website.vercel.app",
-  "https://trustkeyper-marketing.vercel.app",
 ] as const;
 
 export type MarketingCorsRoute = "roles" | "summaries" | "profile";

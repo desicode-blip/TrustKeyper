@@ -22,7 +22,6 @@ describe("marketingCors allowlist", () => {
     expect(list).toContain("https://staging.trustkeyper.com");
     expect(list).toContain("https://www.trustkeyper.com");
     expect(list).toContain("https://trustkeyper-website.vercel.app");
-    expect(list).toContain("https://trustkeyper-marketing.vercel.app");
   });
 
   it("adds MARKETING_STAGING_ORIGIN when set", () => {
