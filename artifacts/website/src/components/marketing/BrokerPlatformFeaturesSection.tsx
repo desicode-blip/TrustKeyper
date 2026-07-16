@@ -66,11 +66,11 @@ const PLATFORM_FEATURES: PlatformFeature[] = [
 
 function PlatformFeatureCard({ iconSrc, title, description }: PlatformFeature) {
   return (
-    <article className="flex gap-4 rounded-3xl bg-white p-3 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)] sm:p-5">
+    <article className="flex h-full gap-4 rounded-3xl bg-white p-3 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)] sm:p-5">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-marketing-green">
         <img src={iconSrc} alt="" width={20} height={20} className="h-5 w-5" aria-hidden />
       </span>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <h3 className="font-roboto text-base font-medium leading-6 text-marketing-navy-dark">{title}</h3>
         <p className="mt-3 font-roboto text-sm leading-5 text-marketing-neutral-1000">{description}</p>
       </div>
@@ -99,9 +99,9 @@ export function BrokerPlatformFeaturesSection() {
           </h2>
         </header>
 
-        <ul className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:mt-[60px] lg:grid-cols-3 lg:gap-[9px]">
+        <ul className="mt-12 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:mt-[60px] lg:grid-cols-3 lg:gap-[9px]">
           {PLATFORM_FEATURES.map((feature) => (
-            <li key={feature.title}>
+            <li key={feature.title} className="h-full min-w-0">
               <PlatformFeatureCard {...feature} />
             </li>
           ))}
