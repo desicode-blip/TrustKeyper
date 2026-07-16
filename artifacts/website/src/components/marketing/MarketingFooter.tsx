@@ -31,12 +31,20 @@ const FOOTER_SOCIAL_LINKS = [
   { label: "TrustKeyper on Instagram", href: "https://www.instagram.com/trustkeyper", Icon: Instagram },
 ] as const;
 
+/**
+ * Vertical rhythm (lg):
+ * - Logo (48px) top-aligns with LEGAL / COMPANY headings
+ * - Tagline top-aligns with "Terms & Conditions" / "FAQs" (2nd link row)
+ * Logo 48 + gap 20 = 68px → heading 16 + mb 16 + link 20 + gap 16 = 68px
+ */
 const footerGroupHeadingClassName =
-  "mb-4 font-roboto text-xs font-medium uppercase tracking-[1.2px] text-white";
+  "mb-4 font-roboto text-xs font-medium uppercase leading-4 tracking-[1.2px] text-white";
 
-const footerLinkClassName = "font-roboto text-sm text-white transition-colors hover:text-white/80";
+const footerLinkClassName =
+  "font-roboto text-sm leading-5 text-white transition-colors hover:text-white/80";
 
-const contactRowClassName = "flex items-center gap-3 text-sm text-white transition-colors hover:text-white/80";
+const contactRowClassName =
+  "flex items-center gap-3 text-sm text-white transition-colors hover:text-white/80";
 
 export interface MarketingFooterProps {
   className?: string;
@@ -60,19 +68,19 @@ export function MarketingFooter({ className }: MarketingFooterProps) {
       <div className="relative z-10">
         <div className="mx-auto w-full max-w-[1168px] px-6 py-16 sm:px-8 sm:py-14 lg:px-8 lg:pb-10 lg:pt-[62px]">
           <div className="flex flex-col gap-10 lg:min-h-[372px] lg:flex-row lg:items-start lg:justify-between lg:gap-16">
-            <div className="max-w-[440px] space-y-5">
+            <div className="max-w-[440px]">
               <img
                 src={logoLight}
                 alt="TrustKeyper"
-                className="h-10 w-auto sm:h-12"
+                className="h-12 w-auto"
                 draggable={false}
               />
 
-              <p className="max-w-[314px] text-2xl font-medium leading-[33px] text-white">
+              <p className="mt-5 max-w-[314px] text-2xl font-medium leading-[33px] text-white">
                 {FOOTER_TAGLINE}
               </p>
 
-              <div className="space-y-3 pt-1">
+              <div className="mt-5 space-y-3">
                 <a href={CONTACT.emailHref} className={contactRowClassName}>
                   <img src={footerIconMail} alt="" className="size-4 shrink-0" aria-hidden />
                   <span>{CONTACT.email}</span>
@@ -91,7 +99,7 @@ export function MarketingFooter({ className }: MarketingFooterProps) {
                 <p className="text-sm text-white">{CONTACT.brandLine}</p>
               </div>
 
-              <div className="flex items-center gap-4 pt-1">
+              <div className="mt-5 flex items-center gap-4">
                 {FOOTER_SOCIAL_LINKS.map(({ label, href, Icon }) => (
                   <a
                     key={label}
@@ -107,8 +115,8 @@ export function MarketingFooter({ className }: MarketingFooterProps) {
               </div>
             </div>
 
-            <div className="relative z-10 flex flex-col gap-8 lg:ml-auto lg:w-[146px] lg:shrink-0">
-              <nav aria-label="Legal">
+            <div className="relative z-10 flex flex-wrap gap-x-12 gap-y-8 sm:gap-x-16 lg:ml-auto lg:shrink-0 lg:gap-x-[72px]">
+              <nav aria-label="Legal" className="min-w-[120px]">
                 <p className={footerGroupHeadingClassName}>Legal</p>
                 <div className="flex flex-col gap-4">
                   {LEGAL_LINKS.map((link) => (
@@ -124,7 +132,7 @@ export function MarketingFooter({ className }: MarketingFooterProps) {
                 </div>
               </nav>
 
-              <nav aria-label="Company">
+              <nav aria-label="Company" className="min-w-[120px]">
                 <p className={footerGroupHeadingClassName}>Company</p>
                 <div className="flex flex-col gap-4">
                   {COMPANY_LINKS.map((link) => (
