@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "wouter";
+import { MarketingAuthTrigger } from "@/components/auth/MarketingAuthTrigger";
 
 interface OnboardingStep {
   number: number;
@@ -89,12 +89,9 @@ export function BrokerOnboardingSection() {
         </div>
 
         <div className="mt-12 flex justify-center sm:justify-start lg:mt-[52px]">
-          <Link
-            href="/signup/broker"
-            className="inline-flex h-14 items-center justify-center rounded-full bg-marketing-green px-10 font-roboto text-base font-medium text-marketing-neutral-1100 transition-colors hover:bg-marketing-green/90"
-          >
+          <MarketingAuthTrigger className="inline-flex h-14 items-center justify-center rounded-full bg-marketing-green px-10 font-roboto text-base font-medium text-marketing-neutral-1100 transition-colors hover:bg-marketing-green/90">
             Start Broker Registration
-          </Link>
+          </MarketingAuthTrigger>
         </div>
       </div>
     </section>
