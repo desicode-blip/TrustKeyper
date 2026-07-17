@@ -118,7 +118,7 @@ function ServiceCard({
       <div className="relative z-10 max-w-[calc(100%-7rem)]">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-marketing-green">
-            <Icon size={20} strokeWidth={2} className="text-white" aria-hidden />
+            <Icon size={20} strokeWidth={2} className="text-marketing-icon-circle" aria-hidden />
           </span>
           <span className="text-xs font-medium uppercase tracking-[0.6px] text-marketing-neutral-1000">
             {number}
