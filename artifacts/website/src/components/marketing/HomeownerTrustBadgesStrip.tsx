@@ -40,7 +40,7 @@ export function HomeownerTrustBadgesStrip() {
   return (
     <section
       aria-label="TrustKeyper service guarantees"
-      className="relative z-10 -mt-6 px-4 sm:-mt-8 sm:px-6 lg:px-8"
+      className="relative z-10 -mt-6 px-4 sm:px-6 lg:px-8"
     >
       <div
         className={cn(

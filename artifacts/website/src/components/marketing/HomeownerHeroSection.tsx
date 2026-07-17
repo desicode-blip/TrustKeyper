@@ -60,7 +60,7 @@ function PropertyStatusCard({ className }: { className?: string }) {
 
 export function HomeownerHeroSection() {
   return (
-    <section className="px-4 pb-6 pt-4 sm:px-6 sm:pb-8 lg:px-8 lg:pb-10">
+    <section className="px-4 pt-4 sm:px-6 lg:px-8">
       <div className="relative mx-auto max-w-[1400px] overflow-hidden rounded-[24px] bg-marketing-neutral-1300 sm:rounded-[36px] lg:rounded-[44px]">
         <div className="absolute inset-0">
           <img
