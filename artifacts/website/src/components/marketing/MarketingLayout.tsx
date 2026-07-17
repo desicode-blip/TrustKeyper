@@ -18,7 +18,7 @@ export function MarketingLayout({
   navVariant = "default",
 }: MarketingLayoutProps) {
   const mainOffsetClassName =
-    navVariant === "homeowner" ? "pt-[58px] sm:pt-[96px]" : "pt-[88px] sm:pt-[96px]";
+    navVariant === "homeowner" ? "pt-[82px] sm:pt-[96px]" : "pt-[88px] sm:pt-[96px]";
 
   return (
     <div className={cn("relative isolate flex min-h-screen flex-col bg-marketing-bg", className)}>

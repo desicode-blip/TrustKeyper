@@ -81,51 +81,55 @@ export function HomeownerMarketingNav({ className }: HomeownerMarketingNavProps)
   return (
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50",
+        "fixed inset-x-0 top-0 z-50 px-4 pt-3 sm:px-6 sm:pt-4 lg:px-8",
         className,
       )}
     >
-      <div className="mx-auto flex max-w-[1168px] items-center justify-between gap-6 px-6 py-3.5 sm:py-[15px] lg:px-8 xl:px-0">
-        <Link href="/" className="shrink-0" onClick={closeMenu}>
-          <img
-            src={logoDark}
-            alt="TrustKeyper"
-            className="h-[30px] w-auto sm:h-10"
-            draggable={false}
-          />
-        </Link>
+      <div className="mx-auto max-w-[1400px] overflow-hidden rounded-[29px] bg-marketing-bg/55 shadow-lg shadow-marketing-neutral-1100/10 ring-1 ring-marketing-azure-stroke/70 backdrop-blur-xl">
+        <div className="flex h-[58px] items-center justify-between gap-6 px-4 sm:h-[66px] sm:px-6 lg:px-8">
+          <Link href="/" className="shrink-0" onClick={closeMenu}>
+            <img
+              src={logoDark}
+              alt="TrustKeyper"
+              className="h-[30px] w-auto sm:h-10"
+              draggable={false}
+            />
+          </Link>
 
-        <nav className="hidden items-center gap-9 lg:flex" aria-label="Audience">
-          <AudienceNavLink href="/" isActive={isHomeownersPage}>
-            For Homeowners
-          </AudienceNavLink>
-          <AudienceNavLink href="/for-brokers" isActive={isBrokersPage}>
-            For Brokers
-          </AudienceNavLink>
-        </nav>
+          <nav className="hidden items-center gap-9 lg:flex" aria-label="Audience">
+            <AudienceNavLink href="/" isActive={isHomeownersPage}>
+              For Homeowners
+            </AudienceNavLink>
+            <AudienceNavLink href="/for-brokers" isActive={isBrokersPage}>
+              For Brokers
+            </AudienceNavLink>
+          </nav>
 
-        <div className="hidden items-center gap-[18px] md:flex">
-          <MarketingContactUsCta href={MARKETING_CTA.getStarted} />
-          <MarketingSignupLoginCta />
+          <div className="hidden items-center gap-[18px] md:flex">
+            <MarketingContactUsCta href={MARKETING_CTA.getStarted} />
+            <MarketingSignupLoginCta />
+          </div>
+
+          <button
+            type="button"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-marketing-neutral-1100 transition-colors hover:bg-white/70 md:hidden"
+            aria-expanded={menuOpen}
+            aria-controls={menuId}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? (
+              <X size={22} strokeWidth={2} aria-hidden />
+            ) : (
+              <Menu size={22} strokeWidth={2} aria-hidden />
+            )}
+          </button>
         </div>
 
-        <button
-          type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full text-marketing-neutral-1100 transition-colors hover:bg-white/70 md:hidden"
-          aria-expanded={menuOpen}
-          aria-controls={menuId}
-          aria-label={menuOpen ? "Close menu" : "Open menu"}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          {menuOpen ? <X size={22} strokeWidth={2} aria-hidden /> : <Menu size={22} strokeWidth={2} aria-hidden />}
-        </button>
-      </div>
-
-      {menuOpen ? (
-        <div className="border-t border-marketing-azure-stroke/60 bg-marketing-cloud-050/95 md:hidden">
+        {menuOpen ? (
           <nav
             id={menuId}
-            className="mx-auto flex max-w-[1168px] flex-col gap-4 px-6 py-5"
+            className="flex flex-col gap-4 border-t border-marketing-azure-stroke/60 bg-marketing-bg/30 px-6 py-5 md:hidden"
             aria-label="Mobile primary"
           >
             <div className="flex flex-col gap-3">
@@ -155,8 +159,8 @@ export function HomeownerMarketingNav({ className }: HomeownerMarketingNavProps)
               <MarketingSignupLoginCta className="w-full" onClick={closeMenu} />
             </div>
           </nav>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </header>
   );
 }
