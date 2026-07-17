@@ -38,7 +38,7 @@ const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
     title: "Ongoing property management",
     description: "TrustKeyper begins coordinating tenants, servicing, repairs, and regular updates.",
     align: "left",
-    desktopClassName: "lg:col-start-2 lg:row-start-2 lg:mt-8 lg:max-w-[297px] lg:justify-self-end",
+    desktopClassName: "lg:col-start-2 lg:row-start-2 lg:mt-[208px] lg:max-w-[297px] lg:justify-self-end",
   },
 ];
 
@@ -54,7 +54,7 @@ function HowItWorksStepItem({ number, title, description, align, desktopClassNam
   return (
     <li
       className={cn(
-        "flex flex-col items-center gap-5 text-center sm:items-stretch sm:text-left",
+        "relative flex flex-col items-center gap-5 text-center sm:items-stretch sm:text-left",
         desktopClassName,
         align === "right" ? "lg:items-end lg:text-right" : "lg:items-start lg:text-left",
       )}
@@ -64,6 +64,12 @@ function HowItWorksStepItem({ number, title, description, align, desktopClassNam
         <h3 className="font-roboto text-base font-medium leading-6 text-marketing-navy-dark">{title}</h3>
         <p className="font-roboto text-sm leading-5 text-marketing-neutral-1000">{description}</p>
       </div>
+      {number < HOW_IT_WORKS_STEPS.length ? (
+        <span
+          className="absolute left-1/2 top-full h-10 w-0.5 -translate-x-1/2 bg-marketing-azure-stroke/70 sm:hidden"
+          aria-hidden
+        />
+      ) : null}
     </li>
   );
 }
@@ -88,7 +94,7 @@ export function HomeownerHowItWorksSection() {
           </h2>
         </header>
 
-        <div className="relative mt-12 lg:mt-[60px]">
+        <div className="relative mt-12 lg:mt-[60px] lg:min-h-[calc(min(62vw,720px)+92px)]">
           <img
             src={howItWorksConnector}
             alt=""
@@ -104,8 +110,8 @@ export function HomeownerHowItWorksSection() {
           </ol>
         </div>
 
-        <div className="mx-auto mt-14 max-w-[575px] text-center lg:mt-[60px]">
-          <h3 className="text-xl font-medium leading-[26px] text-marketing-navy-dark sm:text-[40px] sm:leading-[46px]">
+        <div className="mx-auto mt-14 max-w-[575px] text-center lg:mt-10">
+          <h3 className="text-xl font-bold leading-[26px] text-marketing-navy-dark sm:text-[40px] sm:font-medium sm:leading-[46px]">
             Ready to simplify property management?
           </h3>
           <MarketingAuthTrigger className="mt-6 inline-flex h-14 items-center justify-center rounded-full bg-marketing-green px-10 font-roboto text-base font-medium text-marketing-neutral-1100 transition-colors hover:bg-marketing-green/90">
