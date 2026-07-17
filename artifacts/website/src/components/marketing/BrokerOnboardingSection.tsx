@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "wouter";
+import { MarketingAuthTrigger } from "@/components/auth/MarketingAuthTrigger";
 
 interface OnboardingStep {
   number: number;
@@ -32,7 +32,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
 
 function StepBadge({ number }: { number: number }) {
   return (
-    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-marketing-neutral-1100 text-sm font-bold text-white">
+    <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-marketing-neutral-1100 text-sm font-bold text-white shadow-[0_0_0_8px_#fff]">
       {number}
     </span>
   );
@@ -56,14 +56,19 @@ export function BrokerOnboardingSection() {
           </h2>
         </header>
 
-        <div className="relative mt-12 lg:mt-[52px]">
-          {/* Desktop connector only — same lg:-gated pattern as HomeownerHowItWorksSection */}
+        <div className="relative mt-12 isolate lg:mt-[52px]">
+          {/*
+            Desktop connector behind badges (isolate + z-0 vs badge z-10).
+            left-5 = center of the 40px first badge.
+            right inset ends at the right edge of badge 4 in a 4-col grid with gap-8:
+            last-column width = (100% - 3×2rem) / 4 → right = that − 40px.
+          */}
           <div
-            className="pointer-events-none absolute left-[40px] right-[40px] top-5 hidden h-px bg-marketing-neutral-200 lg:block"
+            className="pointer-events-none absolute top-5 left-5 z-0 hidden h-px bg-marketing-neutral-200 lg:block lg:right-[calc((100%-6rem)/4-40px)]"
             aria-hidden
           />
 
-          <ol className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+          <ol className="relative z-[1] grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
             {ONBOARDING_STEPS.map((step) => (
               <li
                 key={step.number}
@@ -74,7 +79,9 @@ export function BrokerOnboardingSection() {
                   <h3 className="font-roboto text-base font-medium leading-6 text-marketing-navy-dark">
                     {step.title}
                   </h3>
-                  <p className="font-roboto text-sm leading-5 text-marketing-neutral-1000">{step.description}</p>
+                  <p className="font-roboto text-sm leading-5 text-marketing-neutral-1000">
+                    {step.description}
+                  </p>
                 </div>
               </li>
             ))}
@@ -82,12 +89,9 @@ export function BrokerOnboardingSection() {
         </div>
 
         <div className="mt-12 flex justify-center sm:justify-start lg:mt-[52px]">
-          <Link
-            href="/signup/broker"
-            className="inline-flex h-14 items-center justify-center rounded-full bg-marketing-green px-10 font-roboto text-base font-medium text-marketing-neutral-1100 transition-colors hover:bg-marketing-green/90"
-          >
+          <MarketingAuthTrigger className="inline-flex h-14 items-center justify-center rounded-full bg-marketing-green px-10 font-roboto text-base font-medium text-marketing-neutral-1100 transition-colors hover:bg-marketing-green/90">
             Start Broker Registration
-          </Link>
+          </MarketingAuthTrigger>
         </div>
       </div>
     </section>

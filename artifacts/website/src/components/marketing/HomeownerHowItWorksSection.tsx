@@ -1,6 +1,6 @@
 import React from "react";
 import howItWorksConnector from "@/assets/marketing/homeowners/how-it-works/connector.svg";
-import { MARKETING_CTA } from "@/lib/marketingConstants";
+import { MarketingAuthTrigger } from "@/components/auth/MarketingAuthTrigger";
 import { cn } from "@/lib/utils";
 
 interface HowItWorksStep {
@@ -108,12 +108,9 @@ export function HomeownerHowItWorksSection() {
           <h3 className="text-xl font-medium leading-[26px] text-marketing-navy-dark sm:text-[40px] sm:leading-[46px]">
             Ready to simplify property management?
           </h3>
-          <a
-            href={MARKETING_CTA.getStarted}
-            className="mt-6 inline-flex h-14 items-center justify-center rounded-full bg-marketing-green px-10 font-roboto text-base font-medium text-marketing-neutral-1100 transition-colors hover:bg-marketing-green/90"
-          >
+          <MarketingAuthTrigger className="mt-6 inline-flex h-14 items-center justify-center rounded-full bg-marketing-green px-10 font-roboto text-base font-medium text-marketing-neutral-1100 transition-colors hover:bg-marketing-green/90">
             Register your property
-          </a>
+          </MarketingAuthTrigger>
         </div>
       </div>
     </section>

@@ -2,7 +2,6 @@ import React from "react";
 import iconFaster from "@/assets/marketing/brokers/why/icon-faster.svg";
 import iconVerified from "@/assets/marketing/brokers/why/icon-verified.svg";
 import iconWorkflow from "@/assets/marketing/brokers/why/icon-workflow.svg";
-import { cn } from "@/lib/utils";
 
 interface WhyBrokerCard {
   iconSrc: string;
@@ -31,8 +30,8 @@ const WHY_BROKER_CARDS: WhyBrokerCard[] = [
 
 function WhyBrokerCardItem({ iconSrc, title, description }: WhyBrokerCard) {
   return (
-    <article className="rounded-3xl bg-white p-5 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)] sm:p-8">
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-marketing-icon-circle/10">
+    <article className="flex h-full flex-col rounded-3xl bg-white p-5 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)] sm:p-8">
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-marketing-icon-circle/10">
         <img src={iconSrc} alt="" width={24} height={24} className="h-6 w-6" aria-hidden />
       </span>
       <h3 className="mt-5 text-xl font-semibold leading-[26px] text-marketing-navy-dark">{title}</h3>
@@ -65,9 +64,9 @@ export function BrokerWhyBrokersSection() {
           </p>
         </div>
 
-        <ul className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-2 lg:mt-[60px] lg:grid-cols-3 lg:gap-[17px]">
+        <ul className="mt-12 grid grid-cols-1 items-stretch gap-5 md:grid-cols-2 lg:mt-[60px] lg:grid-cols-3 lg:gap-[17px]">
           {WHY_BROKER_CARDS.map((card) => (
-            <li key={card.title} className={cn(card.title === "One Organised Workflow" && "md:col-span-2 lg:col-span-1")}>
+            <li key={card.title} className="h-full min-w-0">
               <WhyBrokerCardItem {...card} />
             </li>
           ))}
