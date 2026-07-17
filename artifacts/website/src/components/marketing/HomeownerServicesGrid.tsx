@@ -1,6 +1,7 @@
 import React from "react";
 import {
   CalendarDays,
+  CircleAlert,
   ClipboardList,
   UserSearch,
   Wrench,
@@ -17,6 +18,7 @@ interface ServiceCardData {
   title: string;
   description: string;
   bullets: string[];
+  notice?: string;
   illustration: string;
   illustrationAlt: string;
 }
@@ -35,6 +37,8 @@ const SERVICE_CARDS: ServiceCardData[] = [
       "Owner notifications",
       "Delayed-payment escalation",
     ],
+    notice:
+      "Rental payments are made directly between the tenant and property owner. TrustKeyper assists with reminders, tracking, and coordination and does not hold rental funds.",
     illustration: serviceRentCollectionIllustration,
     illustrationAlt: "Rent collection reminders and payment tracking illustration",
   },
@@ -110,12 +114,13 @@ function ServiceCard({
   title,
   description,
   bullets,
+  notice,
   illustration,
   illustrationAlt,
 }: ServiceCardData) {
   return (
-    <article className="relative min-h-0 overflow-hidden rounded-3xl bg-white p-5 shadow-[0_1px_2px_rgba(8,50,42,0.04),0_16px_40px_rgba(8,50,42,0.06)] sm:min-h-[360px] sm:p-8 lg:min-h-[406px]">
-      <div className="relative z-10 max-w-[calc(100%-7rem)]">
+    <article className="relative h-full min-h-0 overflow-hidden rounded-3xl bg-white p-5 shadow-[0_1px_2px_rgba(8,50,42,0.04),0_16px_40px_rgba(8,50,42,0.06)] sm:min-h-[430px] sm:p-8 lg:min-h-[436px]">
+      <div className="relative z-10">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-marketing-green">
             <Icon size={20} strokeWidth={2} className="text-marketing-icon-circle" aria-hidden />
@@ -125,7 +130,7 @@ function ServiceCard({
           </span>
         </div>
 
-        <h3 className="mt-6 text-xl font-semibold leading-[26px] text-marketing-navy-dark">{title}</h3>
+        <h3 className="mt-28 text-xl font-semibold leading-[26px] text-marketing-navy-dark sm:mt-6">{title}</h3>
         <p className="mt-4 max-w-md font-roboto text-sm leading-5 text-marketing-neutral-1000">
           {description}
         </p>
@@ -135,10 +140,24 @@ function ServiceCard({
         </div>
       </div>
 
+      {notice ? (
+        <aside className="relative z-10 mt-5 flex items-start gap-2 rounded-2xl border border-marketing-azure-200 bg-marketing-azure-050 px-3 py-2.5 sm:absolute sm:bottom-6 sm:left-8 sm:mt-0 sm:w-[58%] sm:max-w-[300px]">
+          <CircleAlert
+            size={16}
+            strokeWidth={1.75}
+            className="mt-0.5 shrink-0 text-marketing-blue"
+            aria-hidden
+          />
+          <p className="font-roboto text-[11px] leading-[14px] text-marketing-navy-dark">
+            {notice}
+          </p>
+        </aside>
+      ) : null}
+
       <img
         src={illustration}
         alt={illustrationAlt}
-        className="pointer-events-none absolute -bottom-8 -right-4 z-0 w-[min(46%,220px)] max-w-[301px] object-contain sm:w-[min(42%,240px)] lg:-bottom-8 lg:-right-5"
+        className="pointer-events-none absolute right-1 top-3 z-0 w-[min(46%,220px)] max-w-[301px] object-contain sm:-bottom-8 sm:-right-4 sm:top-auto sm:w-[min(42%,240px)] lg:-bottom-8 lg:-right-5"
         draggable={false}
       />
     </article>
@@ -168,7 +187,7 @@ export function HomeownerServicesGrid() {
 
         <ul className="mt-12 grid grid-cols-1 gap-5 lg:mt-[60px] lg:grid-cols-2 lg:gap-5">
           {SERVICE_CARDS.map((card) => (
-            <li key={card.number}>
+            <li key={card.number} className="h-full">
               <ServiceCard {...card} />
             </li>
           ))}
