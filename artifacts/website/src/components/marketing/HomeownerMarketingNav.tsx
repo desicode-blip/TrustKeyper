@@ -81,7 +81,7 @@ export function HomeownerMarketingNav({ className }: HomeownerMarketingNavProps)
   return (
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50 border-b border-marketing-azure-stroke/60 bg-marketing-cloud-050/90 backdrop-blur-[6px]",
+        "fixed inset-x-0 top-0 z-50",
         className,
       )}
     >

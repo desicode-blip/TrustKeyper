@@ -34,18 +34,18 @@ function PropertyStatusCard({ className }: { className?: string }) {
   return (
     <aside
       className={cn(
-        "rounded-3xl bg-white p-5 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)]",
+        "rounded-[20px] bg-white p-4 shadow-[0_1px_1px_rgba(8,50,42,0.04),0_16px_20px_rgba(8,50,42,0.06)] sm:rounded-3xl sm:p-5",
         className,
       )}
       aria-label="Property status overview"
     >
-      <h2 className="text-base font-semibold text-marketing-navy-dark">Property Status</h2>
-      <ul className="mt-5 space-y-0">
+      <h2 className="text-sm font-semibold text-marketing-navy-dark sm:text-base">Property Status</h2>
+      <ul className="mt-4 space-y-0 sm:mt-5">
         {PROPERTY_STATUS_ROWS.map((row, index) => (
           <li
             key={row.label}
             className={cn(
-              "flex items-center justify-between gap-3 py-2",
+              "flex items-center justify-between gap-3 py-1.5 sm:py-2",
               index < PROPERTY_STATUS_ROWS.length - 1 && "border-b border-[rgba(227,233,255,0.5)]",
             )}
           >
@@ -109,19 +109,17 @@ export function HomeownerHeroSection() {
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-[420px] lg:mx-0 lg:max-w-none lg:justify-self-end">
-            <div className="relative flex items-end justify-center gap-4 sm:gap-5 lg:justify-end">
-              <div className="w-[38%] max-w-[166px] shrink-0 overflow-hidden rounded-3xl bg-marketing-sky-card shadow-[0_1px_2px_rgba(8,50,42,0.04),0_16px_40px_rgba(8,50,42,0.06)]">
-                <img
-                  src={heroManagerPhoto}
-                  alt="TrustKeyper property manager"
-                  className="aspect-[166/208] h-full w-full object-cover object-top"
-                  draggable={false}
-                />
-              </div>
-
-              <PropertyStatusCard className="w-[62%] max-w-[277px] shrink-0 lg:absolute lg:right-0 lg:top-[-36px]" />
+          <div className="relative mx-auto h-[220px] w-full max-w-[362px] self-end sm:h-[250px] sm:max-w-[420px] lg:mx-0 lg:self-auto lg:justify-self-end">
+            <div className="absolute bottom-0 left-0 z-10 w-[38%] max-w-[166px] overflow-hidden rounded-3xl bg-marketing-sky-card shadow-[0_1px_2px_rgba(8,50,42,0.04),0_16px_40px_rgba(8,50,42,0.06)]">
+              <img
+                src={heroManagerPhoto}
+                alt="TrustKeyper property manager"
+                className="aspect-[166/208] h-full w-full object-cover object-top"
+                draggable={false}
+              />
             </div>
+
+            <PropertyStatusCard className="absolute right-0 top-0 z-20 w-[66%] max-w-[277px]" />
           </div>
         </div>
       </div>
