@@ -76,7 +76,7 @@ export function HomeownerHeroSection() {
         </div>
 
         <div
-          className="pointer-events-none absolute -right-32 bottom-0 hidden h-[min(55vw,520px)] w-[min(70vw,680px)] rotate-[-25deg] lg:block"
+          className="pointer-events-none absolute -bottom-7 -right-32 h-[210px] w-[280px] rotate-[-25deg] lg:-bottom-14 lg:-right-64 lg:h-[min(44vw,420px)] lg:w-[min(56vw,560px)]"
           aria-hidden
         >
           <img src={heroGreenCurve} alt="" className="h-full w-full object-contain" draggable={false} />
