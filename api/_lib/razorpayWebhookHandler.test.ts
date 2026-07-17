@@ -19,7 +19,11 @@ vi.mock("./razorpayRouteHelpers.js", () => ({
   validationStatusForRouteWebhook: vi.fn(),
 }));
 
-import { razorpayWebhookHandlerTestApi } from "./razorpayWebhookHandler.js";
+import {
+  applyTransferProcessed,
+  promoteToSettledIfComplete,
+  razorpayWebhookHandlerTestApi,
+} from "./razorpayWebhookHandler.js";
 
 const {
   handlePaymentCaptured,
@@ -54,6 +58,13 @@ function parentTransferFailedUpdates(): unknown[][] {
   });
 }
 
+function settledUpdates(): unknown[][] {
+  return queryMock.mock.calls.filter((call) => {
+    const sql = String(call[0] ?? "");
+    return sql.includes("status = 'settled'");
+  });
+}
+
 describe("handlePaymentCaptured", () => {
   afterEach(() => {
     queryMock.mockReset();
@@ -65,6 +76,8 @@ describe("handlePaymentCaptured", () => {
         rows: [{ id: "rp_1", status: "created" }],
       })
       .mockResolvedValueOnce({ rowCount: 1 })
+      // promoteToSettledIfComplete count — transfer still pending
+      .mockResolvedValueOnce({ rows: [{ total: 1, processed: 0 }] })
       .mockResolvedValueOnce({ rowCount: 1 });
 
     const rentPaymentId = await handlePaymentCaptured(
@@ -98,6 +111,8 @@ describe("handlePaymentCaptured", () => {
       .mockResolvedValueOnce({
         rows: [{ id: "rp_1", status: "paid" }],
       })
+      // promoteToSettledIfComplete count — transfer still pending
+      .mockResolvedValueOnce({ rows: [{ total: 1, processed: 0 }] })
       .mockResolvedValueOnce({ rowCount: 1 });
 
     await handlePaymentCaptured(
@@ -117,6 +132,145 @@ describe("handlePaymentCaptured", () => {
       String(call[0] ?? "").includes("status = 'paid'"),
     );
     expect(paidUpdates).toHaveLength(0);
+  });
+});
+
+describe("promoteToSettledIfComplete", () => {
+  afterEach(() => {
+    queryMock.mockReset();
+  });
+
+  it("settles when all transfers of a multi-transfer payment are processed", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: 2, processed: 2 }] })
+      .mockResolvedValueOnce({ rowCount: 1 });
+
+    const promoted = await promoteToSettledIfComplete("rp_1");
+
+    expect(promoted).toBe(true);
+    const updates = settledUpdates();
+    expect(updates).toHaveLength(1);
+    const sql = String(updates[0]?.[0] ?? "");
+    expect(sql).toContain("AND status = 'paid'");
+    expect(sql).toContain("settled_at = NOW()");
+    expect(updates[0]?.[1]).toEqual(["rp_1"]);
+  });
+
+  it("does not settle a multi-transfer payment when only one transfer is processed", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: 2, processed: 1 }] });
+
+    const promoted = await promoteToSettledIfComplete("rp_1");
+
+    expect(promoted).toBe(false);
+    expect(settledUpdates()).toHaveLength(0);
+    expect(queryMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not settle when there are no child transfers", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: 0, processed: 0 }] });
+
+    const promoted = await promoteToSettledIfComplete("rp_1");
+
+    expect(promoted).toBe(false);
+    expect(settledUpdates()).toHaveLength(0);
+  });
+
+  it("is a no-op on a paid payment with a failed child transfer", async () => {
+    // A failed child is not counted as processed, so total !== processed.
+    queryMock.mockResolvedValueOnce({ rows: [{ total: 1, processed: 0 }] });
+
+    const promoted = await promoteToSettledIfComplete("rp_1");
+
+    expect(promoted).toBe(false);
+    expect(settledUpdates()).toHaveLength(0);
+  });
+
+  it("is idempotent: a second call on an already-settled row is a no-op", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: 1, processed: 1 }] })
+      .mockResolvedValueOnce({ rowCount: 1 })
+      // Second call: counts unchanged, but row is 'settled' so the guarded
+      // UPDATE (WHERE status = 'paid') matches nothing.
+      .mockResolvedValueOnce({ rows: [{ total: 1, processed: 1 }] })
+      .mockResolvedValueOnce({ rowCount: 0 });
+
+    const first = await promoteToSettledIfComplete("rp_1");
+    const second = await promoteToSettledIfComplete("rp_1");
+
+    expect(first).toBe(true);
+    expect(second).toBe(false);
+    for (const call of settledUpdates()) {
+      expect(String(call[0] ?? "")).toContain("AND status = 'paid'");
+    }
+  });
+});
+
+describe("settlement webhook ordering", () => {
+  afterEach(() => {
+    queryMock.mockReset();
+  });
+
+  it("settles via payment.captured when transfer.processed arrived first", async () => {
+    // Phase 1 — transfer.processed while the parent is still 'created':
+    // child is marked processed, but the guarded settle UPDATE matches 0 rows.
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ rent_payment_id: "rp_1" }] })
+      .mockResolvedValueOnce({
+        rows: [{ id: "rpt_1", rent_payment_id: "rp_1", status: "pending" }],
+      })
+      .mockResolvedValueOnce({ rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 1, processed: 1 }] })
+      .mockResolvedValueOnce({ rowCount: 0 });
+
+    await applyTransferProcessed("trf_1", { id: "trf_1", source: "order_abc" });
+
+    expect(settledUpdates()).toHaveLength(1);
+    queryMock.mockReset();
+
+    // Phase 2 — payment.captured arrives: sets 'paid' and re-checks settlement.
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ id: "rp_1", status: "created" }] })
+      .mockResolvedValueOnce({ rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 1, processed: 1 }] })
+      .mockResolvedValueOnce({ rowCount: 1 })
+      .mockResolvedValueOnce({ rowCount: 1 });
+
+    const rentPaymentId = await handlePaymentCaptured(
+      baseEvent("payment.captured", {
+        payment: {
+          entity: { id: "pay_abc", order_id: "order_abc", method: "upi" },
+        },
+      }),
+      "rzp_evt_captured_after_transfer",
+    );
+
+    expect(rentPaymentId).toBe("rp_1");
+    const updates = settledUpdates();
+    expect(updates).toHaveLength(1);
+    expect(String(updates[0]?.[0] ?? "")).toContain("AND status = 'paid'");
+    expect(updates[0]?.[1]).toEqual(["rp_1"]);
+  });
+
+  it("settles via transfer.processed when payment.captured arrived first (happy path)", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ rent_payment_id: "rp_1" }] })
+      .mockResolvedValueOnce({
+        rows: [{ id: "rpt_1", rent_payment_id: "rp_1", status: "pending" }],
+      })
+      .mockResolvedValueOnce({ rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 1, processed: 1 }] })
+      .mockResolvedValueOnce({ rowCount: 1 });
+
+    const rentPaymentId = await applyTransferProcessed("trf_1", {
+      id: "trf_1",
+      source: "order_abc",
+    });
+
+    expect(rentPaymentId).toBe("rp_1");
+    const updates = settledUpdates();
+    expect(updates).toHaveLength(1);
+    expect(String(updates[0]?.[0] ?? "")).toContain("AND status = 'paid'");
+    expect(updates[0]?.[1]).toEqual(["rp_1"]);
   });
 });
 

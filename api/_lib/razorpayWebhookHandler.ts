@@ -196,6 +196,38 @@ async function handleTransferCreated(
   return rentPaymentId;
 }
 
+/**
+ * Promote rent_payments → 'settled' when every child transfer is processed.
+ * Idempotent and ordering-safe: only the 'paid' → 'settled' transition is
+ * allowed (WHERE status = 'paid'), so repeat calls, concurrent webhooks, and
+ * out-of-order transfer.processed / payment.captured deliveries are all safe.
+ * A payment with any non-processed child (pending or failed) is never settled.
+ */
+export async function promoteToSettledIfComplete(rentPaymentId: string): Promise<boolean> {
+  const counts = await getPool().query<{ total: number; processed: number }>(
+    `SELECT COUNT(*)::int AS total,
+            COUNT(*) FILTER (WHERE status = 'processed')::int AS processed
+     FROM public.rent_payment_transfers
+     WHERE rent_payment_id = $1`,
+    [rentPaymentId],
+  );
+  const { total, processed } = counts.rows[0] ?? { total: 0, processed: 0 };
+  if (total === 0 || total !== processed) {
+    return false;
+  }
+
+  const result = await getPool().query(
+    `UPDATE public.rent_payments
+     SET status = 'settled',
+         settled_at = NOW(),
+         updated_at = NOW()
+     WHERE id = $1
+       AND status = 'paid'`,
+    [rentPaymentId],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
 async function handlePaymentCaptured(
   event: RazorpayWebhookEvent,
   razorpayEventId: string,
@@ -230,6 +262,9 @@ async function handlePaymentCaptured(
           [row.id, razorpayPaymentId, method],
         );
       }
+      // transfer.processed may have arrived before payment.captured; the child
+      // transfers can already be complete, so re-check settlement now.
+      await promoteToSettledIfComplete(row.id);
     }
   }
 
@@ -276,25 +311,7 @@ export async function applyTransferProcessed(
       );
     }
 
-    const counts = await getPool().query<{ total: number; processed: number }>(
-      `SELECT COUNT(*)::int AS total,
-              COUNT(*) FILTER (WHERE status = 'processed')::int AS processed
-       FROM public.rent_payment_transfers
-       WHERE rent_payment_id = $1`,
-      [row.rent_payment_id],
-    );
-    const { total, processed } = counts.rows[0] ?? { total: 0, processed: 0 };
-    if (total > 0 && total === processed) {
-      await getPool().query(
-        `UPDATE public.rent_payments
-         SET status = 'settled',
-             settled_at = NOW(),
-             updated_at = NOW()
-         WHERE id = $1
-           AND status = 'paid'`,
-        [row.rent_payment_id],
-      );
-    }
+    await promoteToSettledIfComplete(row.rent_payment_id);
   }
 
   return rentPaymentId;
