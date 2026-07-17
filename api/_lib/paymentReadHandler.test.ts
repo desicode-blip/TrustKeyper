@@ -7,12 +7,14 @@ const {
   transfersFetchMock,
   applyTransferProcessedMock,
   applyTransferFailedMock,
+  promoteToSettledIfCompleteMock,
 } = vi.hoisted(() => ({
   queryMock: vi.fn(),
   assertPaymentAuthMock: vi.fn(),
   transfersFetchMock: vi.fn(),
   applyTransferProcessedMock: vi.fn(),
   applyTransferFailedMock: vi.fn(),
+  promoteToSettledIfCompleteMock: vi.fn(),
 }));
 
 vi.mock("./vercelSyncDb.js", () => ({
@@ -37,6 +39,7 @@ vi.mock("./razorpayClient.js", () => ({
 vi.mock("./razorpayWebhookHandler.js", () => ({
   applyTransferProcessed: applyTransferProcessedMock,
   applyTransferFailed: applyTransferFailedMock,
+  promoteToSettledIfComplete: promoteToSettledIfCompleteMock,
 }));
 
 import {
@@ -323,6 +326,7 @@ describe("reconcileStaleTransfers", () => {
     transfersFetchMock.mockReset();
     applyTransferProcessedMock.mockReset();
     applyTransferFailedMock.mockReset();
+    promoteToSettledIfCompleteMock.mockReset();
   });
 
   it("skips Razorpay when there are no candidates", async () => {
@@ -340,8 +344,8 @@ describe("reconcileStaleTransfers", () => {
     queryMock
       .mockResolvedValueOnce({
         rows: [
-          { rent_payment_id: "rp_1", razorpay_transfer_id: "trf_ok" },
-          { rent_payment_id: "rp_1", razorpay_transfer_id: "trf_bad" },
+          { rent_payment_id: "rp_1", razorpay_transfer_id: "trf_ok", child_status: "pending" },
+          { rent_payment_id: "rp_1", razorpay_transfer_id: "trf_bad", child_status: "pending" },
         ],
       })
       .mockResolvedValueOnce({ rowCount: 1 });
@@ -373,8 +377,8 @@ describe("reconcileStaleTransfers", () => {
     queryMock
       .mockResolvedValueOnce({
         rows: [
-          { rent_payment_id: "rp_1", razorpay_transfer_id: "trf_boom" },
-          { rent_payment_id: "rp_2", razorpay_transfer_id: "trf_ok" },
+          { rent_payment_id: "rp_1", razorpay_transfer_id: "trf_boom", child_status: "pending" },
+          { rent_payment_id: "rp_2", razorpay_transfer_id: "trf_ok", child_status: "pending" },
         ],
       })
       .mockResolvedValueOnce({ rowCount: 1 });
@@ -395,7 +399,9 @@ describe("reconcileStaleTransfers", () => {
   it("leaves pending transfers alone without calling apply*", async () => {
     queryMock
       .mockResolvedValueOnce({
-        rows: [{ rent_payment_id: "rp_1", razorpay_transfer_id: "trf_pending" }],
+        rows: [
+          { rent_payment_id: "rp_1", razorpay_transfer_id: "trf_pending", child_status: "pending" },
+        ],
       })
       .mockResolvedValueOnce({ rowCount: 1 });
     transfersFetchMock.mockResolvedValueOnce({ id: "trf_pending", status: "pending" });
@@ -404,5 +410,40 @@ describe("reconcileStaleTransfers", () => {
 
     expect(applyTransferProcessedMock).not.toHaveBeenCalled();
     expect(applyTransferFailedMock).not.toHaveBeenCalled();
+  });
+
+  it("promotes a stranded paid row with an already-processed child without calling Razorpay", async () => {
+    queryMock
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            rent_payment_id: "rp_stranded",
+            razorpay_transfer_id: "trf_done",
+            child_status: "processed",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rowCount: 1 });
+    promoteToSettledIfCompleteMock.mockResolvedValue(true);
+
+    await reconcileStaleTransfers("9000000001", "owner");
+
+    expect(transfersFetchMock).not.toHaveBeenCalled();
+    expect(applyTransferProcessedMock).not.toHaveBeenCalled();
+    expect(applyTransferFailedMock).not.toHaveBeenCalled();
+    expect(promoteToSettledIfCompleteMock).toHaveBeenCalledTimes(1);
+    expect(promoteToSettledIfCompleteMock).toHaveBeenCalledWith("rp_stranded");
+
+    // Candidate query must keep settled rows out and only admit fully-processed
+    // stranded rows (Path B) alongside non-terminal children (Path A).
+    const candidateSql = String(queryMock.mock.calls[0]?.[0] ?? "");
+    expect(candidateSql).toContain("rp.status = 'paid'");
+    expect(candidateSql).toContain("NOT IN ('processed', 'failed')");
+    expect(candidateSql).toContain("NOT EXISTS");
+
+    // Cooldown still updated so a promote failure can't cause thrash.
+    const updateSql = String(queryMock.mock.calls[1]?.[0] ?? "");
+    expect(updateSql).toContain("last_reconciled_at");
+    expect(queryMock.mock.calls[1]?.[1]).toEqual([["rp_stranded"]]);
   });
 });

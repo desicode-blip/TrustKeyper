@@ -9,6 +9,7 @@ import { getRazorpayClient } from "./razorpayClient.js";
 import {
   applyTransferFailed,
   applyTransferProcessed,
+  promoteToSettledIfComplete,
 } from "./razorpayWebhookHandler.js";
 import { assertPaymentAuth } from "./syncAuth.js";
 import { sanitizeErrorForLog } from "./sanitizeErrorForLog.js";
@@ -38,6 +39,7 @@ type TenantPaymentHistoryRow = {
 type StaleTransferCandidate = {
   rent_payment_id: string;
   razorpay_transfer_id: string;
+  child_status: string;
 };
 
 function requestAuthorization(req: VercelRequest): string | undefined {
@@ -91,7 +93,8 @@ export async function reconcileStaleTransfers(
   const candidates = await getPool().query<StaleTransferCandidate>(
     `SELECT DISTINCT
        rp.id AS rent_payment_id,
-       t.razorpay_transfer_id
+       t.razorpay_transfer_id,
+       t.status AS child_status
      FROM public.rent_payments rp
      INNER JOIN public.agreements a ON a.id = rp.agreement_id
      INNER JOIN public.rent_payment_transfers t ON t.rent_payment_id = rp.id
@@ -99,7 +102,21 @@ export async function reconcileStaleTransfers(
        AND rp.payment_type = 'rent'
        AND rp.status = 'paid'
        AND t.razorpay_transfer_id IS NOT NULL
-       AND t.status NOT IN ('processed', 'failed')
+       AND (
+         -- Path A: non-terminal child — needs a Razorpay re-fetch
+         t.status NOT IN ('processed', 'failed')
+         -- Path B: stranded settlement — every sibling already processed but the
+         -- parent missed the paid → settled promotion (webhook ordering race)
+         OR (
+           t.status = 'processed'
+           AND NOT EXISTS (
+             SELECT 1
+             FROM public.rent_payment_transfers t2
+             WHERE t2.rent_payment_id = rp.id
+               AND t2.status <> 'processed'
+           )
+         )
+       )
        AND rp.paid_at IS NOT NULL
        AND rp.paid_at < NOW() - ${RECONCILE_MIN_AGE_SQL}
        AND rp.paid_at > NOW() - ${RECONCILE_MAX_AGE_SQL}
@@ -121,6 +138,12 @@ export async function reconcileStaleTransfers(
     const transferId = row.razorpay_transfer_id;
 
     try {
+      if (row.child_status === "processed") {
+        // Path B: children are already terminal — promote locally, no Razorpay call.
+        await promoteToSettledIfComplete(row.rent_payment_id);
+        continue;
+      }
+
       const fetched = await getRazorpayClient().transfers.fetch(transferId);
       const entity = asRecord(fetched);
       const status = transferStatus(entity);

@@ -37,6 +37,12 @@ Last updated: 2026-07-11
   `AppAuthEntryRedirect`, which loops failed handoffs back to the marketing modal.
 
 ## Payments (pre-dates this work)
-- **`razorpay_transfer_id` is NULL at order creation**, so `transfer.processed`
-  webhooks can't match DB rows and settlement doesn't complete automatically.
-  Longstanding blocker, deferred.
+- **Razorpay webhook subscription is missing `transfer.*` events.** The production
+  webhook ledger (`razorpay_webhook_events`) has only ever recorded
+  `payment.captured` and `payment.failed` — never `transfer.created`,
+  `transfer.processed`, or `transfer.failed`. Until transfer events are enabled in
+  the Razorpay dashboard, settlement completion relies on the on-read reconciler
+  (`api/_lib/paymentReadHandler.ts`). Dashboard config change, not a code change.
+  (The previously tracked blocker — `razorpay_transfer_id` NULL at order creation —
+  was fixed in `bd8e892`: transfer ids are now persisted in the same transaction
+  as the `rent_payments` insert.)
