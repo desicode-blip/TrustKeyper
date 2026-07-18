@@ -26,7 +26,7 @@ export function MarketingLayout({
         <img
           src={heroNavEllipse}
           alt=""
-          className="pointer-events-none absolute left-1/2 top-0 z-0 h-auto w-screen max-w-none -translate-x-1/2 select-none"
+          className="pointer-events-none absolute left-1/2 top-0 z-0 h-[min(calc(44vh+98px),508px)] w-screen max-w-none -translate-x-1/2 select-none object-cover object-top sm:h-[min(calc(44vh+112px),522px)]"
           draggable={false}
           aria-hidden
         />

@@ -72,7 +72,7 @@ export function BrokerOnboardingSection() {
             {ONBOARDING_STEPS.map((step) => (
               <li
                 key={step.number}
-                className="flex flex-col items-center gap-5 text-center sm:items-start sm:text-left"
+                className="relative flex flex-col items-center gap-5 text-center sm:items-start sm:text-left"
               >
                 <StepBadge number={step.number} />
                 <div className="space-y-3">
@@ -83,6 +83,12 @@ export function BrokerOnboardingSection() {
                     {step.description}
                   </p>
                 </div>
+                {step.number < ONBOARDING_STEPS.length ? (
+                  <span
+                    className="absolute left-1/2 top-full h-10 w-0.5 -translate-x-1/2 bg-marketing-azure-stroke/70 sm:hidden"
+                    aria-hidden
+                  />
+                ) : null}
               </li>
             ))}
           </ol>

@@ -93,7 +93,7 @@ function FaqAccordionItem({
 }
 
 export function HomeownerFaqSection() {
-  const [openIndex, setOpenIndex] = React.useState(0);
+  const [openIndex, setOpenIndex] = React.useState(-1);
 
   return (
     <section

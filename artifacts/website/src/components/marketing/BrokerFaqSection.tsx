@@ -72,7 +72,7 @@ function FaqAccordionItem({
 }
 
 export function BrokerFaqSection() {
-  const [openIndex, setOpenIndex] = React.useState(0);
+  const [openIndex, setOpenIndex] = React.useState(-1);
 
   return (
     <section className="bg-white py-16 sm:bg-marketing-neutral-100 lg:py-[140px]" aria-labelledby="broker-faq-heading">
