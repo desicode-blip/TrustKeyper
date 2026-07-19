@@ -29,6 +29,29 @@ function assertStagingDatabase(url: string): void {
   }
 }
 
+/** Shape: {roleChar}{phone10}{9 random base36} — exactly 20 chars. */
+function assertReferenceIdShape(id: string, phone: string, role: string): void {
+  const phone10 = phone.replace(/\D/g, "").slice(-10);
+  const roleChar =
+    role === "owner" ? "o" : role === "tenant" ? "t" : role === "broker" ? "b" : null;
+  if (!roleChar || phone10.length !== 10) {
+    console.error("Cannot assert reference_id shape: bad phone/role", { phone, role });
+    process.exit(1);
+  }
+  const expectedPrefix = `${roleChar}${phone10}`;
+  if (
+    id.length !== 20 ||
+    !id.startsWith(expectedPrefix) ||
+    !/^[otb]\d{10}[0-9a-z]{9}$/.test(id)
+  ) {
+    console.error(
+      `REFERENCE_ID shape invalid (want ${expectedPrefix} + 9 base36, len 20):`,
+      id,
+    );
+    process.exit(1);
+  }
+}
+
 function buildCompleteBody(stakeholderEmail: string) {
   return {
     phone: TEST_PHONE,
@@ -66,6 +89,7 @@ async function ensureLinkedAccount(
   console.log("No linked account — running increment 1 create first...");
   const email = `test-onboard-${Date.now()}@trustkeyper.test`;
   const referenceId = razorpayReferenceId(TEST_PHONE, TEST_ROLE);
+  assertReferenceIdShape(referenceId, TEST_PHONE, TEST_ROLE);
   const payload = buildRazorpayAccountPayload(
     {
       phone: TEST_PHONE,
