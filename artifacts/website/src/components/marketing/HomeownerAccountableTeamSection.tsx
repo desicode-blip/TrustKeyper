@@ -1,5 +1,5 @@
 import React from "react";
-import { Check } from "lucide-react";
+import responsibilityCheck from "@/assets/marketing/homeowners/accountable-team/responsibility-check.svg";
 import teamPhoto from "@/assets/marketing/homeowners/accountable-team/team-photo.jpg";
 
 const TEAM_RESPONSIBILITIES = [
@@ -51,9 +51,7 @@ export function HomeownerAccountableTeamSection() {
             <ul className="mt-6 space-y-4">
               {TEAM_RESPONSIBILITIES.map((item) => (
                 <li key={item} className="flex items-center gap-3">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-marketing-green">
-                    <Check size={12} strokeWidth={3} className="text-white" aria-hidden />
-                  </span>
+                  <img src={responsibilityCheck} alt="" className="h-5 w-5 shrink-0" aria-hidden />
                   <span className="font-roboto text-sm font-medium leading-5 text-marketing-navy-dark">
                     {item}
                   </span>
