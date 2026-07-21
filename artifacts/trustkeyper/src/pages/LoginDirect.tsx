@@ -1,3 +1,6 @@
+/**
+ * Legacy role-card login — route removed; do not re-mount from App.tsx.
+ */
 import React, { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";

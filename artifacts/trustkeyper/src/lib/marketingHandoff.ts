@@ -21,16 +21,31 @@ export interface MarketingHandoffParams {
 
 const SESSION_HASH_PREFIX = "tk_session=";
 
+/** Production marketing site when VITE_MARKETING_URL is unset (never fall back to in-app /login). */
+export const DEFAULT_MARKETING_SITE_URL = "https://trustkeyper.com";
+
 export function getMarketingSiteUrl(): string | null {
   const configured = import.meta.env.VITE_MARKETING_URL;
   if (typeof configured !== "string" || !configured.trim()) return null;
   return configured.replace(/\/$/, "");
 }
 
-export function buildMarketingAuthRedirectUrl(mode: "login" | "signup"): string | null {
-  const base = getMarketingSiteUrl();
-  if (!base) return null;
-  return `${base}#${mode}`;
+/** Marketing base for auth entry — env first, else production homepage. */
+export function resolveMarketingSiteUrl(): string {
+  return getMarketingSiteUrl() ?? DEFAULT_MARKETING_SITE_URL;
+}
+
+export function buildMarketingAuthRedirectUrl(mode: "login" | "signup"): string {
+  return `${resolveMarketingSiteUrl()}#${mode}`;
+}
+
+/**
+ * Leaves the app SPA and opens marketing login/signup via location.replace
+ * so /login and / never remain in the browser history stack.
+ */
+export function redirectToMarketingAuth(mode: "login" | "signup"): void {
+  if (typeof window === "undefined") return;
+  window.location.replace(buildMarketingAuthRedirectUrl(mode));
 }
 
 export function decodeMarketingSessionHash(hash: string): MarketingSessionTokens | null {

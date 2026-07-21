@@ -11,6 +11,7 @@ import {
   logout,
   restoreRememberedSessionFromLocalStorage,
 } from "@/lib/auth";
+import { redirectToMarketingAuth } from "@/lib/marketingHandoff";
 import {
   LayoutDashboard,
   Building2,
@@ -95,7 +96,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
     const session = getActiveSession();
     if (!session || session.role !== "broker") {
       sessionStorage.setItem("tk_pending_role", "broker");
-      setLocation("/login");
+      redirectToMarketingAuth("login");
       return;
     }
   }, [location, setLocation]);
@@ -233,7 +234,7 @@ export default function BrokerLayout({ children }: BrokerLayoutProps) {
                     onClick={() => {
                       logout();
                       closeSidebar();
-                      setLocation("/");
+                      redirectToMarketingAuth("login");
                     }}
                     className="flex items-center gap-3 h-9 px-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 w-full text-left"
                   >

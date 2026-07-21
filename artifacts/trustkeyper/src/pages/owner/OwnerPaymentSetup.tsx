@@ -13,6 +13,7 @@ import {
 import OwnerLayout from "@/components/OwnerLayout";
 import { OwnerFlowButton } from "@/components/owner/OwnerFlowButton";
 import { getActiveSession } from "@/lib/auth";
+import { redirectToMarketingAuth } from "@/lib/marketingHandoff";
 import { getOwnerProfile } from "@/lib/ownerProfile";
 import {
   fetchPaymentRecipientStatus,
@@ -368,7 +369,7 @@ export default function OwnerPaymentSetup() {
 
     const session = getActiveSession();
     if (!session || session.role !== "owner") {
-      setLocation("/login");
+      redirectToMarketingAuth("login");
       return;
     }
 

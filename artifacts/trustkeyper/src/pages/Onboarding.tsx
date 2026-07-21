@@ -1,3 +1,7 @@
+/**
+ * Legacy in-app signup / “I am a” onboarding — no longer routed (`/` → marketing auth).
+ * Retained temporarily for reference; do not re-mount from App.tsx.
+ */
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Check } from "lucide-react";
@@ -40,6 +44,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
+import { redirectToMarketingAuth } from "@/lib/marketingHandoff";
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
@@ -202,7 +207,7 @@ export default function Onboarding() {
                     title: "An account already exists for this number. Please log in instead.",
                     variant: "destructive",
                     action: (
-                      <ToastAction altText="Log in" onClick={() => setLocation("/login")}>
+                      <ToastAction altText="Log in" onClick={() => redirectToMarketingAuth("login")}>
                         Log in
                       </ToastAction>
                     ),
@@ -320,7 +325,7 @@ export default function Onboarding() {
               className="w-full bg-primary hover:bg-primary/90 text-white rounded-sm"
               onClick={() => {
                 setIsManagedPopupOpen(false);
-                setLocation("/");
+                redirectToMarketingAuth("signup");
               }}
             >
               Return Home

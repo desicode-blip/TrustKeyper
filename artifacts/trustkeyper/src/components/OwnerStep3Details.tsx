@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { AuthPhoneField } from "@/components/auth/AuthPhoneField";
 import { AuthTextField } from "@/components/auth/AuthTextField";
@@ -7,6 +6,7 @@ import { AuthSignupScreenFooter } from "@/components/auth/AuthSignupScreenFooter
 import { AuthStepHeading } from "@/components/auth/AuthStepHeading";
 import { authMobileScrollPadClass, authPrimaryButtonClass } from "@/components/auth/authStyles";
 import { profileExistsAsync } from "@/lib/auth";
+import { redirectToMarketingAuth } from "@/lib/marketingHandoff";
 
 interface OwnerStep3DetailsProps {
   details: { name: string; phone: string };
@@ -15,7 +15,6 @@ interface OwnerStep3DetailsProps {
 }
 
 export default function OwnerStep3Details({ details, setDetails, onNext }: OwnerStep3DetailsProps) {
-  const [, setLocation] = useLocation();
   const digits = details.phone.replace(/\D/g, "").slice(0, 10);
   const [duplicateOwnerPhone, setDuplicateOwnerPhone] = useState(false);
 
@@ -63,7 +62,7 @@ export default function OwnerStep3Details({ details, setDetails, onNext }: Owner
             Account exists.{" "}
             <button
               type="button"
-              onClick={() => setLocation("/login")}
+              onClick={() => redirectToMarketingAuth("login")}
               className="font-medium underline underline-offset-2 hover:text-destructive/80"
             >
               Log in instead?

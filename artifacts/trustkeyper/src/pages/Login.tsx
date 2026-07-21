@@ -1,3 +1,7 @@
+/**
+ * Legacy in-app phone login UI — no longer routed (`/login` → marketing auth).
+ * Retained temporarily for reference; do not re-mount from App.tsx.
+ */
 import React, { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { AuthFlowLayout } from "@/components/AuthFlowLayout";

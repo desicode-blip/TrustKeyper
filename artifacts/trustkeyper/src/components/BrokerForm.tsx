@@ -16,6 +16,7 @@ import { handleOtpKeyDown } from "@/lib/otpInput";
 import { Spinner } from "@/components/ui/spinner";
 import { OtpVerifyReadyHint, useOtpVerifyReady } from "@/lib/otpVerifyReady";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phoneOtp";
+import { redirectToMarketingAuth } from "@/lib/marketingHandoff";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -288,7 +289,7 @@ export default function BrokerForm({ onComplete }: BrokerFormProps) {
               Account exists.{" "}
               <button
                 type="button"
-                onClick={() => setLocation("/login")}
+                onClick={() => redirectToMarketingAuth("login")}
                 className="font-medium underline underline-offset-2 hover:text-destructive/80"
               >
                 Log in instead?

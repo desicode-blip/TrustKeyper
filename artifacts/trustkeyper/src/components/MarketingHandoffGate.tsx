@@ -4,6 +4,7 @@ import {
   applyMarketingHandoff,
   clearMarketingHandoffFromUrl,
   parseMarketingHandoffFromWindow,
+  redirectToMarketingAuth,
   type MarketingHandoffParams,
 } from "@/lib/marketingHandoff";
 
@@ -27,8 +28,8 @@ function persistHandoffError(message: string): void {
   }
 }
 
-function navigateToLoginPreservingOrigin(): void {
-  window.history.replaceState({}, document.title, "/login");
+function navigateToMarketingLogin(): void {
+  redirectToMarketingAuth("login");
 }
 
 /**
@@ -57,9 +58,9 @@ export function MarketingHandoffGate({ children }: { children: React.ReactNode }
 
       clearMarketingHandoffFromUrl();
       persistHandoffError(result.error);
-      navigateToLoginPreservingOrigin();
       setError(result.error);
       setPhase("failed");
+      navigateToMarketingLogin();
     })();
 
     return () => {

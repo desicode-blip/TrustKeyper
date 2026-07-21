@@ -34,6 +34,7 @@ import {
   type TenantDocumentUploadSession,
 } from "@/lib/tenantDocumentUploadSession";
 import { finalizeTenantDashboardAccess } from "@/lib/tenantDocumentUploadRedirect";
+import { redirectToMarketingAuth } from "@/lib/marketingHandoff";
 import { getSupabaseAccessToken } from "@/lib/syncSession";
 import { mergeTenantProfileFromInvitePayload } from "@/lib/tenantProfile";
 import { saveTenantWorkspaceFromInvite } from "@/lib/tenantWorkspace";
@@ -391,7 +392,7 @@ export default function TenantDocumentUpload() {
               className="w-full"
               onClick={() => {
                 setAuthPendingRole("tenant");
-                setLocation("/login");
+                redirectToMarketingAuth("login");
               }}
             >
               Sign In
