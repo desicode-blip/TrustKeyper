@@ -27,7 +27,7 @@ function TransparencyBadgePill({ icon: Icon, label }: TransparencyBadge) {
   return (
     <li className="flex min-h-[64px] items-center gap-2 rounded-[52px] border border-white/10 bg-marketing-neutral-1050 px-3 py-3 sm:min-h-[90px] sm:gap-4 sm:px-6 sm:py-5">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-marketing-green">
-        <Icon size={20} strokeWidth={2} className="text-white" aria-hidden />
+        <Icon size={20} strokeWidth={2} className="text-marketing-icon-circle" aria-hidden />
       </span>
       <span className="font-roboto text-[10px] font-medium leading-3 text-white sm:text-base sm:leading-6">
         {label}
