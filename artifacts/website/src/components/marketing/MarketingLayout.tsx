@@ -1,4 +1,5 @@
 import React, { type ReactNode } from "react";
+import heroNavEllipse from "@/assets/marketing/homeowners/hero/hero-nav-ellipse.png";
 import { HomeownerMarketingNav } from "@/components/marketing/HomeownerMarketingNav";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { cn } from "@/lib/utils";
@@ -20,9 +21,18 @@ export function MarketingLayout({
     navVariant === "homeowner" ? "pt-[58px] sm:pt-[96px]" : "pt-[88px] sm:pt-[96px]";
 
   return (
-    <div className={cn("flex min-h-screen flex-col bg-marketing-bg", className)}>
+    <div className={cn("relative isolate flex min-h-screen flex-col bg-marketing-bg", className)}>
+      {navVariant === "homeowner" ? (
+        <img
+          src={heroNavEllipse}
+          alt=""
+          className="pointer-events-none absolute left-1/2 top-0 z-0 h-auto w-screen max-w-none -translate-x-1/2 select-none"
+          draggable={false}
+          aria-hidden
+        />
+      ) : null}
       {!hideNav ? (navVariant === "homeowner" ? <HomeownerMarketingNav /> : <MarketingNav />) : null}
-      <main className={cn("flex flex-1 flex-col", !hideNav && mainOffsetClassName)}>
+      <main className={cn("relative z-10 flex flex-1 flex-col", !hideNav && mainOffsetClassName)}>
         {children}
       </main>
     </div>
