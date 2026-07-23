@@ -8,4 +8,4 @@ export {
   BrokerProfileSchema,
   type BrokerProfile,
   type BrokerProfilePatch,
-} from "./brokerProfile.js";
+} from "./brokerProfile";
