@@ -1,3 +1,4 @@
+import type { BrokerProfile, BrokerProfilePatch } from "@workspace/api-schemas";
 import { getAccessToken } from "../auth/secureSession";
 
 function apiBaseUrl(): string {
@@ -126,5 +127,24 @@ export function putAccountKey(phone: string, role: string, dataKey: string, valu
   return apiRequest<{ ok: true }>(`/sync/accounts/${phone}/${role}/${dataKey}`, {
     method: "PUT",
     body: { value },
+  });
+}
+
+/** Broker profile — JWT scoped to auth user. 404 → null (no row yet). */
+export async function getBrokerProfile(): Promise<BrokerProfile | null> {
+  try {
+    return await apiRequest<BrokerProfile>("/v1/broker/profile");
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+export function patchBrokerProfile(body: BrokerProfilePatch) {
+  return apiRequest<BrokerProfile>("/v1/broker/profile", {
+    method: "PATCH",
+    body,
   });
 }

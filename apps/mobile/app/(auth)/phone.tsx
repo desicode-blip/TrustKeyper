@@ -2,9 +2,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Button, Text, TextInput, View } from "react-native";
+import { Button, Text, TextInput } from "react-native";
 import { sendPhoneOtp } from "@/lib/auth/phoneOtp";
 import { PhoneFormSchema, type PhoneFormValues } from "@/lib/auth/schemas";
+import { ScreenSafeArea } from "@/lib/ScreenSafeArea";
 
 export default function PhoneScreen() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function PhoneScreen() {
   });
 
   return (
-    <View>
+    <ScreenSafeArea>
       <Text>Phone number</Text>
       <Text>+91</Text>
       <Controller
@@ -58,6 +59,6 @@ export default function PhoneScreen() {
       {errors.phone ? <Text>{errors.phone.message}</Text> : null}
       {submitError ? <Text>{submitError}</Text> : null}
       <Button title={isSubmitting ? "Sending…" : "Send OTP"} onPress={() => void onSubmit()} disabled={isSubmitting} />
-    </View>
+    </ScreenSafeArea>
   );
 }

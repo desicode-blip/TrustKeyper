@@ -1,8 +1,11 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Button, Text, View } from "react-native";
+import { Button, Text } from "react-native";
 import { signOut } from "@/lib/auth/phoneOtp";
 import { loadStoredSession, type StoredSession } from "@/lib/auth/secureSession";
+import { ScreenSafeArea } from "@/lib/ScreenSafeArea";
+
+const TAB_EDGES = ["top", "left", "right"] as const;
 
 export default function ProfileTab() {
   const router = useRouter();
@@ -37,12 +40,12 @@ export default function ProfileTab() {
   };
 
   return (
-    <View>
+    <ScreenSafeArea edges={TAB_EDGES}>
       <Text>Profile</Text>
       <Text>Phone: {session?.phone ?? "—"}</Text>
       <Text>Role: {session?.role ?? "—"}</Text>
       {error ? <Text>{error}</Text> : null}
       <Button title={isSigningOut ? "Signing out…" : "Sign out"} onPress={() => void onSignOut()} disabled={isSigningOut} />
-    </View>
+    </ScreenSafeArea>
   );
 }

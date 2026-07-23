@@ -108,3 +108,28 @@ export async function assertPaymentAuth(
 ): Promise<SyncAuthResult> {
   return assertSyncAccountAuth(authorization, phone);
 }
+
+/**
+ * JWT-only auth for user-scoped resources (e.g. brokers.user_id).
+ * Does not require a phone path/body match.
+ */
+export async function assertJwtUserAuth(
+  authorization: string | undefined,
+): Promise<SyncAuthResult> {
+  if (!isSyncAuthRequired()) {
+    return {
+      ok: true,
+      user: {
+        phone: "0000000000",
+        userId: "00000000-0000-4000-8000-000000000001",
+      },
+    };
+  }
+
+  const user = await verifySyncBearerToken(authorization);
+  if (!user) {
+    return { ok: false, status: 401, error: "Unauthorized" };
+  }
+
+  return { ok: true, user };
+}

@@ -2,12 +2,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Button, Text, TextInput, View } from "react-native";
-import { useQuery } from "@tanstack/react-query";
-import { getAccountRoles } from "@/lib/api/client";
+import { Button, Text, TextInput } from "react-native";
+import { getBrokerProfile } from "@/lib/api/client";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/auth/phoneOtp";
 import { OtpFormSchema, type OtpFormValues } from "@/lib/auth/schemas";
 import { saveSessionIdentity } from "@/lib/auth/secureSession";
+import { routeFromBrokerProfile } from "@/lib/broker/routing";
+import { ScreenSafeArea } from "@/lib/ScreenSafeArea";
 import { normalizePhoneDigits } from "@workspace/auth-server/phone";
 
 export default function OtpScreen() {
@@ -27,12 +28,6 @@ export default function OtpScreen() {
     defaultValues: { phone, token: "" },
   });
 
-  const rolesQuery = useQuery({
-    queryKey: ["account-roles", phone],
-    queryFn: () => getAccountRoles(phone),
-    enabled: false,
-  });
-
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
     setIsSubmitting(true);
@@ -43,16 +38,16 @@ export default function OtpScreen() {
         return;
       }
 
-      const rolesResult = await rolesQuery.refetch();
-      const roles = rolesResult.data?.roles ?? [];
-      if (roles.length === 0) {
-        router.replace("/(onboarding)/step-1");
-        return;
-      }
+      await saveSessionIdentity({ phone: values.phone, role: "broker" });
 
-      const role = roles[0] ?? null;
-      await saveSessionIdentity({ phone: values.phone, role });
-      router.replace("/(tabs)/home");
+      try {
+        const profile = await getBrokerProfile();
+        router.replace(routeFromBrokerProfile(profile));
+      } catch (err) {
+        setSubmitError(
+          err instanceof Error ? err.message : "Could not load broker profile",
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -67,7 +62,7 @@ export default function OtpScreen() {
   };
 
   return (
-    <View>
+    <ScreenSafeArea>
       <Text>Enter OTP</Text>
       <Text>Sent to +91{phone}</Text>
       <Controller
@@ -90,6 +85,6 @@ export default function OtpScreen() {
       {submitError ? <Text>{submitError}</Text> : null}
       <Button title={isSubmitting ? "Verifying…" : "Verify"} onPress={() => void onSubmit()} disabled={isSubmitting} />
       <Button title="Resend OTP" onPress={() => void onResend()} disabled={isSubmitting} />
-    </View>
+    </ScreenSafeArea>
   );
 }
