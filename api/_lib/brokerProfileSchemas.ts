@@ -6,12 +6,42 @@ import { z } from "zod";
 
 const currentYear = new Date().getFullYear();
 
-export const BrokerEmploymentTypeSchema = z.enum([
-  "self_employed",
-  "salaried",
-  "firm_partner",
+export const BrokerEmploymentTypeSchema = z.enum(["full_time", "part_time"]);
+
+export const BrokerDealsWithOptionSchema = z.enum([
+  "rent",
+  "sale",
+  "maintenance",
   "other",
 ]);
+
+export const BrokerPropertyTypeSchema = z.enum([
+  "flats",
+  "independent_house",
+  "community_flats",
+  "villas",
+  "commercial",
+  "other",
+]);
+
+function requireOtherTextWhenSelected(
+  selected: string[],
+  otherText: string | null | undefined,
+  path: string,
+  message: string,
+  ctx: z.RefinementCtx,
+): void {
+  if (!selected.includes("other")) {
+    return;
+  }
+  if (otherText == null || otherText.trim().length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message,
+      path: [path],
+    });
+  }
+}
 
 export const BrokerProfileSchema = z.object({
   id: z.string().uuid(),
@@ -54,13 +84,34 @@ export const BrokerOnboardingStep2Schema = z.object({
   stepCompleted: z.literal(2),
 });
 
-export const BrokerOnboardingStep3Schema = z.object({
-  dealsWith: z.array(z.string().trim().min(1)).min(1, "Select at least one"),
-  dealsWithOther: z.string().trim().optional().nullable(),
-  propertyTypes: z.array(z.string().trim().min(1)).min(1, "Select at least one"),
-  propertyTypesOther: z.string().trim().optional().nullable(),
-  stepCompleted: z.literal(3),
-});
+export const BrokerOnboardingStep3Schema = z
+  .object({
+    dealsWith: z
+      .array(BrokerDealsWithOptionSchema)
+      .min(1, "Select at least one"),
+    dealsWithOther: z.string().trim().optional().nullable(),
+    propertyTypes: z
+      .array(BrokerPropertyTypeSchema)
+      .min(1, "Select at least one"),
+    propertyTypesOther: z.string().trim().optional().nullable(),
+    stepCompleted: z.literal(3),
+  })
+  .superRefine((data, ctx) => {
+    requireOtherTextWhenSelected(
+      data.dealsWith,
+      data.dealsWithOther,
+      "dealsWithOther",
+      "Describe other deal type",
+      ctx,
+    );
+    requireOtherTextWhenSelected(
+      data.propertyTypes,
+      data.propertyTypesOther,
+      "propertyTypesOther",
+      "Describe other property type",
+      ctx,
+    );
+  });
 
 export const BrokerOnboardingStep4Schema = z.object({
   region: z.string().trim().min(1, "Region is required"),
@@ -78,9 +129,9 @@ export const BrokerProfilePatchSchema = z
     employmentType: BrokerEmploymentTypeSchema.or(z.literal("")).optional(),
     businessSinceYear: z.number().int().min(1950).max(currentYear).optional(),
     propertiesHandled: z.number().int().min(0).max(100_000).optional(),
-    dealsWith: z.array(z.string()).optional(),
+    dealsWith: z.array(BrokerDealsWithOptionSchema).optional(),
     dealsWithOther: z.string().trim().nullable().optional(),
-    propertyTypes: z.array(z.string()).optional(),
+    propertyTypes: z.array(BrokerPropertyTypeSchema).optional(),
     propertyTypesOther: z.string().trim().nullable().optional(),
     region: z.string().trim().optional(),
     pincodes: z.array(z.string().regex(/^\d{6}$/)).optional(),
