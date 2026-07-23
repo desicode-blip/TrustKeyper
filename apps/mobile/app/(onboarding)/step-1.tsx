@@ -11,10 +11,8 @@ import { ScreenSafeArea } from "@/lib/ScreenSafeArea";
 type Step1Values = z.infer<typeof BrokerOnboardingStep1Schema>;
 
 const EMPLOYMENT_OPTIONS = [
-  { value: "self_employed", label: "Self-employed" },
-  { value: "salaried", label: "Salaried" },
-  { value: "firm_partner", label: "Firm partner" },
-  { value: "other", label: "Other" },
+  { value: "full_time", label: "Full-time" },
+  { value: "part_time", label: "Part-time" },
 ] as const;
 
 export default function OnboardingStep1() {
@@ -34,7 +32,7 @@ export default function OnboardingStep1() {
       name: "",
       age: 25,
       firmName: null,
-      employmentType: "self_employed",
+      employmentType: "full_time",
       stepCompleted: 1,
     },
   });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BrokerOnboardingStep1Schema,
+  BrokerOnboardingStep3Schema,
   BrokerOnboardingStep4Schema,
   BrokerProfilePatchSchema,
 } from "./brokerProfileSchemas.js";
@@ -20,8 +21,41 @@ describe("BrokerProfilePatchSchema", () => {
       name: "Riya",
       age: 32,
       firmName: null,
+      employmentType: "full_time",
+      stepCompleted: 1,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects legacy employment_type values", () => {
+    const result = BrokerOnboardingStep1Schema.safeParse({
+      name: "Riya",
+      age: 32,
+      firmName: null,
       employmentType: "self_employed",
       stepCompleted: 1,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("requires dealsWithOther when other is selected", () => {
+    const result = BrokerOnboardingStep3Schema.safeParse({
+      dealsWith: ["rent", "other"],
+      dealsWithOther: null,
+      propertyTypes: ["flats"],
+      propertyTypesOther: null,
+      stepCompleted: 3,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a valid step 3 payload with other text", () => {
+    const result = BrokerOnboardingStep3Schema.safeParse({
+      dealsWith: ["rent", "other"],
+      dealsWithOther: "PG leasing",
+      propertyTypes: ["flats", "other"],
+      propertyTypesOther: "Farmhouse",
+      stepCompleted: 3,
     });
     expect(result.success).toBe(true);
   });
@@ -44,12 +78,12 @@ describe("mapBrokerRowToProfile", () => {
       name: "Riya",
       age: 32,
       firm_name: null,
-      employment_type: "self_employed",
+      employment_type: "full_time",
       business_since_year: 2018,
       properties_handled: 40,
-      deals_with: ["owners"],
+      deals_with: ["rent", "sale"],
       deals_with_other: null,
-      property_types: ["apartment"],
+      property_types: ["flats"],
       property_types_other: null,
       region: "Bengaluru",
       pincodes: ["560001"],
