@@ -1,0 +1,124 @@
+/**
+ * Vercel-bundled copy of @workspace/api-schemas broker profile Zod schemas.
+ * Keep in sync with lib/api-schemas/src/brokerProfile.ts (mobile imports the workspace package).
+ */
+import { z } from "zod";
+
+const currentYear = new Date().getFullYear();
+
+export const BrokerEmploymentTypeSchema = z.enum([
+  "self_employed",
+  "salaried",
+  "firm_partner",
+  "other",
+]);
+
+export const BrokerProfileSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  name: z.string(),
+  age: z.number().int().positive().nullable(),
+  firmName: z.string().nullable(),
+  employmentType: z.string(),
+  businessSinceYear: z.number().int().nullable(),
+  propertiesHandled: z.number().int().nullable(),
+  dealsWith: z.array(z.string()),
+  dealsWithOther: z.string().nullable(),
+  propertyTypes: z.array(z.string()),
+  propertyTypesOther: z.string().nullable(),
+  region: z.string(),
+  pincodes: z.array(z.string()),
+  stepCompleted: z.number().int().min(0).max(4),
+  onboardingCompletedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export type BrokerProfile = z.infer<typeof BrokerProfileSchema>;
+
+export const BrokerOnboardingStep1Schema = z.object({
+  name: z.string().trim().min(1, "Name is required"),
+  age: z.coerce.number().int().min(18, "Age must be at least 18").max(100),
+  firmName: z.string().trim().optional().nullable(),
+  employmentType: BrokerEmploymentTypeSchema,
+  stepCompleted: z.literal(1),
+});
+
+export const BrokerOnboardingStep2Schema = z.object({
+  businessSinceYear: z.coerce
+    .number()
+    .int()
+    .min(1950)
+    .max(currentYear, `Year cannot be after ${currentYear}`),
+  propertiesHandled: z.coerce.number().int().min(0).max(100_000),
+  stepCompleted: z.literal(2),
+});
+
+export const BrokerOnboardingStep3Schema = z.object({
+  dealsWith: z.array(z.string().trim().min(1)).min(1, "Select at least one"),
+  dealsWithOther: z.string().trim().optional().nullable(),
+  propertyTypes: z.array(z.string().trim().min(1)).min(1, "Select at least one"),
+  propertyTypesOther: z.string().trim().optional().nullable(),
+  stepCompleted: z.literal(3),
+});
+
+export const BrokerOnboardingStep4Schema = z.object({
+  region: z.string().trim().min(1, "Region is required"),
+  pincodes: z
+    .array(z.string().trim().regex(/^\d{6}$/, "Each pincode must be 6 digits"))
+    .min(1, "Add at least one pincode"),
+  stepCompleted: z.literal(4),
+});
+
+export const BrokerProfilePatchSchema = z
+  .object({
+    name: z.string().trim().min(1).optional(),
+    age: z.number().int().min(18).max(100).optional(),
+    firmName: z.string().trim().nullable().optional(),
+    employmentType: BrokerEmploymentTypeSchema.or(z.literal("")).optional(),
+    businessSinceYear: z.number().int().min(1950).max(currentYear).optional(),
+    propertiesHandled: z.number().int().min(0).max(100_000).optional(),
+    dealsWith: z.array(z.string()).optional(),
+    dealsWithOther: z.string().trim().nullable().optional(),
+    propertyTypes: z.array(z.string()).optional(),
+    propertyTypesOther: z.string().trim().nullable().optional(),
+    region: z.string().trim().optional(),
+    pincodes: z.array(z.string().regex(/^\d{6}$/)).optional(),
+    stepCompleted: z.number().int().min(0).max(4),
+  })
+  .superRefine((body, ctx) => {
+    if (body.stepCompleted === 1) {
+      const parsed = BrokerOnboardingStep1Schema.safeParse({ ...body, stepCompleted: 1 });
+      if (!parsed.success) {
+        for (const issue of parsed.error.issues) {
+          ctx.addIssue(issue);
+        }
+      }
+    }
+    if (body.stepCompleted === 2) {
+      const parsed = BrokerOnboardingStep2Schema.safeParse({ ...body, stepCompleted: 2 });
+      if (!parsed.success) {
+        for (const issue of parsed.error.issues) {
+          ctx.addIssue(issue);
+        }
+      }
+    }
+    if (body.stepCompleted === 3) {
+      const parsed = BrokerOnboardingStep3Schema.safeParse({ ...body, stepCompleted: 3 });
+      if (!parsed.success) {
+        for (const issue of parsed.error.issues) {
+          ctx.addIssue(issue);
+        }
+      }
+    }
+    if (body.stepCompleted === 4) {
+      const parsed = BrokerOnboardingStep4Schema.safeParse({ ...body, stepCompleted: 4 });
+      if (!parsed.success) {
+        for (const issue of parsed.error.issues) {
+          ctx.addIssue(issue);
+        }
+      }
+    }
+  });
+
+export type BrokerProfilePatch = z.infer<typeof BrokerProfilePatchSchema>;

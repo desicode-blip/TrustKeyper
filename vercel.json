@@ -50,9 +50,16 @@
     },
     "api/upload-property-image.ts": {
       "maxDuration": 30
+    },
+    "api/v1-broker-profile.ts": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
+    {
+      "source": "/api/v1/broker/profile",
+      "destination": "/api/v1-broker-profile"
+    },
     {
       "source": "/api/sync/(.*)",
       "destination": "/api/sync?syncPath=$1"

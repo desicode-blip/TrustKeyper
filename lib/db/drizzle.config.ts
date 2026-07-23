@@ -25,6 +25,7 @@ export default defineConfig({
     path.join(schemaDir, "agreements.ts"),
     path.join(schemaDir, "operations.ts"),
     path.join(schemaDir, "payments.ts"),
+    path.join(schemaDir, "brokers.ts"),
   ],
   dialect: "postgresql",
   dbCredentials: {
