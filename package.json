@@ -27,6 +27,7 @@
     "dev:local:docker": "node scripts/ensure-env.mjs && pnpm run db:up && dotenv -e .env -- cross-env DATABASE_URL=postgresql://trustkeyper:trustkeyper@localhost:5432/trustkeyper_dev pnpm run db:push && concurrently -k -n api,web \"pnpm run dev:api\" \"pnpm --filter @workspace/trustkeyper run dev\"",
     "dev:web": "pnpm --filter @workspace/trustkeyper run dev",
     "dev:website": "pnpm --filter @workspace/website run dev",
+    "dev:mobile": "pnpm --filter @workspace/mobile run start",
     "start:deploy": "node artifacts/api-server/dist/index.mjs",
     "typecheck:api": "tsc -p tsconfig.api.json",
     "typecheck:deploy": "pnpm run check:drizzle-singleton && pnpm run typecheck:libs && pnpm run typecheck:api && pnpm -r --filter \"./artifacts/**\" --if-present run typecheck",

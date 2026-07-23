@@ -33,8 +33,20 @@ minimumReleaseAgeExclude:
   # this setting guards against does not apply to our own packages.
   - '@replit/*'
   - stripe-replit-sync
+  # Expo / React Native toolchain for apps/mobile (SDK 53)
+  - expo
+  - expo-*
+  - '@expo/*'
+  - react-native
+  - react-native-*
+  - metro
+  - metro-*
+  - '@react-native/*'
+  - '@react-navigation/*'
+  - babel-preset-expo
 
 packages:
+  - apps/*
   - artifacts/*
   - lib/*
   - lib/integrations/*
@@ -67,6 +79,16 @@ catalog:
   zod: ^3.25.76
 
 autoInstallPeers: false
+
+# Public hoist: phantom-dep tooling (Expo Metro CLI, Drizzle singleton for TS).
+# pnpm 11 ignores public-hoist-pattern in .npmrc — this is the effective source.
+publicHoistPattern:
+  - drizzle-orm
+  - drizzle-kit
+  - '*metro*'
+  - '@expo/*'
+  - 'react-native*'
+  - 'expo-*'
 
 onlyBuiltDependencies:
   - '@swc/core'
