@@ -97,6 +97,9 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  # Unify React types across Expo mobile (wants 19.1.17) and web (catalog 19.2.14).
+  # Dual versions collide via .pnpm/node_modules for packages like react-day-picker.
+  "@types/react": "19.2.14"
   # replit uses linux-x64 only, we can exclude all other platforms
   "esbuild>@esbuild/darwin-arm64": "-"
   "esbuild>@esbuild/darwin-x64": "-"
